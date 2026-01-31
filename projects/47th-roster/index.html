@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>47th Legion - Forged in Battle, Bound by Honor</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/47th-theme.css">
+  <style>
+    /* ===== LANDING PAGE - SPACE ROME ===== */
+    
+    /* Hero Section - Grand Imperial */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem;
+      position: relative;
+      overflow: hidden;
+      
+      /* Marble and space blend */
+      background: 
+        /* Subtle marble veining */
+        linear-gradient(135deg, 
+          rgba(245, 245, 240, 0.03) 0%, 
+          transparent 30%,
+          rgba(120, 100, 80, 0.02) 50%,
+          transparent 70%,
+          rgba(245, 245, 240, 0.02) 100%
+        ),
+        /* Deep space gradient */
+        radial-gradient(ellipse at center top, rgba(139, 112, 32, 0.15) 0%, transparent 50%),
+        linear-gradient(180deg, #12100a 0%, #0a0908 40%, var(--bg-dark) 100%);
+    }
+    
+    /* Grand ornamental border */
+    .hero::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        #3d3020 10%,
+        #8b7020 25%,
+        #d4af37 40%,
+        #ffd700 50%,
+        #d4af37 60%,
+        #8b7020 75%,
+        #3d3020 90%,
+        transparent 100%
+      );
+      box-shadow: 
+        0 0 20px rgba(212, 175, 55, 0.4),
+        0 0 40px rgba(212, 175, 55, 0.2);
+    }
+    
+    /* Decorative corner columns */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        /* Left column */
+        linear-gradient(90deg, rgba(61, 48, 32, 0.3) 0%, transparent 3%),
+        /* Right column */
+        linear-gradient(270deg, rgba(61, 48, 32, 0.3) 0%, transparent 3%);
+      pointer-events: none;
+    }
+    
+    .hero-logo {
+      width: 200px;
+      height: 200px;
+      margin-bottom: 1.5rem;
+      filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.5));
+      animation: logoGlow 3s ease-in-out infinite;
+    }
+    
+    @keyframes logoGlow {
+      0%, 100% { filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.5)); }
+      50% { filter: drop-shadow(0 0 50px rgba(212, 175, 55, 0.7)); }
+    }
+    
+    .hero h1 {
+      font-family: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+      font-size: 4rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: 10px;
+      background: linear-gradient(180deg, 
+        #ffd700 0%, 
+        #d4af37 30%, 
+        #ffd700 50%, 
+        #a08020 70%, 
+        #d4af37 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+    }
+    
+    .hero-motto {
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      color: var(--text-dim);
+      font-style: italic;
+      letter-spacing: 4px;
+      margin-bottom: 2.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    
+    /* Decorative divider */
+    .hero-divider {
+      width: 400px;
+      max-width: 80%;
+      height: 3px;
+      margin: 0 auto 2.5rem;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold-dim) 20%,
+        var(--gold) 50%,
+        var(--gold-dim) 80%,
+        transparent 100%
+      );
+      position: relative;
+    }
+    
+    .hero-divider::before {
+      content: '✦';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-dark);
+      padding: 0 1rem;
+      color: var(--gold);
+      font-size: 1.2rem;
+    }
+    
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 4rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    
+    .hero-stat {
+      text-align: center;
+      padding: 1.5rem 2rem;
+      background: 
+        linear-gradient(135deg, rgba(245, 245, 240, 0.03) 0%, transparent 100%),
+        linear-gradient(180deg, rgba(26, 21, 16, 0.8) 0%, rgba(13, 11, 8, 0.9) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      min-width: 140px;
+      
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 4px 12px rgba(0, 0, 0, 0.6);
+      
+      transition: all 0.3s ease;
+    }
+    
+    .hero-stat:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-4px);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 8px 20px rgba(0, 0, 0, 0.7),
+        0 0 20px rgba(212, 175, 55, 0.15);
+    }
+    
+    .hero-stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      line-height: 1;
+      background: linear-gradient(180deg, #ffd700 0%, #d4af37 50%, #a08020 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+    
+    .hero-stat-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 0.5rem;
+    }
+    
+    .hero-cta {
+      margin-top: 2.5rem;
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .hero-cta .btn {
+      padding: 1.2rem 3rem;
+      font-size: 1.1rem;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 2px;
+    }
+    
+    /* ===== Feature Cards - Embossed Marble ===== */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      padding: 4rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .feature-card {
+      background: 
+        /* Marble veining */
+        linear-gradient(135deg, 
+          rgba(245, 245, 240, 0.05) 0%, 
+          transparent 25%,
+          rgba(120, 100, 80, 0.03) 50%,
+          transparent 75%,
+          rgba(245, 245, 240, 0.04) 100%
+        ),
+        /* Base */
+        linear-gradient(180deg, #18150f 0%, #0d0b08 100%);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        0 6px 16px rgba(0, 0, 0, 0.7),
+        0 12px 32px rgba(0, 0, 0, 0.4);
+      
+      transition: all 0.3s ease;
+    }
+    
+    /* Bronze corner accents */
+    .feature-card::before,
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--gold-dim);
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card::before {
+      top: 10px;
+      left: 10px;
+      border-right: none;
+      border-bottom: none;
+    }
+    
+    .feature-card::after {
+      bottom: 10px;
+      right: 10px;
+      border-left: none;
+      border-top: none;
+    }
+    
+    .feature-card:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-6px);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        0 12px 28px rgba(0, 0, 0, 0.8),
+        0 20px 48px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(212, 175, 55, 0.15);
+    }
+    
+    .feature-card:hover::before,
+    .feature-card:hover::after {
+      opacity: 1;
+      border-color: var(--gold);
+    }
+    
+    .feature-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+    }
+    
+    .feature-card h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+      letter-spacing: 2px;
+    }
+    
+    .feature-card p {
+      color: var(--text-dim);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    
+    /* ===== About Section - Grand Hall ===== */
+    .about-section {
+      background: 
+        linear-gradient(135deg, 
+          rgba(245, 245, 240, 0.02) 0%, 
+          transparent 50%, 
+          rgba(245, 245, 240, 0.02) 100%
+        ),
+        linear-gradient(180deg, #12100a 0%, #0a0908 100%);
+      padding: 5rem 2rem;
+      text-align: center;
+      position: relative;
+      
+      /* Top border with glow */
+      border-top: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+    
+    .about-section::before {
+      content: '— SPQR —';
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      color: var(--gold-dim);
+      letter-spacing: 8px;
+      margin-bottom: 1rem;
+      opacity: 0.6;
+    }
+    
+    .about-section h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 2.2rem;
+      letter-spacing: 4px;
+      margin-bottom: 2rem;
+    }
+    
+    .about-content {
+      max-width: 800px;
+      margin: 0 auto;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      line-height: 1.9;
+      
+      /* Subtle inner border */
+      padding: 2rem;
+      border: 1px solid rgba(61, 48, 32, 0.3);
+      border-radius: var(--radius-md);
+      background: rgba(13, 11, 8, 0.5);
+    }
+    
+    .about-content p {
+      margin-bottom: 1.5rem;
+    }
+    
+    .about-content p:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* ===== Join Section - Call to Arms ===== */
+    .join-section {
+      padding: 5rem 2rem;
+      text-align: center;
+      position: relative;
+      
+      background: 
+        radial-gradient(ellipse at center, rgba(139, 112, 32, 0.1) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-dark) 0%, #0a0908 100%);
+    }
+    
+    .join-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 4px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold-dim) 30%,
+        var(--gold) 50%,
+        var(--gold-dim) 70%,
+        transparent 100%
+      );
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    }
+    
+    .join-section h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 2.5rem;
+      letter-spacing: 4px;
+      margin-bottom: 1rem;
+    }
+    
+    .join-section p {
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+      font-size: 1.2rem;
+    }
+    
+    .join-section .btn {
+      font-family: 'Cinzel', serif;
+      padding: 1.2rem 3rem;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+    }
+    
+    /* ===== Roman Quote Decoration ===== */
+    .roman-quote {
+      font-family: 'Cinzel', serif;
+      font-style: italic;
+      color: var(--gold-dim);
+      padding: 2rem;
+      text-align: center;
+      position: relative;
+    }
+    
+    .roman-quote::before,
+    .roman-quote::after {
+      content: '❧';
+      position: absolute;
+      font-size: 1.5rem;
+      color: var(--gold-dim);
+      opacity: 0.5;
+    }
+    
+    .roman-quote::before {
+      top: 0;
+      left: 2rem;
+    }
+    
+    .roman-quote::after {
+      bottom: 0;
+      right: 2rem;
+      transform: scaleX(-1);
+    }
+    
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+        letter-spacing: 4px;
+      }
+      
+      .hero-motto {
+        font-size: 1rem;
+        letter-spacing: 2px;
+      }
+      
+      .hero-stat-value {
+        font-size: 2.5rem;
+      }
+      
+      .hero-stats {
+        gap: 1.5rem;
+      }
+      
+      .hero-cta .btn {
+        padding: 1rem 2rem;
+      }
+      
+      .features {
+        padding: 2rem 1rem;
+      }
+      
+      .feature-card::before,
+      .feature-card::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <ul class="nav-list">
+      <li><a href="https://47th.info" class="nav-link active">Home</a></li>
+      <li><a href="https://47th.info/roster/" class="nav-link">Roster</a></li>
+      <li><a href="https://47th.info/rank-structure/" class="nav-link">Ranks</a></li>
+      <li><a href="https://47th.info/awards/" class="nav-link">Awards</a></li>
+      <li><a href="https://discord.gg/tQ7Bh79Dwm" class="nav-link" target="_blank">Discord</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <img src="assets/logo.png" alt="47th Legion" class="hero-logo">
+    <h1>47TH LEGION</h1>
+    <p class="hero-motto">Forged in Battle, Bound by Honor</p>
+    
+    <div class="hero-divider"></div>
+    
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-value">MMVII</div>
+        <div class="hero-stat-label">Founded</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value" id="years-active">XVIII</div>
+        <div class="hero-stat-label">Years Active</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value" id="member-count">--</div>
+        <div class="hero-stat-label">Legionnaires</div>
+      </div>
+    </div>
+    
+    <div class="hero-cta">
+      <a href="roster.html" class="btn btn-primary">View Roster</a>
+      <a href="https://discord.gg/tQ7Bh79Dwm" class="btn btn-secondary" target="_blank">Join Discord</a>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="feature-card">
+      <span class="feature-icon">⚔️</span>
+      <h3>Multi-Game Legion</h3>
+      <p>From MMOs to tactical shooters, we fight together across multiple titles. One Legion, countless battlefields.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎖️</span>
+      <h3>Military Structure</h3>
+      <p>Rank-based organization with clear leadership. Earn your stripes through dedication and skill on the field of battle.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🛡️</span>
+      <h3>Brotherhood</h3>
+      <p>More than a gaming clan — a brotherhood of warriors who've been gaming together for nearly two decades.</p>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="about-section">
+    <h2>About the 47th</h2>
+    <div class="about-content">
+      <p>The 47th Legion was founded in 2007 by a group of gamers seeking more than just a casual clan. We wanted structure, camaraderie, and a place where dedication was recognized and rewarded.</p>
+      <p>Over the years, we've fought in countless games, weathered roster changes, and built something that's lasted longer than most gaming communities ever do. Our Roman-inspired rank structure isn't just for show — it reflects our values of discipline, honor, and earned respect.</p>
+      <p>Whether you're a grizzled veteran or fresh recruit, if you value teamwork and want to be part of something bigger, the 47th might be your home.</p>
+    </div>
+  </section>
+
+  <!-- Join -->
+  <section class="join-section">
+    <h2>Ready to Enlist?</h2>
+    <p>Join our Discord server to meet the Legion and learn about recruitment.</p>
+    <a href="https://discord.gg/tQ7Bh79Dwm" class="btn btn-primary" target="_blank">Join Our Discord</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>47th Legion &bull; Est. MMVII &bull; <em>Forged in Battle, Bound by Honor</em></p>
+  </footer>
+
+  <script>
+    // Convert years to Roman numerals
+    function toRoman(num) {
+      const romanNumerals = [
+        ['M', 1000], ['CM', 900], ['D', 500], ['CD', 400],
+        ['C', 100], ['XC', 90], ['L', 50], ['XL', 40],
+        ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]
+      ];
+      let result = '';
+      for (const [letter, value] of romanNumerals) {
+        while (num >= value) {
+          result += letter;
+          num -= value;
+        }
+      }
+      return result;
+    }
+    
+    // Calculate years active dynamically
+    const founded = 2007;
+    const yearsActive = new Date().getFullYear() - founded;
+    document.getElementById('years-active').textContent = toRoman(yearsActive);
+    
+    // Fetch member count from roster data
+    fetch('data/roster.json')
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('member-count').textContent = data.members.length;
+      })
+      .catch(() => {
+        document.getElementById('member-count').textContent = '??';
+      });
+  </script>
+</body>
+</html>

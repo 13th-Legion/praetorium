@@ -1,0 +1,821 @@
+/* ============================================
+   47TH LEGION - CUSTOM DARK THEME
+   High-specificity overrides for Astra
+   ============================================ */
+
+/* === Root Variables === */
+:root {
+  --legion-bg-dark: #0a0a0f;
+  --legion-bg-darker: #06060a;
+  --legion-bg-card: #12121a;
+  --legion-border: #2a2a3a;
+  --legion-gold: #c9a227;
+  --legion-gold-bright: #d4af37;
+  --legion-text: #e8e6e3;
+  --legion-text-dim: #888;
+}
+
+/* === Global Background === */
+html,
+body,
+body.flavor-flavor,
+body.flavor-flavor.flavor-flavor,
+body.ast-separate-container,
+body.ast-plain-container,
+body.ast-page-builder-template,
+body.ast-full-width-container,
+body.legion-dark-theme {
+  background-color: #0a0a0f !important;
+  background: #0a0a0f !important;
+}
+
+/* === Site Containers === */
+.site,
+#page,
+.site-content,
+#content,
+.content-area,
+.ast-container,
+.ast-separate-container .ast-article-post,
+.ast-separate-container .ast-article-single,
+.ast-separate-container.ast-right-sidebar #primary,
+.ast-separate-container.ast-left-sidebar #primary,
+.ast-plain-container .site-content > .ast-container {
+  background: #0a0a0f !important;
+  background-color: #0a0a0f !important;
+}
+
+/* === Typography === */
+body,
+body.legion-dark-theme,
+p,
+.entry-content,
+.entry-content p,
+.page-content,
+.page-content p,
+.ast-article-post .entry-content,
+.ast-article-single .entry-content {
+  color: #e8e6e3 !important;
+  font-family: 'Crimson Text', Georgia, serif !important;
+}
+
+h1, h2, h3, h4, h5, h6,
+.entry-title,
+.page-title,
+.ast-archive-title,
+.site-title,
+h1.entry-title,
+h2.entry-title,
+.ast-article-post .entry-title,
+.ast-article-single .entry-title {
+  color: #c9a227 !important;
+  font-family: 'Cinzel', 'Times New Roman', serif !important;
+  font-weight: 600 !important;
+}
+
+a,
+.entry-content a,
+.page-content a {
+  color: #c9a227 !important;
+}
+
+a:hover,
+a:focus,
+.entry-content a:hover,
+.page-content a:hover {
+  color: #d4af37 !important;
+}
+
+strong, b,
+.entry-content strong,
+.entry-content b {
+  color: #c9a227 !important;
+}
+
+/* === Header === */
+.site-header,
+#masthead,
+header.site-header,
+.main-header-bar,
+.ast-primary-header,
+.ast-main-header-wrap,
+.ast-header-break-point .site-header,
+.ast-header-break-point .main-header-bar {
+  background: #06060a !important;
+  background-color: #06060a !important;
+  border-bottom: 1px solid #2a2a3a !important;
+}
+
+.site-title a,
+.site-title,
+.ast-site-identity .site-title a {
+  color: #c9a227 !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+}
+
+.site-description {
+  color: #888 !important;
+}
+
+/* === Navigation === */
+.main-navigation a,
+.ast-nav-menu a,
+.menu-link,
+.main-header-menu a,
+.ast-header-break-point .main-header-menu a {
+  color: #e8e6e3 !important;
+  font-family: 'Cinzel', serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-size: 0.85rem !important;
+}
+
+.main-navigation a:hover,
+.ast-nav-menu a:hover,
+.menu-link:hover,
+.current-menu-item > a,
+.current-menu-item > .menu-link {
+  color: #c9a227 !important;
+}
+
+/* Mobile Menu Toggle */
+.ast-mobile-menu-buttons .menu-toggle,
+.ast-header-break-point .ast-mobile-menu-buttons .menu-toggle {
+  color: #c9a227 !important;
+}
+
+.ast-mobile-popup-drawer .ast-mobile-popup-inner,
+.ast-mobile-header-wrap .ast-mobile-header-content {
+  background: #06060a !important;
+}
+
+/* === Main Content === */
+.ast-separate-container .ast-article-post,
+.ast-separate-container .ast-article-single,
+.ast-separate-container .ast-author-box,
+.ast-separate-container .comments-area,
+article.post,
+article.page {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 2rem !important;
+  margin-bottom: 2rem !important;
+}
+
+/* Page with no sidebar (full width) */
+.ast-plain-container .ast-article-post,
+.ast-plain-container .ast-article-single {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* === Sidebar === */
+.sidebar .widget,
+#secondary .widget,
+.widget-area .widget {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+}
+
+.widget-title,
+.widget .widget-title {
+  color: #c9a227 !important;
+  border-bottom: 2px solid #c9a227 !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.widget ul li {
+  border-bottom: 1px solid #2a2a3a !important;
+}
+
+.widget ul li a {
+  color: #e8e6e3 !important;
+}
+
+.widget ul li a:hover {
+  color: #c9a227 !important;
+}
+
+/* === Buttons === */
+.button,
+.ast-button,
+button,
+input[type="submit"],
+input[type="button"],
+.wp-block-button__link,
+a.button,
+a.wp-block-button__link,
+.elementor-button,
+.menu-toggle {
+  background: linear-gradient(135deg, #c9a227 0%, #a08020 100%) !important;
+  color: #0a0a0f !important;
+  border: none !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  border-radius: 4px !important;
+  padding: 0.75rem 2rem !important;
+}
+
+.button:hover,
+.ast-button:hover,
+button:hover,
+input[type="submit"]:hover,
+.wp-block-button__link:hover {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%) !important;
+  color: #0a0a0f !important;
+}
+
+/* Outline buttons */
+.wp-block-button.is-style-outline .wp-block-button__link {
+  background: transparent !important;
+  border: 2px solid #c9a227 !important;
+  color: #c9a227 !important;
+}
+
+.wp-block-button.is-style-outline .wp-block-button__link:hover {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+}
+
+/* === Forms === */
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select,
+.ast-search-menu-icon .search-field {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  color: #e8e6e3 !important;
+  border-radius: 4px !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #c9a227 !important;
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.2) !important;
+  outline: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #666 !important;
+}
+
+label {
+  color: #e8e6e3 !important;
+}
+
+/* === Tables === */
+table {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-collapse: collapse !important;
+}
+
+th {
+  background: #06060a !important;
+  color: #c9a227 !important;
+  font-family: 'Cinzel', serif !important;
+  border-bottom: 2px solid #c9a227 !important;
+}
+
+td {
+  border-bottom: 1px solid #2a2a3a !important;
+  color: #e8e6e3 !important;
+}
+
+tr:hover {
+  background: rgba(201, 162, 39, 0.05) !important;
+}
+
+/* === Footer === */
+.site-footer,
+#colophon,
+footer.site-footer,
+.ast-footer-overlay,
+.ast-small-footer,
+.ast-primary-footer,
+.ast-above-footer,
+.ast-below-footer {
+  background: #06060a !important;
+  background-color: #06060a !important;
+  border-top: 1px solid #2a2a3a !important;
+  color: #888 !important;
+}
+
+.site-footer a,
+.ast-footer-copyright a {
+  color: #c9a227 !important;
+}
+
+.site-info,
+.ast-footer-copyright,
+.copyright {
+  color: #666 !important;
+}
+
+/* === Comments === */
+.comments-area,
+.comment-respond {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 2rem !important;
+}
+
+.comment-author .fn {
+  color: #c9a227 !important;
+}
+
+.comment-metadata,
+.comment-metadata a {
+  color: #666 !important;
+}
+
+/* === Pagination === */
+.ast-pagination a,
+.ast-pagination span,
+.page-numbers {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  color: #e8e6e3 !important;
+}
+
+.ast-pagination a:hover,
+.page-numbers:hover,
+.ast-pagination .current,
+.page-numbers.current {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+  border-color: #c9a227 !important;
+}
+
+/* === Blockquote === */
+blockquote,
+.wp-block-quote {
+  background: #12121a !important;
+  border-left: 4px solid #c9a227 !important;
+  padding: 1.5rem 2rem !important;
+  color: #888 !important;
+}
+
+blockquote p {
+  color: #888 !important;
+}
+
+/* === HR/Separator === */
+hr,
+.wp-block-separator {
+  border-color: #c9a227 !important;
+  background: linear-gradient(90deg, transparent, #c9a227, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+/* === Selection === */
+::selection {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #06060a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c9a227;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  h1, .entry-title { font-size: 1.75rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  
+  .ast-separate-container .ast-article-post,
+  .ast-separate-container .ast-article-single,
+  article.post,
+  article.page {
+    padding: 1rem !important;
+  }
+}
+
+/* === HEADER & NAV FIXES === */
+
+/* Header container - flexbox layout */
+.main-header-bar,
+.ast-primary-header-bar,
+.site-header .ast-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Site branding - don't let it grow too much */
+.site-branding,
+.ast-site-identity {
+  flex-shrink: 0 !important;
+}
+
+/* Navigation - keep on one line */
+.main-header-menu,
+.ast-nav-menu,
+.main-navigation ul {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+/* Smaller nav items for more space */
+.main-navigation a,
+.ast-nav-menu a,
+.menu-link,
+.main-header-menu a,
+.main-header-menu > .menu-item > a {
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  white-space: nowrap !important;
+}
+
+/* On larger screens, slightly more padding */
+@media (min-width: 1200px) {
+  .main-navigation a,
+  .ast-nav-menu a,
+  .menu-link,
+  .main-header-menu a {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Prevent header from wrapping */
+.ast-primary-header,
+.main-header-bar-wrap {
+  overflow: visible !important;
+}
+
+/* Site Logo */
+.site-logo img,
+.custom-logo,
+.ast-site-identity img {
+  max-height: 60px !important;
+  width: auto !important;
+}
+
+.site-logo-img {
+  display: inline-block !important;
+}
+
+/* Logo + title side by side */
+.ast-site-identity {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+/* Make site title smaller if logo is present */
+.has-custom-logo .site-title {
+  font-size: 1.25rem !important;
+}
+
+/* === AGGRESSIVE NAV FIX === */
+
+/* Make header full width */
+.site-header,
+.main-header-bar,
+.ast-primary-header-bar {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.site-header .ast-container,
+.main-header-bar .ast-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0 2rem !important;
+}
+
+/* Smaller logo */
+.site-logo img,
+.custom-logo,
+.custom-logo-link img {
+  max-height: 80px !important;
+  width: auto !important;
+}
+
+/* Compact site title when logo present */
+.has-custom-logo .site-title,
+.ast-has-custom-logo .site-title {
+  font-size: 1.1rem !important;
+  letter-spacing: 1px !important;
+}
+
+/* Very compact nav items */
+.main-header-menu > li > a,
+.main-navigation > ul > li > a,
+.ast-nav-menu > li > a,
+.menu-item > .menu-link {
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Force nav to not wrap */
+.main-header-menu,
+.ast-nav-menu,
+#ast-hf-menu-1,
+.main-navigation > ul {
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+
+/* On larger screens */
+@media (min-width: 1400px) {
+  .main-header-menu > li > a,
+  .main-navigation > ul > li > a {
+    padding: 0.5rem 0.9rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+/* At wide breakpoint, show full nav */
+@media (min-width: 1600px) {
+  .main-header-menu > li > a,
+  .main-navigation > ul > li > a {
+    padding: 0.5rem 1.1rem !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* === HIDE SITE TITLE WHEN LOGO PRESENT === */
+/* The logo is enough - no need for redundant text */
+.has-custom-logo .site-title,
+.ast-has-custom-logo .site-title,
+body.flavor-flavor .site-title,
+.custom-logo-link + .site-title {
+  display: none !important;
+}
+
+/* Or if we want to show it, make it very small on desktop */
+@media (max-width: 1599px) {
+  .has-custom-logo .site-title,
+  .ast-has-custom-logo .site-title {
+    display: none !important;
+  }
+}
+
+/* Show title only on very large screens */
+@media (min-width: 1600px) {
+  .has-custom-logo .site-title,
+  .ast-has-custom-logo .site-title {
+    display: block !important;
+    font-size: 1rem !important;
+  }
+}
+
+/* === DIRECT TARGETING - Hide text title when logo is visible === */
+/* Target the site-title link that comes after the logo link */
+.site-branding .custom-logo-link + .site-title,
+.ast-site-identity .custom-logo-link + .site-title,
+.site-branding > a + a.site-title,
+.site-branding > .custom-logo-link ~ .site-title,
+a.site-logo-link + a,
+.ast-site-identity > a:nth-child(2) {
+  display: none !important;
+}
+
+/* If there's a logo img, hide sibling title links */
+.site-branding a[href] + a[href]:not(.custom-logo-link),
+.ast-site-identity a:has(img) ~ a:not(:has(img)) {
+  display: none !important;
+}
+
+/* Fallback: target site-title class directly */
+.site-title:not(:only-child),
+p.site-title,
+.site-title {
+  display: none !important;
+}
+
+/* Keep logo visible */
+.custom-logo-link,
+.site-logo-link,
+a:has(.custom-logo),
+a:has(img[alt*="Legion"]) {
+  display: inline-block !important;
+}
+
+/* Make sure logo is reasonable size */
+.custom-logo,
+.site-logo img,
+img.custom-logo {
+  max-height: 70px !important;
+  width: auto !important;
+}
+
+/* === FOOTER FIX - ALL FOOTER AREAS DARK === */
+.site-footer,
+#colophon,
+footer,
+footer.site-footer,
+.ast-footer-overlay,
+.ast-small-footer,
+.ast-small-footer-wrap,
+.ast-primary-footer,
+.ast-above-footer,
+.ast-above-footer-wrap,
+.ast-below-footer,
+.ast-footer-copyright,
+.ast-builder-footer-grid-columns,
+.ast-footer-html-inner,
+.site-below-footer-wrap,
+.site-above-footer-wrap,
+.ast-builder-grid-row,
+.ast-footer-row-inline,
+.site-primary-footer-wrap,
+footer *,
+.site-footer * {
+  background: #06060a !important;
+  background-color: #06060a !important;
+}
+
+/* Footer container */
+.site-footer .ast-container,
+footer .ast-container {
+  background: #06060a !important;
+}
+
+/* Footer text */
+.site-footer,
+.site-footer *,
+.ast-footer-copyright,
+.ast-small-footer .ast-footer-html-inner,
+.site-info {
+  color: #666 !important;
+}
+
+.site-footer a {
+  color: #c9a227 !important;
+}
+
+/* Remove any white borders/separators */
+.site-footer hr,
+.ast-footer-copyright {
+  border-color: #2a2a3a !important;
+}
+
+/* === NUCLEAR FOOTER FIX === */
+/* Target everything below main content */
+.site-footer,
+.site-footer *,
+.site-footer *::before,
+.site-footer *::after,
+footer.site-footer,
+footer.site-footer *,
+#colophon,
+#colophon *,
+.ast-small-footer,
+.ast-small-footer *,
+.ast-above-footer-wrap,
+.ast-above-footer-wrap *,
+.site-below-footer-wrap,
+.site-below-footer-wrap *,
+.ast-builder-footer-grid-columns,
+.ast-builder-footer-grid-columns *,
+.ast-footer-copyright,
+.ast-footer-html-inner,
+.ast-row,
+.ast-builder-grid-row {
+  background: #06060a !important;
+  background-color: #06060a !important;
+  border-color: #2a2a3a !important;
+}
+
+/* Hide any stray borders/lines in footer */
+.site-footer hr,
+.site-footer .ast-row::before,
+.site-footer .ast-row::after,
+.ast-above-footer-wrap hr,
+.ast-builder-footer-grid-columns::before,
+.ast-builder-footer-grid-columns::after {
+  background: transparent !important;
+  border-color: #2a2a3a !important;
+}
+
+/* Astra footer widget separator */
+.ast-small-footer .ast-container,
+.ast-small-footer-wrap .ast-container {
+  background: #06060a !important;
+  border-top-color: #2a2a3a !important;
+}
+
+/* Any remaining container */
+.ast-builder-footer-grid-columns .site-footer-section,
+.ast-builder-footer-grid-columns .footer-widget-area {
+  background: #06060a !important;
+}
+
+/* === CONTENT AREA BOTTOM BORDER FIX === */
+article,
+article.post,
+article.page,
+.ast-article-post,
+.ast-article-single,
+.ast-separate-container .ast-article-post,
+.ast-separate-container .ast-article-single,
+#primary,
+.content-area,
+main#main {
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+}
+
+/* Space between content and footer */
+.site-content {
+  padding-bottom: 2rem !important;
+  margin-bottom: 0 !important;
+}
+
+/* Footer top border - make it subtle gold instead of removing */
+.site-footer {
+  border-top: 1px solid #2a2a3a !important;
+  margin-top: 0 !important;
+}
+
+/* === GAME CARDS === */
+.game-cards .wp-block-column {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.game-cards .wp-block-column:hover {
+  border-color: #c9a227 !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+.game-cards .wp-block-image {
+  margin-bottom: 1rem !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+.game-cards .wp-block-image img {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  transition: transform 0.3s ease !important;
+}
+
+.game-cards .wp-block-image:hover img {
+  transform: scale(1.02) !important;
+}
+
+.game-cards h4 {
+  margin-top: 0 !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 1.2rem !important;
+}
+
+.game-cards h4 a {
+  color: #c9a227 !important;
+  text-decoration: none !important;
+}
+
+.game-cards h4 a:hover {
+  color: #d4af37 !important;
+}
+
+.game-cards p {
+  color: #888 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+  margin-bottom: 0 !important;
+}

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>47th Legion - Awards Admin</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="assets/css/47th-theme.css">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-hover: #1a1a25;
+      --gold: #d4af37;
+      --gold-dim: #a08020;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --border: #2a2a35;
+      --success: #22c55e;
+      --danger: #ef4444;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    h1 {
+      color: var(--gold);
+      margin-bottom: 2rem;
+    }
+    
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .panel h2 {
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      color: var(--gold);
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-dim);
+    }
+    
+    select, input {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    
+    button {
+      padding: 0.75rem 1.5rem;
+      background: var(--gold-dim);
+      border: none;
+      border-radius: 4px;
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: var(--gold);
+    }
+    
+    button.danger {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .ribbon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+    
+    .ribbon-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .ribbon-option:hover {
+      border-color: var(--gold);
+    }
+    
+    .ribbon-option.selected {
+      border-color: var(--gold);
+      background: var(--bg-hover);
+    }
+    
+    .ribbon-option img {
+      width: 32px;
+      height: 12px;
+    }
+    
+    .ribbon-option span {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    
+    .current-awards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .award-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--bg-dark);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .award-badge img {
+      width: 32px;
+      height: 12px;
+    }
+    
+    .award-badge .remove {
+      color: var(--danger);
+      cursor: pointer;
+      margin-left: 0.25rem;
+    }
+    
+    .message {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    
+    .message.success {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid var(--success);
+    }
+    
+    .message.error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--danger);
+    }
+    
+    .export-box {
+      background: var(--bg-dark);
+      padding: 1rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow: auto;
+      white-space: pre;
+    }
+    
+    a {
+      color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+  <!-- Site Navigation -->
+  <nav class="nav">
+    <ul class="nav-list">
+      <li><a href="index.html" class="nav-link">Home</a></li>
+      <li><a href="roster.html" class="nav-link">Roster</a></li>
+      <li><a href="https://discord.gg/tQ7Bh79Dwm" class="nav-link" target="_blank">Discord</a></li>
+      <li><a href="admin.html" class="nav-link active">Admin</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h1>47th Legion - Awards Admin</h1>
+    
+    <div id="message"></div>
+    
+    <div class="panel">
+      <h2>Assign Award</h2>
+      
+      <div class="form-group">
+        <label>Select Member</label>
+        <select id="member-select">
+          <option value="">-- Select a member --</option>
+        </select>
+      </div>
+      
+      <div id="current-awards-container" style="display: none;">
+        <label>Current Awards</label>
+        <div class="current-awards" id="current-awards"></div>
+      </div>
+      
+      <div class="form-group" style="margin-top: 1rem;">
+        <label>Select Award to Add</label>
+        <div class="ribbon-grid" id="ribbon-grid"></div>
+      </div>
+      
+      <button onclick="addAward()">Add Selected Award</button>
+    </div>
+    
+    <div class="panel">
+      <h2>Export Awards Data</h2>
+      <p style="margin-bottom: 1rem; color: var(--text-dim);">
+        Copy this JSON and save it to <code>data/awards.json</code>, then run <code>node build-roster.js</code>
+      </p>
+      <div class="export-box" id="export-box">{}</div>
+      <button onclick="copyExport()" style="margin-top: 1rem">Copy to Clipboard</button>
+      <button onclick="downloadExport()" style="margin-left: 0.5rem">Download JSON</button>
+    </div>
+  </div>
+
+  <script>
+    // Available ribbons
+    const RIBBONS = [
+      'achievement', 'armillae', 'army_occupation', 'commendation',
+      'corona_aurea', 'corona_civica', 'corona_muralis', 'corona_obsidionalis',
+      'corona_vallaris', 'defense', 'defiance', 'division', 'division2',
+      'earthrise', 'elder_scrolls', 'empyrion', 'fallen_earth', 'firefall',
+      'global_agenda', 'good_conduct', 'humane_action', 'joint_operations',
+      'joint_training', 'medal', 'mng_2014', 'MWO', 'nco_development',
+      'organizational_excellence', 'planetside2', 'prisoner', 'recruiter',
+      'repopulation', 'service', 'star_citizen', 'sto', 'swtor',
+      'tabula_rasa', 'torques', 'wounded'
+    ];
+    
+    let roster = null;
+    let awards = {};
+    let selectedMember = null;
+    let selectedRibbon = null;
+    
+    async function init() {
+      // Load roster
+      const resp = await fetch('data/roster.json');
+      roster = await resp.json();
+      
+      // Try to load existing awards
+      try {
+        const awardsResp = await fetch('data/awards.json');
+        awards = await awardsResp.json();
+      } catch (e) {
+        awards = {};
+      }
+      
+      // Populate member dropdown
+      const select = document.getElementById('member-select');
+      for (const member of roster.members) {
+        const opt = document.createElement('option');
+        opt.value = member.id;
+        opt.textContent = `${member.displayName} (${member.rank.code})`;
+        select.appendChild(opt);
+      }
+      
+      // Populate ribbon grid
+      const grid = document.getElementById('ribbon-grid');
+      for (const ribbon of RIBBONS) {
+        const div = document.createElement('div');
+        div.className = 'ribbon-option';
+        div.dataset.ribbon = ribbon;
+        div.innerHTML = `
+          <img src="assets/ribbons/${ribbon}.png" alt="${ribbon}">
+          <span>${ribbon.replace(/_/g, ' ')}</span>
+        `;
+        div.onclick = () => selectRibbon(ribbon);
+        grid.appendChild(div);
+      }
+      
+      updateExport();
+    }
+    
+    function selectRibbon(ribbon) {
+      selectedRibbon = ribbon;
+      document.querySelectorAll('.ribbon-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.ribbon === ribbon);
+      });
+    }
+    
+    document.getElementById('member-select').addEventListener('change', (e) => {
+      selectedMember = e.target.value;
+      if (selectedMember) {
+        updateCurrentAwards();
+        document.getElementById('current-awards-container').style.display = 'block';
+      } else {
+        document.getElementById('current-awards-container').style.display = 'none';
+      }
+    });
+    
+    function updateCurrentAwards() {
+      const container = document.getElementById('current-awards');
+      const memberAwards = awards[selectedMember] || [];
+      
+      if (memberAwards.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-dim)">No awards</span>';
+        return;
+      }
+      
+      container.innerHTML = memberAwards.map(a => `
+        <div class="award-badge">
+          <img src="assets/ribbons/${a}.png" alt="${a}">
+          <span>${a.replace(/_/g, ' ')}</span>
+          <span class="remove" onclick="removeAward('${a}')">&times;</span>
+        </div>
+      `).join('');
+    }
+    
+    function addAward() {
+      if (!selectedMember) {
+        showMessage('Please select a member', 'error');
+        return;
+      }
+      if (!selectedRibbon) {
+        showMessage('Please select an award', 'error');
+        return;
+      }
+      
+      if (!awards[selectedMember]) {
+        awards[selectedMember] = [];
+      }
+      
+      if (awards[selectedMember].includes(selectedRibbon)) {
+        showMessage('Member already has this award', 'error');
+        return;
+      }
+      
+      awards[selectedMember].push(selectedRibbon);
+      updateCurrentAwards();
+      updateExport();
+      showMessage(`Added ${selectedRibbon.replace(/_/g, ' ')} award`, 'success');
+    }
+    
+    function removeAward(ribbon) {
+      if (!selectedMember || !awards[selectedMember]) return;
+      
+      awards[selectedMember] = awards[selectedMember].filter(a => a !== ribbon);
+      if (awards[selectedMember].length === 0) {
+        delete awards[selectedMember];
+      }
+      
+      updateCurrentAwards();
+      updateExport();
+      showMessage(`Removed ${ribbon.replace(/_/g, ' ')} award`, 'success');
+    }
+    
+    function updateExport() {
+      document.getElementById('export-box').textContent = JSON.stringify(awards, null, 2);
+    }
+    
+    function copyExport() {
+      navigator.clipboard.writeText(JSON.stringify(awards, null, 2));
+      showMessage('Copied to clipboard!', 'success');
+    }
+    
+    function downloadExport() {
+      const blob = new Blob([JSON.stringify(awards, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'awards.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    function showMessage(text, type) {
+      const el = document.getElementById('message');
+      el.className = `message ${type}`;
+      el.textContent = text;
+      setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+    }
+    
+    init();
+  </script>
+</body>
+</html>

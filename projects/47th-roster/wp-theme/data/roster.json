@@ -1,0 +1,3129 @@
+{
+  "generated": "2026-01-31T00:16:31.148Z",
+  "guildId": "179481732217569280",
+  "guildName": "47th Legion ComNet",
+  "members": [
+    {
+      "id": "179481162710908928",
+      "username": "cavadus",
+      "displayName": "Cavadus",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/179481162710908928/930419e624f5726ace28f07b72a709fe.png",
+      "joinedAt": "2016-05-10T06:36:19.893000+00:00",
+      "historicalJoinDate": "2007-12-04T05:56:00.000Z",
+      "yearsOfService": 18,
+      "daysInService": 3552,
+      "rank": {
+        "code": "O4",
+        "name": "Centurion",
+        "category": "Officers"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76",
+        "Elder Scrolls Online",
+        "Aliens: Fireteam Elite"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea",
+        "nco_development",
+        "organizational_excellence",
+        "defense",
+        "elder_scrolls",
+        "colonial_marines",
+        "joint_operations",
+        "joint_training",
+        "recruiter",
+        "helldivers",
+        "swg",
+        "fallout76",
+        "MWO",
+        "star_citizen"
+      ],
+      "isAgent": true,
+      "forumUsername": "Cavadus",
+      "forumPosts": 3651
+    },
+    {
+      "id": "242836923394162688",
+      "username": "kolyasucks",
+      "displayName": "Kolya",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/242836923394162688/b88a99818e8b7a2fe400da67a015c7ed.png",
+      "joinedAt": "2017-02-16T02:57:42.120000+00:00",
+      "historicalJoinDate": "2008-01-16T01:18:00.000Z",
+      "yearsOfService": 18,
+      "daysInService": 3270,
+      "rank": {
+        "code": "O3",
+        "name": "Optio",
+        "category": "Officers"
+      },
+      "games": [
+        "Aliens: Fireteam Elite"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea",
+        "nco_development",
+        "organizational_excellence",
+        "colonial_marines",
+        "recruiter"
+      ],
+      "isAgent": true,
+      "forumUsername": "Kolya",
+      "forumPosts": 734
+    },
+    {
+      "id": "180332042720903168",
+      "username": "odin331",
+      "displayName": "Odin",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180332042720903168/1387899e6bf3362be86a3128cd59cfd2.png",
+      "joinedAt": "2016-06-12T22:32:39.851000+00:00",
+      "historicalJoinDate": "2013-08-08T15:03:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3519,
+      "rank": {
+        "code": "O2",
+        "name": "Tesserarian",
+        "category": "Officers"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76",
+        "Star Wars: Galaxies",
+        "Aliens: Fireteam Elite",
+        "MechWarrior Online"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "nco_development",
+        "organizational_excellence",
+        "defense",
+        "swtor",
+        "colonial_marines",
+        "MWO",
+        "joint_training",
+        "recruiter",
+        "helldivers",
+        "fallout76",
+        "swg"
+      ],
+      "isAgent": true,
+      "forumUsername": "Odin",
+      "forumPosts": 4
+    },
+    {
+      "id": "917992606892429443",
+      "username": "dragonsoul47",
+      "displayName": "Dragonsoul",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/917992606892429443/7cf897f99ce39b031692e651c697a4af.png",
+      "joinedAt": "2022-08-22T23:23:22.562000+00:00",
+      "historicalJoinDate": "2013-06-18T18:31:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 1257,
+      "rank": {
+        "code": "O1",
+        "name": "Vexillarian",
+        "category": "Officers"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "nco_development",
+        "organizational_excellence",
+        "defense",
+        "swtor",
+        "joint_training",
+        "helldivers",
+        "fallout76",
+        "swg"
+      ],
+      "isAgent": false,
+      "forumUsername": "Dragonsoul",
+      "forumPosts": 46
+    },
+    {
+      "id": "180127552126320640",
+      "username": "marethlightfoot",
+      "displayName": "Lightfoot",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180127552126320640/114bd0ca999afceb23477ec39e94866e.png",
+      "joinedAt": "2016-05-12T01:24:20.407000+00:00",
+      "historicalJoinDate": "2013-05-07T18:02:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3550,
+      "rank": {
+        "code": "E8",
+        "name": "Signifier",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2",
+        "Elder Scrolls Online",
+        "Star Wars: Galaxies",
+        "Aliens: Fireteam Elite"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "nco_development",
+        "organizational_excellence",
+        "defense",
+        "elder_scrolls",
+        "swtor",
+        "colonial_marines",
+        "joint_operations",
+        "joint_training",
+        "recruiter",
+        "helldivers",
+        "swg"
+      ],
+      "isAgent": true,
+      "forumUsername": "Lightfoot",
+      "forumPosts": 41
+    },
+    {
+      "id": "179849584124624897",
+      "username": "paytoncda",
+      "displayName": "Payton",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/179849584124624897/af93603a6177ca0c855f9dde1817cef0.png",
+      "joinedAt": "2017-11-04T23:26:44.753000+00:00",
+      "historicalJoinDate": "2008-12-30T05:15:00.000Z",
+      "yearsOfService": 17,
+      "daysInService": 3009,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Fallout 76",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea",
+        "nco_development",
+        "swtor",
+        "fallout76",
+        "swg"
+      ],
+      "isAgent": false,
+      "forumUsername": "Payton",
+      "forumPosts": 430
+    },
+    {
+      "id": "169887739406319618",
+      "username": "redcatmaximus",
+      "displayName": "Maximus",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/169887739406319618/185c8422afab60cf8ed751e273a597fa.png",
+      "joinedAt": "2016-05-12T16:49:40.187000+00:00",
+      "historicalJoinDate": "2013-05-07T10:42:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3550,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "nco_development",
+        "joint_operations",
+        "recruiter"
+      ],
+      "isAgent": true,
+      "forumUsername": "Maximus",
+      "forumPosts": 35
+    },
+    {
+      "id": "180087410619711488",
+      "username": "bealin",
+      "displayName": "Bealin",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180087410619711488/1685fe660022fd481f95ba1269f11164.png",
+      "joinedAt": "2016-05-11T22:43:04.569000+00:00",
+      "historicalJoinDate": "2013-07-18T01:36:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3551,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "nco_development",
+        "recruiter",
+        "fallout76"
+      ],
+      "isAgent": true,
+      "forumUsername": "Bealin",
+      "forumPosts": 34
+    },
+    {
+      "id": "1245124464082026573",
+      "username": "snowmanha_",
+      "displayName": "snowmanha",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1245124464082026573/f58651a3cddd7a9d27afbf069420093f.png",
+      "joinedAt": "2024-05-28T21:24:19.055000+00:00",
+      "historicalJoinDate": "2017-06-01T00:00:00.000Z",
+      "yearsOfService": 8,
+      "daysInService": 3166,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "nco_development"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1107472302280540300",
+      "username": "glyndo",
+      "displayName": "Glyndo",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1107472302280540300/cb81cc46c020cf86da1a10b27e7eb53f.png",
+      "joinedAt": "2023-06-28T23:50:33.315000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 947,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "nco_development",
+        "swtor",
+        "joint_operations",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "289659617300971520",
+      "username": "dudebro69",
+      "displayName": "Archer",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/289659617300971520/1fcee69f80ae3370fec1b47056ac9563.png",
+      "joinedAt": "2025-05-31T01:56:26.018000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 244,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "nco_development"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "322625015453450241",
+      "username": "buckshot9371cst",
+      "displayName": "Buckshotz93",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/322625015453450241/cbe9507cc6d2921ed63d0b784801c441.png",
+      "joinedAt": "2025-05-30T23:15:41.819000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 245,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "nco_development",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "184043575405707264",
+      "username": "anchoredtyke",
+      "displayName": "Rala",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/184043575405707264/d34916f25e7c56f42af8fed6bfb2afe0.png",
+      "joinedAt": "2016-08-02T00:07:31.571000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3469,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "defense",
+        "swtor",
+        "joint_training",
+        "recruiter",
+        "helldivers",
+        "swg"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "218966657152974858",
+      "username": "thescruffythejanitor",
+      "displayName": "Scruffy_The_Janitor",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/218966657152974858/a_22c457102820e33a808a5bd0e3fdd663.png",
+      "joinedAt": "2016-08-27T05:35:19.524000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3443,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter",
+        "fallout76"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "435102463906021378",
+      "username": "tsarg",
+      "displayName": "Tsarg",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/435102463906021378/263809554e409af63fbd1254194c97b3.png",
+      "joinedAt": "2018-04-20T16:06:18.389000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 7,
+      "daysInService": 2842,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies",
+        "MechWarrior Online"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "swtor",
+        "MWO",
+        "joint_training",
+        "recruiter",
+        "swg"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "133067967436029953",
+      "username": "stormshatow",
+      "displayName": "stormshatow",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/133067967436029953/a80e837692193f1817dba50fdd2c56eb.png",
+      "joinedAt": "2021-05-20T06:15:31.551000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1716,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "151912435224150016",
+      "username": "keylimechicago",
+      "displayName": "Grandfather",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/151912435224150016/cba3ad5d34e1ef451dee0e461bfa1997.png",
+      "joinedAt": "2024-01-16T16:44:13.307000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 745,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "240676830581882895",
+      "username": "mysticdreamer76",
+      "displayName": "Mysticdreamer76",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/240676830581882895/5c0768d95727be0a8c1e2a69e7900682.png",
+      "joinedAt": "2024-01-11T23:13:49.642000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 750,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "314767470302855170",
+      "username": "askorno",
+      "displayName": "Askorno (Zethra'Thal)",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/314767470302855170/5bdc1739a8b8516efe971ad3df7b1772.png",
+      "joinedAt": "2024-01-29T16:30:01.845000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 732,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "363904587306106882",
+      "username": "poidisb",
+      "displayName": "Poidisb - Belief/Sinar/Haspepim",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/363904587306106882/dac49518446a39b2c9a0f668fb0631e6.png",
+      "joinedAt": "2023-10-13T22:37:12.515000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 840,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "418499778507440128",
+      "username": "_._.dread._._",
+      "displayName": "Method",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/418499778507440128/664bfeec0774d1b1dd68080ad9ca121a.png",
+      "joinedAt": "2023-12-25T21:23:50.495000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 767,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "630491281352687616",
+      "username": "awwna71",
+      "displayName": "Awwna71",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/630491281352687616/ea3a57bf5761d07ef8bd258ded101f91.png",
+      "joinedAt": "2023-11-15T23:51:46.641000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 807,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "97101653123014656",
+      "username": "orrix",
+      "displayName": "Orrix",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/97101653123014656/4a2a21af40d7932d8c1218238dd900c7.png",
+      "joinedAt": "2024-02-05T02:28:42.530000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 725,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "swtor",
+        "helldivers",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "301521266945556480",
+      "username": "xblock.",
+      "displayName": "Dicknuts",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/301521266945556480/6cbaf0778ead2d821b1cc003ef305019.png",
+      "joinedAt": "2024-02-26T20:27:47.903000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 704,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "joint_operations",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "315599784226324480",
+      "username": "rubntugnotongue",
+      "displayName": "RubNtugNoTongue",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/315599784226324480/df90262e8fbc274c03482000ac27e747.png",
+      "joinedAt": "2024-02-22T23:12:32.640000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 708,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "388166303288000522",
+      "username": "tansoner",
+      "displayName": "Tansoner",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/388166303288000522/78d408f361a31c820d77b8f5c0035a65.png",
+      "joinedAt": "2025-01-21T02:22:29.809000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 374,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1036760692650418236",
+      "username": "steelitalian",
+      "displayName": "Paul Cilia",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1036760692650418236/de4bdc78331d176d67d9cdd6160bbc6e.png",
+      "joinedAt": "2024-07-23T23:03:20.540000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 556,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "MechWarrior Online"
+      ],
+      "awards": [
+        "service",
+        "MWO"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1288487982021607444",
+      "username": "fairchild_f",
+      "displayName": "Fairchild_F",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1288487982021607444/d8a74c421311ce54389439fb19899913.png",
+      "joinedAt": "2025-01-21T15:21:47.585000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 374,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "133186449142054912",
+      "username": "tungurahua",
+      "displayName": "Tung",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/133186449142054912/2fa969c9f307c731160cf9ccd3024238.png",
+      "joinedAt": "2025-07-15T23:55:01.307000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 199,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "142463934052433920",
+      "username": "luckylance",
+      "displayName": "luckylance",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/142463934052433920/e7a48b34a7e266f70f2cd7707dbfcf0f.png",
+      "joinedAt": "2025-05-31T21:41:09.356000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 244,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Aliens: Fireteam Elite"
+      ],
+      "awards": [
+        "service",
+        "colonial_marines"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "180127917546668032",
+      "username": "jplewis",
+      "displayName": "JPLewis316",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180127917546668032/df8c59037fa8717fff0905ce2e3c34fa.png",
+      "joinedAt": "2025-07-10T15:34:20.481000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 204,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "186307383708876800",
+      "username": "powerbeardx",
+      "displayName": "powerbeardx",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/186307383708876800/f94bc09a68250a6a7b86c97b3561e6a9.png",
+      "joinedAt": "2025-04-21T15:42:46.720000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 284,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "228287390739857408",
+      "username": ".zhaku",
+      "displayName": "Zhaku",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/228287390739857408/9155352169c2dd1a36e054befdf2a0c6.png",
+      "joinedAt": "2025-07-06T05:09:26.538000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 208,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "235057656883183627",
+      "username": "likeaboss00",
+      "displayName": "LikeABoss00",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/235057656883183627/52b6f8b8eb6c8a267fe5bf339c3957ac.png",
+      "joinedAt": "2025-07-29T04:08:46.827000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 185,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "294836601341739009",
+      "username": "bushwookieactual",
+      "displayName": "BeallYouCanBe",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/294836601341739009/a_b88f6dcb6ca3aa52afc852b482f2e360.png",
+      "joinedAt": "2025-08-28T00:22:00.296000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 155,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Elder Scrolls Online"
+      ],
+      "awards": [
+        "service",
+        "elder_scrolls",
+        "joint_operations",
+        "joint_training",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "304079074698199040",
+      "username": "cowboy1878",
+      "displayName": "cowboy1878",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/304079074698199040/d4b38990460f80714463948324b6c10d.png",
+      "joinedAt": "2025-07-19T04:34:21.480000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 195,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "332281986880110592",
+      "username": "nodak1",
+      "displayName": "Keziah",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/332281986880110592/28b0c13811d7a6b8845e0dfa349c7af6.png",
+      "joinedAt": "2025-07-22T05:04:31.256000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 192,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "468584563040583750",
+      "username": "shin01184",
+      "displayName": "Shintoryu1",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/468584563040583750/8eb4c36cef52668b2aeb30f99968e474.png",
+      "joinedAt": "2025-09-03T19:24:15.698000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 149,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "joint_operations"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "804935914820337675",
+      "username": "bushwookietwo",
+      "displayName": "BushWookieTwo",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/804935914820337675/cdde4128ce40a72b94e384abc5bf537d.png",
+      "joinedAt": "2025-08-30T01:43:30.704000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 153,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "820724167842201621",
+      "username": "knuck135",
+      "displayName": "KNUCK135",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/820724167842201621/8142cb360bf593c2399223373851c5d4.png",
+      "joinedAt": "2025-05-13T23:59:56.335000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 262,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1240851519797067870",
+      "username": "47._s",
+      "displayName": "47._s",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1240851519797067870/de02f77f01fc00758b059a4956e14aff.png",
+      "joinedAt": "2025-07-07T02:27:32.811000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 207,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "fallout76"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "259802009820069889",
+      "username": "ravenwing199",
+      "displayName": "RavenWing",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/259802009820069889/a_8eb2cfcccf4e8c8ddccbd1609e93cabd.png",
+      "joinedAt": "2026-01-28T01:05:03.599000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 2,
+      "rank": {
+        "code": "E1",
+        "name": "Tiron",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Aliens: Fireteam Elite"
+      ],
+      "awards": [
+        "service",
+        "colonial_marines"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "116001859822419977",
+      "username": "0x19",
+      "displayName": "0x19",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/116001859822419977/aa25b5fc06f1071a21f87b3f8e177a13.png",
+      "joinedAt": "2020-03-11T20:37:40.731000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2151,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "118207425818918916",
+      "username": "dinlek",
+      "displayName": "Dinlek",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/118207425818918916/d119c0f05dec8fd24705b980efb992dc.png",
+      "joinedAt": "2021-06-28T02:51:49.641000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1677,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "126731780106616832",
+      "username": "flowvector",
+      "displayName": "Flux-Vector",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/126731780106616832/d4b287574fe1838dc534fb86b5ad429a.png",
+      "joinedAt": "2023-03-15T02:27:59.761000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 1052,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "133064214016163840",
+      "username": "fidesangel",
+      "displayName": "FidesAngel",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/133064214016163840/76d32583b1eb36baca5f2daa100c8f86.png",
+      "joinedAt": "2020-04-27T16:27:56.189000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2104,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "fallout76"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "141289033245392896",
+      "username": "cjungels",
+      "displayName": "Jungels",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/141289033245392896/b1750705a512554a4a50243cc6fa7f66.png",
+      "joinedAt": "2016-05-19T22:16:28.704000+00:00",
+      "historicalJoinDate": "2013-02-07T02:49:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3543,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "recruiter"
+      ],
+      "isAgent": true,
+      "forumUsername": "Jungels",
+      "forumPosts": 255
+    },
+    {
+      "id": "143984311534616576",
+      "username": "goddeloosbjos0505",
+      "displayName": "Goddeloos / Bjos",
+      "avatarUrl": null,
+      "joinedAt": "2016-05-31T01:55:31.013000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3531,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "147964646286950400",
+      "username": "lyv",
+      "displayName": "Lyvion/Nyvious/Vabax",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/147964646286950400/a_9fd3073ff404062596f38515f7fcf7cd.png",
+      "joinedAt": "2023-12-01T23:36:22.291000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 791,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "defense",
+        "swtor",
+        "helldivers",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "151814353354489856",
+      "username": "hayotsha5909",
+      "displayName": "Lodowar",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/151814353354489856/c8896793e8e9ac80207a0d5b64444393.png",
+      "joinedAt": "2017-06-08T02:17:50.129000+00:00",
+      "historicalJoinDate": "2013-07-05T16:48:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3158,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Lodowar",
+      "forumPosts": 1
+    },
+    {
+      "id": "154670147850731522",
+      "username": "cabledx",
+      "displayName": "cabledx",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/154670147850731522/441eb6cb7dbea00a8f9b93355fc00021.png",
+      "joinedAt": "2016-05-12T07:06:00.738000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3550,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "157228969446342666",
+      "username": "_nightbolt",
+      "displayName": "Bonetti",
+      "avatarUrl": null,
+      "joinedAt": "2016-05-12T02:34:20.864000+00:00",
+      "historicalJoinDate": "2013-03-12T05:12:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3550,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Bonetti",
+      "forumPosts": 30
+    },
+    {
+      "id": "164427970482667520",
+      "username": "sekkuar201",
+      "displayName": "sekkuar",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/164427970482667520/370552e733ff4e0fc778d52d3dcab956.png",
+      "joinedAt": "2016-05-12T07:06:20.167000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3550,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Elder Scrolls Online",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "elder_scrolls",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "169496925748461568",
+      "username": "helcon1405",
+      "displayName": "Helcon",
+      "avatarUrl": null,
+      "joinedAt": "2016-08-19T05:31:19.539000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3451,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "173679004883091457",
+      "username": "dralzen",
+      "displayName": "Dralzen",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/173679004883091457/b628415ba354a76a91d16515146c97c8.png",
+      "joinedAt": "2016-05-10T22:27:24.757000+00:00",
+      "historicalJoinDate": "2013-05-18T20:58:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3552,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Dralzen",
+      "forumPosts": 13
+    },
+    {
+      "id": "174947029150203904",
+      "username": "ubersaints",
+      "displayName": "Longfellow",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/174947029150203904/be20aa16e6fdf21e76adc309f4ae311d.png",
+      "joinedAt": "2016-05-11T21:20:01.695000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3551,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "defense",
+        "recruiter",
+        "helldivers",
+        "fallout76"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "179782530264727552",
+      "username": "_balaso",
+      "displayName": "Destroy",
+      "avatarUrl": null,
+      "joinedAt": "2021-05-14T15:10:17.184000+00:00",
+      "historicalJoinDate": "2011-02-05T00:04:00.000Z",
+      "yearsOfService": 14,
+      "daysInService": 1722,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Elder Scrolls Online",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "elder_scrolls",
+        "swtor",
+        "joint_operations",
+        "joint_training",
+        "recruiter",
+        "swg"
+      ],
+      "isAgent": true,
+      "forumUsername": "Destroy",
+      "forumPosts": 165
+    },
+    {
+      "id": "180125977429540865",
+      "username": "campbell42",
+      "displayName": "Campbell",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180125977429540865/64d85a53f83fad01be5f5918a3818785.png",
+      "joinedAt": "2016-05-12T01:16:19.718000+00:00",
+      "historicalJoinDate": "2008-01-27T17:13:00.000Z",
+      "yearsOfService": 18,
+      "daysInService": 3550,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea"
+      ],
+      "isAgent": false,
+      "forumUsername": "Campbell",
+      "forumPosts": 886
+    },
+    {
+      "id": "180675714855600129",
+      "username": "vande36",
+      "displayName": "Vande",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180675714855600129/4ac10b7f495a189e82c6b4f61822cda3.png",
+      "joinedAt": "2020-07-04T17:17:20.400000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2036,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "180846037315878913",
+      "username": "regretfulobjectsyrusan",
+      "displayName": "Regretfulobject/Syrusan",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/180846037315878913/a416a9bc146f6c840c2f92b541418b50.png",
+      "joinedAt": "2016-05-14T16:41:14.192000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3548,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "181570862770552842",
+      "username": "stynker8437",
+      "displayName": "Stynker",
+      "avatarUrl": null,
+      "joinedAt": "2016-12-28T04:43:20.610000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3320,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "183274731825266688",
+      "username": "bikerb123356",
+      "displayName": "bikerb12",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/183274731825266688/381d5bf0c099a795eb7ea6d970e0a4f0.png",
+      "joinedAt": "2020-07-26T03:32:44.507000+00:00",
+      "historicalJoinDate": "2013-06-30T01:00:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 2014,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Bikerb12",
+      "forumPosts": 10
+    },
+    {
+      "id": "187695869171204097",
+      "username": "gambiop",
+      "displayName": "GambiOP",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/187695869171204097/0396591501ab8b158f85a91e324cae16.png",
+      "joinedAt": "2020-04-16T06:35:16.609000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2115,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "191035185205215243",
+      "username": "shogun5420",
+      "displayName": "ShoGun",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/191035185205215243/101340874c3e439864c53c9f69d40bcd.png",
+      "joinedAt": "2016-06-11T03:45:37.499000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3520,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "207286447907143680",
+      "username": "rathner4977",
+      "displayName": "Rathner",
+      "avatarUrl": null,
+      "joinedAt": "2016-08-23T01:34:23.880000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3447,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "209688892130066432",
+      "username": "xiumalgiz",
+      "displayName": "Bonkers",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/209688892130066432/7b8e9ff9abd49c217cf4fe18766e065a.png",
+      "joinedAt": "2017-07-06T11:34:21.973000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 8,
+      "daysInService": 3130,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "221010154680877056",
+      "username": "reaper19k4",
+      "displayName": "reaper19k4",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/221010154680877056/213eaf4b67536bd77f29746be9246bbd.png",
+      "joinedAt": "2019-05-22T18:18:21.818000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 6,
+      "daysInService": 2445,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "223201985749450762",
+      "username": "3ndwalker",
+      "displayName": "3ndwalker",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/223201985749450762/c74684961f76dfaedbaf93c55db3fb3b.png",
+      "joinedAt": "2024-03-29T06:05:28.165000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 672,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "recruiter",
+        "helldivers"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "224711771661926411",
+      "username": "armagedn.",
+      "displayName": "Ar'ma Ged'n",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/224711771661926411/cd751b8c62c13653e5f1382d267e79a0.png",
+      "joinedAt": "2016-09-18T00:06:03.406000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3422,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "224738132333953026",
+      "username": "krieden",
+      "displayName": "Krieden",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/224738132333953026/692a91c52f2ef88bd61eb5bb320e1069.png",
+      "joinedAt": "2016-09-12T03:51:27.601000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3427,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "226187681560920074",
+      "username": "brokenprismstudios",
+      "displayName": "Broken Prism Studios",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/226187681560920074/a35fa14d2ad365fd4529e067c87f7b83.png",
+      "joinedAt": "2024-02-25T16:24:42.364000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 705,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "229755946660790272",
+      "username": "creave",
+      "displayName": "Creave",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/229755946660790272/606bcf51d699a748326539056dd0621d.png",
+      "joinedAt": "2023-12-28T23:14:51.421000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 764,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "230076738351267841",
+      "username": "madadh",
+      "displayName": "Madadh",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/230076738351267841/30c6c3ad121ff274c985d5f2a40b9d17.png",
+      "joinedAt": "2023-07-27T19:52:11.242000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 918,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "231905245372874763",
+      "username": "rojnaar",
+      "displayName": "Rojnaar",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/231905245372874763/b8a1ac92b23cf32f726c3bcdb95f2711.png",
+      "joinedAt": "2017-04-23T01:53:25.618000+00:00",
+      "historicalJoinDate": "2013-03-11T19:14:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3204,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Rojnaar",
+      "forumPosts": 3
+    },
+    {
+      "id": "231948327237844992",
+      "username": "packrat9663",
+      "displayName": "PackRat",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/231948327237844992/d84530e536a20a9eef1a990fccf90d0b.png",
+      "joinedAt": "2020-05-01T00:05:16.033000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2101,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "defense",
+        "helldivers",
+        "fallout76"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "234314657018544128",
+      "username": "rothen7641",
+      "displayName": "Rothen",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/234314657018544128/1f5856e7a605c7db5ab962e7aa7a5a2f.png",
+      "joinedAt": "2020-04-22T12:11:23.110000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2109,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "fallout76"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "241798585103024128",
+      "username": "resethill",
+      "displayName": "standard",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/241798585103024128/d9fefbe28e558be683663fe33a8ff0de.png",
+      "joinedAt": "2020-02-26T19:30:54.814000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2165,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "251537367603740673",
+      "username": "newland1224",
+      "displayName": "Newland979",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/251537367603740673/9d653dc96fe83916bc836b3e58cedcc0.png",
+      "joinedAt": "2019-03-23T05:31:34.640000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 6,
+      "daysInService": 2505,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "defense",
+        "recruiter",
+        "helldivers"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "260985794582413312",
+      "username": "mytherian",
+      "displayName": "Mystogon",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/260985794582413312/92393a98c0150a669221cb1f653dd35e.png",
+      "joinedAt": "2024-04-19T17:02:28.837000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 651,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "268237709816889345",
+      "username": "grossmisconduct",
+      "displayName": "Cranky",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/268237709816889345/f2dd21ea5b56b622295e9ad1adff2c07.png",
+      "joinedAt": "2017-01-10T04:41:34.237000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3307,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "268642731490934784",
+      "username": "fir3beast4132",
+      "displayName": "Fir3Beast",
+      "avatarUrl": null,
+      "joinedAt": "2017-01-11T07:30:36.229000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 9,
+      "daysInService": 3306,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "269643017583853569",
+      "username": "munster1313",
+      "displayName": "Munster",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/269643017583853569/33b18a0b76d5c08babda317512e2112d.png",
+      "joinedAt": "2017-01-14T01:45:13.300000+00:00",
+      "historicalJoinDate": "2013-03-24T16:47:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 3303,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "defense",
+        "recruiter",
+        "helldivers",
+        "fallout76"
+      ],
+      "isAgent": true,
+      "forumUsername": "Munster",
+      "forumPosts": 4
+    },
+    {
+      "id": "276621332492451850",
+      "username": "_yahne",
+      "displayName": "Yahne",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/276621332492451850/5f3360b33b25528bf2a11c62d053e214.png",
+      "joinedAt": "2022-11-18T22:15:41.883000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 3,
+      "daysInService": 1169,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "276736498080940033",
+      "username": "yourmommasonmylips",
+      "displayName": "Abajorek",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/276736498080940033/c9e11f5652bc896a209dba9d97016018.png",
+      "joinedAt": "2017-02-02T15:33:38.604000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 8,
+      "daysInService": 3284,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "fallout76"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "277740239194423297",
+      "username": "private_goodbloke",
+      "displayName": "Ghafl",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/277740239194423297/2ba50e3ff5f2547c38d357bf53011924.png",
+      "joinedAt": "2024-08-20T07:10:03.685000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 528,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "294262756167647242",
+      "username": "kyzara_of_corbantis",
+      "displayName": "Demiurge <MASC>",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/294262756167647242/d306f43298d2c21c32d009486fa6c752.png",
+      "joinedAt": "2023-09-09T23:28:37.157000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 874,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "299772766490722306",
+      "username": "sydmarch1330",
+      "displayName": "Revoco",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/299772766490722306/8853ec97bcc180e657dcf24d58fc5a3c.png",
+      "joinedAt": "2017-06-22T02:40:22.743000+00:00",
+      "historicalJoinDate": "2008-02-06T10:05:00.000Z",
+      "yearsOfService": 17,
+      "daysInService": 3144,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea"
+      ],
+      "isAgent": false,
+      "forumUsername": "Revoco",
+      "forumPosts": 146
+    },
+    {
+      "id": "301936029550510080",
+      "username": "relolabowski",
+      "displayName": "Relo LaBowski",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/301936029550510080/73413c82edcc1d8c5d0c82da56173aa1.png",
+      "joinedAt": "2023-07-30T10:55:16.686000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 915,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "305118790310690836",
+      "username": "ltwartortle",
+      "displayName": "Lt Wartortle",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/305118790310690836/cbe53961d90a18964c2c9f2a05086b00.png",
+      "joinedAt": "2019-05-15T18:52:47.244000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 6,
+      "daysInService": 2452,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "305517347043672065",
+      "username": "roj6670",
+      "displayName": "Roj",
+      "avatarUrl": null,
+      "joinedAt": "2017-04-23T01:37:02.248000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 8,
+      "daysInService": 3204,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "310179692433113088",
+      "username": "krein9455",
+      "displayName": "Krein",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/310179692433113088/45a03dea82dff1ef38dbccfd4bc541b7.png",
+      "joinedAt": "2023-04-13T03:55:13.245000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 1023,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "317488651720327170",
+      "username": "hsskor",
+      "displayName": "Hsskor",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/317488651720327170/56aa861e1d7a61df294e63f786fb0964.png",
+      "joinedAt": "2021-10-20T08:34:58.655000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1563,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "322095043294920705",
+      "username": "aalnasateen",
+      "displayName": "Aalna Sateen | Flame of Eternity",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/322095043294920705/c9918edac3573c3ce8d089663d79b961.png",
+      "joinedAt": "2023-08-23T11:25:57.162000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 891,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "334156153082871809",
+      "username": "suthamorak1721",
+      "displayName": "Suthamorak",
+      "avatarUrl": null,
+      "joinedAt": "2017-07-11T02:17:47.954000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 8,
+      "daysInService": 3125,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "338759663157772311",
+      "username": "neoncoyote.",
+      "displayName": "neoncoyote",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/338759663157772311/5641f997b05e457b290843742285ccad.png",
+      "joinedAt": "2018-07-28T21:30:31.009000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 7,
+      "daysInService": 2743,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "341207893288288257",
+      "username": "striker04439",
+      "displayName": "Striker",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/341207893288288257/8664dc2387544ac768142a06c5ae8396.png",
+      "joinedAt": "2017-07-30T13:21:23.403000+00:00",
+      "historicalJoinDate": "2011-01-06T13:56:00.000Z",
+      "yearsOfService": 15,
+      "daysInService": 3106,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "corona_aurea",
+        "recruiter"
+      ],
+      "isAgent": true,
+      "forumUsername": "Striker",
+      "forumPosts": 353
+    },
+    {
+      "id": "367819237252923393",
+      "username": "toomey9329",
+      "displayName": "Toomey",
+      "avatarUrl": null,
+      "joinedAt": "2018-03-06T00:26:02.952000+00:00",
+      "historicalJoinDate": "2013-01-11T02:01:00.000Z",
+      "yearsOfService": 13,
+      "daysInService": 2887,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation"
+      ],
+      "isAgent": false,
+      "forumUsername": "Toomey",
+      "forumPosts": 21
+    },
+    {
+      "id": "371092240329736193",
+      "username": "dahazed",
+      "displayName": "Dahazed <MASC>",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/371092240329736193/9bb2d525daf28a410983e189825651ed.png",
+      "joinedAt": "2023-11-30T18:48:18.742000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 792,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "388164489650110475",
+      "username": ".chezzka.",
+      "displayName": "Chezzka",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/388164489650110475/7eb3eb0843a10977dbf7a7f3137e7c88.png",
+      "joinedAt": "2023-02-16T06:30:37.050000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 1079,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "388208422568591360",
+      "username": "inthejohn",
+      "displayName": "InTheJohn",
+      "avatarUrl": null,
+      "joinedAt": "2024-04-13T04:43:32.574000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 657,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "404290158939340800",
+      "username": "ccc9576",
+      "displayName": "Dofla",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/404290158939340800/0b968b4c97e0d311ec254646581a7703.png",
+      "joinedAt": "2026-01-07T17:33:37.331000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 23,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "409726615237558272",
+      "username": "scooby2835",
+      "displayName": "scooby2023",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/409726615237558272/4b9ab219a910f5e9f4dcad16fa99cfba.png",
+      "joinedAt": "2018-03-06T03:44:14.262000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 7,
+      "daysInService": 2887,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "443093309213114368",
+      "username": "methodz13",
+      "displayName": "methodz13",
+      "avatarUrl": null,
+      "joinedAt": "2023-08-24T04:03:29.501000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 890,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "458788424548089867",
+      "username": "jkob0931",
+      "displayName": "JKob",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/458788424548089867/3670780ce0b51eecd8b997b259d05e24.png",
+      "joinedAt": "2021-05-08T02:02:40.896000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1728,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "484601527198285825",
+      "username": "tuf412",
+      "displayName": "TUF412",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/484601527198285825/c9e7048f498ea2f0b879872cf2d292c3.png",
+      "joinedAt": "2024-04-02T10:39:54.459000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 668,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "516165793143062548",
+      "username": "roosterous9449",
+      "displayName": "Dahmer",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/516165793143062548/e208e08acc078a0adf5f4aa1bdaefb90.png",
+      "joinedAt": "2022-01-04T00:50:04.742000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1487,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "537332237507756043",
+      "username": "moonicorn1987",
+      "displayName": "Jenkins",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/537332237507756043/ca8e7be2cf7453c9e9f7e2a0cea015ee.png",
+      "joinedAt": "2019-02-08T23:55:20.949000+00:00",
+      "historicalJoinDate": "2013-03-13T15:34:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 2548,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "recruiter"
+      ],
+      "isAgent": true,
+      "forumUsername": "Jenkins",
+      "forumPosts": 11
+    },
+    {
+      "id": "543853965155106816",
+      "username": "sics4752",
+      "displayName": "Zippers",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/543853965155106816/e493d98178354099a7578b9fbd2b390d.png",
+      "joinedAt": "2023-11-16T00:18:47.247000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 806,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "556231428501929999",
+      "username": "chipaxlvii",
+      "displayName": "Chipa <XLVII>",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/556231428501929999/1aa2513472edc7ab9fc1f5f37a69540e.png",
+      "joinedAt": "2021-08-24T00:14:22.351000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 4,
+      "daysInService": 1621,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "582732679037059072",
+      "username": "jerik_arca",
+      "displayName": "Jerik",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/582732679037059072/55af63b29938b21d97bd5acbed4d13d1.png",
+      "joinedAt": "2023-05-20T22:45:37.358000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 986,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "595662102124036099",
+      "username": "ekempaggio",
+      "displayName": "Elliot",
+      "avatarUrl": null,
+      "joinedAt": "2024-08-20T19:38:59.072000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 528,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "720072971166941205",
+      "username": "squidhm3",
+      "displayName": "SquidHM3",
+      "avatarUrl": null,
+      "joinedAt": "2023-08-01T03:17:24.598000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 913,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "736777629662707833",
+      "username": "blueblood786263",
+      "displayName": "blueblood78",
+      "avatarUrl": null,
+      "joinedAt": "2020-07-26T02:59:09.552000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 2014,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "740019537168171028",
+      "username": "sk17zo",
+      "displayName": "Skitzo <MASC>",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/740019537168171028/38eb3526ff7242c8149d1a02efdb0f61.png",
+      "joinedAt": "2023-11-17T04:18:55.798000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 805,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "758886352674095146",
+      "username": "westman3219",
+      "displayName": "westman3219",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/758886352674095146/8f44dc21b18ad74d957a511c19925f1e.png",
+      "joinedAt": "2020-09-25T03:07:20.409000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 5,
+      "daysInService": 1953,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "recruiter"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "795464015992193044",
+      "username": "thompson_rtmc",
+      "displayName": "thompson_rtmc",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/795464015992193044/bf91b2df54418025b91444d1770e5e9f.png",
+      "joinedAt": "2022-07-15T14:58:08.718000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 3,
+      "daysInService": 1295,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "810405371030011924",
+      "username": "the_widowmaker",
+      "displayName": "WidowMaker",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/810405371030011924/e9c2c45ba22bb478193281635cfb7613.png",
+      "joinedAt": "2023-11-15T02:59:55.683000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 807,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "833178283331551242",
+      "username": "bonez5051",
+      "displayName": "Bonez",
+      "avatarUrl": null,
+      "joinedAt": "2024-01-20T21:18:24.257000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 741,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service",
+        "good_conduct"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "871775857386090516",
+      "username": "jackhole2239",
+      "displayName": "Jackhole",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/871775857386090516/dd605377f51727b122ece94e69ad98d0.png",
+      "joinedAt": "2023-06-20T13:35:24.660000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 955,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "924385713351450675",
+      "username": "kalicu",
+      "displayName": "Kal'icu",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/924385713351450675/c7df2e711412d7a22af2ecac1de4f14c.png",
+      "joinedAt": "2023-04-05T23:48:23.982000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 1031,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Fallout 76",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "fallout76",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "930481266162294885",
+      "username": "demonmango",
+      "displayName": "Mangomonius",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/930481266162294885/9d6500fb0391799c8eaa8f389f1815c6.png",
+      "joinedAt": "2025-06-21T05:05:54.899000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 223,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1117026342945427486",
+      "username": "dacenn",
+      "displayName": "Dacenn",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1117026342945427486/5445ffd7ffb201a98393cbdf684ea4b1.png",
+      "joinedAt": "2023-06-10T12:26:53.117000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 965,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1150253189162074163",
+      "username": "azraeal66",
+      "displayName": "azraeal (Miirzi/Muerte aneki)",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1150253189162074163/1747ffab4d00abcd208870c9782b10aa.png",
+      "joinedAt": "2023-09-25T03:49:51.893000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 858,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "swtor",
+        "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1271118987618549833",
+      "username": "blaedoc_00619",
+      "displayName": "Blaedoc",
+      "avatarUrl": null,
+      "joinedAt": "2024-08-08T14:53:34.660000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 1,
+      "daysInService": 540,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1278755189657960519",
+      "username": "trentonrath",
+      "displayName": "rath5566",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1278755189657960519/6c5996770c985bcd6e5b68131ff2ba04.png",
+      "joinedAt": "2025-07-26T22:50:57.939000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 188,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1311816797858566237",
+      "username": "harucats0640",
+      "displayName": "zｈⓔα",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1311816797858566237/70c2355ea88ce76e2ba1b1d244c16ad6.png",
+      "joinedAt": "2025-07-03T05:10:35.119000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 211,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "1437966291951550488",
+      "username": "pedro.pinto91d2f06b",
+      "displayName": "pedro.pinto91d2f06b",
+      "avatarUrl": null,
+      "joinedAt": "2025-11-12T00:53:32.579000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 79,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [
+        "service"
+      ],
+      "isAgent": false
+    }
+  ],
+  "historicalDataMerged": true
+}

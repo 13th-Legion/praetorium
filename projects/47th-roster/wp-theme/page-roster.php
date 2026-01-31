@@ -1,0 +1,515 @@
+<?php
+/**
+ * Template Name: 47th Legion Roster
+ * 
+ * Full-width roster page template
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+get_header(); 
+?>
+
+<style>
+/* Roster Styles */
+
+/* Break out of Astra's container constraints */
+.ast-separate-container #primary,
+.ast-plain-container #primary,
+#primary {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ast-separate-container .ast-article-single,
+.ast-plain-container .ast-article-single,
+article.page {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+.legion-roster-wrap {
+  background: #0a0a0f;
+  color: #e8e6e3;
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  min-height: 100vh;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.legion-roster-wrap * {
+  box-sizing: border-box;
+}
+
+.roster-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.roster-header h1 {
+  color: #c9a227;
+  font-size: 2.5rem;
+  letter-spacing: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.roster-header .subtitle {
+  color: #888;
+  font-style: italic;
+}
+
+.roster-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.roster-stat {
+  text-align: center;
+  padding: 1rem;
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  min-width: 100px;
+}
+
+.roster-stat .number {
+  display: block;
+  font-size: 2rem;
+  color: #c9a227;
+  font-weight: bold;
+}
+
+.roster-stat .label {
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.roster-filters {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  color: #e8e6e3;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+
+.filter-btn:hover, .filter-btn.active {
+  background: #c9a227;
+  color: #0a0a0f;
+  border-color: #c9a227;
+}
+
+.search-box {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.search-box input {
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  color: #e8e6e3;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  width: 100%;
+  max-width: 400px;
+  font-family: inherit;
+}
+
+.search-box input::placeholder {
+  color: #888;
+}
+
+.roster-container {
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 2rem;
+}
+
+.category-section {
+  margin-bottom: 2rem;
+}
+
+.category-header {
+  color: #c9a227;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #c9a227;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.category-count {
+  background: #c9a227;
+  color: #0a0a0f;
+  padding: 0.2rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.member-card {
+  background: linear-gradient(135deg, #12121a 0%, #1a1a24 100%);
+  border: 1px solid #2a2a3a;
+  border-radius: 10px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 1rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.member-card:hover {
+  transform: translateY(-2px);
+  border-color: #c9a227;
+}
+
+.member-avatar img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid #c9a227;
+  object-fit: cover;
+}
+
+.member-avatar-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid #2a2a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: #1a1a24;
+}
+
+.member-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e8e6e3;
+  margin-bottom: 0.25rem;
+}
+
+.member-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.rank-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.rank-name {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.member-service {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.service-pips {
+  display: inline-flex;
+  gap: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.service-pip {
+  width: 12px;
+  height: 16px;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Ribbon Rack */
+.ribbon-rack {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2a3a;
+}
+
+.ribbon-row {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: -1px;
+}
+
+.ribbon {
+  width: 36px;
+  height: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.ribbon:hover {
+  transform: scale(2);
+  z-index: 100;
+}
+
+.no-results {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 3rem;
+}
+
+.roster-footer {
+  text-align: center;
+  margin-top: 2rem;
+  color: #888;
+  font-size: 0.9rem;
+}
+</style>
+
+<div class="legion-roster-wrap">
+  <div class="roster-header">
+    <h1>47TH LEGION ROSTER</h1>
+  </div>
+
+  <div class="roster-stats">
+    <div class="roster-stat">
+      <span class="number" id="total-count">--</span>
+      <span class="label">Total</span>
+    </div>
+    <div class="roster-stat">
+      <span class="number" id="officers-count">--</span>
+      <span class="label">Officers</span>
+    </div>
+    <div class="roster-stat">
+      <span class="number" id="enlisted-count">--</span>
+      <span class="label">Enlisted</span>
+    </div>
+    <div class="roster-stat">
+      <span class="number" id="reserves-count">--</span>
+      <span class="label">Reserves</span>
+    </div>
+  </div>
+
+  <div class="roster-filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="Officers">Officers</button>
+    <button class="filter-btn" data-filter="Enlisted">Enlisted</button>
+    <button class="filter-btn" data-filter="Reserves">Reserves</button>
+  </div>
+
+  <div class="search-box">
+    <input type="text" id="search" placeholder="Search by name...">
+  </div>
+
+  <div class="roster-container" id="roster-container">
+    <p class="no-results">Loading roster...</p>
+  </div>
+
+  <div class="roster-footer">
+    <p>Last updated: <span id="last-updated">--</span></p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ASSET_BASE = '<?php echo get_stylesheet_directory_uri(); ?>/assets';
+  let rosterData = null;
+  let currentFilter = 'all';
+
+  const rankImages = {
+    'E1': 'ranks/e1.png', 'E2': 'ranks/e2.png', 'E3': 'ranks/e3.png',
+    'E4': 'ranks/e4.png', 'E5': 'ranks/e5.png', 'E6': 'ranks/e6.png',
+    'E7': 'ranks/e7.png', 'E8': 'ranks/e8.png',
+    'O1': 'ranks/o1.png', 'O2': 'ranks/o2.png', 'O3': 'ranks/o3.png',
+    'O4': 'ranks/o4.png', 'O5': 'ranks/o5.png', 'O6': 'ranks/o6.png',
+    'O7': 'ranks/o7.png', 'O8': 'ranks/o8.png',
+  };
+
+  const awardPrecedence = {
+    'corona_obsidionalis': 1, 'corona_civica': 2, 'medal': 3, 'corona_aurea': 4,
+    'corona_vallaris': 5, 'corona_muralis': 6, 'prisoner': 7, 'wounded': 8,
+    'torques': 9, 'commendation': 10, 'achievement': 11, 'armillae': 12,
+    'mng_2014': 13, 'defense': 14, 'swg': 20, 'tabula_rasa': 21,
+    'fallen_earth': 22, 'global_agenda': 23, 'earthrise': 24, 'swtor': 25,
+    'sto': 26, 'defiance': 27, 'firefall': 28, 'planetside2': 29,
+    'repopulation': 30, 'star_citizen': 31, 'division': 32, 'division2': 33,
+    'empyrion': 34, 'elder_scrolls': 35, 'MWO': 36, 'fallout76': 37,
+    'helldivers': 38, 'colonial_marines': 39,
+    'joint_operations': 50, 'army_occupation': 51, 'organizational_excellence': 52,
+    'good_conduct': 53, 'humane_action': 54, 'nco_development': 55,
+    'recruiter': 56, 'joint_training': 57, 'service': 99,
+  };
+
+  function getServicePips(years) {
+    if (years < 1) return [];
+    const goldPips = Math.floor(years / 5);
+    const silverPips = years % 5;
+    const pips = [];
+    for (let i = 0; i < goldPips; i++) pips.push('timeInService/pip_5year.png');
+    for (let i = 0; i < silverPips; i++) pips.push('timeInService/pip_1year.png');
+    return pips;
+  }
+
+  function sortAwardsByPrecedence(awards) {
+    return [...awards].sort((a, b) => (awardPrecedence[a] ?? 999) - (awardPrecedence[b] ?? 999));
+  }
+
+  function buildRibbonRack(awards, ribbonsPerRow = 4) {
+    if (!awards || awards.length === 0) return '';
+    const sorted = sortAwardsByPrecedence(awards);
+    const totalRibbons = sorted.length;
+    const topRowCount = totalRibbons % ribbonsPerRow;
+    let rows = [];
+    let idx = 0;
+    if (topRowCount > 0) {
+      rows.push({ ribbons: sorted.slice(0, topRowCount), isPartial: true });
+      idx = topRowCount;
+    }
+    while (idx < totalRibbons) {
+      rows.push({ ribbons: sorted.slice(idx, idx + ribbonsPerRow), isPartial: false });
+      idx += ribbonsPerRow;
+    }
+    return `<div class="ribbon-rack">
+      ${rows.map(row => `<div class="ribbon-row${row.isPartial ? ' ribbon-row-partial' : ''}">
+        ${row.ribbons.map(a => `<img src="${ASSET_BASE}/ribbons/${a}.png" alt="${a}" title="${a}" class="ribbon">`).join('')}
+      </div>`).join('')}
+    </div>`;
+  }
+
+  function renderMemberCard(member) {
+    const servicePips = getServicePips(member.yearsOfService);
+    const rankImg = rankImages[member.rank.code];
+    const awardsHtml = buildRibbonRack(member.awards);
+    
+    return `
+      <div class="member-card" data-category="${member.rank.category}">
+        <div class="member-avatar">
+          ${member.avatarUrl 
+            ? `<img src="${member.avatarUrl}" alt="${member.displayName}" loading="lazy">`
+            : '<div class="member-avatar-placeholder">👤</div>'}
+        </div>
+        <div class="member-info">
+          <div class="member-name">${member.displayName}</div>
+          <div class="member-rank">
+            ${rankImg ? `<img src="${ASSET_BASE}/${rankImg}" alt="${member.rank.code}" class="rank-img">` : ''}
+            <span class="rank-name">${member.rank.name} (${member.rank.code})</span>
+          </div>
+          <div class="member-service">
+            <span class="service-pips">${servicePips.map(p => `<img src="${ASSET_BASE}/${p}" alt="pip" class="service-pip">`).join('')}</span>
+            <span>${member.yearsOfService} year${member.yearsOfService !== 1 ? 's' : ''} service</span>
+          </div>
+        </div>
+        ${awardsHtml}
+      </div>`;
+  }
+
+  function renderRoster() {
+    if (!rosterData) return;
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const container = document.getElementById('roster-container');
+    const categories = ['Officers', 'Enlisted', 'Reserves'];
+    let html = '';
+    let anyVisible = false;
+
+    for (const category of categories) {
+      if (currentFilter !== 'all' && currentFilter !== category) continue;
+      const members = rosterData.members.filter(m => {
+        if (m.rank.category !== category) return false;
+        if (searchTerm && !m.displayName.toLowerCase().includes(searchTerm)) return false;
+        return true;
+      });
+      if (members.length === 0) continue;
+      anyVisible = true;
+      html += `
+        <div class="category-section">
+          <h2 class="category-header">${category} <span class="category-count">${members.length}</span></h2>
+          <div class="members-grid">${members.map(renderMemberCard).join('')}</div>
+        </div>`;
+    }
+    container.innerHTML = anyVisible ? html : '<p class="no-results">No members found.</p>';
+  }
+
+  function updateStats() {
+    if (!rosterData) return;
+    const members = rosterData.members;
+    document.getElementById('total-count').textContent = members.length;
+    document.getElementById('officers-count').textContent = members.filter(m => m.rank.category === 'Officers').length;
+    document.getElementById('enlisted-count').textContent = members.filter(m => m.rank.category === 'Enlisted').length;
+    document.getElementById('reserves-count').textContent = members.filter(m => m.rank.category === 'Reserves').length;
+  }
+
+  async function loadRoster() {
+    try {
+      const resp = await fetch('<?php echo get_stylesheet_directory_uri(); ?>/data/roster.json');
+      rosterData = await resp.json();
+      updateStats();
+      renderRoster();
+      const d = new Date(rosterData.generated);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+      const year = String(d.getFullYear()).slice(-2);
+      document.getElementById('last-updated').textContent = `${day} ${month} ${year}`;
+    } catch (err) {
+      console.error('Failed to load roster:', err);
+      document.getElementById('roster-container').innerHTML = '<p class="no-results">Failed to load roster data.</p>';
+    }
+  }
+
+  // Event listeners
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderRoster();
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', renderRoster);
+
+  // Load roster on page load
+  loadRoster();
+})();
+</script>
+
+<?php get_footer(); ?>

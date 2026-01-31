@@ -1,0 +1,452 @@
+[
+  {
+    "useractivationid": "105",
+    "userid": "308",
+    "dateline": "1295362904",
+    "activationid": "0b1c6c36e4b9efc07374ab74b45ef866c11d9821",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "260",
+    "userid": "447",
+    "dateline": "1300418318",
+    "activationid": "8b0dd58548dac99b029b007499832e23b8c07cfe",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "310",
+    "userid": "489",
+    "dateline": "1313043793",
+    "activationid": "283441cafe6d99896113d1feb36e7b8d9765b94c",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "376",
+    "userid": "544",
+    "dateline": "1317993716",
+    "activationid": "4e9f558d67ed7ca70357fef1c0ed542abfeb8d80",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "416",
+    "userid": "66",
+    "dateline": "1324950462",
+    "activationid": "9bb6bbbbc9902ff94de736e7a8c649db3c26f504",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "1"
+  },
+  {
+    "useractivationid": "425",
+    "userid": "590",
+    "dateline": "1326100204",
+    "activationid": "069bdd314b2791458ca38904b7e8e3a0d303c8b5",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "557",
+    "userid": "718",
+    "dateline": "1354978571",
+    "activationid": "7bdb0ffd611c9de149f7cd451942325093883b60",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "597",
+    "userid": "758",
+    "dateline": "1355934937",
+    "activationid": "c70953d7377b87aed21250862e54b2a04f06cb76",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "598",
+    "userid": "759",
+    "dateline": "1355934937",
+    "activationid": "675233cbc4059508d332a89e2b1c4149a3ea4c22",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "599",
+    "userid": "760",
+    "dateline": "1355934937",
+    "activationid": "0e4ce62106388c2f532fa73649ba5d3664229a78",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "612",
+    "userid": "773",
+    "dateline": "1356009214",
+    "activationid": "a8645ab9d1936571f61cd510924b049d1236eed2",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "616",
+    "userid": "777",
+    "dateline": "1356009214",
+    "activationid": "3c75763d7e15a2b038d6a13008e2e6bdce0ce03e",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "629",
+    "userid": "790",
+    "dateline": "1356107521",
+    "activationid": "a214536beb1c105733eddb0946fc604e9d0d188c",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "631",
+    "userid": "792",
+    "dateline": "1356107521",
+    "activationid": "a2e0464346c1ca7db903ddb816d0e78146464c18",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "637",
+    "userid": "798",
+    "dateline": "1356200760",
+    "activationid": "ceac1b59e4f657da208dac948b9f7122f48226b1",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "638",
+    "userid": "799",
+    "dateline": "1356200760",
+    "activationid": "5b8323f21b72de15492d2af9444ea1b11da2c146",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "642",
+    "userid": "803",
+    "dateline": "1356200760",
+    "activationid": "241925a218af16052c5776347408049a21b1bd5d",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "652",
+    "userid": "813",
+    "dateline": "1356200760",
+    "activationid": "2401c89b6506ff3fe48546e033f6681a23c7eb31",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "661",
+    "userid": "822",
+    "dateline": "1356200760",
+    "activationid": "c163de8b23664a3ef7f0f7199ca3115c337251a9",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "663",
+    "userid": "824",
+    "dateline": "1356200760",
+    "activationid": "c8c0c86aa6482d7545452df4ac1403f51957e128",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "667",
+    "userid": "828",
+    "dateline": "1356200760",
+    "activationid": "4b1f7ffb8b738f42099594f9427a4cce3444e03b",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "670",
+    "userid": "831",
+    "dateline": "1356200760",
+    "activationid": "3fd9f1421e5af8856f1eb66cb7e4f1b8d1141e0f",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "672",
+    "userid": "833",
+    "dateline": "1356200760",
+    "activationid": "bd5a495965b7903bc6e518463ab92e84e756a06d",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "685",
+    "userid": "844",
+    "dateline": "1356200760",
+    "activationid": "e9cc07835dd3cceb9a2c563b21d3f3382669de74",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "686",
+    "userid": "845",
+    "dateline": "1356200760",
+    "activationid": "5143217450e00a43420d03cb8e02e39df7802c59",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "687",
+    "userid": "846",
+    "dateline": "1356200760",
+    "activationid": "1113c826f5da7a134041e7b645c15cb25a234efe",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "691",
+    "userid": "850",
+    "dateline": "1356200760",
+    "activationid": "df41d3310be0ef8b5a7a7e0a7819e42202cb9c06",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "695",
+    "userid": "854",
+    "dateline": "1355934937",
+    "activationid": "d99d8e63118ae3cdc114e827584ad82a64efeadd",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "700",
+    "userid": "859",
+    "dateline": "1355934937",
+    "activationid": "0c8f8fcabdd52652113f8286da16354eb59225c7",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "707",
+    "userid": "866",
+    "dateline": "1356293540",
+    "activationid": "2f58ae2f291d5fb1dd192a7b02a9b41712f28c09",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "708",
+    "userid": "867",
+    "dateline": "1356293540",
+    "activationid": "744d50cfdfbb0ef652e339ffcc04df8d5d640e11",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "710",
+    "userid": "869",
+    "dateline": "1356293540",
+    "activationid": "5685839a07d22660a0a9b4392f741fd51e8e6188",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "721",
+    "userid": "880",
+    "dateline": "1355815819",
+    "activationid": "f61b61e955693b1a76b1222749b2e99d4443cc9b",
+    "type": "0",
+    "usergroupid": "4",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "784",
+    "userid": "936",
+    "dateline": "1358026164",
+    "activationid": "bd1720c68b2b549c16c106addbed369337bb9025",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "788",
+    "userid": "940",
+    "dateline": "1358081494",
+    "activationid": "e76c7e456d802bd898827d73561d0cd208343ed7",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "798",
+    "userid": "949",
+    "dateline": "1358489909",
+    "activationid": "68ddc717ec32b0a9d17145b78839d475e69081c3",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "836",
+    "userid": "985",
+    "dateline": "1359186560",
+    "activationid": "ec746c6b7be397813b11fd7e3c25f7f61dc045da",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "894",
+    "userid": "1035",
+    "dateline": "1363380232",
+    "activationid": "0db4854384c9db5025e7684b318671f08f42bb0c",
+    "type": "0",
+    "usergroupid": "24",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "896",
+    "userid": "1037",
+    "dateline": "1363586195",
+    "activationid": "191c17a6602c113279411cca87a0f87d395600b3",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "915",
+    "userid": "1053",
+    "dateline": "1364620000",
+    "activationid": "77c70fd64d33047511f4d8258d8a56fcbd717d2d",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "918",
+    "userid": "1056",
+    "dateline": "1364145559",
+    "activationid": "124843082c1d5ab880383434179a9b6fac193804",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "936",
+    "userid": "1075",
+    "dateline": "1364473288",
+    "activationid": "4178d8f405f1f3a8beed37054537e6a01da2bb94",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "951",
+    "userid": "1087",
+    "dateline": "1364779787",
+    "activationid": "ae233f117f474e158ea6b6f9e2f271f9fa93f227",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1023",
+    "userid": "1228",
+    "dateline": "1365920057",
+    "activationid": "fa566416b37a7cf73773a63338a0f752b315b0fe",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1045",
+    "userid": "1350",
+    "dateline": "1366485249",
+    "activationid": "9a84f75048a3dd117e2b0302cdc189dec4a087d7",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1051",
+    "userid": "1404",
+    "dateline": "1366651393",
+    "activationid": "e538563e9184893e6f39e7951f926ebe032ada93",
+    "type": "0",
+    "usergroupid": "8",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1109",
+    "userid": "1730",
+    "dateline": "1368989746",
+    "activationid": "837838c3eca14e05dca78f4ba3f4ae762e8defde",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1200",
+    "userid": "2218",
+    "dateline": "1371779861",
+    "activationid": "fd82bce6ae4f64b8e8ca8e2f558e72ace5c8e199",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1213",
+    "userid": "2317",
+    "dateline": "1372224401",
+    "activationid": "6169a2e6c5209473badd9292b99d93092bcbdb89",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  },
+  {
+    "useractivationid": "1358",
+    "userid": "3026",
+    "dateline": "1375161205",
+    "activationid": "fc7098fcb1e695103d192d9a820f12b4c45d0fec",
+    "type": "0",
+    "usergroupid": "17",
+    "emailchange": "0"
+  }
+]

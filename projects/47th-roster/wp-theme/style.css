@@ -1,0 +1,824 @@
+/*
+ Theme Name:   Astra Child - 47th Legion
+ Theme URI:    https://47th.info
+ Description:  Astra Child Theme for 47th Legion
+ Author:       47th Legion
+ Template:     astra
+ Version:      2.0.0
+*/
+
+/* ============================================
+   47TH LEGION - DARK ROMAN THEME
+   ============================================ */
+
+/* === CSS Variables === */
+:root {
+  --legion-bg-dark: #0a0a0f;
+  --legion-bg-darker: #06060a;
+  --legion-bg-card: #12121a;
+  --legion-bg-card-hover: #1a1a24;
+  --legion-border: #2a2a3a;
+  --legion-border-light: #3a3a4a;
+  --legion-gold: #c9a227;
+  --legion-gold-bright: #d4af37;
+  --legion-gold-dim: #8b7355;
+  --legion-text: #e8e6e3;
+  --legion-text-dim: #888;
+  --legion-text-muted: #666;
+  --legion-red: #8b0000;
+  --legion-red-bright: #b22222;
+  --legion-link: #c9a227;
+  --legion-link-hover: #d4af37;
+}
+
+/* === Google Fonts === */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+/* === Global Styles === */
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+body.flavor-flavor {
+  background: var(--legion-bg-darker) !important;
+  color: var(--legion-text) !important;
+  font-family: 'Crimson Text', Georgia, 'Times New Roman', serif !important;
+  line-height: 1.7;
+  font-size: 17px;
+}
+
+/* === Typography === */
+h1, h2, h3, h4, h5, h6,
+.entry-title,
+.page-title,
+.site-title,
+.widget-title {
+  font-family: 'Cinzel', 'Times New Roman', serif !important;
+  color: var(--legion-gold) !important;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1.3;
+}
+
+h1, .entry-title { font-size: 2.5rem; letter-spacing: 2px; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.1rem; }
+h6 { font-size: 1rem; }
+
+p {
+  color: var(--legion-text);
+  margin-bottom: 1.5rem;
+}
+
+a {
+  color: var(--legion-link);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover, a:focus {
+  color: var(--legion-link-hover);
+  text-decoration: none;
+}
+
+strong, b {
+  color: var(--legion-gold);
+  font-weight: 600;
+}
+
+blockquote {
+  border-left: 4px solid var(--legion-gold);
+  background: var(--legion-bg-card);
+  padding: 1.5rem 2rem;
+  margin: 2rem 0;
+  font-style: italic;
+  color: var(--legion-text-dim);
+}
+
+blockquote p {
+  margin-bottom: 0;
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--legion-gold), transparent);
+  margin: 3rem 0;
+}
+
+/* === Selection === */
+::selection {
+  background: var(--legion-gold);
+  color: var(--legion-bg-dark);
+}
+
+::-moz-selection {
+  background: var(--legion-gold);
+  color: var(--legion-bg-dark);
+}
+
+/* === Header === */
+.ast-header-break-point .site-header,
+.site-header,
+#masthead,
+.ast-primary-header-bar,
+.ast-main-header-wrap,
+#ast-desktop-header,
+.ast-desktop-header-content,
+.ast-main-header-bar-alignment {
+  background: var(--legion-bg-darker) !important;
+}
+
+.site-header,
+#masthead {
+  border-bottom: 1px solid var(--legion-border) !important;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+}
+
+.ast-header-break-point .main-header-bar,
+.main-header-bar {
+  background: transparent !important;
+  border-bottom: none !important;
+}
+
+.site-title a,
+.site-title {
+  font-family: 'Cinzel', serif !important;
+  color: var(--legion-gold) !important;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.site-title a:hover {
+  color: var(--legion-gold-bright) !important;
+}
+
+.site-description {
+  color: var(--legion-text-dim) !important;
+  font-style: italic;
+}
+
+/* === Navigation === */
+.main-navigation,
+.main-header-menu,
+.ast-nav-menu {
+  background: transparent !important;
+}
+
+.main-navigation a,
+.ast-nav-menu a,
+.menu-link {
+  font-family: 'Cinzel', serif !important;
+  color: var(--legion-text) !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.3s ease, border-color 0.3s ease;
+  padding: 0.75rem 1rem !important;
+}
+
+.main-navigation a:hover,
+.ast-nav-menu a:hover,
+.menu-link:hover,
+.main-navigation .current-menu-item > a,
+.ast-nav-menu .current-menu-item > a {
+  color: var(--legion-gold) !important;
+}
+
+/* Mobile Menu */
+.ast-header-break-point .ast-mobile-menu-buttons .menu-toggle {
+  color: var(--legion-gold) !important;
+}
+
+.ast-mobile-popup-drawer .ast-mobile-popup-inner {
+  background: var(--legion-bg-darker) !important;
+  border-left: 1px solid var(--legion-border);
+}
+
+.ast-mobile-popup-drawer .menu-link {
+  border-bottom: 1px solid var(--legion-border) !important;
+}
+
+/* === Main Content Area === */
+.site-content,
+#content,
+.content-area {
+  background: var(--legion-bg-darker) !important;
+}
+
+.ast-container {
+  background: transparent !important;
+}
+
+.entry-content,
+.page-content {
+  color: var(--legion-text);
+}
+
+/* Content cards/boxes */
+article.post,
+article.page,
+.ast-article-post,
+.ast-article-single {
+  background: var(--legion-bg-card) !important;
+  border: 1px solid var(--legion-border);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+article.post:hover,
+.ast-article-post:hover {
+  border-color: var(--legion-gold-dim);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* === Page Headers === */
+.ast-archive-description,
+.page-header {
+  background: linear-gradient(180deg, var(--legion-bg-darker) 0%, var(--legion-bg-dark) 100%);
+  border-bottom: 1px solid var(--legion-border);
+  padding: 3rem 0 !important;
+  text-align: center;
+}
+
+.ast-archive-description .ast-archive-title,
+.page-header .page-title {
+  color: var(--legion-gold) !important;
+  margin-bottom: 0.5rem;
+}
+
+/* === Sidebar & Widgets === */
+.sidebar,
+#secondary,
+.widget-area {
+  background: transparent;
+}
+
+.widget {
+  background: var(--legion-bg-card) !important;
+  border: 1px solid var(--legion-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.widget-title {
+  border-bottom: 2px solid var(--legion-gold) !important;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem !important;
+}
+
+.widget ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.widget ul li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--legion-border);
+}
+
+.widget ul li:last-child {
+  border-bottom: none;
+}
+
+.widget ul li a {
+  color: var(--legion-text);
+}
+
+.widget ul li a:hover {
+  color: var(--legion-gold);
+}
+
+/* === Buttons === */
+button,
+input[type="submit"],
+input[type="button"],
+.button,
+.btn,
+.wp-block-button__link,
+.ast-button,
+a.button,
+a.btn {
+  font-family: 'Cinzel', serif !important;
+  background: linear-gradient(135deg, var(--legion-gold) 0%, #a08020 100%) !important;
+  color: var(--legion-bg-dark) !important;
+  border: none !important;
+  padding: 0.75rem 2rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.3);
+}
+
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+.button:hover,
+.btn:hover,
+.wp-block-button__link:hover,
+.ast-button:hover,
+a.button:hover,
+a.btn:hover {
+  background: linear-gradient(135deg, var(--legion-gold-bright) 0%, var(--legion-gold) 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4);
+}
+
+/* Secondary/Outline Buttons */
+.btn-secondary,
+.button-secondary,
+.wp-block-button.is-style-outline .wp-block-button__link {
+  background: transparent !important;
+  border: 2px solid var(--legion-gold) !important;
+  color: var(--legion-gold) !important;
+}
+
+.btn-secondary:hover,
+.button-secondary:hover,
+.wp-block-button.is-style-outline .wp-block-button__link:hover {
+  background: var(--legion-gold) !important;
+  color: var(--legion-bg-dark) !important;
+}
+
+/* === Forms === */
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+  background: var(--legion-bg-card) !important;
+  border: 1px solid var(--legion-border) !important;
+  color: var(--legion-text) !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 4px !important;
+  font-family: 'Crimson Text', Georgia, serif !important;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--legion-gold) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.2) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--legion-text-muted) !important;
+}
+
+label {
+  color: var(--legion-text);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* === Tables === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--legion-bg-card);
+  border: 1px solid var(--legion-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+th {
+  background: var(--legion-bg-darker);
+  color: var(--legion-gold);
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid var(--legion-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--legion-border);
+  color: var(--legion-text);
+}
+
+tr:hover {
+  background: rgba(201, 162, 39, 0.05);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* === Lists === */
+ul, ol {
+  color: var(--legion-text);
+  padding-left: 1.5rem;
+}
+
+ul li, ol li {
+  margin-bottom: 0.5rem;
+}
+
+ul li::marker {
+  color: var(--legion-gold);
+}
+
+ol li::marker {
+  color: var(--legion-gold);
+  font-weight: 600;
+}
+
+/* === Footer === */
+.site-footer,
+#colophon,
+footer.site-footer {
+  background: var(--legion-bg-darker) !important;
+  border-top: 1px solid var(--legion-border) !important;
+  color: var(--legion-text-dim) !important;
+  padding: 3rem 0 !important;
+}
+
+.site-footer a {
+  color: var(--legion-gold-dim) !important;
+}
+
+.site-footer a:hover {
+  color: var(--legion-gold) !important;
+}
+
+.footer-widget-area .widget {
+  background: transparent !important;
+  border: none !important;
+}
+
+.site-info,
+.ast-footer-copyright {
+  text-align: center;
+  color: var(--legion-text-muted);
+  font-size: 0.9rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--legion-border);
+}
+
+/* === Pagination === */
+.pagination,
+.ast-pagination,
+.nav-links {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 3rem 0;
+}
+
+.pagination a,
+.pagination span,
+.ast-pagination a,
+.ast-pagination span,
+.page-numbers {
+  background: var(--legion-bg-card) !important;
+  border: 1px solid var(--legion-border) !important;
+  color: var(--legion-text) !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 4px !important;
+  font-family: 'Cinzel', serif;
+  transition: all 0.3s ease;
+}
+
+.pagination a:hover,
+.ast-pagination a:hover,
+.page-numbers:hover {
+  background: var(--legion-gold) !important;
+  color: var(--legion-bg-dark) !important;
+  border-color: var(--legion-gold) !important;
+}
+
+.pagination .current,
+.ast-pagination .current,
+.page-numbers.current {
+  background: var(--legion-gold) !important;
+  color: var(--legion-bg-dark) !important;
+  border-color: var(--legion-gold) !important;
+}
+
+/* === Comments === */
+.comments-area {
+  background: var(--legion-bg-card);
+  border: 1px solid var(--legion-border);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-top: 3rem;
+}
+
+.comments-title {
+  border-bottom: 2px solid var(--legion-gold);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+.comment-list {
+  list-style: none;
+  padding: 0;
+}
+
+.comment {
+  border-bottom: 1px solid var(--legion-border);
+  padding: 1.5rem 0;
+}
+
+.comment:last-child {
+  border-bottom: none;
+}
+
+.comment-author {
+  color: var(--legion-gold);
+  font-weight: 600;
+}
+
+.comment-metadata {
+  color: var(--legion-text-muted);
+  font-size: 0.85rem;
+}
+
+.comment-content {
+  margin-top: 1rem;
+}
+
+.comment-reply-link {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--legion-bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--legion-border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--legion-gold-dim);
+}
+
+/* === WordPress Blocks === */
+.wp-block-group,
+.wp-block-cover {
+  background-color: var(--legion-bg-card) !important;
+}
+
+.wp-block-separator {
+  border-color: var(--legion-gold) !important;
+  opacity: 0.5;
+}
+
+.wp-block-quote {
+  border-left-color: var(--legion-gold) !important;
+  background: var(--legion-bg-card);
+  padding: 1.5rem 2rem;
+}
+
+.wp-block-quote cite {
+  color: var(--legion-gold-dim);
+}
+
+.wp-block-pullquote {
+  border-top-color: var(--legion-gold) !important;
+  border-bottom-color: var(--legion-gold) !important;
+}
+
+.wp-block-image figcaption {
+  color: var(--legion-text-dim);
+}
+
+/* === Utility Classes === */
+.legion-gold { color: var(--legion-gold) !important; }
+.legion-text { color: var(--legion-text) !important; }
+.legion-text-dim { color: var(--legion-text-dim) !important; }
+.legion-bg-dark { background: var(--legion-bg-darker) !important; }
+.legion-bg-card { background: var(--legion-bg-card) !important; }
+
+.text-center { text-align: center !important; }
+.text-uppercase { text-transform: uppercase !important; }
+.letter-spacing { letter-spacing: 2px !important; }
+
+/* === Hero Section (for homepage) === */
+.legion-hero {
+  text-align: center;
+  padding: 5rem 2rem;
+  background: 
+    radial-gradient(ellipse at center top, rgba(139, 112, 32, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, var(--legion-bg-darker) 0%, var(--legion-bg-dark) 100%);
+  border-bottom: 3px solid;
+  border-image: linear-gradient(90deg, transparent, var(--legion-gold), transparent) 1;
+}
+
+.legion-hero h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 20px rgba(201, 162, 39, 0.3);
+}
+
+.legion-hero .tagline {
+  font-size: 1.25rem;
+  color: var(--legion-text-dim);
+  font-style: italic;
+  margin-bottom: 2rem;
+}
+
+/* === Card Grid === */
+.legion-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.legion-card {
+  background: var(--legion-bg-card);
+  border: 1px solid var(--legion-border);
+  border-radius: 8px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.legion-card:hover {
+  border-color: var(--legion-gold);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.legion-card h3 {
+  margin-top: 0;
+}
+
+/* === Dividers === */
+.legion-divider {
+  text-align: center;
+  margin: 3rem 0;
+  color: var(--legion-gold-dim);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 3px;
+}
+
+.legion-divider::before,
+.legion-divider::after {
+  content: '—';
+  margin: 0 1rem;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  h1, .entry-title { font-size: 2rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  
+  article.post,
+  article.page {
+    padding: 1.5rem;
+  }
+  
+  .legion-hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  table {
+    font-size: 0.9rem;
+  }
+  
+  th, td {
+    padding: 0.75rem;
+  }
+}
+
+/* === Astra-Specific Overrides === */
+.ast-separate-container .ast-article-post,
+.ast-separate-container .ast-article-single {
+  background: var(--legion-bg-card) !important;
+}
+
+.ast-separate-container {
+  background: var(--legion-bg-darker) !important;
+}
+
+.ast-plain-container {
+  background: var(--legion-bg-darker) !important;
+}
+
+body .entry-content > *:not(.alignwide):not(.alignfull):not(.alignleft):not(.alignright):not(.wp-block-separator):not(.woocommerce) {
+  color: var(--legion-text);
+}
+
+/* Fix for Astra's default link colors */
+.entry-content a:not(.wp-block-button__link):not(.button) {
+  color: var(--legion-gold);
+}
+
+.entry-content a:not(.wp-block-button__link):not(.button):hover {
+  color: var(--legion-gold-bright);
+}
+
+/* === Print Styles === */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+  }
+}
+
+/* Fix header full-width background */
+.ast-primary-header-bar,
+.ast-main-header-wrap,
+.main-header-bar-wrap,
+.site-primary-header-wrap,
+.ast-builder-grid-row-container.site-header-focus-item,
+[data-section="section-primary-header-builder"] {
+  background: var(--legion-bg-darker) !important;
+}
+
+/* Fix header background full width */
+#page,
+.ast-hfb-header,
+.ast-hfb-header .site-header,
+#ast-desktop-header,
+.ast-desktop-header-content,
+.ast-main-header-wrap,
+.main-header-bar-wrap,
+.ast-primary-header-bar,
+.site-primary-header-wrap,
+.ast-builder-grid-row-container,
+.ast-container {
+  background-color: #06060a !important;
+}
+
+/* Nuclear header fix - ensure consistent dark background */
+body,
+#page,
+.site,
+header,
+.site-header,
+#masthead,
+.ast-hfb-header *,
+#ast-desktop-header *,
+[class*="header"] {
+  background-color: #06060a !important;
+}
+
+/* But restore card backgrounds */
+.ast-article-inner,
+.ast-separate-container .ast-article-single,
+article.page,
+.entry-content {
+  background-color: transparent !important;
+}
+
+/* Override Astra color variables for header */
+:root {
+  --ast-global-color-5: #06060a !important;
+  --ast-global-color-6: #06060a !important;
+  --ast-global-color-7: #06060a !important;
+}
+
+html {
+  background-color: #06060a !important;
+}

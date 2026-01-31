@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Awards & Ranks - 47th Legion</title>
+  <link rel="stylesheet" href="assets/css/47th-theme.css">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-card: #12121a;
+      --border: #2a2a3a;
+      --gold: #c9a227;
+      --gold-dim: #8b7355;
+      --text: #e8e6e3;
+      --text-dim: #888;
+      --red: #8b0000;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Cinzel', 'Times New Roman', serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    nav {
+      background: linear-gradient(180deg, #1a1a24 0%, #0d0d12 100%);
+      border-bottom: 2px solid var(--gold);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+    }
+    
+    nav a {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    
+    nav a:hover { color: #fff; }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    h1 {
+      text-align: center;
+      color: var(--gold);
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: 3px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: var(--text-dim);
+      font-style: italic;
+      margin-bottom: 3rem;
+    }
+    
+    h2 {
+      color: var(--gold);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin: 2rem 0 1rem;
+      font-size: 1.5rem;
+      letter-spacing: 2px;
+    }
+    
+    .section-intro {
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+      font-family: Georgia, serif;
+    }
+    
+    /* Rank Table */
+    .rank-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    
+    .rank-table th {
+      background: var(--bg-card);
+      color: var(--gold);
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid var(--gold);
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
+    
+    .rank-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    
+    .rank-table tr:hover {
+      background: rgba(201, 162, 39, 0.05);
+    }
+    
+    .rank-img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+    
+    .rank-code {
+      font-family: monospace;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+    
+    .rank-name {
+      font-weight: bold;
+    }
+    
+    .rank-category {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .cat-officers { background: var(--gold); color: #000; }
+    .cat-ncos { background: #4a6fa5; color: #fff; }
+    .cat-enlisted { background: #5a5a5a; color: #fff; }
+    
+    /* Awards Grid */
+    .awards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    
+    .award-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      transition: border-color 0.3s, transform 0.2s;
+    }
+    
+    .award-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+    
+    .award-ribbon {
+      width: 72px;
+      height: 28px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.3);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .award-info {
+      flex: 1;
+    }
+    
+    .award-name {
+      font-weight: bold;
+      color: var(--gold);
+      margin-bottom: 0.25rem;
+      font-size: 0.95rem;
+    }
+    
+    .award-desc {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      font-family: Georgia, serif;
+    }
+    
+    .award-category-header {
+      color: var(--gold);
+      font-size: 1.1rem;
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .promotion-info {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    
+    .promotion-info h3 {
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    
+    .promotion-info ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .promotion-info li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-family: Georgia, serif;
+    }
+    
+    .promotion-info li:last-child {
+      border-bottom: none;
+    }
+    
+    .days {
+      color: var(--gold);
+      font-weight: bold;
+    }
+    
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="https://47th.info">Home</a>
+    <a href="https://47th.info/roster/">Roster</a>
+    <a href="https://47th.info/rank-structure/">Ranks</a>
+    <a href="https://47th.info/awards/">Awards</a>
+    <a href="https://discord.gg/tQ7Bh79Dwm">Discord</a>
+  </nav>
+
+  <div class="container">
+    <h1>AWARDS & RANKS</h1>
+    <p class="subtitle">The honors and structure of the 47th Legion</p>
+
+    <!-- RANK STRUCTURE -->
+    <h2>⚔️ RANK STRUCTURE</h2>
+    <p class="section-intro">
+      The 47th Legion uses a Roman-inspired military rank structure. Junior enlisted ranks (E-1 to E-3) 
+      are earned through time in service, while senior enlisted (E-4+) and Officer ranks require demonstrated 
+      leadership and are awarded by command.
+    </p>
+
+    <div class="promotion-info">
+      <h3>📈 Automatic Promotion Schedule</h3>
+      <ul>
+        <li><strong>E-1 Tiron → E-2 Miles:</strong> <span class="days">30 days</span> of service</li>
+        <li><strong>E-2 Miles → E-3 Miles Gregarius:</strong> <span class="days">60 days</span> of service</li>
+        <li><strong>E-3 Miles Gregarius → E-4 Decanus:</strong> <span class="days">120 days</span> of service</li>
+        <li><strong>E-5+ Senior Enlisted:</strong> Awarded by command based on merit</li>
+        <li><strong>Officer Ranks (O-1 to O-8):</strong> Appointed by Legion command</li>
+      </ul>
+    </div>
+
+    <h3 style="color: var(--gold); margin: 1.5rem 0 1rem;">Officers</h3>
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th style="width: 60px;">Insignia</th>
+          <th style="width: 60px;">Grade</th>
+          <th>Title</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img src="assets/ranks/o8.png" alt="O-8" class="rank-img"></td>
+          <td class="rank-code">O-8</td>
+          <td class="rank-name">Imperator</td>
+          <td>Supreme Commander</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o7.png" alt="O-7" class="rank-img"></td>
+          <td class="rank-code">O-7</td>
+          <td class="rank-name">Legate</td>
+          <td>Legion Commander</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o6.png" alt="O-6" class="rank-img"></td>
+          <td class="rank-code">O-6</td>
+          <td class="rank-name">Prefect</td>
+          <td>Senior Staff Officer</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o5.png" alt="O-5" class="rank-img"></td>
+          <td class="rank-code">O-5</td>
+          <td class="rank-name">Tribune</td>
+          <td>Staff Officer</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o4.png" alt="O-4" class="rank-img"></td>
+          <td class="rank-code">O-4</td>
+          <td class="rank-name">Centurion</td>
+          <td>Century Commander</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o3.png" alt="O-3" class="rank-img"></td>
+          <td class="rank-code">O-3</td>
+          <td class="rank-name">Optio</td>
+          <td>Second-in-command of a Century</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o2.png" alt="O-2" class="rank-img"></td>
+          <td class="rank-code">O-2</td>
+          <td class="rank-name">Tesserarian</td>
+          <td>Guard Commander, Watch Officer</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/o1.png" alt="O-1" class="rank-img"></td>
+          <td class="rank-code">O-1</td>
+          <td class="rank-name">Vexillarian</td>
+          <td>Standard Bearer, Junior Officer</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="color: var(--gold); margin: 1.5rem 0 1rem;">Enlisted</h3>
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th style="width: 60px;">Insignia</th>
+          <th style="width: 60px;">Grade</th>
+          <th>Title</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img src="assets/ranks/e8.png" alt="E-8" class="rank-img"></td>
+          <td class="rank-code">E-8</td>
+          <td class="rank-name">Signifier</td>
+          <td>Standard Bearer of the Century</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e7.png" alt="E-7" class="rank-img"></td>
+          <td class="rank-code">E-7</td>
+          <td class="rank-name">Triplicarian</td>
+          <td>Senior Pay Grade (Triple Pay)</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e6.png" alt="E-6" class="rank-img"></td>
+          <td class="rank-code">E-6</td>
+          <td class="rank-name">Duplicarian</td>
+          <td>Senior Enlisted (Double Pay)</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e5.png" alt="E-5" class="rank-img"></td>
+          <td class="rank-code">E-5</td>
+          <td class="rank-name">Carian</td>
+          <td>Veteran Soldier</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e4.png" alt="E-4" class="rank-img"></td>
+          <td class="rank-code">E-4</td>
+          <td class="rank-name">Decanus</td>
+          <td>Squad Leader (Contubernium)</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e3.png" alt="E-3" class="rank-img"></td>
+          <td class="rank-code">E-3</td>
+          <td class="rank-name">Miles Gregarius</td>
+          <td>Common Soldier (60+ days)</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e2.png" alt="E-2" class="rank-img"></td>
+          <td class="rank-code">E-2</td>
+          <td class="rank-name">Miles</td>
+          <td>Soldier (30+ days)</td>
+        </tr>
+        <tr>
+          <td><img src="assets/ranks/e1.png" alt="E-1" class="rank-img"></td>
+          <td class="rank-code">E-1</td>
+          <td class="rank-name">Tiron</td>
+          <td>Recruit, New Legionary</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="color: var(--gold); margin: 1.5rem 0 1rem;">Reserves</h3>
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th style="width: 60px;">Insignia</th>
+          <th style="width: 60px;">Grade</th>
+          <th>Title</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>—</td>
+          <td class="rank-code">RES</td>
+          <td class="rank-name">Veteranus</td>
+          <td>Inactive or reserve Legionary</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- AWARDS -->
+    <h2>🎖️ DECORATIONS & AWARDS</h2>
+    <p class="section-intro">
+      Legionaries earn awards for valor, service, and participation in campaigns. 
+      Awards are displayed in order of precedence on member profiles.
+    </p>
+
+    <h3 class="award-category-header">Valor Decorations</h3>
+    <div class="awards-grid">
+      <div class="award-card">
+        <img src="assets/ribbons/corona_obsidionalis.png" alt="Corona Obsidionalis" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Corona Obsidionalis</div>
+          <div class="award-desc">Breaking the siege of beleaguered Imperial forces.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/corona_civica.png" alt="Corona Civica" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Corona Civica</div>
+          <div class="award-desc">Saving the life of another Legionary.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/medal.png" alt="Legionary's Medal" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Legionary's Medal</div>
+          <div class="award-desc">Distinguishing heroism above and beyond the call of duty.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/corona_aurea.png" alt="Corona Aurea" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Corona Aurea</div>
+          <div class="award-desc">Killing an enemy soldier in single combat.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/corona_vallaris.png" alt="Corona Vallaris" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Corona Vallaris</div>
+          <div class="award-desc">First Legionary to enter an enemy fortification.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/corona_muralis.png" alt="Corona Muralis" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Corona Muralis</div>
+          <div class="award-desc">First Legionary to enter a besieged city.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/wounded.png" alt="Wounded in Combat" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Wounded in Combat</div>
+          <div class="award-desc">Suffer egregious physical injury from enemy contact.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/torques.png" alt="Torques" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Torques</div>
+          <div class="award-desc">Display valor in combat.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="award-category-header">Merit Awards</h3>
+    <div class="awards-grid">
+      <div class="award-card">
+        <img src="assets/ribbons/commendation.png" alt="Commendation" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Commendation</div>
+          <div class="award-desc">Meritorious service to the Legion.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/achievement.png" alt="Achievement" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Achievement</div>
+          <div class="award-desc">Lesser meritorious service.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/armillae.png" alt="Armillae" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Armillae</div>
+          <div class="award-desc">Minor valor (non-combat).</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/defense.png" alt="Defense of the Empire" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Defense of the Empire</div>
+          <div class="award-desc">Service during wartime.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="award-category-header">Service Awards</h3>
+    <div class="awards-grid">
+      <div class="award-card">
+        <img src="assets/ribbons/service.png" alt="Imperial Service" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Imperial Service</div>
+          <div class="award-desc">Begin service with the Legion.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/good_conduct.png" alt="Good Conduct" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Good Conduct</div>
+          <div class="award-desc">Complete 60 days of service without reprimand.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/nco_development.png" alt="NCO Development" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">NCO Development</div>
+          <div class="award-desc">Display skill in leadership as an NCO.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/recruiter.png" alt="Recruiter" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Recruiter</div>
+          <div class="award-desc">Recruit 2 Legionaries into the Legion.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/organizational_excellence.png" alt="Organizational Excellence" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Organizational Excellence</div>
+          <div class="award-desc">Show great skill in organizing a document or event.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/joint_operations.png" alt="Joint Operations" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Joint Operations</div>
+          <div class="award-desc">Participate in a combat operation with allied forces.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/joint_training.png" alt="Joint Training" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Joint Training</div>
+          <div class="award-desc">Participate in a training exercise with allied forces.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="award-category-header">Campaign Ribbons</h3>
+    <div class="awards-grid">
+      <div class="award-card">
+        <img src="assets/ribbons/swg.png" alt="Star Wars Galaxies" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Star Wars Galaxies</div>
+          <div class="award-desc">Origin game of the 47th Legion.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/swtor.png" alt="SWTOR" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Star Wars: The Old Republic</div>
+          <div class="award-desc">Served in SWTOR.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/elder_scrolls.png" alt="Elder Scrolls Online" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Elder Scrolls Online</div>
+          <div class="award-desc">Served in ESO.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/star_citizen.png" alt="Star Citizen" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Star Citizen</div>
+          <div class="award-desc">Served in Star Citizen.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/helldivers.png" alt="Helldivers 2" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Helldivers 2</div>
+          <div class="award-desc">Served in Helldivers 2.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/fallout76.png" alt="Fallout 76" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Fallout 76</div>
+          <div class="award-desc">Served in Fallout 76.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/colonial_marines.png" alt="Colonial Marines" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Colonial Marines</div>
+          <div class="award-desc">Served in Aliens: Fireteam Elite.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/MWO.png" alt="MechWarrior Online" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">MechWarrior Online</div>
+          <div class="award-desc">Served in MWO.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="award-category-header">Legacy Campaigns</h3>
+    <p class="section-intro" style="margin-top: 0;">Historical campaigns from the Legion's past.</p>
+    <div class="awards-grid">
+      <div class="award-card">
+        <img src="assets/ribbons/tabula_rasa.png" alt="Tabula Rasa" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Tabula Rasa</div>
+          <div class="award-desc">Served in Tabula Rasa (2007-2009).</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/fallen_earth.png" alt="Fallen Earth" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Fallen Earth</div>
+          <div class="award-desc">Served in Fallen Earth.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/defiance.png" alt="Defiance" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Defiance</div>
+          <div class="award-desc">Served in Defiance.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/firefall.png" alt="Firefall" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Firefall</div>
+          <div class="award-desc">Served in Firefall.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/planetside2.png" alt="Planetside 2" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Planetside 2</div>
+          <div class="award-desc">Served in Planetside 2.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/division.png" alt="The Division" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">The Division</div>
+          <div class="award-desc">Served in The Division.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/empyrion.png" alt="Empyrion" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Empyrion</div>
+          <div class="award-desc">Served in Empyrion: Galactic Survival.</div>
+        </div>
+      </div>
+      <div class="award-card">
+        <img src="assets/ribbons/global_agenda.png" alt="Global Agenda" class="award-ribbon">
+        <div class="award-info">
+          <div class="award-name">Global Agenda</div>
+          <div class="award-desc">Served in Global Agenda.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>☆ ☆ ☆</p>
+    <p>47th Legion • Est. MMVII • <em>Forged in Battle, Bound by Honor</em></p>
+  </footer>
+</body>
+</html>

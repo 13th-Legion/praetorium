@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>47th Legion - Personnel Roster</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/47th-theme.css">
+  <style>
+    /* ===== ROSTER PAGE - SPACE ROME ===== */
+    
+    /* Header - Grand Command */
+    header {
+      background: 
+        /* Marble texture */
+        linear-gradient(135deg, 
+          rgba(245, 245, 240, 0.03) 0%, 
+          transparent 30%,
+          rgba(120, 100, 80, 0.02) 50%,
+          transparent 70%,
+          rgba(245, 245, 240, 0.02) 100%
+        ),
+        /* Space gradient */
+        radial-gradient(ellipse at center top, rgba(139, 112, 32, 0.15) 0%, transparent 50%),
+        linear-gradient(180deg, #12100a 0%, #0a0908 40%, var(--bg-dark) 100%);
+      padding: 3rem 2rem;
+      text-align: center;
+      position: relative;
+    }
+    
+    /* Grand bottom border */
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        #3d3020 10%,
+        #8b7020 25%,
+        #d4af37 40%,
+        #ffd700 50%,
+        #d4af37 60%,
+        #8b7020 75%,
+        #3d3020 90%,
+        transparent 100%
+      );
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    }
+    
+    .logo {
+      width: 140px;
+      height: 140px;
+      margin-bottom: 1.5rem;
+      filter: drop-shadow(0 0 25px rgba(212, 175, 55, 0.5));
+    }
+    
+    h1 {
+      font-family: 'Cinzel', 'Trajan Pro', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: 8px;
+      background: linear-gradient(180deg, 
+        #ffd700 0%, 
+        #d4af37 30%, 
+        #ffd700 50%, 
+        #a08020 70%, 
+        #d4af37 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      font-family: 'Cinzel', serif;
+      color: var(--text-dim);
+      font-size: 1.3rem;
+      letter-spacing: 4px;
+      font-style: italic;
+    }
+    
+    /* Stats Bar - Console Style */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      text-align: center;
+      padding: 1rem 1.5rem;
+      background: 
+        linear-gradient(135deg, rgba(245, 245, 240, 0.03) 0%, transparent 100%),
+        linear-gradient(180deg, rgba(26, 21, 16, 0.8) 0%, rgba(13, 11, 8, 0.9) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      min-width: 100px;
+      
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 4px 12px rgba(0, 0, 0, 0.6);
+      
+      transition: all 0.3s ease;
+    }
+    
+    .stat:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-2px);
+    }
+    
+    .stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(180deg, #ffd700 0%, #d4af37 50%, #a08020 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    
+    .stat-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 0.3rem;
+    }
+    
+    /* Category colors for stats */
+    .stat.officers .stat-value { 
+      background: linear-gradient(180deg, #ffd700 0%, #d4af37 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .stat.ncos .stat-value { 
+      background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .stat.enlisted .stat-value { 
+      background: linear-gradient(180deg, #e0a060 0%, #cd7f32 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .stat.reserves .stat-value { 
+      background: linear-gradient(180deg, #6a7080 0%, #4a5568 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    
+    /* Filter Bar - Tactical Console */
+    .filter-bar {
+      background: 
+        linear-gradient(180deg, #151512 0%, #0d0d0a 100%);
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 4px 12px rgba(0, 0, 0, 0.8);
+    }
+    
+    .nav-btn {
+      font-family: 'Cinzel', serif;
+      background: linear-gradient(180deg, #2a2520 0%, #1a1510 50%, #0d0a08 100%);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 1.5rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.5);
+      
+      transition: all 0.2s;
+    }
+    
+    .nav-btn:hover {
+      background: linear-gradient(180deg, #3a3025 0%, #2a2015 50%, #1a150d 100%);
+      border-color: var(--gold-dim);
+      color: var(--gold);
+      transform: translateY(-1px);
+    }
+    
+    .nav-btn.active {
+      background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 50%, #6b5518 100%);
+      border-color: var(--gold);
+      color: #000;
+      font-weight: 600;
+      box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+        0 0 15px rgba(212, 175, 55, 0.3);
+    }
+    
+    /* Category-specific active states */
+    .nav-btn[data-filter="Officers"].active { 
+      background: linear-gradient(180deg, #ffd700 0%, #d4af37 50%, #8b7020 100%);
+      border-color: #ffd700;
+    }
+    .nav-btn[data-filter="NCOs"].active { 
+      background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 50%, #808080 100%);
+      border-color: #c0c0c0;
+    }
+    .nav-btn[data-filter="Enlisted"].active { 
+      background: linear-gradient(180deg, #e0a060 0%, #cd7f32 50%, #8b5a20 100%);
+      border-color: #cd7f32;
+    }
+    .nav-btn[data-filter="Reserves"].active { 
+      background: linear-gradient(180deg, #6a7585 0%, #4a5568 50%, #2d3748 100%);
+      border-color: #4a5568;
+      color: #fff;
+    }
+    
+    /* Main Content */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    /* Search Box - Console Input */
+    .search-box {
+      margin-bottom: 2rem;
+    }
+    
+    .search-box input {
+      width: 100%;
+      max-width: 400px;
+      padding: 0.8rem 1.2rem;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      background: linear-gradient(180deg, #0a0808 0%, #0d0b08 100%);
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      color: var(--gold);
+      
+      box-shadow: 
+        inset 0 2px 8px rgba(0, 0, 0, 0.5),
+        0 1px 0 rgba(255, 255, 255, 0.05);
+      
+      transition: all 0.2s;
+    }
+    
+    .search-box input::placeholder {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 
+        inset 0 2px 8px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(212, 175, 55, 0.3);
+    }
+    
+    /* Roster Sections */
+    .roster-section {
+      margin-bottom: 3rem;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+      position: relative;
+    }
+    
+    .section-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin: 0;
+    }
+    
+    /* Section colors with glow */
+    .section-header.officers { 
+      border-color: var(--officers); 
+      box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2);
+    }
+    .section-header.officers h2 { color: var(--officers); }
+    
+    .section-header.ncos { 
+      border-color: var(--ncos); 
+      box-shadow: 0 2px 10px rgba(192, 192, 192, 0.2);
+    }
+    .section-header.ncos h2 { color: var(--ncos); }
+    
+    .section-header.enlisted { 
+      border-color: var(--enlisted); 
+      box-shadow: 0 2px 10px rgba(205, 127, 50, 0.2);
+    }
+    .section-header.enlisted h2 { color: var(--enlisted); }
+    
+    .section-header.reserves { 
+      border-color: var(--reserves); 
+      box-shadow: 0 2px 10px rgba(74, 85, 104, 0.2);
+    }
+    .section-header.reserves h2 { color: var(--reserves); }
+    
+    .section-count {
+      font-family: 'Cinzel', serif;
+      background: linear-gradient(180deg, #1a1510 0%, #0d0a08 100%);
+      padding: 0.3rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      color: var(--gold);
+      border: 1px solid var(--border);
+    }
+    
+    /* Roster Grid */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    
+    /* Member Cards - Embossed Plaques */
+    .member-card {
+      background: 
+        /* Marble veining */
+        linear-gradient(135deg, 
+          rgba(245, 245, 240, 0.04) 0%, 
+          transparent 25%,
+          rgba(120, 100, 80, 0.02) 50%,
+          transparent 75%,
+          rgba(245, 245, 240, 0.03) 100%
+        ),
+        /* Base */
+        linear-gradient(180deg, #15120d 0%, #0c0a07 100%);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        0 4px 12px rgba(0, 0, 0, 0.6),
+        0 8px 24px rgba(0, 0, 0, 0.3);
+      
+      transition: all 0.25s ease;
+    }
+    
+    /* Corner accent */
+    .member-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, 
+        transparent 50%, 
+        rgba(139, 112, 32, 0.3) 50%
+      );
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    
+    .member-card:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-4px);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        0 8px 20px rgba(0, 0, 0, 0.7),
+        0 16px 40px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(212, 175, 55, 0.1);
+    }
+    
+    .member-card:hover::before {
+      opacity: 1;
+    }
+    
+    /* Avatar - Medallion Style */
+    .member-avatar {
+      width: 85px;
+      height: 85px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #1a1510 0%, #0a0908 100%);
+      border: 3px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: var(--text-dim);
+      overflow: hidden;
+      
+      box-shadow: 
+        inset 0 2px 6px rgba(0, 0, 0, 0.6),
+        0 2px 8px rgba(0, 0, 0, 0.5);
+      
+      transition: all 0.25s ease;
+    }
+    
+    .member-card:hover .member-avatar {
+      border-color: var(--gold-dim);
+      box-shadow: 
+        inset 0 2px 6px rgba(0, 0, 0, 0.6),
+        0 0 15px rgba(212, 175, 55, 0.2);
+    }
+    
+    .member-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .member-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .member-name {
+      font-family: 'Cinzel', serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+      letter-spacing: 1px;
+    }
+    
+    .member-rank {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .rank-img {
+      width: 26px;
+      height: 26px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    }
+    
+    .rank-name {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+    
+    .member-service {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    
+    .service-pips {
+      display: inline-flex;
+      gap: 0;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    
+    .service-pip {
+      width: 12px;
+      height: 16px;
+      display: block;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    }
+    
+    /* Awards - Military Ribbon Rack */
+    .ribbon-rack {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    .ribbon-row {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: -1px; /* Overlap rows slightly like real racks */
+    }
+    
+    .ribbon-row-partial {
+      /* Partial top row is centered by default via justify-content: center */
+    }
+    
+    .ribbon {
+      width: 36px;
+      height: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      box-sizing: border-box;
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: transform 0.2s ease, z-index 0s;
+      position: relative;
+    }
+    
+    .ribbon:hover {
+      transform: scale(2);
+      z-index: 100;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+    }
+    
+    /* No Results */
+    .no-results {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+    }
+    
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2.5rem;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, transparent 0%, rgba(26, 21, 16, 0.3) 100%);
+    }
+    
+    footer::before {
+      content: '☆ ☆ ☆';
+      display: block;
+      color: var(--gold-dim);
+      margin-bottom: 1rem;
+      letter-spacing: 1rem;
+      opacity: 0.6;
+    }
+    
+    .hidden { display: none !important; }
+    
+    /* Responsive */
+    @media (max-width: 480px) {
+      .roster-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      h1 { 
+        font-size: 2rem; 
+        letter-spacing: 4px;
+      }
+      
+      .stats { gap: 0.75rem; }
+      .stat { padding: 0.75rem 1rem; min-width: 80px; }
+      .stat-value { font-size: 1.8rem; }
+      
+      .member-card {
+        padding: 1rem;
+        gap: 1rem;
+      }
+      
+      .member-avatar {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .member-name {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Site Navigation -->
+  <nav class="nav">
+    <ul class="nav-list">
+      <li><a href="https://47th.info" class="nav-link">Home</a></li>
+      <li><a href="https://47th.info/roster/" class="nav-link active">Roster</a></li>
+      <li><a href="https://47th.info/rank-structure/" class="nav-link">Ranks</a></li>
+      <li><a href="https://47th.info/awards/" class="nav-link">Awards</a></li>
+      <li><a href="https://discord.gg/tQ7Bh79Dwm" class="nav-link" target="_blank">Discord</a></li>
+    </ul>
+  </nav>
+
+  <header>
+    <img src="assets/logo.png" alt="47th Legion" class="logo">
+    <h1>47TH LEGION</h1>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="total-count">--</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat officers">
+        <div class="stat-value" id="officers-count">--</div>
+        <div class="stat-label">Officers</div>
+      </div>
+      <div class="stat enlisted">
+        <div class="stat-value" id="enlisted-count">--</div>
+        <div class="stat-label">Enlisted</div>
+      </div>
+      <div class="stat reserves">
+        <div class="stat-value" id="reserves-count">--</div>
+        <div class="stat-label">Reserves</div>
+      </div>
+    </div>
+  </header>
+  
+  <div class="filter-bar">
+    <button class="nav-btn active" data-filter="all">All Personnel</button>
+    <button class="nav-btn" data-filter="Officers">Officers</button>
+    <button class="nav-btn" data-filter="Enlisted">Enlisted</button>
+    <button class="nav-btn" data-filter="Reserves">Reserves</button>
+  </div>
+  
+  <main>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Search by name...">
+    </div>
+    
+    <div id="roster-container">
+      <p class="no-results">Loading roster...</p>
+    </div>
+  </main>
+  
+  <footer>
+    <p>47th Legion &bull; Founded MMVII &bull; <em>Forged in Battle, Bound by Honor</em></p>
+    <p style="margin-top: 0.5rem; opacity: 0.7;">Last updated: <span id="last-updated">--</span></p>
+  </footer>
+
+  <script>
+    const ASSET_BASE = 'assets';
+    let rosterData = null;
+    let currentFilter = 'all';
+    
+    // Rank images mapping
+    const rankImages = {
+      'E1': 'ranks/e1.png',
+      'E2': 'ranks/e2.png',
+      'E3': 'ranks/e3.png',
+      'E4': 'ranks/e4.png',
+      'E5': 'ranks/e5.png',
+      'E6': 'ranks/e6.png',
+      'E7': 'ranks/e7.png',
+      'E8': 'ranks/e8.png',
+      'O1': 'ranks/o1.png',
+      'O2': 'ranks/o2.png',
+      'O3': 'ranks/o3.png',
+      'O4': 'ranks/o4.png',
+      'O5': 'ranks/o5.png',
+      'O6': 'ranks/o6.png',
+      'O7': 'ranks/o7.png',
+      'O8': 'ranks/o8.png',
+    };
+    
+    // Award precedence (lower number = higher precedence, displayed first)
+    // Based on 47th Legion awards order of precedence
+    const awardPrecedence = {
+      // Highest decorations
+      'corona_obsidionalis': 1,
+      'corona_civica': 2,
+      'medal': 3,                    // Legionary's Medal
+      'corona_aurea': 4,
+      'corona_vallaris': 5,
+      'corona_muralis': 6,
+      'prisoner': 7,                 // Prisoner of War
+      'wounded': 8,                  // Wounded in Combat
+      'torques': 9,
+      'commendation': 10,
+      'achievement': 11,
+      'armillae': 12,
+      'mng_2014': 13,                // Meet & Greet 2014
+      'defense': 14,                 // Defense of the Empire
+      // Campaign ribbons (chronological by game release/adoption)
+      'swg': 20,                     // Star Wars Galaxies (origin game)
+      'tabula_rasa': 21,
+      'fallen_earth': 22,
+      'global_agenda': 23,
+      'earthrise': 24,
+      'swtor': 25,                   // Star Wars: The Old Republic
+      'sto': 26,                     // Star Trek Online
+      'defiance': 27,
+      'firefall': 28,
+      'planetside2': 29,
+      'repopulation': 30,
+      'star_citizen': 31,
+      'division': 32,
+      'division2': 33,
+      'empyrion': 34,
+      'elder_scrolls': 35,
+      'MWO': 36,                     // MechWarrior Online
+      'fallout76': 37,
+      'helldivers': 38,
+      'colonial_marines': 39,        // Aliens: Fireteam
+      // Service awards
+      'joint_operations': 50,
+      'army_occupation': 51,
+      'organizational_excellence': 52,
+      'good_conduct': 53,
+      'humane_action': 54,
+      'nco_development': 55,
+      'recruiter': 56,
+      'joint_training': 57,
+      'service': 99,                 // Imperial Service (everyone has this)
+    };
+    
+    // Sort awards by precedence
+    function sortAwardsByPrecedence(awards) {
+      return [...awards].sort((a, b) => {
+        const precA = awardPrecedence[a] ?? 999;
+        const precB = awardPrecedence[b] ?? 999;
+        return precA - precB;
+      });
+    }
+    
+    // Build ribbon rack HTML with military-style layout
+    // Incomplete rows go on TOP and are centered
+    function buildRibbonRack(awards, ribbonsPerRow = 4) {
+      if (!awards || awards.length === 0) return '';
+      
+      const sorted = sortAwardsByPrecedence(awards);
+      const totalRibbons = sorted.length;
+      const fullRows = Math.floor(totalRibbons / ribbonsPerRow);
+      const topRowCount = totalRibbons % ribbonsPerRow;
+      
+      let rows = [];
+      let idx = 0;
+      
+      // If there's an incomplete row, it goes first (top)
+      if (topRowCount > 0) {
+        rows.push({
+          ribbons: sorted.slice(0, topRowCount),
+          isPartial: true
+        });
+        idx = topRowCount;
+      }
+      
+      // Full rows below
+      while (idx < totalRibbons) {
+        rows.push({
+          ribbons: sorted.slice(idx, idx + ribbonsPerRow),
+          isPartial: false
+        });
+        idx += ribbonsPerRow;
+      }
+      
+      // Build HTML
+      return `<div class="ribbon-rack">
+        ${rows.map(row => `
+          <div class="ribbon-row${row.isPartial ? ' ribbon-row-partial' : ''}">
+            ${row.ribbons.map(a => 
+              `<img src="${ASSET_BASE}/ribbons/${a}.png" alt="${a}" title="${a}" class="ribbon">`
+            ).join('')}
+          </div>
+        `).join('')}
+      </div>`;
+    }
+    
+    // Service pips - combinatorial approach using gold (5yr) and silver (1yr) pips
+    function getServicePips(years) {
+      if (years < 1) return [];
+      const goldPips = Math.floor(years / 5);  // Each gold pip = 5 years
+      const silverPips = years % 5;             // Each silver pip = 1 year
+      const pips = [];
+      for (let i = 0; i < goldPips; i++) pips.push('timeInService/pip_5year.png');
+      for (let i = 0; i < silverPips; i++) pips.push('timeInService/pip_1year.png');
+      return pips;
+    }
+    
+    async function loadRoster() {
+      try {
+        const resp = await fetch('data/roster.json');
+        rosterData = await resp.json();
+        updateStats();
+        renderRoster();
+        document.getElementById('last-updated').textContent = 
+          new Date(rosterData.generated).toLocaleDateString();
+      } catch (err) {
+        console.error('Failed to load roster:', err);
+        document.getElementById('roster-container').innerHTML = 
+          '<p class="no-results">Failed to load roster data.</p>';
+      }
+    }
+    
+    function updateStats() {
+      if (!rosterData) return;
+      const members = rosterData.members;
+      document.getElementById('total-count').textContent = members.length;
+      document.getElementById('officers-count').textContent = 
+        members.filter(m => m.rank.category === 'Officers').length;
+      document.getElementById('enlisted-count').textContent = 
+        members.filter(m => m.rank.category === 'Enlisted').length;
+      document.getElementById('reserves-count').textContent = 
+        members.filter(m => m.rank.category === 'Reserves').length;
+    }
+    
+    function renderMemberCard(member) {
+      const servicePips = getServicePips(member.yearsOfService);
+      const rankImg = rankImages[member.rank.code];
+      
+      const awardsHtml = buildRibbonRack(member.awards);
+      
+      return `
+        <div class="member-card" data-category="${member.rank.category}" data-name="${member.displayName.toLowerCase()}">
+          <div class="member-avatar">
+            ${member.avatarUrl 
+              ? `<img src="${member.avatarUrl}" alt="${member.displayName}" loading="lazy">`
+              : '👤'}
+          </div>
+          <div class="member-info">
+            <div class="member-name">${member.displayName}</div>
+            <div class="member-rank">
+              ${rankImg ? `<img src="${ASSET_BASE}/${rankImg}" alt="${member.rank.code}" class="rank-img">` : ''}
+              <span class="rank-name">${member.rank.name} (${member.rank.code})</span>
+            </div>
+            <div class="member-service">
+              <span class="service-pips">${servicePips.map(p => `<img src="${ASSET_BASE}/${p}" alt="pip" class="service-pip">`).join('')}</span>
+              <span>${member.yearsOfService} year${member.yearsOfService !== 1 ? 's' : ''} service</span>
+            </div>
+          </div>
+          ${awardsHtml}
+        </div>`;
+    }
+    
+    function renderRoster() {
+      if (!rosterData) return;
+      
+      const searchTerm = document.getElementById('search').value.toLowerCase();
+      const container = document.getElementById('roster-container');
+      
+      const categories = ['Officers', 'Enlisted', 'Reserves'];
+      let html = '';
+      let anyVisible = false;
+      
+      for (const category of categories) {
+        if (currentFilter !== 'all' && currentFilter !== category) continue;
+        
+        const members = rosterData.members.filter(m => {
+          if (m.rank.category !== category) return false;
+          if (searchTerm && !m.displayName.toLowerCase().includes(searchTerm)) return false;
+          return true;
+        });
+        
+        if (members.length === 0) continue;
+        anyVisible = true;
+        
+        html += `
+          <section class="roster-section">
+            <div class="section-header ${category.toLowerCase()}">
+              <h2>${category}</h2>
+              <span class="section-count">${members.length}</span>
+            </div>
+            <div class="roster-grid">
+              ${members.map(renderMemberCard).join('')}
+            </div>
+          </section>`;
+      }
+      
+      if (!anyVisible) {
+        html = '<p class="no-results">No personnel found matching your criteria.</p>';
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    // Event listeners
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderRoster();
+      });
+    });
+    
+    document.getElementById('search').addEventListener('input', renderRoster);
+    
+    // Init
+    loadRoster();
+  </script>
+</body>
+</html>
