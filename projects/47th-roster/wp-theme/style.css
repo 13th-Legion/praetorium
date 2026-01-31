@@ -822,3 +822,24 @@ article.page,
 html {
   background-color: #06060a !important;
 }
+
+/* Full-width header background fix */
+.ast-primary-header-bar,
+.ast-main-header-wrap,
+.main-header-bar-wrap,
+#ast-desktop-header {
+  background-color: #0a0a0f !important;
+}
+
+.site-primary-header-wrap.ast-container {
+  background-color: transparent !important;
+}
+
+/* Unified header background - single color source */
+#masthead {
+  background-color: #0a0a0f !important;
+}
+
+#masthead *:not(img):not(a):not(span):not(li):not(ul):not(nav) {
+  background-color: transparent !important;
+}
