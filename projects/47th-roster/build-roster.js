@@ -247,6 +247,7 @@ function getGames(roles) {
 function buildRoster() {
   const rawPath = path.join(__dirname, 'data', 'members-raw.json');
   const awardsPath = path.join(__dirname, 'data', 'awards.json');
+  const rosterPath = path.join(__dirname, 'data', 'roster.json');
   
   if (!fs.existsSync(rawPath)) {
     console.error('Run fetch-roster.sh first!');
@@ -259,6 +260,18 @@ function buildRoster() {
   let awards = {};
   if (fs.existsSync(awardsPath)) {
     awards = JSON.parse(fs.readFileSync(awardsPath, 'utf-8'));
+  }
+  
+  // SAFEGUARD: Load existing roster to preserve any awards not in awards.json
+  // This prevents accidental loss of historical ribbons
+  let existingAwards = {};
+  if (fs.existsSync(rosterPath)) {
+    const existingRoster = JSON.parse(fs.readFileSync(rosterPath, 'utf-8'));
+    for (const member of existingRoster.members || []) {
+      if (member.awards && member.awards.length > 0) {
+        existingAwards[member.id] = member.awards;
+      }
+    }
   }
   
   const roster = {
@@ -289,9 +302,11 @@ function buildRoster() {
     const games = getGames(member.roles);
     const gameRibbons = games.map(g => GAME_RIBBONS[g]).filter(Boolean);
     
-    // Combine manual awards with auto-generated game ribbons (dedupe)
+    // Combine: existing awards + manual awards + auto-generated game ribbons (dedupe)
+    // This preserves any awards from the previous roster that aren't in awards.json
+    const previousAwards = existingAwards[userId] || [];
     const manualAwards = awards[userId] || [];
-    const memberAwards = [...new Set([...manualAwards, ...gameRibbons])];
+    const memberAwards = [...new Set([...previousAwards, ...manualAwards, ...gameRibbons])];
     
     roster.members.push({
       id: userId,
