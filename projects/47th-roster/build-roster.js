@@ -46,12 +46,73 @@ const EXCLUDED_USERNAMES = [
 // Manual member overrides (Discord ID -> overrides)
 // Use for correcting names, ranks, or join dates that Discord doesn't have right
 const MEMBER_OVERRIDES = {
-  '180127552126320640': {  // Mareth Lightfoot
+  '179481162710908928': {  // Cavadus
+    historicalJoinDate: '2007-12-04T05:56:00.000Z',
+  },
+  '242836923394162688': {  // Kolya
+    historicalJoinDate: '2008-01-16T01:18:00.000Z',
+  },
+  '180332042720903168': {  // Odin
+    historicalJoinDate: '2013-08-08T15:03:00.000Z',
+  },
+  '917992606892429443': {  // Dragonsoul
+    historicalJoinDate: '2013-06-18T18:31:00.000Z',
+  },
+  '180127552126320640': {  // Lightfoot
     displayName: 'Lightfoot',
     rank: { code: 'E8', name: 'Signifier', category: 'Enlisted' },
+    historicalJoinDate: '2013-05-07T18:02:00.000Z',
   },
-  '1245124464082026573': {  // Snowmanha (new Discord account, original member since 2017)
+  '169887739406319618': {  // Maximus
+    historicalJoinDate: '2013-05-07T10:42:00.000Z',
+  },
+  '180087410619711488': {  // Bealin
+    historicalJoinDate: '2013-07-18T01:36:00.000Z',
+  },
+  '179849584124624897': {  // Payton
+    historicalJoinDate: '2008-12-30T05:15:00.000Z',
+  },
+  '1245124464082026573': {  // Snowmanha
     historicalJoinDate: '2017-06-01T00:00:00.000Z',
+  },
+  '141289033245392896': {  // Jungels
+    historicalJoinDate: '2013-02-07T02:49:00.000Z',
+  },
+  '151814353354489856': {  // Lodowar
+    historicalJoinDate: '2013-07-05T16:48:00.000Z',
+  },
+  '157228969446342666': {  // Bonetti
+    historicalJoinDate: '2013-03-12T05:12:00.000Z',
+  },
+  '173679004883091457': {  // Dralzen
+    historicalJoinDate: '2013-05-18T20:58:00.000Z',
+  },
+  '179782530264727552': {  // Destroy
+    historicalJoinDate: '2011-02-05T00:04:00.000Z',
+  },
+  '180125977429540865': {  // Campbell
+    historicalJoinDate: '2008-01-27T17:13:00.000Z',
+  },
+  '183274731825266688': {  // bikerb12
+    historicalJoinDate: '2013-06-30T01:00:00.000Z',
+  },
+  '231905245372874763': {  // Rojnaar
+    historicalJoinDate: '2013-03-11T19:14:00.000Z',
+  },
+  '269643017583853569': {  // Munster
+    historicalJoinDate: '2013-03-24T16:47:00.000Z',
+  },
+  '299772766490722306': {  // Revoco
+    historicalJoinDate: '2008-02-06T10:05:00.000Z',
+  },
+  '341207893288288257': {  // Striker
+    historicalJoinDate: '2011-01-06T13:56:00.000Z',
+  },
+  '367819237252923393': {  // Toomey
+    historicalJoinDate: '2013-01-11T02:01:00.000Z',
+  },
+  '537332237507756043': {  // Jenkins
+    historicalJoinDate: '2013-03-13T15:34:00.000Z',
   },
 };
 

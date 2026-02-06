@@ -97,6 +97,19 @@ article.page {
   gap: 1rem;
 }
 
+@media (max-width: 1400px) {
+  .awards-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 1100px) {
+  .awards-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 800px) {
+  .awards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .awards-grid { grid-template-columns: 1fr; }
+}
+
 .award-card {
   background: #12121a;
   border: 1px solid #2a2a3a;
@@ -154,17 +167,44 @@ article.page {
       <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/achievement.png" class="award-ribbon"><div class="award-info"><div class="award-name">Achievement</div><div class="award-desc">Lesser meritorious service.</div></div></div>
     </div>
 
-    <h3>Campaign Ribbons</h3>
+    <h2>🎗️ CAMPAIGN RIBBONS</h2>
+    <p class="section-intro">Awarded for participation in Legion campaigns, ordered by precedence (oldest campaigns first).</p>
+
+    <h3>Campaign Ribbons — Historical</h3>
     <div class="awards-grid">
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/helldivers.png" class="award-ribbon"><div class="award-info"><div class="award-name">Helldivers 2</div><div class="award-desc">Served in Helldivers 2.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/fallout76.png" class="award-ribbon"><div class="award-info"><div class="award-name">Fallout 76</div><div class="award-desc">Served in Fallout 76.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/elder_scrolls.png" class="award-ribbon"><div class="award-info"><div class="award-name">Elder Scrolls Online</div><div class="award-desc">Served in ESO.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/swg.png" class="award-ribbon"><div class="award-info"><div class="award-name">Star Wars Galaxies</div><div class="award-desc">Origin game of the 47th.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/colonial_marines.png" class="award-ribbon"><div class="award-info"><div class="award-name">Colonial Marines</div><div class="award-desc">Served in Aliens: Fireteam Elite.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/MWO.png" class="award-ribbon"><div class="award-info"><div class="award-name">MechWarrior Online</div><div class="award-desc">Served in MWO.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/star_citizen.png" class="award-ribbon"><div class="award-info"><div class="award-name">Star Citizen</div><div class="award-desc">Served in Star Citizen.</div></div></div>
-      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/swtor.png" class="award-ribbon"><div class="award-info"><div class="award-name">SWTOR</div><div class="award-desc">Served in The Old Republic.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/swg.png" class="award-ribbon"><div class="award-info"><div class="award-name">Star Wars Galaxies</div><div class="award-desc">Origin game of the 47th (2007).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/tabula_rasa.png" class="award-ribbon"><div class="award-info"><div class="award-name">Tabula Rasa</div><div class="award-desc">Served in Tabula Rasa (2007).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/fallen_earth.png" class="award-ribbon"><div class="award-info"><div class="award-name">Fallen Earth</div><div class="award-desc">Served in Fallen Earth (2009).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/global_agenda.png" class="award-ribbon"><div class="award-info"><div class="award-name">Global Agenda</div><div class="award-desc">Served in Global Agenda (2010).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/sto.png" class="award-ribbon"><div class="award-info"><div class="award-name">Star Trek Online</div><div class="award-desc">Served in Star Trek Online (2010).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/swtor.png" class="award-ribbon"><div class="award-info"><div class="award-name">SWTOR</div><div class="award-desc">Served in Star Wars: The Old Republic (2011).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/earthrise.png" class="award-ribbon"><div class="award-info"><div class="award-name">Earthrise</div><div class="award-desc">Served in Earthrise (2011).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/planetside2.png" class="award-ribbon"><div class="award-info"><div class="award-name">Planetside 2</div><div class="award-desc">Served in Planetside 2 (2012).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/defiance.png" class="award-ribbon"><div class="award-info"><div class="award-name">Defiance</div><div class="award-desc">Served in Defiance (2013).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/MWO.png" class="award-ribbon"><div class="award-info"><div class="award-name">MechWarrior Online</div><div class="award-desc">Served in MechWarrior Online (2013).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/elder_scrolls.png" class="award-ribbon"><div class="award-info"><div class="award-name">Elder Scrolls Online</div><div class="award-desc">Served in Elder Scrolls Online (2014).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/firefall.png" class="award-ribbon"><div class="award-info"><div class="award-name">Firefall</div><div class="award-desc">Served in Firefall (2014).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/empyrion.png" class="award-ribbon"><div class="award-info"><div class="award-name">Empyrion</div><div class="award-desc">Served in Empyrion: Galactic Survival (2015).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/repopulation.png" class="award-ribbon"><div class="award-info"><div class="award-name">The Repopulation</div><div class="award-desc">Served in The Repopulation (2015).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/division.png" class="award-ribbon"><div class="award-info"><div class="award-name">The Division</div><div class="award-desc">Served in The Division (2016).</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/division2.png" class="award-ribbon"><div class="award-info"><div class="award-name">The Division 2</div><div class="award-desc">Served in The Division 2 (2019).</div></div></div>
     </div>
+
+    <h3>Campaign Ribbons — Active</h3>
+    <div class="awards-grid">
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/dune_awakening.png" class="award-ribbon"><div class="award-info"><div class="award-name">Dune: Awakening</div><div class="award-desc">Served in Dune: Awakening.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/fallout76.png" class="award-ribbon"><div class="award-info"><div class="award-name">Fallout 76</div><div class="award-desc">Served in Fallout 76.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/colonial_marines.png" class="award-ribbon"><div class="award-info"><div class="award-name">Aliens: Fireteam Elite</div><div class="award-desc">Served in Aliens: Fireteam Elite.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/war_thunder.png" class="award-ribbon"><div class="award-info"><div class="award-name">War Thunder</div><div class="award-desc">Served in War Thunder.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/helldivers.png" class="award-ribbon"><div class="award-info"><div class="award-name">Helldivers 2</div><div class="award-desc">Served in Helldivers 2.</div></div></div>
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/space_marine2.png" class="award-ribbon"><div class="award-info"><div class="award-name">Space Marine 2</div><div class="award-desc">Served in Warhammer 40K: Space Marine 2.</div></div></div>
+    </div>
+
+    <h3>Campaign Ribbons — Upcoming</h3>
+    <div class="awards-grid">
+      <div class="award-card"><img src="<?php echo $asset_base; ?>/ribbons/stars_reach.png" class="award-ribbon"><div class="award-info"><div class="award-name">Stars Reach</div><div class="award-desc">Served in Stars Reach.</div></div></div>
+    </div>
+
   </div>
 </div>
 

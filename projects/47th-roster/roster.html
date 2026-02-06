@@ -652,6 +652,11 @@
     let rosterData = null;
     let currentFilter = 'all';
     
+    // Format rank code with hyphen (e.g., "O3" -> "O-3")
+    function formatRankCode(code) {
+      return code.replace(/^([A-Z])(\d+)$/, '$1-$2');
+    }
+    
     // Rank images mapping
     const rankImages = {
       'E1': 'ranks/e1.png',
@@ -675,52 +680,58 @@
     // Award precedence (lower number = higher precedence, displayed first)
     // Based on 47th Legion awards order of precedence
     const awardPrecedence = {
-      // Highest decorations
+      // Valor Decorations (highest precedence)
       'corona_obsidionalis': 1,
       'corona_civica': 2,
-      'medal': 3,                    // Legionary's Medal
+      'medal': 3,
       'corona_aurea': 4,
       'corona_vallaris': 5,
       'corona_muralis': 6,
-      'prisoner': 7,                 // Prisoner of War
-      'wounded': 8,                  // Wounded in Combat
-      'torques': 9,
-      'commendation': 10,
-      'achievement': 11,
-      'armillae': 12,
-      'mng_2014': 13,                // Meet & Greet 2014
-      'defense': 14,                 // Defense of the Empire
-      // Campaign ribbons (chronological by game release/adoption)
-      'swg': 20,                     // Star Wars Galaxies (origin game)
-      'tabula_rasa': 21,
-      'fallen_earth': 22,
-      'global_agenda': 23,
-      'earthrise': 24,
-      'swtor': 25,                   // Star Wars: The Old Republic
-      'sto': 26,                     // Star Trek Online
-      'defiance': 27,
-      'firefall': 28,
-      'planetside2': 29,
-      'repopulation': 30,
-      'star_citizen': 31,
-      'division': 32,
-      'division2': 33,
-      'empyrion': 34,
-      'elder_scrolls': 35,
-      'MWO': 36,                     // MechWarrior Online
-      'fallout76': 37,
-      'helldivers': 38,
-      'colonial_marines': 39,        // Aliens: Fireteam
-      // Service awards
-      'joint_operations': 50,
-      'army_occupation': 51,
-      'organizational_excellence': 52,
-      'good_conduct': 53,
-      'humane_action': 54,
-      'nco_development': 55,
-      'recruiter': 56,
-      'joint_training': 57,
-      'service': 99,                 // Imperial Service (everyone has this)
+      'torques': 7,
+      'wounded': 8,
+      'prisoner': 9,
+      'armillae': 10,
+      // Service Awards
+      'service': 11,
+      'good_conduct': 12,
+      'nco_development': 13,
+      'recruiter': 14,
+      'commendation': 15,
+      'achievement': 16,
+      'organizational_excellence': 17,
+      'joint_operations': 18,
+      'joint_training': 19,
+      'defense': 20,
+      'army_occupation': 21,
+      'humane_action': 22,
+      'mng_2014': 23,
+      // Campaign Ribbons - Historical (chronological)
+      'swg': 30,
+      'tabula_rasa': 31,
+      'fallen_earth': 32,
+      'global_agenda': 33,
+      'sto': 34,
+      'swtor': 35,
+      'earthrise': 36,
+      'planetside2': 37,
+      'defiance': 38,
+      'MWO': 39,
+      'elder_scrolls': 40,
+      'firefall': 41,
+      'empyrion': 42,
+      'repopulation': 43,
+      'division': 44,
+      'division2': 45,
+      // Campaign Ribbons - Active
+      'dune_awakening': 50,
+      'fallout76': 51,
+      'colonial_marines': 52,
+      'war_thunder': 53,
+      'helldivers': 54,
+      'space_marine2': 55,
+      // Campaign Ribbons - Upcoming
+      'stars_reach': 60,
+    };
     };
     
     // Sort awards by precedence
@@ -830,7 +841,7 @@
             <div class="member-name">${member.displayName}</div>
             <div class="member-rank">
               ${rankImg ? `<img src="${ASSET_BASE}/${rankImg}" alt="${member.rank.code}" class="rank-img">` : ''}
-              <span class="rank-name">${member.rank.name} (${member.rank.code})</span>
+              <span class="rank-name">${member.rank.name} (${formatRankCode(member.rank.code)})</span>
             </div>
             <div class="member-service">
               <span class="service-pips">${servicePips.map(p => `<img src="${ASSET_BASE}/${p}" alt="pip" class="service-pip">`).join('')}</span>

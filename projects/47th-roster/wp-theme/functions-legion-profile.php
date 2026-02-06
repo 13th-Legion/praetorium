@@ -69,22 +69,25 @@ function legion_display_profile_extras($args) {
     // Ribbon Rack
     if (!empty($member['awards'])) {
         $precedence = array(
-            // Highest decorations
+            // Valor Decorations (highest precedence)
             'corona_obsidionalis' => 1, 'corona_civica' => 2, 'medal' => 3, 'corona_aurea' => 4,
-            'corona_vallaris' => 5, 'corona_muralis' => 6, 'prisoner' => 7, 'wounded' => 8, 'torques' => 9,
-            'commendation' => 10, 'achievement' => 11, 'armillae' => 12, 'mng_2014' => 13,
-            'defense' => 14,
-            // Campaign ribbons (chronological by game release/adoption)
-            'swg' => 20, 'tabula_rasa' => 21, 'fallen_earth' => 22, 'global_agenda' => 23,
-            'earthrise' => 24, 'swtor' => 25, 'sto' => 26, 'defiance' => 27, 'firefall' => 28,
-            'planetside2' => 29, 'repopulation' => 30, 'star_citizen' => 31, 'division' => 32,
-            'division2' => 33, 'empyrion' => 34, 'elder_scrolls' => 35, 'MWO' => 36,
-            'fallout76' => 37, 'helldivers' => 38, 'colonial_marines' => 39,
-            'dune_awakening' => 40, 'war_thunder' => 41, 'space_marine2' => 42, 'stars_reach' => 43,
-            // Service awards (lowest precedence, displayed last)
-            'joint_operations' => 50, 'army_occupation' => 51, 'organizational_excellence' => 52,
-            'good_conduct' => 53, 'humane_action' => 54, 'nco_development' => 55,
-            'recruiter' => 56, 'joint_training' => 57, 'service' => 99
+            'corona_vallaris' => 5, 'corona_muralis' => 6, 'torques' => 7, 'wounded' => 8,
+            'prisoner' => 9, 'armillae' => 10,
+            // Service Awards
+            'service' => 11, 'good_conduct' => 12, 'nco_development' => 13, 'recruiter' => 14,
+            'commendation' => 15, 'achievement' => 16, 'organizational_excellence' => 17,
+            'joint_operations' => 18, 'joint_training' => 19, 'defense' => 20,
+            'army_occupation' => 21, 'humane_action' => 22, 'mng_2014' => 23,
+            // Campaign Ribbons - Historical (chronological)
+            'swg' => 30, 'tabula_rasa' => 31, 'fallen_earth' => 32, 'global_agenda' => 33,
+            'sto' => 34, 'swtor' => 35, 'earthrise' => 36, 'planetside2' => 37,
+            'defiance' => 38, 'MWO' => 39, 'elder_scrolls' => 40, 'firefall' => 41,
+            'empyrion' => 42, 'repopulation' => 43, 'division' => 44, 'division2' => 45,
+            // Campaign Ribbons - Active
+            'dune_awakening' => 50, 'fallout76' => 51, 'colonial_marines' => 52,
+            'war_thunder' => 53, 'helldivers' => 54, 'space_marine2' => 55,
+            // Campaign Ribbons - Upcoming
+            'stars_reach' => 60
         );
         
         $awards = $member['awards'];
