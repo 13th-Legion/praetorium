@@ -129,7 +129,7 @@
     "user": {
       "id": "126731780106616832",
       "username": "flowvector",
-      "avatar": "d4b287574fe1838dc534fb86b5ad429a",
+      "avatar": "e71fd06141bb5a56ffb4a80a2f8caad1",
       "discriminator": "0",
       "public_flags": 0,
       "flags": 0,
@@ -267,7 +267,7 @@
       "flags": 0,
       "banner": null,
       "accent_color": null,
-      "global_name": "Ayonesea",
+      "global_name": "Tungurahua",
       "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,
@@ -413,7 +413,6 @@
       "446695304343846913",
       "830084560724820000",
       "1146595907211632833",
-      "1137168237512105985",
       "1138254260417597542",
       "1131980166122438686"
     ],
@@ -1260,11 +1259,10 @@
       "830084560724820000",
       "1058087377383477349",
       "1137168010562519112",
-      "1137168237512105985",
       "1138255198888931459",
+      "1146595907211632833",
       "1249842357919285248",
       "455749225515319308",
-      "1146595907211632833",
       "461401559452876820",
       "765592732710076437",
       "962030162122252348"
@@ -1648,6 +1646,7 @@
     "roles": [
       "179985023607373824",
       "406136095395545088",
+      "471727189025488896",
       "424278722192080897",
       "1131980166122438686"
     ],
@@ -2952,7 +2951,6 @@
     "roles": [
       "179985023607373824",
       "830084560724820000",
-      "1137168592778051605",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -3158,8 +3156,7 @@
       "179985023607373824",
       "326821477720522752",
       "830084560724820000",
-      "1146595907211632833",
-      "1137177316041162812"
+      "1146595907211632833"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -3283,7 +3280,6 @@
       "179985023607373824",
       "1146595907211632833",
       "830084560724820000",
-      "1137168164988403784",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -3580,8 +3576,7 @@
       "179985023607373824",
       "326821477720522752",
       "830084560724820000",
-      "1146595907211632833",
-      "1137168164988403784"
+      "1146595907211632833"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -3690,8 +3685,7 @@
     "premium_since": null,
     "roles": [
       "830084560724820000",
-      "1137168010562519112",
-      "1137168506455085077"
+      "1137168010562519112"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -3908,9 +3902,8 @@
       "179985023607373824",
       "326821477720522752",
       "830084560724820000",
-      "1137168237512105985",
-      "1138255449939001344",
       "1146595907211632833",
+      "1138255449939001344",
       "1137168010562519112"
     ],
     "unusual_dm_activity_until": null,
@@ -3996,7 +3989,6 @@
       "179985023607373824",
       "1146595907211632833",
       "830084560724820000",
-      "1137168506455085077",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -4489,9 +4481,7 @@
     "roles": [
       "179985023607373824",
       "326821477720522752",
-      "830084560724820000",
-      "1137168237512105985",
-      "1137168592778051605"
+      "830084560724820000"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -4529,7 +4519,6 @@
       "179985023607373824",
       "1146595907211632833",
       "830084560724820000",
-      "1137168506455085077",
       "1138254650903101531",
       "1131980166122438686"
     ],
@@ -4671,14 +4660,14 @@
     "communication_disabled_until": null,
     "flags": 0,
     "joined_at": "2020-09-25T03:07:20.409000+00:00",
-    "nick": null,
+    "nick": "Dizz",
     "pending": false,
     "premium_since": null,
     "roles": [
       "179985023607373824",
-      "406136095395545088",
+      "326821477720522752",
       "461401559452876820",
-      "1131980166122438686"
+      "406136095395545088"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -4942,8 +4931,6 @@
       "1146595907211632833",
       "830084560724820000",
       "1138254260417597542",
-      "1137168164988403784",
-      "1137168592778051605",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -4982,14 +4969,11 @@
       "179482607589785600",
       "179985023607373824",
       "830084560724820000",
-      "446695304343846913",
-      "1137168237512105985",
       "1138255198888931459",
+      "446695304343846913",
       "1146595907211632833",
-      "1137168318499934219",
       "455749225515319308",
-      "765592732710076437",
-      "1137168592778051605"
+      "765592732710076437"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -5035,11 +5019,9 @@
     "premium_since": null,
     "roles": [
       "179985023607373824",
-      "1137168237512105985",
       "830084560724820000",
       "1138255198888931459",
       "455749225515319308",
-      "1137177316041162812",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -5183,9 +5165,8 @@
       "179482772086325250",
       "830084560724820000",
       "471727189025488896",
-      "1137168237512105985",
-      "1138254260417597542",
       "1146595907211632833",
+      "1138254260417597542",
       "765592732710076437"
     ],
     "unusual_dm_activity_until": null,
@@ -5260,9 +5241,6 @@
       "1138255449939001344",
       "830084560724820000",
       "1146595907211632833",
-      "1137168164988403784",
-      "1137168592778051605",
-      "1137177316041162812",
       "1131980166122438686"
     ],
     "unusual_dm_activity_until": null,
@@ -5483,16 +5461,16 @@
     "user": {
       "id": "1311816797858566237",
       "username": "harucats0640",
-      "avatar": "70c2355ea88ce76e2ba1b1d244c16ad6",
+      "avatar": "f29296ebd5d15e83fb1375e14d62ad73",
       "discriminator": "0",
       "public_flags": 128,
       "flags": 128,
       "banner": null,
       "accent_color": null,
-      "global_name": "zｈⓔα",
+      "global_name": "🌙",
       "avatar_decoration_data": {
-        "asset": "a_17e170cd07a325877152cc0ae31c3219",
-        "sku_id": "1432550258256121966",
+        "asset": "a_9532e6bc08133eb1401c654a4f1a800e",
+        "sku_id": "1332505467980873728",
         "expires_at": null
       },
       "collectibles": {
@@ -5517,6 +5495,82 @@
         "tag": "ᯓ𖥔",
         "badge": "b9abbda52da128ee174f3f2fb68b3d71"
       }
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-02-02T10:35:28.854000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1341141580442243082",
+      "username": "kilzz0938_07652",
+      "avatar": "8569adcbd36c70a7578c017bf5604ea5",
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "KiLzZ",
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": {
+        "identity_guild_id": "179481732217569280",
+        "identity_enabled": true,
+        "tag": "47LG",
+        "badge": "60822eb8c504c45cee27680dbccf599b"
+      },
+      "primary_guild": {
+        "identity_guild_id": "179481732217569280",
+        "identity_enabled": true,
+        "tag": "47LG",
+        "badge": "60822eb8c504c45cee27680dbccf599b"
+      }
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-02-03T21:35:17.156000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1378800352618479709",
+      "username": "987maa",
+      "avatar": null,
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "Joe",
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -5581,6 +5635,39 @@
       "banner": null,
       "accent_color": null,
       "global_name": null,
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-02-04T23:18:05.858000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1468747236920787086",
+      "username": "derk28.",
+      "avatar": null,
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "Derk28",
       "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,

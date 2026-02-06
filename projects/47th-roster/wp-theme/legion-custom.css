@@ -428,8 +428,6 @@ hr,
 .main-header-bar,
 .ast-primary-header-bar,
 .site-header .ast-container {
-  display: flex !important;
-  align-items: center !important;
   justify-content: space-between !important;
   flex-wrap: nowrap !important;
 }
@@ -492,8 +490,6 @@ hr,
 
 /* Logo + title side by side */
 .ast-site-identity {
-  display: flex !important;
-  align-items: center !important;
   gap: 1rem !important;
 }
 
@@ -712,7 +708,30 @@ footer.site-footer *,
 .ast-builder-grid-row {
   background: #06060a !important;
   background-color: #06060a !important;
-  border-color: #2a2a3a !important;
+}
+
+/* Remove ALL footer borders except the main footer top border */
+.site-footer *,
+.site-below-footer-wrap,
+.site-below-footer-wrap *,
+.ast-builder-layout-element,
+.ast-footer-copyright,
+.ast-builder-footer-grid-columns,
+.ast-footer-row-inline,
+.site-footer-section {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* Single clean border on the footer itself */
+.site-footer,
+footer.site-footer,
+#colophon {
+  border-top: 1px solid #2a2a3a !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
 }
 
 /* Hide any stray borders/lines in footer */
@@ -818,4 +837,804 @@ main#main {
   font-size: 0.95rem !important;
   line-height: 1.6 !important;
   margin-bottom: 0 !important;
+}
+
+/* ============================================
+   MOBILE MENU FIXES - CRITICAL
+   ============================================ */
+
+/* Mobile header wrapper - ensure dark background */
+.ast-mobile-header-wrap,
+#ast-mobile-header,
+.ast-mobile-header-wrap *,
+#ast-mobile-header * {
+  background-color: #06060a !important;
+}
+
+/* Mobile menu toggle button - center and style */
+.ast-header-break-point .ast-mobile-menu-buttons,
+.ast-mobile-menu-buttons {
+  justify-content: center !important;
+}
+
+.menu-toggle,
+.main-header-menu-toggle,
+.ast-mobile-menu-trigger-minimal {
+  background: transparent !important;
+  border: none !important;
+  padding: 8px !important;
+  color: #c9a227 !important;
+  cursor: pointer !important;
+}
+
+.menu-toggle svg,
+.main-header-menu-toggle svg {
+  fill: #c9a227 !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* Mobile menu dropdown container */
+.ast-mobile-header-content,
+.ast-mobile-header-wrap .ast-mobile-header-content {
+  background: #0a0a0f !important;
+  background-color: #0a0a0f !important;
+  border-bottom: 1px solid #2a2a3a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* When menu is toggled open - multiple selector approaches */
+/* Body class approach */
+body.ast-main-header-nav-open .ast-mobile-header-content {
+  display: block !important;
+}
+
+/* :has() selector for modern browsers - when toggle has aria-expanded=true */
+.ast-mobile-header-wrap:has(.menu-toggle[aria-expanded="true"]) .ast-mobile-header-content,
+.ast-mobile-header-wrap:has(.menu-toggle.toggled) .ast-mobile-header-content {
+  display: block !important;
+}
+
+/* Mobile menu when visible */
+body.ast-main-header-nav-open .ast-mobile-header-content,
+.ast-mobile-header-wrap:has(.menu-toggle[aria-expanded="true"]) .ast-mobile-header-content,
+.ast-mobile-header-wrap:has(.menu-toggle.toggled) .ast-mobile-header-content,
+.ast-mobile-header-content[style*="display: block"] {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 9999 !important;
+  background: #0a0a0f !important;
+  padding: 0 !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  border-bottom: 2px solid #c9a227 !important;
+}
+
+/* Mobile navigation */
+.ast-mobile-header-content nav,
+.ast-mobile-header-content .main-navigation,
+.ast-mobile-header-content .ast-builder-menu-mobile,
+#ast-mobile-site-navigation {
+  background: transparent !important;
+  width: 100% !important;
+}
+
+/* Mobile menu list */
+.ast-mobile-header-content .main-header-menu,
+.ast-mobile-header-content .ast-nav-menu,
+.ast-mobile-header-content ul.main-header-menu,
+#ast-hf-mobile-menu ul {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style: none !important;
+  background: transparent !important;
+}
+
+/* Mobile menu items */
+.ast-mobile-header-content .menu-item,
+.ast-mobile-header-content li,
+#ast-hf-mobile-menu li {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid #2a2a3a !important;
+  background: transparent !important;
+}
+
+.ast-mobile-header-content .menu-item:last-child,
+.ast-mobile-header-content li:last-child {
+  border-bottom: none !important;
+}
+
+/* Mobile menu links */
+.ast-mobile-header-content .menu-link,
+.ast-mobile-header-content a,
+#ast-hf-mobile-menu a {
+  display: block !important;
+  padding: 15px 20px !important;
+  color: #e8e6e3 !important;
+  font-family: 'Cinzel', serif !important;
+  font-size: 0.9rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  text-decoration: none !important;
+  transition: all 0.3s ease !important;
+  background: transparent !important;
+}
+
+.ast-mobile-header-content .menu-link:hover,
+.ast-mobile-header-content a:hover,
+.ast-mobile-header-content .current-menu-item > a {
+  color: #c9a227 !important;
+  background: rgba(201, 162, 39, 0.1) !important;
+}
+
+/* Ensure toggle icon switches between menu and close */
+.menu-toggle .ast-menu-svg {
+  display: block !important;
+}
+
+.menu-toggle .ast-close-svg {
+  display: none !important;
+}
+
+.menu-toggle.toggled .ast-menu-svg,
+.menu-toggle[aria-expanded="true"] .ast-menu-svg {
+  display: none !important;
+}
+
+.menu-toggle.toggled .ast-close-svg,
+.menu-toggle[aria-expanded="true"] .ast-close-svg {
+  display: block !important;
+}
+
+/* Mobile header layout fix - logo left, hamburger right */
+@media (max-width: 921px) {
+  .ast-mobile-header-wrap .ast-primary-header-bar,
+  .ast-header-break-point .ast-primary-header-bar {
+    justify-content: space-between !important;
+    padding: 10px 15px !important;
+  }
+  
+  .ast-header-break-point .site-branding,
+  .ast-mobile-header-wrap .site-branding {
+    flex: 0 0 auto !important;
+  }
+  
+  .ast-header-break-point .ast-builder-layout-element[data-section="section-header-mobile-trigger"],
+  .ast-mobile-header-wrap .ast-builder-layout-element[data-section="section-header-mobile-trigger"] {
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+  }
+  
+  /* Hide site title on mobile - logo is enough */
+  .ast-header-break-point .site-title,
+  .ast-mobile-header-wrap .site-title,
+  .ast-header-break-point .ast-site-title-wrap {
+    display: none !important;
+  }
+  
+  /* Logo size on mobile */
+  .ast-header-break-point .custom-logo,
+  .ast-mobile-header-wrap .custom-logo {
+    max-height: 50px !important;
+    width: auto !important;
+  }
+}
+
+/* Fix for Astra's mobile popup drawer if used */
+.ast-mobile-popup-drawer,
+.ast-mobile-popup-drawer .ast-mobile-popup-inner {
+  background: #06060a !important;
+}
+
+.ast-mobile-popup-drawer .ast-mobile-popup-content {
+  background: #0a0a0f !important;
+}
+
+/* Ensure proper stacking */
+.ast-mobile-header-wrap {
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+.ast-mobile-header-content {
+  z-index: 9999 !important;
+}
+
+}
+
+}
+
+/* Discord nav button - external link styling (high specificity) */
+.main-header-menu li#menu-item-26 > a.menu-link,
+#ast-hf-menu-1 li#menu-item-26 > a.menu-link,
+nav .menu-item#menu-item-26 > .menu-link,
+li.menu-item#menu-item-26 a {
+  background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%) !important;
+  color: #fff !important;
+  padding: 6px 14px !important;
+  border-radius: 4px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  margin: 0 4px !important;
+}
+
+.main-header-menu li#menu-item-26 > a.menu-link::after,
+#ast-hf-menu-1 li#menu-item-26 > a.menu-link::after,
+li.menu-item#menu-item-26 a::after {
+  content: " ↗" !important;
+  font-size: 0.85em !important;
+  opacity: 0.9 !important;
+}
+
+.main-header-menu li#menu-item-26 > a.menu-link:hover,
+#ast-hf-menu-1 li#menu-item-26 > a.menu-link:hover,
+li.menu-item#menu-item-26 a:hover {
+  background: linear-gradient(135deg, #6d77ff 0%, #5865F2 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(88, 101, 242, 0.5) !important;
+}
+
+/* ===== Fix Update Profile Button ===== */
+.um input[type="submit"],
+.um .um-button,
+.um-form input[type="submit"],
+.um-profile-edit input[type="submit"],
+input.um-button.um-alt,
+.um-col-alt-b input[type="submit"] {
+    min-width: 180px !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 12px 24px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+}
+
+/* Show/hide menu items based on login state */
+.logged-in .logged-out-only {
+    display: none !important;
+}
+.logged-in-only {
+    display: none !important;
+}
+.logged-in .logged-in-only {
+    display: block !important;
+}
+
+/* ===== RIGHT-ALIGN NAV MENU ===== */
+.main-header-bar .ast-container,
+.ast-primary-header-bar .ast-container {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.ast-primary-header-bar .ast-builder-grid-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.site-branding,
+.ast-site-identity {
+  flex: 0 0 auto !important;
+}
+
+.ast-builder-menu,
+.ast-builder-menu-1,
+.main-header-menu,
+.ast-nav-menu {
+  margin-left: auto !important;
+}
+
+.ast-builder-layout-element[data-section="section-primary-header-builder"] {
+  justify-content: flex-end !important;
+}
+
+/* ============================================
+   BBPRESS FORUMS - DARK THEME
+   ============================================ */
+
+/* === Forum Container === */
+#bbpress-forums,
+#bbpress-forums *,
+div.bbpress {
+  color: #e8e6e3 !important;
+}
+
+#bbpress-forums {
+  background: transparent !important;
+}
+
+/* === Forum/Topic Lists === */
+#bbpress-forums li.bbp-header,
+#bbpress-forums li.bbp-footer {
+  background: #06060a !important;
+  border-bottom: 2px solid #c9a227 !important;
+  padding: 12px 8px !important;
+}
+
+#bbpress-forums li.bbp-header li,
+#bbpress-forums li.bbp-footer li {
+  color: #c9a227 !important;
+  font-family: 'Cinzel', serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-weight: 600 !important;
+}
+
+#bbpress-forums li.bbp-body ul.forum,
+#bbpress-forums li.bbp-body ul.topic {
+  background: #12121a !important;
+  border-bottom: 1px solid #2a2a3a !important;
+  padding: 15px 8px !important;
+}
+
+#bbpress-forums li.bbp-body ul.forum:hover,
+#bbpress-forums li.bbp-body ul.topic:hover {
+  background: #1a1a24 !important;
+}
+
+/* === STICKY TOPICS FIX - Remove yellow background === */
+#bbpress-forums ul.sticky,
+#bbpress-forums li.sticky,
+#bbpress-forums .sticky,
+#bbpress-forums ul.super-sticky,
+#bbpress-forums li.super-sticky,
+.bbp-topics .sticky,
+.bbp-topics ul.sticky,
+ul.topic.sticky,
+li.bbp-body ul.sticky {
+  background: #1a1525 !important;
+  border-left: 3px solid #c9a227 !important;
+}
+
+#bbpress-forums ul.sticky:hover,
+#bbpress-forums ul.super-sticky:hover {
+  background: #221a30 !important;
+}
+
+/* Sticky indicator text */
+#bbpress-forums .bbp-topic-permalink::before,
+.sticky .bbp-topic-permalink::before {
+  color: #c9a227 !important;
+}
+
+/* === Forum/Topic Titles === */
+#bbpress-forums .bbp-forum-title,
+#bbpress-forums .bbp-topic-permalink {
+  color: #c9a227 !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+#bbpress-forums .bbp-forum-title:hover,
+#bbpress-forums .bbp-topic-permalink:hover {
+  color: #d4af37 !important;
+}
+
+/* === Forum Descriptions === */
+#bbpress-forums .bbp-forum-content,
+#bbpress-forums p.bbp-topic-meta {
+  color: #888 !important;
+  font-size: 0.9rem !important;
+}
+
+/* === Author/Meta Info === */
+#bbpress-forums .bbp-topic-started-by,
+#bbpress-forums .bbp-topic-started-in,
+#bbpress-forums span.bbp-author-name,
+#bbpress-forums a.bbp-author-name {
+  color: #c9a227 !important;
+}
+
+#bbpress-forums .bbp-author-avatar img {
+  border: 2px solid #2a2a3a !important;
+  border-radius: 4px !important;
+}
+
+/* === Topic/Forum Counts === */
+#bbpress-forums .bbp-forum-topic-count,
+#bbpress-forums .bbp-forum-reply-count,
+#bbpress-forums .bbp-topic-voice-count,
+#bbpress-forums .bbp-topic-reply-count {
+  color: #888 !important;
+}
+
+/* === Freshness/Time === */
+#bbpress-forums .bbp-topic-freshness-author,
+#bbpress-forums a.bbp-topic-freshness-author,
+#bbpress-forums .bbp-forum-freshness-author {
+  color: #c9a227 !important;
+}
+
+#bbpress-forums span.bbp-topic-freshness-time,
+#bbpress-forums .bbp-forum-freshness time {
+  color: #888 !important;
+}
+
+/* === Single Topic View === */
+#bbpress-forums div.bbp-topic-author,
+#bbpress-forums div.bbp-reply-author {
+  background: #12121a !important;
+  border-right: 1px solid #2a2a3a !important;
+}
+
+#bbpress-forums div.bbp-topic-content,
+#bbpress-forums div.bbp-reply-content {
+  background: #0a0a0f !important;
+  color: #e8e6e3 !important;
+}
+
+#bbpress-forums div.bbp-reply-header,
+#bbpress-forums div.bbp-topic-header {
+  background: #06060a !important;
+  border-bottom: 1px solid #2a2a3a !important;
+}
+
+/* === Reply Form === */
+#bbpress-forums #new-topic-0,
+#bbpress-forums #new-reply-0,
+#bbpress-forums #edit-reply,
+#bbpress-forums #edit-topic,
+#bbpress-forums .bbp-reply-form,
+#bbpress-forums .bbp-topic-form {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+  margin-top: 20px !important;
+}
+
+/* === Form Fields === */
+#bbpress-forums input[type="text"],
+#bbpress-forums input[type="email"],
+#bbpress-forums input[type="password"],
+#bbpress-forums textarea,
+#bbpress-forums select {
+  background: #0a0a0f !important;
+  border: 1px solid #2a2a3a !important;
+  color: #e8e6e3 !important;
+  border-radius: 4px !important;
+  padding: 10px !important;
+}
+
+#bbpress-forums input[type="text"]:focus,
+#bbpress-forums textarea:focus,
+#bbpress-forums select:focus {
+  border-color: #c9a227 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.2) !important;
+}
+
+/* === SELECT/DROPDOWN FIX - Text color visible === */
+#bbpress-forums select,
+#bbpress-forums select option,
+.bbp-form select,
+.bbp-form select option,
+#bbp_topic_status,
+#bbp_stick_topic,
+#bbp_topic_tags,
+select#bbp_topic_status,
+select#bbp_stick_topic_select,
+select#bbp_topic_type,
+#bbpress-forums .bbp-the-content-wrapper select {
+  background: #0a0a0f !important;
+  color: #e8e6e3 !important;
+  border: 1px solid #2a2a3a !important;
+}
+
+#bbpress-forums select option {
+  background: #12121a !important;
+  color: #e8e6e3 !important;
+  padding: 8px !important;
+}
+
+#bbpress-forums select option:checked,
+#bbpress-forums select option:hover {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+}
+
+/* Make sure selected text is visible */
+#bbpress-forums select:not(:focus) {
+  color: #e8e6e3 !important;
+}
+
+/* === Form Labels === */
+#bbpress-forums label,
+#bbpress-forums legend,
+#bbpress-forums .bbp-form label {
+  color: #c9a227 !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 600 !important;
+}
+
+/* === Submit Buttons === */
+#bbpress-forums button,
+#bbpress-forums input[type="submit"],
+#bbpress-forums .bbp-submit-wrapper button {
+  background: linear-gradient(135deg, #c9a227 0%, #a08020 100%) !important;
+  color: #0a0a0f !important;
+  border: none !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  padding: 12px 24px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+}
+
+#bbpress-forums button:hover,
+#bbpress-forums input[type="submit"]:hover {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%) !important;
+}
+
+/* === Search Form === */
+#bbpress-forums #bbp-search-form,
+#bbpress-forums .bbp-search-form {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+#bbpress-forums #bbp_search {
+  flex: 1 !important;
+  max-width: 300px !important;
+}
+
+/* === Breadcrumb === */
+#bbpress-forums .bbp-breadcrumb,
+#bbpress-forums .bbp-breadcrumb a {
+  color: #888 !important;
+}
+
+#bbpress-forums .bbp-breadcrumb a:hover {
+  color: #c9a227 !important;
+}
+
+#bbpress-forums .bbp-breadcrumb-current {
+  color: #e8e6e3 !important;
+}
+
+/* === Pagination === */
+#bbpress-forums .bbp-pagination-links a,
+#bbpress-forums .bbp-pagination-links span {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  color: #e8e6e3 !important;
+  padding: 6px 12px !important;
+  border-radius: 4px !important;
+}
+
+#bbpress-forums .bbp-pagination-links a:hover,
+#bbpress-forums .bbp-pagination-links span.current {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+  border-color: #c9a227 !important;
+}
+
+/* === Notice Messages === */
+#bbpress-forums div.bbp-template-notice,
+#bbpress-forums div.indicator-hint {
+  background: #1a1a24 !important;
+  border: 1px solid #2a2a3a !important;
+  border-left: 4px solid #c9a227 !important;
+  color: #e8e6e3 !important;
+  border-radius: 4px !important;
+  padding: 15px !important;
+}
+
+#bbpress-forums div.bbp-template-notice.info,
+#bbpress-forums div.bbp-template-notice.important {
+  border-left-color: #5865F2 !important;
+}
+
+#bbpress-forums div.bbp-template-notice.warning {
+  border-left-color: #ff9800 !important;
+}
+
+#bbpress-forums div.bbp-template-notice.error {
+  border-left-color: #f44336 !important;
+}
+
+/* === Topic Tags === */
+#bbpress-forums .bbp-topic-tags,
+#bbpress-forums a.bbp-topic-tag {
+  color: #888 !important;
+}
+
+#bbpress-forums a.bbp-topic-tag:hover {
+  color: #c9a227 !important;
+}
+
+/* === User Profile Forum Sections === */
+#bbpress-forums #bbp-user-wrapper {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+}
+
+#bbpress-forums #bbp-user-navigation ul {
+  background: #06060a !important;
+  border-bottom: 1px solid #2a2a3a !important;
+}
+
+#bbpress-forums #bbp-user-navigation a {
+  color: #e8e6e3 !important;
+}
+
+#bbpress-forums #bbp-user-navigation li.current a {
+  color: #c9a227 !important;
+  border-bottom: 2px solid #c9a227 !important;
+}
+
+/* === Keymaster/Moderator Badges === */
+#bbpress-forums .bbp-author-role {
+  background: #c9a227 !important;
+  color: #0a0a0f !important;
+  padding: 2px 8px !important;
+  border-radius: 3px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+/* === Login Notice === */
+#bbpress-forums .bbp-logged-in {
+  background: #12121a !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 8px !important;
+  padding: 15px !important;
+}
+
+/* === Odd/Even Row Colors === */
+#bbpress-forums .bbp-body .odd {
+  background: #12121a !important;
+}
+
+#bbpress-forums .bbp-body .even {
+  background: #0f0f16 !important;
+}
+
+/* === TinyMCE Editor Dark Theme === */
+#bbpress-forums .wp-editor-container,
+#bbpress-forums .mce-panel,
+#bbpress-forums .mce-toolbar,
+#bbpress-forums .mce-toolbar-grp {
+  background: #12121a !important;
+  border-color: #2a2a3a !important;
+}
+
+#bbpress-forums .mce-btn button {
+  color: #e8e6e3 !important;
+}
+
+#bbpress-forums .mce-content-body,
+#bbpress-forums iframe.mce-edit-area {
+  background: #0a0a0f !important;
+  color: #e8e6e3 !important;
+}
+
+/* === Topic Status Icons === */
+#bbpress-forums .bbp-topic-status-icon::before {
+  color: #c9a227 !important;
+}
+
+/* === Link styling within posts === */
+#bbpress-forums .bbp-topic-content a,
+#bbpress-forums .bbp-reply-content a {
+  color: #c9a227 !important;
+}
+
+#bbpress-forums .bbp-topic-content a:hover,
+#bbpress-forums .bbp-reply-content a:hover {
+  color: #d4af37 !important;
+  text-decoration: underline !important;
+}
+
+/* === Code blocks in posts === */
+#bbpress-forums code,
+#bbpress-forums pre {
+  background: #06060a !important;
+  border: 1px solid #2a2a3a !important;
+  color: #c9a227 !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+}
+
+#bbpress-forums pre {
+  padding: 15px !important;
+  overflow-x: auto !important;
+}
+
+/* === Blockquotes in posts === */
+#bbpress-forums blockquote {
+  background: #12121a !important;
+  border-left: 4px solid #c9a227 !important;
+  padding: 10px 20px !important;
+  margin: 10px 0 !important;
+  color: #888 !important;
+}
+
+/* === STICKY TOPIC FIX - Higher Specificity Override === */
+/* These match bbPress's exact selectors with extra specificity */
+#bbpress-forums .bbp-forum-content ul.sticky,
+#bbpress-forums .bbp-topics ul.sticky,
+#bbpress-forums .bbp-topics ul.super-sticky,
+#bbpress-forums .bbp-topics-front ul.super-sticky,
+body #bbpress-forums ul.sticky,
+body #bbpress-forums ul.super-sticky,
+html body #bbpress-forums .bbp-topics ul.sticky,
+.bbp-forum-content ul.sticky,
+.bbp-topics ul.sticky,
+.bbp-topics ul.super-sticky,
+.bbp-topics-front ul.super-sticky {
+  background: #1a1525 !important;
+  background-color: #1a1525 !important;
+  border-left: 3px solid #c9a227 !important;
+}
+
+/* Also override odd/even rows from bbPress */
+#bbpress-forums div.odd,
+#bbpress-forums ul.odd,
+body #bbpress-forums div.odd,
+body #bbpress-forums ul.odd {
+  background: #12121a !important;
+  background-color: #12121a !important;
+}
+
+#bbpress-forums div.even,
+#bbpress-forums ul.even,
+body #bbpress-forums div.even,
+body #bbpress-forums ul.even {
+  background: #0f0f16 !important;
+  background-color: #0f0f16 !important;
+}
+
+/* ast-article-single class override (applied to topic items) */
+#bbpress-forums ul.ast-article-single,
+#bbpress-forums li.ast-article-single,
+.bbp-topics ul.ast-article-single {
+  background: transparent !important;
+}
+
+#bbpress-forums .bbp-topics ul.sticky.ast-article-single {
+  background: #1a1525 !important;
+}
+
+/* === SELECT/DROPDOWN HEIGHT FIX - Text getting cut off === */
+#bbpress-forums select,
+.bbp-form select,
+select#bbp_topic_status,
+select#bbp_stick_topic_select,
+select#bbp_topic_type,
+#bbpress-forums .bbp-the-content-wrapper select,
+#bbpress-forums fieldset select {
+  height: auto !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  line-height: 1.4 !important;
+  font-size: 14px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure option text is fully visible */
+#bbpress-forums select option {
+  padding: 8px 12px !important;
+  line-height: 1.4 !important;
+  min-height: 30px !important;
 }

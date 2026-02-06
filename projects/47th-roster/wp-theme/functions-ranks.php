@@ -275,7 +275,7 @@ function legion_get_user_rank($user_id = null) {
 }
 
 /**
- * Display rank in Ultimate Member profile
+ * Display rank in Ultimate Member profile header (below the display name)
  */
 function legion_um_profile_rank($args) {
     $user_id = um_profile_id();
@@ -283,14 +283,14 @@ function legion_um_profile_rank($args) {
     
     if ($rank) {
         $insignia = legion_get_rank_insignia($user_id);
-        echo '<div class="legion-profile-rank">';
+        echo '<div class="legion-profile-header-rank">';
         echo $insignia;
         echo '<span class="rank-name">' . esc_html($rank['name']) . '</span>';
-        echo ' <span class="rank-grade">(' . esc_html($rank['grade']) . ')</span>';
+        echo '<span class="rank-grade">(' . esc_html($rank['grade']) . ')</span>';
         echo '</div>';
     }
 }
-add_action('um_after_profile_name_inline', 'legion_um_profile_rank');
+add_action('um_after_profile_header_name_args', 'legion_um_profile_rank', 5);
 
 /**
  * Add rank to bbPress forum posts

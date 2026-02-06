@@ -1,5 +1,5 @@
 {
-  "generated": "2026-02-06T19:16:33.697Z",
+  "generated": "2026-02-06T19:23:45.047Z",
   "guildId": "179481732217569280",
   "guildName": "47th Legion ComNet",
   "members": [
@@ -100,7 +100,7 @@
       "joinedAt": "2016-06-12T22:32:39.851000+00:00",
       "historicalJoinDate": "2013-08-08T15:03:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4564,
+      "daysInService": 4565,
       "rank": {
         "code": "O2",
         "name": "Tesserarian",
@@ -140,7 +140,7 @@
       "joinedAt": "2022-08-22T23:23:22.562000+00:00",
       "historicalJoinDate": "2013-06-18T18:31:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4615,
+      "daysInService": 4616,
       "rank": {
         "code": "O1",
         "name": "Vexillarian",
@@ -175,7 +175,7 @@
       "joinedAt": "2016-05-12T01:24:20.407000+00:00",
       "historicalJoinDate": "2013-05-07T18:02:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4657,
+      "daysInService": 4658,
       "rank": {
         "code": "E8",
         "name": "Signifier",
@@ -188,23 +188,61 @@
         "Aliens: Fireteam Elite"
       ],
       "awards": [
+        "achievement",
+        "colonial_marines",
+        "commendation",
+        "corona_aurea",
+        "corona_civica",
+        "defense",
+        "division",
+        "division2",
+        "elder_scrolls",
+        "good_conduct",
+        "helldivers",
+        "joint_operations",
+        "joint_training",
+        "medal",
+        "nco_development",
+        "organizational_excellence",
+        "recruiter",
+        "service",
+        "swg",
+        "swtor",
+        "torques",
+        "wounded"
+      ],
+      "isAgent": true
+    },
+    {
+      "id": "179849584124624897",
+      "username": "paytoncda",
+      "displayName": "Payton",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/179849584124624897/af93603a6177ca0c855f9dde1817cef0.png",
+      "joinedAt": "2017-11-04T23:26:44.753000+00:00",
+      "historicalJoinDate": "2008-12-30T05:15:00.000Z",
+      "yearsOfService": 17,
+      "daysInService": 6247,
+      "rank": {
+        "code": "E6",
+        "name": "Duplicarian",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Fallout 76",
+        "Star Wars: Galaxies"
+      ],
+      "awards": [
         "service",
         "good_conduct",
         "achievement",
         "commendation",
+        "corona_aurea",
         "nco_development",
-        "organizational_excellence",
-        "defense",
-        "elder_scrolls",
         "swtor",
-        "colonial_marines",
-        "joint_operations",
-        "joint_training",
-        "recruiter",
-        "helldivers",
+        "fallout76",
         "swg"
       ],
-      "isAgent": true
+      "isAgent": false
     },
     {
       "id": "169887739406319618",
@@ -259,37 +297,6 @@
         "fallout76"
       ],
       "isAgent": true
-    },
-    {
-      "id": "179849584124624897",
-      "username": "paytoncda",
-      "displayName": "Payton",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/179849584124624897/af93603a6177ca0c855f9dde1817cef0.png",
-      "joinedAt": "2017-11-04T23:26:44.753000+00:00",
-      "historicalJoinDate": "2008-12-30T05:15:00.000Z",
-      "yearsOfService": 17,
-      "daysInService": 6247,
-      "rank": {
-        "code": "E6",
-        "name": "Duplicarian",
-        "category": "Enlisted"
-      },
-      "games": [
-        "Fallout 76",
-        "Star Wars: Galaxies"
-      ],
-      "awards": [
-        "service",
-        "good_conduct",
-        "achievement",
-        "commendation",
-        "corona_aurea",
-        "nco_development",
-        "swtor",
-        "fallout76",
-        "swg"
-      ],
-      "isAgent": false
     },
     {
       "id": "1245124464082026573",
@@ -1220,7 +1227,7 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/141289033245392896/b1750705a512554a4a50243cc6fa7f66.png",
       "joinedAt": "2016-05-19T22:16:28.704000+00:00",
       "historicalJoinDate": "2013-02-07T02:49:00.000Z",
-      "yearsOfService": 13,
+      "yearsOfService": 12,
       "daysInService": 4747,
       "rank": {
         "code": "RES",
@@ -1295,7 +1302,7 @@
       "joinedAt": "2017-06-08T02:17:50.129000+00:00",
       "historicalJoinDate": "2013-07-05T16:48:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4598,
+      "daysInService": 4599,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1497,7 +1504,7 @@
       "joinedAt": "2016-05-12T01:16:19.718000+00:00",
       "historicalJoinDate": "2008-01-27T17:13:00.000Z",
       "yearsOfService": 18,
-      "daysInService": 6584,
+      "daysInService": 6585,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1865,7 +1872,7 @@
       "joinedAt": "2017-04-23T01:53:25.618000+00:00",
       "historicalJoinDate": "2013-03-11T19:14:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4714,
+      "daysInService": 4715,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2058,7 +2065,7 @@
       "joinedAt": "2017-01-14T01:45:13.300000+00:00",
       "historicalJoinDate": "2013-03-24T16:47:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4701,
+      "daysInService": 4702,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2392,7 +2399,7 @@
       "joinedAt": "2017-07-30T13:21:23.403000+00:00",
       "historicalJoinDate": "2011-01-06T13:56:00.000Z",
       "yearsOfService": 15,
-      "daysInService": 5509,
+      "daysInService": 5510,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2639,7 +2646,7 @@
       "joinedAt": "2019-02-08T23:55:20.949000+00:00",
       "historicalJoinDate": "2013-03-13T15:34:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4712,
+      "daysInService": 4713,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3062,7 +3069,7 @@
     {
       "id": "1311816797858566237",
       "username": "harucats0640",
-      "displayName": "\ud83c\udf19",
+      "displayName": "🌙",
       "avatarUrl": "https://cdn.discordapp.com/avatars/1311816797858566237/f29296ebd5d15e83fb1375e14d62ad73.png",
       "joinedAt": "2025-07-03T05:10:35.119000+00:00",
       "historicalJoinDate": null,

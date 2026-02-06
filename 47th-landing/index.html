@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XLVII Legio Fulminata – Imperial Roman Legion in Space</title>
+  <meta name="description" content="Since 2007, we have stood as a brotherhood forged in virtual warfare. Founded by veterans. We are gamers. We are family.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #d4a84b;
+      --gold-bright: #f4c764;
+      --amber: #ff9d3d;
+      --crimson: #8b1a1a;
+      --dark-crimson: #5c1111;
+      --bg-dark: #0a0a0f;
+      --bg-card: #12121a;
+      --text: #e8e8e8;
+      --text-muted: #888;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== HERO SECTION ===== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: url('assets/hero-formation-v2.jpg') center center / cover no-repeat;
+      z-index: -2;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(10, 10, 15, 0.3) 0%,
+        rgba(10, 10, 15, 0.5) 50%,
+        rgba(10, 10, 15, 0.95) 100%
+      );
+      z-index: -1;
+    }
+
+    .hero-content {
+      max-width: 900px;
+      animation: fadeInUp 1.2s ease-out;
+    }
+
+    .hero-numeral {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      color: var(--gold);
+      letter-spacing: 0.5em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 30px rgba(212, 168, 75, 0.5);
+    }
+
+    .hero-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .hero-title span {
+      display: block;
+      color: var(--gold);
+      font-size: 0.5em;
+      letter-spacing: 0.3em;
+      margin-top: 0.5rem;
+    }
+
+    .hero-motto {
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      color: var(--gold);
+      font-style: italic;
+      letter-spacing: 0.2em;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .hero-tagline {
+      font-size: clamp(1.1rem, 2vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.8;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2.5rem;
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--amber) 100%);
+      color: #0a0a0f;
+      border-color: var(--gold);
+      box-shadow: 0 0 30px rgba(212, 168, 75, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 50px rgba(212, 168, 75, 0.5);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .scroll-indicator {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: bounce 2s infinite;
+    }
+
+    .scroll-indicator svg {
+      width: 30px;
+      height: 30px;
+      stroke: var(--gold);
+      opacity: 0.6;
+    }
+
+    /* ===== SECTIONS ===== */
+    section {
+      padding: 6rem 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== ABOUT SECTION ===== */
+    .about {
+      background: linear-gradient(to bottom, var(--bg-dark), var(--bg-card));
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .about-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(212, 168, 75, 0.2);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .about-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .about-card-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .about-card h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.3rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .about-card p {
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    /* ===== BATTLE SECTION ===== */
+    .battle {
+      position: relative;
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .battle-bg {
+      position: absolute;
+      inset: 0;
+      background: url('assets/hero-battle.jpg') center center / cover no-repeat;
+      z-index: -2;
+    }
+
+    .battle-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(10, 10, 15, 0.85) 0%,
+        rgba(10, 10, 15, 0.6) 50%,
+        rgba(10, 10, 15, 0.85) 100%
+      );
+      z-index: -1;
+    }
+
+    .battle-content {
+      max-width: 600px;
+    }
+
+    .battle h2 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+
+    .battle h2 span {
+      color: var(--gold);
+    }
+
+    .battle p {
+      font-size: 1.2rem;
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+
+    .game-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .game-tag {
+      background: rgba(212, 168, 75, 0.15);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .game-tag:hover {
+      background: var(--gold);
+      color: #0a0a0f;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(212, 168, 75, 0.3);
+    }
+
+    /* ===== CTA SECTION ===== */
+    .cta {
+      background: linear-gradient(to bottom, var(--bg-card), var(--bg-dark));
+      text-align: center;
+    }
+
+    .cta-box {
+      background: linear-gradient(135deg, rgba(139, 26, 26, 0.3) 0%, rgba(92, 17, 17, 0.3) 100%);
+      border: 1px solid var(--crimson);
+      border-radius: 12px;
+      padding: 4rem 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .cta h2 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+
+    .cta p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta .hero-buttons {
+      margin-top: 2rem;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #06060a;
+      padding: 3rem 2rem;
+      text-align: center;
+      border-top: 1px solid rgba(212, 168, 75, 0.1);
+    }
+
+    .footer-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 1.5rem;
+      color: var(--gold);
+      letter-spacing: 0.2em;
+      margin-bottom: 1rem;
+    }
+
+    .footer-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .footer-text a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .footer-founded {
+      margin-top: 1rem;
+      font-family: 'Cinzel', serif;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      letter-spacing: 0.3em;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateX(-50%) translateY(0);
+      }
+      40% {
+        transform: translateX(-50%) translateY(-10px);
+      }
+      60% {
+        transform: translateX(-50%) translateY(-5px);
+      }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+      }
+
+      section {
+        padding: 4rem 1.5rem;
+      }
+
+      .battle-content {
+        text-align: center;
+      }
+
+      .game-tags {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-numeral">XLVII</div>
+      <h1 class="hero-title">
+        Legio Fvlminata
+        <span>The Thunderbolt Legion</span>
+      </h1>
+      <p class="hero-motto">Servitivm Ante Se</p>
+      <p class="hero-tagline">
+        Since 2007, we have stood as a brotherhood forged in the fires of virtual warfare. 
+        Founded by veterans of the United States Armed Forces, we carry the traditions of the ancient Roman Legions into the stars.
+      </p>
+      <div class="hero-buttons">
+        <a href="/enlist/" class="btn btn-primary">Enlist Now</a>
+        <a href="https://discord.gg/PEbYqXrt" class="btn btn-secondary" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
+          Join Discord
+        </a>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about" id="about">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Ave, Citizen</h2>
+        <p class="section-subtitle">For nearly two decades, the 47th Legion has stood as a bastion of camaraderie, honor, and relentless gameplay.</p>
+      </div>
+      <div class="about-grid">
+        <div class="about-card">
+          <div class="about-card-icon">⚔️</div>
+          <h3>Veterans</h3>
+          <p>Founded by active duty and veteran servicemembers of the United States Armed Forces. We know what it means to serve.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">🦅</div>
+          <h3>Brotherhood</h3>
+          <p>More than a clan — we're a family. From 2007 to today, bonds forged in digital fire have become lifelong friendships.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">🎮</div>
+          <h3>Gamers</h3>
+          <p>From tactical shooters to grand strategy, we dominate across genres. Where there's competition, there's the Legion.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BATTLE / GAMES -->
+  <section class="battle">
+    <div class="battle-bg"></div>
+    <div class="battle-overlay"></div>
+    <div class="container">
+      <div class="battle-content">
+        <h2>Into <span>The Fray</span></h2>
+        <p>We don't just play games — we conquer them. Currently spreading managed democracy and purging xenos across the galaxy.</p>
+        <p>Whether you're a seasoned veteran or fresh meat, there's a place in the formation for you.</p>
+        <div class="game-tags">
+          <a href="/campaigns/" class="game-tag">Dune Awakening</a>
+          <a href="/campaigns/" class="game-tag">Fallout 76</a>
+          <a href="/campaigns/" class="game-tag">Helldivers 2</a>
+          <a href="/campaigns/" class="game-tag">Space Marine 2</a>
+          <a href="/campaigns/" class="game-tag">And More</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <div class="cta-box">
+        <h2>Join The Legion</h2>
+        <p>Ready to be part of something bigger? The 47th is always looking for warriors who have what it takes.</p>
+        <div class="hero-buttons">
+          <a href="/enlist/" class="btn btn-primary">Begin Enlistment</a>
+          <a href="https://discord.gg/PEbYqXrt" class="btn btn-secondary" target="_blank">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
+            Join Discord
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">XLVII LEGIO FVLMINATA</div>
+    <p class="footer-text">
+      <a href="/">Home</a> · <a href="/historia-legio/">Historia</a> · <a href="/roster/">Roster</a> · <a href="/rank-structure/">Ranks</a> · <a href="/forums/">Forums</a> · <a href="/awards/">Awards</a> · <a href="/campaigns/">Campaigns</a> · <a href="/enlist/">Enlist</a> · <a href="https://discord.gg/PEbYqXrt" target="_blank">Discord ↗</a>
+    </p>
+    <p class="footer-founded">FVNDATA MMVII</p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+     "version": 1,
+     "socket": {
+       "path": "/home/lkavadas/.clawdbot/exec-approvals.sock",
+       "token": "tZfetQ-T9lUIFGPsW_-JjmTJ1xtkiiiN"
+     },
+     "defaults": {},
+     "agents": {
+       "*": {
+         "allowlist": [
+           { "pattern": "**" }
+         ]
+       },
+       "main": {
+         "allowlist": [
+           { "pattern": "**" }
+         ]
+       }
+     }
+   }  

@@ -4,7 +4,7 @@
  Description:  Astra Child Theme for 47th Legion
  Author:       47th Legion
  Template:     astra
- Version:      2.0.0
+ Version:      2.0.1
 */
 
 /* ============================================
@@ -842,4 +842,213 @@ html {
 
 #masthead *:not(img):not(a):not(span):not(li):not(ul):not(nav) {
   background-color: transparent !important;
+}
+
+/* ============================================
+   bbPRESS FORUMS STYLING
+   ============================================ */
+
+/* Sub-forums list - display vertically */
+ul.bbp-forums-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  margin: 0.75rem 0 0 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+ul.bbp-forums-list li.bbp-forum {
+  display: block !important;
+  padding: 0.5rem 0.75rem !important;
+  background: rgba(201, 162, 39, 0.05) !important;
+  border-left: 3px solid var(--legion-gold-dim) !important;
+  border-radius: 0 4px 4px 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+ul.bbp-forums-list li.bbp-forum:hover {
+  background: rgba(201, 162, 39, 0.1) !important;
+  border-left-color: var(--legion-gold) !important;
+}
+
+/* Remove the comma separators */
+ul.bbp-forums-list li.bbp-forum.css-sep::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Style the forum links */
+ul.bbp-forums-list li.bbp-forum a.bbp-forum-link {
+  color: var(--legion-text) !important;
+  font-family: 'Cinzel', serif !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.5px !important;
+  transition: color 0.2s ease !important;
+}
+
+ul.bbp-forums-list li.bbp-forum a.bbp-forum-link:hover {
+  color: var(--legion-gold) !important;
+}
+
+/* Forum category titles */
+.bbp-forum-title {
+  font-family: 'Cinzel', serif !important;
+  color: var(--legion-gold) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+}
+
+/* Forum info styling */
+#bbpress-forums {
+  background: var(--legion-bg-card) !important;
+  border: 1px solid var(--legion-border) !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+}
+
+#bbpress-forums .bbp-header,
+#bbpress-forums li.bbp-header {
+  background: var(--legion-bg-darker) !important;
+  border-bottom: 2px solid var(--legion-gold) !important;
+  color: var(--legion-gold) !important;
+  font-family: 'Cinzel', serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  font-weight: 600 !important;
+}
+
+#bbpress-forums .bbp-body {
+  background: transparent !important;
+}
+
+#bbpress-forums li.bbp-body ul.forum {
+  border-bottom: 1px solid var(--legion-border) !important;
+  padding: 1rem 0 !important;
+}
+
+#bbpress-forums li.bbp-body ul.forum:last-child {
+  border-bottom: none !important;
+}
+
+/* Forum content description */
+.bbp-forum-content {
+  color: var(--legion-text-dim) !important;
+  font-size: 0.9rem !important;
+  font-style: italic !important;
+  margin: 0.25rem 0 !important;
+}
+
+/* Topic and post counts */
+.bbp-forum-topic-count,
+.bbp-forum-reply-count {
+  color: var(--legion-text-muted) !important;
+  font-family: 'Cinzel', serif !important;
+}
+
+/* Last post info */
+.bbp-forum-freshness {
+  color: var(--legion-text-dim) !important;
+  font-size: 0.85rem !important;
+}
+
+.bbp-forum-freshness a {
+  color: var(--legion-gold-dim) !important;
+}
+
+.bbp-forum-freshness a:hover {
+  color: var(--legion-gold) !important;
+}
+
+/* Search box styling */
+#bbpress-forums #bbp-search-form input[type=text] {
+  background: var(--legion-bg-darker) !important;
+}
+
+/* Breadcrumb styling */
+.bbp-breadcrumb {
+  color: var(--legion-text-dim) !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.bbp-breadcrumb a {
+  color: var(--legion-gold-dim) !important;
+}
+
+.bbp-breadcrumb a:hover {
+  color: var(--legion-gold) !important;
+}
+
+/* ============================================
+   bbPRESS SUB-FORUMS - VERTICAL LIST FIX
+   ============================================ */
+
+/* Override bbPress defaults - display sub-forums vertically */
+#bbpress-forums .bbp-forums-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  margin: 0.75rem 0 0 0 !important;
+  padding: 0 !important;
+  border-left: none !important;
+  list-style: none !important;
+}
+
+#bbpress-forums .bbp-forums-list .bbp-forum {
+  display: block !important;
+  font-size: 0.9rem !important;
+  padding: 0.5rem 0.75rem !important;
+  margin: 0.25rem 0 !important;
+  background: rgba(201, 162, 39, 0.05) !important;
+  border-left: 3px solid var(--legion-gold-dim) !important;
+  border-radius: 0 4px 4px 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+#bbpress-forums .bbp-forums-list .bbp-forum:hover {
+  background: rgba(201, 162, 39, 0.12) !important;
+  border-left-color: var(--legion-gold) !important;
+}
+
+/* Remove comma separators */
+#bbpress-forums .bbp-forums-list .bbp-forum.css-sep::after,
+#bbpress-forums .bbp-forums-list .bbp-forum.css-sep:not(:last-child)::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Style sub-forum links */
+#bbpress-forums .bbp-forums-list .bbp-forum a.bbp-forum-link {
+  color: var(--legion-text) !important;
+  font-family: 'Cinzel', serif !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.5px !important;
+  text-decoration: none !important;
+}
+
+#bbpress-forums .bbp-forums-list .bbp-forum a.bbp-forum-link:hover {
+  color: var(--legion-gold) !important;
+}
+
+/* Fix bbPress header/category background colors */
+#bbpress-forums li.bbp-header,
+#bbpress-forums li.bbp-header ul,
+#bbpress-forums .bbp-header,
+#bbpress-forums .bbp-forums .bbp-header,
+#bbpress-forums div.bbp-forum-header,
+#bbpress-forums ul.bbp-forums,
+#bbpress-forums ul.bbp-forums li,
+#bbpress-forums li.bbp-body ul.forum,
+#bbpress-forums .bbp-body,
+#bbpress-forums .bbp-body ul.forum,
+.bbp-header,
+li.bbp-header {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Keep the gold bottom border on header */
+#bbpress-forums li.bbp-header {
+  border-bottom: 2px solid var(--legion-gold) !important;
 }

@@ -1,0 +1,4564 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>DFW Area Study - Security Analysis (January 2026)</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <style>body{font-family:system-ui,-apple-system,sans-serif;max-width:850px;margin:0 auto;padding:20px;line-height:1.6;font-size:14px}table{border-collapse:collapse;width:100%;margin:1em 0}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f0f0f0;font-weight:600}h1{color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px}h2{color:#2a2a2a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:2em}h3{color:#3a3a3a}code{background:#f4f4f4;padding:2px 6px;border-radius:3px;font-size:13px}pre{background:#f4f4f4;padding:12px;border-radius:4px;overflow-x:auto}blockquote{border-left:4px solid #ddd;margin-left:0;padding-left:16px;color:#555}.toc{background:#fafafa;padding:15px;border:1px solid #ddd;border-radius:4px}</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">DFW Area Study - Security Analysis (January 2026)</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#executive-summary" id="toc-executive-summary">Executive
+Summary</a>
+<ul>
+<li><a href="#key-findings" id="toc-key-findings">Key Findings</a></li>
+<li><a href="#geography-demographics"
+id="toc-geography-demographics">Geography &amp; Demographics</a></li>
+<li><a href="#political-landscape"
+id="toc-political-landscape">Political Landscape</a></li>
+<li><a href="#recent-history-2020-present"
+id="toc-recent-history-2020-present">Recent History
+(2020-Present)</a></li>
+<li><a href="#left-wing-activist-groups-primary-focus"
+id="toc-left-wing-activist-groups-primary-focus">3.1 Left-Wing Activist
+Groups (Primary Focus)</a></li>
+<li><a href="#right-wing-groups" id="toc-right-wing-groups">3.2
+Right-Wing Groups</a></li>
+<li><a href="#other-threat-actors" id="toc-other-threat-actors">3.3
+Other Threat Actors</a></li>
+<li><a href="#threat-summary-matrix" id="toc-threat-summary-matrix">3.4
+Threat Summary Matrix</a></li>
+</ul></li>
+<li><a href="#historical-incident-analysis-2020present"
+id="toc-historical-incident-analysis-2020present">Historical Incident
+Analysis (2020–Present)</a>
+<ul>
+<li><a href="#major-incidents" id="toc-major-incidents">Major
+Incidents</a></li>
+<li><a href="#incident-pattern-analysis"
+id="toc-incident-pattern-analysis">Incident Pattern Analysis</a></li>
+<li><a href="#protest-direct-action-tactics"
+id="toc-protest-direct-action-tactics">5.1 Protest &amp; Direct Action
+Tactics</a></li>
+<li><a href="#counter-protest-dynamics"
+id="toc-counter-protest-dynamics">5.2 Counter-Protest Dynamics</a></li>
+<li><a href="#doxxing-online-targeting"
+id="toc-doxxing-online-targeting">5.3 Doxxing &amp; Online
+Targeting</a></li>
+<li><a href="#physical-security-concerns"
+id="toc-physical-security-concerns">5.4 Physical Security
+Concerns</a></li>
+<li><a href="#communications-coordination"
+id="toc-communications-coordination">5.5 Communications &amp;
+Coordination</a></li>
+<li><a href="#social-media-coordination"
+id="toc-social-media-coordination">5.6 Social Media
+Coordination</a></li>
+<li><a href="#legal-media-tactics" id="toc-legal-media-tactics">5.7
+Legal &amp; Media Tactics</a></li>
+<li><a href="#annual-calendar-high-risk-dates"
+id="toc-annual-calendar-high-risk-dates">6.1 Annual Calendar — High-Risk
+Dates</a></li>
+<li><a href="#reactive-triggers" id="toc-reactive-triggers">6.2 Reactive
+Triggers</a></li>
+<li><a href="#client-specific-triggers"
+id="toc-client-specific-triggers">6.3 Client-Specific Triggers</a></li>
+<li><a href="#monitoring-recommendations"
+id="toc-monitoring-recommendations">6.4 Monitoring
+Recommendations</a></li>
+</ul></li>
+<li><a href="#critical-locations" id="toc-critical-locations">Critical
+Locations</a>
+<ul>
+<li><a href="#primary-protest-sites" id="toc-primary-protest-sites">7.1
+Primary Protest Sites</a></li>
+<li><a href="#federal-facilities" id="toc-federal-facilities">7.2
+Federal Facilities</a></li>
+<li><a href="#venues-for-political-events"
+id="toc-venues-for-political-events">7.3 Venues for Political
+Events</a></li>
+<li><a href="#areas-of-concern" id="toc-areas-of-concern">7.4 Areas of
+Concern</a></li>
+<li><a href="#route-planning" id="toc-route-planning">7.5 Route
+Planning</a></li>
+<li><a href="#threat-scenario-analysis"
+id="toc-threat-scenario-analysis">8.1 Threat Scenario Analysis</a></li>
+<li><a href="#risk-matrix-summary" id="toc-risk-matrix-summary">8.2 Risk
+Matrix Summary</a></li>
+<li><a href="#client-specific-vulnerabilities"
+id="toc-client-specific-vulnerabilities">8.3 Client-Specific
+Vulnerabilities</a></li>
+<li><a href="#comparative-risk-assessment"
+id="toc-comparative-risk-assessment">8.4 Comparative Risk
+Assessment</a></li>
+<li><a href="#physical-security-measures"
+id="toc-physical-security-measures">9.1 Physical Security
+Measures</a></li>
+<li><a href="#event-planning-considerations"
+id="toc-event-planning-considerations">9.2 Event Planning
+Considerations</a></li>
+<li><a href="#opsec-for-members" id="toc-opsec-for-members">9.3 OPSEC
+for Members</a></li>
+<li><a href="#monitoring-early-warning"
+id="toc-monitoring-early-warning">9.4 Monitoring &amp; Early
+Warning</a></li>
+<li><a href="#law-enforcement-coordination"
+id="toc-law-enforcement-coordination">9.5 Law Enforcement
+Coordination</a></li>
+<li><a href="#legal-preparedness" id="toc-legal-preparedness">9.6 Legal
+Preparedness</a></li>
+<li><a href="#summary-priority-actions"
+id="toc-summary-priority-actions">9.7 Summary: Priority Actions</a></li>
+<li><a href="#a.1-left-wing-groups" id="toc-a.1-left-wing-groups">A.1
+Left-Wing Groups</a></li>
+<li><a href="#a.2-right-wing-groups-contextual"
+id="toc-a.2-right-wing-groups-contextual">A.2 Right-Wing Groups
+(Contextual)</a></li>
+<li><a href="#a.3-organizational-relationships"
+id="toc-a.3-organizational-relationships">A.3 Organizational
+Relationships</a></li>
+</ul></li>
+<li><a href="#appendix-b-incident-log-2020present"
+id="toc-appendix-b-incident-log-2020present">Appendix B: Incident Log
+(2020–Present)</a>
+<ul>
+<li><a href="#chronological-incident-summary"
+id="toc-chronological-incident-summary">Chronological Incident
+Summary</a></li>
+<li><a href="#incident-categories" id="toc-incident-categories">Incident
+Categories</a></li>
+<li><a href="#notable-legal-outcomes"
+id="toc-notable-legal-outcomes">Notable Legal Outcomes</a></li>
+<li><a href="#key-observations" id="toc-key-observations">Key
+Observations</a></li>
+<li><a href="#annual-recurring-dates"
+id="toc-annual-recurring-dates">Annual Recurring Dates</a></li>
+<li><a href="#specific-events" id="toc-specific-events">2026 Specific
+Events</a></li>
+<li><a href="#planning-calendar" id="toc-planning-calendar">Planning
+Calendar</a></li>
+<li><a href="#primary-sources-consulted"
+id="toc-primary-sources-consulted">Primary Sources Consulted</a></li>
+<li><a href="#source-evaluation-notes"
+id="toc-source-evaluation-notes">Source Evaluation Notes</a></li>
+<li><a href="#urls-referenced" id="toc-urls-referenced">URLs
+Referenced</a></li>
+<li><a href="#classification-handling"
+id="toc-classification-handling">Classification &amp; Handling</a></li>
+<li><a href="#e.1-named-leadership-key-figures"
+id="toc-e.1-named-leadership-key-figures">E.1 Named Leadership &amp; Key
+Figures</a></li>
+<li><a href="#e.2-physical-locations"
+id="toc-e.2-physical-locations">E.2 Physical Locations</a></li>
+<li><a href="#e.3-funding-financial-information"
+id="toc-e.3-funding-financial-information">E.3 Funding &amp; Financial
+Information</a></li>
+<li><a href="#e.4-social-media-directory"
+id="toc-e.4-social-media-directory">E.4 Social Media Directory</a></li>
+<li><a href="#e.5-additional-groups-identified"
+id="toc-e.5-additional-groups-identified">E.5 Additional Groups
+Identified</a></li>
+<li><a href="#e.6-network-connections"
+id="toc-e.6-network-connections">E.6 Network Connections</a></li>
+<li><a href="#e.7-imagery-notes" id="toc-e.7-imagery-notes">E.7 Imagery
+Notes</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="executive-summary">Executive Summary</h1>
+<p><strong>Classification:</strong> UNCLASSIFIED // FOR OFFICIAL USE
+ONLY<br />
+<strong>Prepared For:</strong> [Client - Conservative Political
+Organization]<br />
+<strong>Date:</strong> January 2026<br />
+<strong>AO:</strong> Dallas-Fort Worth Metroplex, Texas</p>
+<hr />
+<h2 id="key-findings">Key Findings</h2>
+<h3 id="threat-environment">Threat Environment</h3>
+<p>The Dallas-Fort Worth metroplex presents a
+<strong>moderate-to-elevated threat environment</strong> for
+conservative political organizations. The region has experienced
+significant civil unrest activity since 2020 and contains active cells
+of multiple left-wing activist and armed groups.</p>
+<p><strong>Primary Threat Actors:</strong> - <strong>Antifa-affiliated
+networks</strong> — Decentralized cells with documented presence in
+North Texas; linked to the July 2025 Prairieland ICE facility attack
+resulting in federal terrorism charges - <strong>Elm Fork John Brown Gun
+Club</strong> — Armed left-wing group with established DFW presence;
+documented confrontations at drag shows and political events -
+<strong>Black Lives Matter affiliates</strong> — Multiple chapters with
+varying activity levels; reduced operational tempo since 2020 peak -
+<strong>DSA North Texas</strong> — Democratic Socialists of America
+chapter with organizing committees across the metroplex; primarily
+focused on electoral/labor organizing</p>
+<p><strong>Secondary Considerations:</strong> - Right-wing groups
+(Patriot Front HQ’d in Grapevine-Haslet area) may create
+association/optics risk or counter-protest dynamics - Lone actor threats
+remain a concern given political polarization</p>
+<h3 id="recent-significant-incidents">Recent Significant Incidents</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 37%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>July 4, 2025</td>
+<td>Prairieland ICE Detention Center attack</td>
+<td>11 arrested, police officer shot, first federal antifa terrorism
+charges</td>
+</tr>
+<tr class="even">
+<td>April 2023</td>
+<td>Fort Worth drag show confrontation</td>
+<td>JBGC vs. right-wing protesters; arrests, viral video, lawsuit</td>
+</tr>
+<tr class="odd">
+<td>May-June 2020</td>
+<td>George Floyd protests</td>
+<td>Downtown Dallas looting, fires, police use of less-lethal
+munitions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="risk-assessment">Risk Assessment</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Threat Type</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Overall</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Protest disruption at events</td>
+<td>HIGH</td>
+<td>MEDIUM</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="even">
+<td>Physical confrontation</td>
+<td>MEDIUM</td>
+<td>HIGH</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="odd">
+<td>Doxxing/online targeting</td>
+<td>HIGH</td>
+<td>MEDIUM</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="even">
+<td>Armed standoff</td>
+<td>LOW</td>
+<td>CRITICAL</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+<tr class="odd">
+<td>Targeted violence</td>
+<td>LOW</td>
+<td>CRITICAL</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="priority-recommendations">Priority Recommendations</h3>
+<ol type="1">
+<li><strong>Event Security:</strong> Engage professional security with
+crowd management experience for all public events; coordinate with local
+law enforcement</li>
+<li><strong>OPSEC:</strong> Implement operational security protocols for
+leadership and members; limit personal information exposure</li>
+<li><strong>Monitoring:</strong> Establish continuous monitoring of
+activist social media, event calendars, and local organizing
+platforms</li>
+<li><strong>Site Selection:</strong> Avoid venues with documented
+protest activity; prefer locations with controlled access</li>
+<li><strong>Legal Preparedness:</strong> Retain legal counsel familiar
+with Texas protest law and civil rights litigation</li>
+</ol>
+<hr />
+<p><em>Full analysis follows in subsequent sections.</em> # Area
+Overview</p>
+<h2 id="geography-demographics">Geography &amp; Demographics</h2>
+<h3 id="basic-statistics">Basic Statistics</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Value</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MSA Population</strong></td>
+<td>8,344,032 (July 2024)</td>
+<td>US Census Bureau</td>
+</tr>
+<tr class="even">
+<td><strong>NCTCOG Region</strong></td>
+<td>8,481,512 (Jan 2024)</td>
+<td>North Central Texas COG</td>
+</tr>
+<tr class="odd">
+<td><strong>National Rank</strong></td>
+<td>4th largest metro</td>
+<td>Census Bureau</td>
+</tr>
+<tr class="even">
+<td><strong>Annual Growth</strong></td>
+<td>+177,922 (2023-2024)</td>
+<td>Census Bureau</td>
+</tr>
+<tr class="odd">
+<td><strong>Growth Rank</strong></td>
+<td>3rd fastest growing US metro</td>
+<td>Census Bureau</td>
+</tr>
+</tbody>
+</table>
+<h3 id="major-population-centers">Major Population Centers</h3>
+<table>
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 64%" />
+<col style="width: 18%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>City</th>
+<th>Population (2024 est.)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Dallas</td>
+<td>~1.35 million</td>
+<td>Core city, liberal-leaning</td>
+</tr>
+<tr class="even">
+<td>Fort Worth</td>
+<td>1,008,106</td>
+<td>2nd million+ city in metro, more conservative</td>
+</tr>
+<tr class="odd">
+<td>Arlington</td>
+<td>~400,000</td>
+<td>Between Dallas/FW, mixed</td>
+</tr>
+<tr class="even">
+<td>Plano</td>
+<td>~290,000</td>
+<td>Northern suburb, affluent</td>
+</tr>
+<tr class="odd">
+<td>Garland</td>
+<td>~240,000</td>
+<td>Eastern suburb</td>
+</tr>
+<tr class="even">
+<td>Irving</td>
+<td>~240,000</td>
+<td>Between Dallas/FW</td>
+</tr>
+<tr class="odd">
+<td>Frisco</td>
+<td>~230,000</td>
+<td>Fast-growing northern suburb</td>
+</tr>
+</tbody>
+</table>
+<h3 id="geographic-layout">Geographic Layout</h3>
+<p>The DFW metroplex spans approximately 9,300 square miles across 13
+counties. Key geographic features relevant to security planning:</p>
+<ul>
+<li><strong>Urban Core (Dallas):</strong> High-density downtown, Deep
+Ellum entertainment district, Uptown</li>
+<li><strong>Urban Core (Fort Worth):</strong> Sundance Square,
+Stockyards, Cultural District</li>
+<li><strong>Suburban Ring:</strong> Plano, Frisco, McKinney (north);
+Arlington, Grand Prairie (between); Garland, Mesquite (east)</li>
+<li><strong>Exurban Areas:</strong> Rapid growth in Collin, Denton,
+Kaufman counties</li>
+</ul>
+<h3 id="transportation">Transportation</h3>
+<ul>
+<li><strong>Highways:</strong> I-35E/W split, I-20, I-30, I-635 (LBJ),
+DNT, PGBT</li>
+<li><strong>Airports:</strong> DFW International (major hub), Dallas
+Love Field</li>
+<li><strong>Transit:</strong> DART light rail (Dallas/suburbs), Trinity
+Metro (Fort Worth), TRE commuter rail</li>
+</ul>
+<hr />
+<h2 id="political-landscape">Political Landscape</h2>
+<h3 id="overview">Overview</h3>
+<p>DFW is politically purple, with significant variation between urban
+cores (Democratic-leaning) and suburban/exurban areas
+(Republican-leaning). The region has trended slightly more Democratic in
+recent cycles, particularly in Dallas County and inner suburbs.</p>
+<h3 id="county-political-lean-2024">County Political Lean (2024)</h3>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 28%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>County</th>
+<th>Lean</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Dallas</td>
+<td>D+15-20</td>
+<td>Solidly Democratic; Dallas proper is deep blue</td>
+</tr>
+<tr class="even">
+<td>Tarrant</td>
+<td>Swing/R+2-5</td>
+<td>Historically Republican, increasingly competitive</td>
+</tr>
+<tr class="odd">
+<td>Collin</td>
+<td>R+5-10</td>
+<td>Trending purple; Plano/Frisco growing more competitive</td>
+</tr>
+<tr class="even">
+<td>Denton</td>
+<td>R+8-12</td>
+<td>Republican but Denton city is college town (UNT)</td>
+</tr>
+<tr class="odd">
+<td>Rockwall</td>
+<td>R+25+</td>
+<td>Strongly Republican</td>
+</tr>
+<tr class="even">
+<td>Ellis</td>
+<td>R+20+</td>
+<td>Strongly Republican</td>
+</tr>
+<tr class="odd">
+<td>Kaufman</td>
+<td>R+15-20</td>
+<td>Republican, rapid growth</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-political-dynamics">Key Political Dynamics</h3>
+<ol type="1">
+<li><p><strong>Urban-Suburban Divide:</strong> Conservative political
+organizations can expect more favorable reception in Tarrant County
+(especially southern/western areas), Collin County suburbs, and exurban
+counties. Dallas proper and inner-ring suburbs skew
+progressive.</p></li>
+<li><p><strong>Texas State Politics:</strong> Despite blue urban
+pockets, Texas remains a Republican trifecta state. State-level support
+and legal framework generally favorable to conservative
+organizations.</p></li>
+<li><p><strong>Activist Concentration:</strong> Left-wing activist
+groups primarily concentrate in Dallas proper, Denton (UNT), and urban
+Fort Worth. Suburban events face lower (but non-zero) protest
+risk.</p></li>
+</ol>
+<hr />
+<h2 id="recent-history-2020-present">Recent History (2020-Present)</h2>
+<h3 id="george-floyd-protests">2020: George Floyd Protests</h3>
+<p>The murder of George Floyd (May 25, 2020) triggered significant
+protests across DFW:</p>
+<ul>
+<li><strong>May 29-30, 2020:</strong> Large protests in downtown Dallas.
+Initially peaceful, escalated overnight with looting of stores (Neiman
+Marcus flagship, etc.), fires, vandalism.</li>
+<li><strong>Police Response:</strong> Tear gas, pepper spray,
+less-lethal rounds deployed. Multiple civilians struck, including
+documented injuries.</li>
+<li><strong>Arrests:</strong> ~100+ arrests for protest-related offenses
+over the first week.</li>
+<li><strong>Sustained Activity:</strong> Smaller protests continued
+through summer 2020.</li>
+<li><strong>Fort Worth:</strong> Parallel protests; generally less
+violent than Dallas.</li>
+</ul>
+<h3 id="declining-protest-volume">2021-2024: Declining Protest
+Volume</h3>
+<p>Following the 2020 peak, protest activity declined but never ceased:
+- Ongoing BLM-affiliated demonstrations (smaller scale) - Abortion
+rights protests following Dobbs decision (2022) - Drag show
+confrontations (2022-2024) — see Threat Landscape section - Various
+anti-Trump/anti-MAGA demonstrations</p>
+<h3 id="escalation">2025: Escalation</h3>
+<p><strong>July 4, 2025 — Prairieland ICE Facility Attack:</strong> - 11
+individuals arrested following an armed confrontation at Prairieland
+Detention Center in Alvarado (south of Fort Worth) - Police officer shot
+in the neck - First-ever federal terrorism charges against alleged
+antifa-affiliated defendants - DOJ alleges coordinated attack with
+rifles, pistols, body armor - Multiple defendants from Dallas area -
+Case ongoing; some pleading guilty, others facing additional charges</p>
+<p><strong>September 2025:</strong> - Trump administration formally
+designates “Antifa” as a domestic terrorist organization - Increased
+federal law enforcement focus on left-wing extremism - Activist
+community response: heightened operational security, some groups going
+dormant</p>
+<p><strong>Ongoing:</strong> - “No Kings” and anti-Trump protests
+continue - Immigration-related demonstrations - Continued drag event
+confrontations # Threat Landscape</p>
+<h2 id="left-wing-activist-groups-primary-focus">3.1 Left-Wing Activist
+Groups (Primary Focus)</h2>
+<h3 id="antifa-affiliated-networks">Antifa-Affiliated Networks</h3>
+<p><strong>Overview:</strong><br />
+Antifa (“anti-fascist”) is a decentralized movement rather than a formal
+organization. In North Texas, antifa-aligned individuals operate through
+informal networks, often overlapping with other left-wing groups. No
+single “chapter” exists; rather, cells form around specific actions or
+campaigns.</p>
+<p><strong>Key Characteristics:</strong> - Decentralized, cell-based
+structure - Heavy emphasis on operational security (masks, anonymity,
+encrypted communications) - Tactical focus on “direct action” —
+confrontation, disruption, property destruction - Increasingly subject
+to federal scrutiny following September 2025 domestic terrorism
+designation</p>
+<p><strong>DFW Presence:</strong><br />
+The July 2025 Prairieland attack revealed an active North Texas cell.
+Per court filings: - 11+ individuals arrested - Operated from
+Dallas-area residence - Had access to rifles, pistols, body armor -
+Demonstrated willingness to engage law enforcement</p>
+<p><strong>Threat Assessment:</strong><br />
+Following Prairieland and the terrorism designation, antifa-affiliated
+activity in DFW has likely decreased operationally due to federal
+pressure, but the ideological base remains. Conservative political
+events are considered legitimate targets in antifa ideology.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Capability</td>
+<td>MEDIUM-HIGH (demonstrated armed capability)</td>
+</tr>
+<tr class="even">
+<td>Intent</td>
+<td>HIGH (explicit ideological opposition)</td>
+</tr>
+<tr class="odd">
+<td>Current Activity</td>
+<td>REDUCED (federal pressure)</td>
+</tr>
+<tr class="even">
+<td>Overall Threat</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="elm-fork-john-brown-gun-club">Elm Fork John Brown Gun Club</h3>
+<p><strong>Overview:</strong><br />
+The John Brown Gun Club is a national network of armed left-wing groups
+named after the abolitionist. The Elm Fork chapter operates in the DFW
+area and is one of the most active JBGC branches nationally.</p>
+<p><strong>Key Characteristics:</strong> - Openly armed; members carry
+rifles, pistols at events - Describes itself as providing “community
+defense” against “white supremacists/fascism” - Active at drag shows,
+LGBTQ+ events, and left-wing demonstrations - Uses social media for
+recruitment and coordination - Members wear masks/face coverings for
+anonymity</p>
+<p><strong>DFW Activities (Documented):</strong> -
+<strong>2022-2024:</strong> Regular armed presence at drag shows across
+DFW (Dallas, Fort Worth, Princeton, Grand Prairie) - <strong>April
+2023:</strong> Confrontation with right-wing protesters at Fort Worth
+drag brunch; arrests made; viral video; subsequent lawsuit by New
+Columbia Movement - <strong>December 2022:</strong> Armed
+counter-protest at suburban drag event; documented confrontation with
+militia members carrying barbed-wire bat</p>
+<p><strong>Tactics:</strong> - Arrive armed and in numbers to events
+they perceive as threatened - Positioning to intercept/deter right-wing
+protesters - Have used pepper spray/mace on protesters (documented 2023)
+- Primarily defensive posture but willing to initiate physical
+confrontation</p>
+<p><strong>Relationship to Antifa:</strong><br />
+Ideological overlap is significant; some individuals may participate in
+both JBGC and antifa-style actions. JBGC is more publicly visible due to
+open-carry activities.</p>
+<p><strong>Social Media:</strong> - Active on Twitter/X, Instagram -
+Known to block critics quickly - Uses platforms for event
+coordination</p>
+<p><strong>Threat Assessment:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Capability</td>
+<td>HIGH (openly armed, trained)</td>
+</tr>
+<tr class="even">
+<td>Intent</td>
+<td>MEDIUM (defensive focus but will confront)</td>
+</tr>
+<tr class="odd">
+<td>Current Activity</td>
+<td>ACTIVE</td>
+</tr>
+<tr class="even">
+<td>Overall Threat</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="black-lives-matter-blm-dfw-affiliates">Black Lives Matter (BLM)
+— DFW Affiliates</h3>
+<p><strong>Overview:</strong><br />
+BLM in DFW consists of multiple loosely affiliated groups rather than a
+single chapter. Activity has declined significantly from 2020 peak.</p>
+<p><strong>Key Groups:</strong> - <strong>Next Generation Action
+Network:</strong> Organized major 2020 protests in Dallas -
+<strong>Dallas Truth, Racial Healing and Transformation (TRHT):</strong>
+Partners with City of Dallas on equity initiatives - Various informal
+community groups</p>
+<p><strong>Current Status:</strong><br />
+Nationally, BLM support declined from 67% (2020) to 45% (2024). Local
+chapters have lower visibility and reduced operational tempo. Most
+activity now focuses on: - Anniversary commemorations - Police
+accountability advocacy - Coalition building with other progressive
+groups</p>
+<p><strong>Tactics:</strong> - Marches, rallies, vigils - Social media
+campaigns - Partnerships with institutional actors (city government,
+churches) - Generally non-violent; 2020 events saw property destruction
+primarily by opportunists rather than organized BLM</p>
+<p><strong>Threat Assessment:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Capability</td>
+<td>MEDIUM (mobilization capacity for large events)</td>
+</tr>
+<tr class="even">
+<td>Intent</td>
+<td>LOW-MEDIUM (not specifically targeting conservatives)</td>
+</tr>
+<tr class="odd">
+<td>Current Activity</td>
+<td>LOW</td>
+</tr>
+<tr class="even">
+<td>Overall Threat</td>
+<td><strong>LOW-MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="democratic-socialists-of-america-north-texas-dsa-ntx">Democratic
+Socialists of America — North Texas (DSA-NTX)</h3>
+<p><strong>Overview:</strong><br />
+DSA is the largest socialist organization in the US. The North Texas
+chapter covers the DFW metroplex with organizing committees in Fort
+Worth, Collin County, and Denton.</p>
+<p><strong>Key Characteristics:</strong> - Focus on electoral politics,
+labor organizing, mutual aid - Not a direct-action or confrontational
+group - ~5,400 Instagram followers (DSA North Texas) - Youth chapters at
+McKinney HS and UTD</p>
+<p><strong>Activities:</strong> - Candidate endorsements (progressive
+Democrats, occasional socialists) - Labor campaign support - Tenant
+organizing - Medicare for All advocacy - Occasional protest
+participation (coalition events)</p>
+<p><strong>Threat Assessment:</strong><br />
+DSA is primarily a political organizing group, not a security threat.
+However: - Members may participate in broader protest coalitions -
+Provides ideological/logistical support network for other groups - Some
+individual members may be involved in more confrontational activities
+separately</p>
+<table>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Capability</td>
+<td>LOW (not a direct-action group)</td>
+</tr>
+<tr class="even">
+<td>Intent</td>
+<td>LOW (electoral focus)</td>
+</tr>
+<tr class="odd">
+<td>Current Activity</td>
+<td>MODERATE</td>
+</tr>
+<tr class="even">
+<td>Overall Threat</td>
+<td><strong>LOW</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="socialist-rifle-association-sra">Socialist Rifle Association
+(SRA)</h3>
+<p><strong>Overview:</strong><br />
+The SRA is a national left-wing gun rights organization. A Dallas-area
+presence has been documented alongside John Brown Gun Club.</p>
+<p><strong>Key Characteristics:</strong> - Focus on firearms training
+and education for leftists - Less confrontational than JBGC; more
+emphasis on training - Membership overlaps with JBGC and DSA</p>
+<p><strong>Threat Assessment:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Capability</td>
+<td>MEDIUM (armed, trained)</td>
+</tr>
+<tr class="even">
+<td>Intent</td>
+<td>LOW (training focus, not confrontational)</td>
+</tr>
+<tr class="odd">
+<td>Current Activity</td>
+<td>LOW-MODERATE</td>
+</tr>
+<tr class="even">
+<td>Overall Threat</td>
+<td><strong>LOW</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="single-issue-activist-groups">Single-Issue Activist Groups</h3>
+<p>Several single-issue groups may intersect with conservative political
+events:</p>
+<p><strong>Abortion Rights Groups:</strong> - Elevated activity since
+Dobbs (2022) - Target anti-abortion events, crisis pregnancy centers -
+Groups: Lilith Fund, Fund Texas Choice, local Planned Parenthood
+affiliates</p>
+<p><strong>Trans Rights / LGBTQ+ Advocates:</strong> - Active at any
+event perceived as anti-LGBTQ+ - Coalition with JBGC for armed
+protection - Groups: Equality Texas, local PFLAG chapters, ad hoc
+groups</p>
+<p><strong>Immigration Advocates:</strong> - Elevated activity under
+current administration - Focus on ICE facilities, detention centers,
+deportation flights - Groups: LULAC, ACLU Texas, various sanctuary
+networks</p>
+<p><strong>Climate Activists:</strong> - Less prominent in DFW than
+coastal cities - Occasional intersection with progressive coalitions</p>
+<hr />
+<h2 id="right-wing-groups">3.2 Right-Wing Groups</h2>
+<p><em>Included for full threat picture; these groups are not direct
+threats to the client but create important contextual dynamics.</em></p>
+<h3 id="patriot-front">Patriot Front</h3>
+<p><strong>Overview:</strong><br />
+Patriot Front is a white nationalist, neo-fascist organization
+<strong>headquartered in the DFW suburbs</strong> (Grapevine-Haslet
+area). This is highly significant — DFW is the operational center of one
+of the most active white supremacist groups nationally.</p>
+<p><strong>Key Characteristics:</strong> - Originated from Vanguard
+America after Charlottesville (2017) - Primary activity: propaganda
+distribution (stickers, banners, flyers) - Conducts flash demonstrations
+in matching uniforms - Texas leads nation in white supremacist
+propaganda incidents - Members engage in fitness training, marches</p>
+<p><strong>Relevance to Client:</strong> - <strong>Association
+Risk:</strong> Conservative events may attract Patriot Front attendance
+or be perceived as aligned - <strong>Counter-Protest Dynamics:</strong>
+PF presence can escalate confrontations with antifa/JBGC -
+<strong>Media/Optics:</strong> Any association (real or perceived) is
+reputationally damaging</p>
+<p><strong>Recommendation:</strong> Explicitly disavow and exclude white
+nationalist groups from events; have security prepared to remove
+individuals displaying PF symbols.</p>
+<h3 id="proud-boys">Proud Boys</h3>
+<p><strong>Overview:</strong><br />
+Neo-fascist group with documented Texas presence. Less organizationally
+prominent in DFW than Patriot Front.</p>
+<p><strong>Relevance:</strong> - May attend conservative events -
+History of violent confrontations nationally - Similar
+association/optics concerns as Patriot Front</p>
+<h3 id="new-columbia-movement">New Columbia Movement</h3>
+<p><strong>Overview:</strong><br />
+Christian nationalist group active in DFW area, particularly around drag
+show protests.</p>
+<p><strong>Activities:</strong> - Regular protests at drag events -
+Filed lawsuit against Elm Fork JBGC following April 2023 confrontation -
+Generally non-violent protest tactics</p>
+<p><strong>Relevance:</strong> - Their protests draw JBGC
+counter-protests - Conservative events may attract their attendance -
+Lower risk profile than PF/Proud Boys from association standpoint</p>
+<hr />
+<h2 id="other-threat-actors">3.3 Other Threat Actors</h2>
+<h3 id="lone-actors">Lone Actors</h3>
+<p>The highest-impact but lowest-probability threat. Political
+polarization increases lone actor risk across the spectrum.</p>
+<p><strong>Considerations:</strong> - Conservative figures have been
+targeted nationally (e.g., Charlie Kirk assassination, Sept 2025) - No
+specific intelligence on DFW-based lone actor threats to conservative
+orgs - Standard protective measures apply</p>
+<h3 id="criminal-opportunists">Criminal Opportunists</h3>
+<p>Large gatherings (protests or events) attract criminal activity: -
+Theft, robbery targeting attendees - Property crime against venues - Not
+ideologically motivated but creates security burden</p>
+<hr />
+<h2 id="threat-summary-matrix">3.4 Threat Summary Matrix</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Capability</th>
+<th>Intent</th>
+<th>Activity</th>
+<th>Overall</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Antifa Networks</td>
+<td>MED-HIGH</td>
+<td>HIGH</td>
+<td>REDUCED</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="even">
+<td>Elm Fork JBGC</td>
+<td>HIGH</td>
+<td>MEDIUM</td>
+<td>ACTIVE</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="odd">
+<td>BLM Affiliates</td>
+<td>MEDIUM</td>
+<td>LOW-MED</td>
+<td>LOW</td>
+<td><strong>LOW-MOD</strong></td>
+</tr>
+<tr class="even">
+<td>DSA-NTX</td>
+<td>LOW</td>
+<td>LOW</td>
+<td>MODERATE</td>
+<td><strong>LOW</strong></td>
+</tr>
+<tr class="odd">
+<td>Socialist Rifle Assn</td>
+<td>MEDIUM</td>
+<td>LOW</td>
+<td>LOW-MOD</td>
+<td><strong>LOW</strong></td>
+</tr>
+<tr class="even">
+<td>Single-Issue Groups</td>
+<td>LOW-MED</td>
+<td>VARIES</td>
+<td>VARIES</td>
+<td><strong>LOW-MOD</strong></td>
+</tr>
+<tr class="odd">
+<td>Patriot Front</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><em>Assoc. Risk</em></td>
+</tr>
+<tr class="even">
+<td>Lone Actors</td>
+<td>HIGH</td>
+<td>UNKNOWN</td>
+<td>—</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<h1 id="historical-incident-analysis-2020present">Historical Incident
+Analysis (2020–Present)</h1>
+<h2 id="major-incidents">Major Incidents</h2>
+<h3 id="george-floyd-protests-dallas">2020 George Floyd Protests —
+Dallas</h3>
+<p><strong>Date:</strong> May 29 – June 2020 (peak); sporadic through
+summer<br />
+<strong>Location:</strong> Downtown Dallas, primarily around Dallas
+Police HQ, City Hall, Deep Ellum</p>
+<p><strong>Timeline:</strong> - <strong>May 29, 2020:</strong> Initial
+protest organized by Next Generation Action Network outside Dallas
+Police HQ. Nearly 1,000 attendees. Peaceful during day. - <strong>May
+29-30 overnight:</strong> Situation escalated. Protesters clashed with
+police. Looting began in downtown (Neiman Marcus flagship store among
+targets). Dumpster fires set. Windows smashed. - <strong>May 30,
+2020:</strong> Continued protests. Police deployed tear gas, pepper
+spray. Multiple civilians struck by “less lethal” rounds, including
+documented injuries. - <strong>Following days:</strong> Protests
+continued at reduced intensity. Curfew implemented.</p>
+<p><strong>Outcomes:</strong> - 100+ arrests over first week - Property
+damage in millions (downtown retail) - Several lawsuits against Dallas
+PD for use of force - Two DPD officers later accused of assault for
+shooting protesters with less-lethal rounds - “Black Lives Matter”
+painted in front of Dallas City Hall</p>
+<p><strong>Lessons Learned:</strong> - Large protests can escalate
+rapidly after dark - Criminal opportunists exploit protest cover - DPD
+response capacity can be overwhelmed - Downtown Dallas is primary
+protest magnet</p>
+<hr />
+<h3 id="george-floyd-protests-fort-worth">2020 George Floyd Protests —
+Fort Worth</h3>
+<p><strong>Date:</strong> May-June 2020<br />
+<strong>Location:</strong> Downtown Fort Worth, Sundance Square area</p>
+<p><strong>Summary:</strong><br />
+Parallel protests occurred in Fort Worth but were generally smaller and
+less violent than Dallas. Some confrontations with police but no
+comparable looting/destruction.</p>
+<hr />
+<h3 id="drag-show-confrontations">2022-2024 Drag Show
+Confrontations</h3>
+<p><strong>Overview:</strong><br />
+Starting in 2022, drag events across DFW became flashpoints for
+confrontation between right-wing protesters (Christian nationalist
+groups, militia-adjacent individuals) and left-wing counter-protesters
+(primarily Elm Fork John Brown Gun Club).</p>
+<p><strong>Key Incidents:</strong></p>
+<p><strong>November-December 2022 — Various Suburbs:</strong> -
+Right-wing protesters targeted drag brunches in Dallas suburbs - JBGC
+began providing armed “security” at events - One incident involved
+right-wing protester with barbed-wire bat - Confrontations but no major
+violence</p>
+<p><strong>April 2023 — Fort Worth (Fort Brewery &amp; Pizza):</strong>
+- New Columbia Movement protested drag show - Elm Fork JBGC
+counter-protested - Physical confrontation ensued - Three JBGC members
+arrested - Viral video showed police arresting counter-protesters - NCM
+subsequently filed civil lawsuit against JBGC - JBGC accused of using
+mace on protesters</p>
+<p><strong>2024 — Continued Lower-Level Confrontations:</strong> -
+Pattern continued at various venues - Both sides adapted tactics - No
+major escalation</p>
+<p><strong>Relevance:</strong><br />
+Demonstrates that JBGC is willing to: - Deploy armed members to events -
+Physically confront opponents - Accept arrests - Operate despite
+legal/civil consequences</p>
+<hr />
+<h3 id="july-4-2025-prairieland-ice-detention-center-attack">July 4,
+2025 — Prairieland ICE Detention Center Attack</h3>
+<p><strong>Date:</strong> July 4, 2025 (late evening)<br />
+<strong>Location:</strong> Prairieland Detention Center, Alvarado, TX
+(Johnson County, south of Fort Worth)</p>
+<p><strong>Summary:</strong><br />
+The most significant left-wing extremist incident in DFW history. First
+federal terrorism charges against alleged antifa-aligned defendants.</p>
+<p><strong>Timeline:</strong> - <strong>Earlier July 4:</strong> Small
+peaceful protest at facility during daytime - <strong>~10:37
+PM:</strong> Group of 11-12 individuals gathered near facility - Several
+dressed in black “military-style” clothing - Group allegedly armed with
+rifles, pistols; some wearing body armor - Shots fired; police officer
+struck in neck (survived) - Suspects fled; apprehended over following
+days</p>
+<p><strong>Arrests:</strong><br />
+11 individuals initially arrested, including: - Savanna Batten — prior
+protest-related arrests - Ines Soto — prior protest-related
+arrests<br />
+- Additional defendants named in subsequent filings</p>
+<p><strong>Charges:</strong> - Providing material support to terrorists
+- Multiple counts of attempted murder - Federal riot charges -
+Explosive-related charges (some defendants)</p>
+<p><strong>Court Proceedings:</strong> - Multiple defendants made first
+appearances in Fort Worth federal court - Some defendants negotiating
+plea deals - Others facing additional charges - Case ongoing as of
+January 2026</p>
+<p><strong>Government Response:</strong> - FBI Director Kash Patel:
+“First time ever: the FBI arrested Antifa-aligned anarchist violent
+extremists and terrorism charges have been brought” - DHS cited 1,000%
+increase in attacks on ICE facilities - Migrants subsequently moved from
+Dallas ICE office to Prairieland - September 2025: Trump administration
+formally designates Antifa as domestic terrorist organization</p>
+<p><strong>Key Details from Court Filings:</strong> - Defendants
+conducted “gear check” at Dallas-area residence - At least one defendant
+allegedly stated intent to shoot police rather than be arrested -
+Planning involved encrypted communications - Group had access to
+significant weapons cache</p>
+<p><strong>Relevance:</strong><br />
+This incident demonstrates: - Existence of armed, operationally capable
+cells in North Texas - Willingness to engage law enforcement with lethal
+force - Sophisticated planning and OPSEC - Current federal focus on
+left-wing extremism may suppress but not eliminate threat</p>
+<hr />
+<h3 id="september-2025-antifa-domestic-terrorism-designation">September
+2025 — Antifa Domestic Terrorism Designation</h3>
+<p><strong>Date:</strong> September 22, 2025<br />
+<strong>Action:</strong> Presidential action designating “Antifa” as
+domestic terrorist organization</p>
+<p><strong>Implications:</strong> - Enhanced federal investigative
+authorities - Material support charges now available - Increased
+scrutiny of affiliated individuals/groups - Some activists report going
+dormant or increasing OPSEC</p>
+<hr />
+<h3 id="ongoing-protest-activity">2025 — Ongoing Protest Activity</h3>
+<p><strong>May Day 2025:</strong><br />
+Hundreds gathered across DFW for May Day protests focused on labor
+rights, immigrant rights, anti-Trump messaging. Generally peaceful.</p>
+<p><strong>“No Kings” Protests (June 2025):</strong><br />
+Coordinated anti-Trump protests across North Texas: - Dallas (Dealey
+Plaza) - Fort Worth - Arlington - Denton - Frisco - McKinney - Multiple
+other suburbs</p>
+<p>Demonstrates continued mobilization capacity for large-scale
+coordinated action.</p>
+<hr />
+<h2 id="incident-pattern-analysis">Incident Pattern Analysis</h2>
+<h3 id="escalation-factors">Escalation Factors</h3>
+<p>Incidents are more likely to escalate when: 1. <strong>Time of
+day:</strong> After-dark events have higher escalation risk 2.
+<strong>Counter-protests:</strong> Presence of opposing groups
+dramatically increases confrontation risk 3. <strong>Police
+presence:</strong> Insufficient or aggressive police response can
+trigger escalation 4. <strong>Symbolic dates:</strong> July 4, May Day,
+Juneteenth, election periods 5. <strong>Triggering events:</strong>
+Police shootings, court decisions, major political developments</p>
+<h3 id="geographic-patterns">Geographic Patterns</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Location Type</th>
+<th>Incident Frequency</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Downtown Dallas</td>
+<td>HIGH</td>
+<td>MODERATE-HIGH</td>
+</tr>
+<tr class="even">
+<td>Downtown Fort Worth</td>
+<td>MODERATE</td>
+<td>MODERATE</td>
+</tr>
+<tr class="odd">
+<td>Dallas suburbs</td>
+<td>LOW-MODERATE</td>
+<td>MODERATE</td>
+</tr>
+<tr class="even">
+<td>Exurban areas</td>
+<td>LOW</td>
+<td>HIGH (when occurs)</td>
+</tr>
+<tr class="odd">
+<td>ICE/Federal facilities</td>
+<td>MODERATE</td>
+<td>HIGH</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seasonal-patterns">Seasonal Patterns</h3>
+<ul>
+<li><strong>Spring (April-May):</strong> May Day, increased outdoor
+activity</li>
+<li><strong>Summer (June-August):</strong> Juneteenth, July 4, George
+Floyd anniversary; peak protest season</li>
+<li><strong>Fall (Sept-Nov):</strong> Election-related activity
+peaks</li>
+<li><strong>Winter (Dec-Feb):</strong> Reduced activity (weather);
+holiday period # Tactics, Techniques &amp; Procedures (TTPs)</li>
+</ul>
+<h2 id="protest-direct-action-tactics">5.1 Protest &amp; Direct Action
+Tactics</h2>
+<h3 id="standard-protest-tactics">Standard Protest Tactics</h3>
+<p><strong>Marches &amp; Rallies:</strong> - Permitted or unpermitted
+marches on public streets - Rallies at symbolic locations (City Hall,
+Dealey Plaza, government buildings) - Chanting, signs, banners -
+Generally protected First Amendment activity</p>
+<p><strong>Civil Disobedience:</strong> - Blocking streets/intersections
+- Sit-ins at targeted locations - Refusal to disperse when ordered -
+Designed to provoke arrest for media attention</p>
+<p><strong>Noise Demonstrations:</strong> - Sustained noise-making
+outside targeted locations - Pots, pans, air horns, drums - Used to
+disrupt events without direct confrontation</p>
+<h3 id="escalated-tactics">Escalated Tactics</h3>
+<p><strong>Property Destruction:</strong> - Graffiti, vandalism -
+Window-breaking (black bloc tactic) - Arson (dumpsters, vehicles; rarely
+structures) - Targeting of corporate/government property over
+personal</p>
+<p><strong>Direct Confrontation:</strong> - Physical blocking of access
+- Surrounding/mobbing individuals - Pushing, shoving, striking - Use of
+improvised weapons (flagpoles, umbrellas, frozen water bottles)</p>
+<p><strong>Armed Presence:</strong> - Open carry of firearms (legal in
+Texas) - Displayed to deter opposition or project force - JBGC uses this
+regularly at events</p>
+<hr />
+<h2 id="counter-protest-dynamics">5.2 Counter-Protest Dynamics</h2>
+<p>When conservative events attract left-wing counter-protesters, the
+following pattern typically emerges:</p>
+<p><strong>Phase 1 — Intelligence Gathering:</strong> - Monitoring of
+event announcements, social media - Identification of date, time,
+location - Assessment of security posture</p>
+<p><strong>Phase 2 — Mobilization:</strong> - Calls to action on social
+media, Signal groups, encrypted channels - Coalition building with
+aligned groups - Logistics coordination (transportation, supplies)</p>
+<p><strong>Phase 3 — Deployment:</strong> - Arrival at or near event
+location - Positioning to maximize visibility/disruption - Banner drops,
+chanting, noise</p>
+<p><strong>Phase 4 — Confrontation (if escalation occurs):</strong> -
+Attempts to block access - Verbal harassment of attendees - Physical
+confrontation if barriers breached - Potential for violence if opposing
+groups clash</p>
+<p><strong>Phase 5 — Documentation:</strong> - Extensive
+filming/photography - Doxxing efforts (identifying attendees, speakers)
+- Social media amplification - Potential follow-up targeting of
+identified individuals</p>
+<hr />
+<h2 id="doxxing-online-targeting">5.3 Doxxing &amp; Online
+Targeting</h2>
+<p><strong>Definition:</strong><br />
+Doxxing is the practice of publicly revealing private information about
+individuals (real names, addresses, employers, family members) to enable
+harassment or intimidation.</p>
+<h3 id="methods">Methods</h3>
+<p><strong>Open-Source Intelligence (OSINT):</strong> - Social media
+analysis - Public records searches - Facial recognition tools - License
+plate tracking - Cross-referencing event photos with online profiles</p>
+<p><strong>Photography at Events:</strong> - Systematic photography of
+attendees, vehicles - Focus on individuals without masks - License
+plates recorded</p>
+<p><strong>Publication:</strong> - Posting on social media, forums -
+Dedicated antifa “research” accounts - Anonymous tip lines to
+employers</p>
+<h3 id="consequences-for-targets">Consequences for Targets</h3>
+<ul>
+<li>Employer notification campaigns (job loss attempts)</li>
+<li>Harassment of family members</li>
+<li>Threats (physical, reputational)</li>
+<li>Ongoing surveillance</li>
+<li>Difficulty attending future events anonymously</li>
+</ul>
+<h3 id="protective-measures">Protective Measures</h3>
+<p>See Section 9 (Recommendations) for detailed OPSEC guidance.</p>
+<hr />
+<h2 id="physical-security-concerns">5.4 Physical Security Concerns</h2>
+<h3 id="armed-left-wing-groups">Armed Left-Wing Groups</h3>
+<p>Groups like Elm Fork JBGC openly carry firearms to events. Key
+considerations:</p>
+<p><strong>Legal Status:</strong><br />
+Open carry of long guns is legal in Texas without a permit. Handguns
+require License to Carry (LTC) or permitless carry status.</p>
+<p><strong>Tactical Posture:</strong><br />
+JBGC typically maintains a defensive posture — positioning between
+event/attendees and opposing protesters. However: - Have demonstrated
+willingness to initiate physical contact - Documented use of pepper
+spray - Firearms presence creates escalation risk</p>
+<p><strong>Confrontation Risk:</strong><br />
+Any physical confrontation involving armed individuals carries potential
+for lethal escalation, even if neither side intends lethal force
+initially.</p>
+<h3 id="projectiles-less-lethal-weapons">Projectiles &amp; Less-Lethal
+Weapons</h3>
+<p>Commonly observed at protests: - Pepper spray / OC spray - Bear mace
+- Fireworks / commercial-grade pyrotechnics - Rocks, bottles, cans -
+Improvised weapons (bike locks, flagpoles) - Laser pointers (eye injury
+risk)</p>
+<h3 id="vehicle-tactics">Vehicle Tactics</h3>
+<ul>
+<li>Vehicle convoys to events</li>
+<li>Blocking streets</li>
+<li>Historical incidents of vehicles used as weapons (both left and
+right-wing perpetrators nationally)</li>
+</ul>
+<hr />
+<h2 id="communications-coordination">5.5 Communications &amp;
+Coordination</h2>
+<h3 id="platforms-used">Platforms Used</h3>
+<p><strong>Public:</strong> - Twitter/X (mobilization, public messaging)
+- Instagram (event promotion, recruitment) - Facebook (event pages,
+groups — declining use) - TikTok (recruitment, propaganda)</p>
+<p><strong>Semi-Private:</strong> - Discord servers - Telegram channels
+- Reddit (various leftist subreddits)</p>
+<p><strong>Encrypted:</strong> - Signal (primary secure comms) - Wickr -
+Matrix/Element</p>
+<h3 id="operational-security-adversary-opsec">Operational Security
+(Adversary OPSEC)</h3>
+<p>Antifa-aligned groups emphasize OPSEC: - Mask/face covering
+requirements - No photography of members - Encrypted communications for
+planning - Compartmentalized information (need-to-know) -
+Counter-surveillance awareness - Burner phones for actions</p>
+<p><strong>Implications:</strong><br />
+Difficult to develop human intelligence on planned actions. Monitoring
+of public channels provides limited warning.</p>
+<hr />
+<h2 id="social-media-coordination">5.6 Social Media Coordination</h2>
+<h3 id="mobilization-patterns">Mobilization Patterns</h3>
+<p><strong>Event Announcement → Sharing → Amplification:</strong> 1.
+Event posted publicly (by organizers or discovered by activists) 2.
+Shared to activist networks with call to action 3. Coalition groups
+amplify 4. Logistics coordinated in private channels 5. Post-event
+documentation and narrative control</p>
+<h3 id="accounts-to-monitor">Accounts to Monitor</h3>
+<p><em>Note: Specific account recommendations should be developed based
+on current OSINT. Accounts frequently change, get suspended, or go
+private.</em></p>
+<p>General categories: - Local antifa-aligned accounts - JBGC official
+and affiliated accounts - DSA North Texas - Local BLM-affiliated
+accounts - Single-issue groups (abortion, immigration, LGBTQ+) -
+Left-wing media (Texas Observer, Courier Texas, etc.)</p>
+<hr />
+<h2 id="legal-media-tactics">5.7 Legal &amp; Media Tactics</h2>
+<h3 id="legal-support">Legal Support</h3>
+<p>Activist networks maintain legal support infrastructure: - National
+Lawyers Guild (NLG) legal observers at protests - Know Your Rights
+training - Bail funds - Legal defense coordination</p>
+<h3 id="media-engagement">Media Engagement</h3>
+<ul>
+<li>Sympathetic journalists cultivated</li>
+<li>Immediate narrative framing post-incident</li>
+<li>“Victim” framing when arrests occur</li>
+<li>Viral video strategy (selectively edited clips)</li>
+<li>Press releases, statements</li>
+</ul>
+<h3 id="lawfare">Lawfare</h3>
+<ul>
+<li>Civil lawsuits against opponents (see NCM lawsuit vs. JBGC)</li>
+<li>Police misconduct complaints</li>
+<li>Public records requests to expose opposition # Key Dates &amp;
+Triggers</li>
+</ul>
+<h2 id="annual-calendar-high-risk-dates">6.1 Annual Calendar — High-Risk
+Dates</h2>
+<h3 id="predictable-annual-events">Predictable Annual Events</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>January 6</strong></td>
+<td>J6 Anniversary</td>
+<td>MODERATE</td>
+<td>Counter-protests at conservative events likely</td>
+</tr>
+<tr class="even">
+<td><strong>January (3rd Monday)</strong></td>
+<td>MLK Day</td>
+<td>LOW-MOD</td>
+<td>Marches, rallies; generally peaceful</td>
+</tr>
+<tr class="odd">
+<td><strong>February (Black History Month)</strong></td>
+<td>Various events</td>
+<td>LOW</td>
+<td>Commemorative; low confrontation risk</td>
+</tr>
+<tr class="even">
+<td><strong>March 8</strong></td>
+<td>International Women’s Day</td>
+<td>LOW-MOD</td>
+<td>Feminist/abortion rights actions</td>
+</tr>
+<tr class="odd">
+<td><strong>March 31</strong></td>
+<td>Trans Day of Visibility</td>
+<td>MODERATE</td>
+<td>LGBTQ+ events; potential flashpoint</td>
+</tr>
+<tr class="even">
+<td><strong>April 20</strong></td>
+<td>4/20</td>
+<td>LOW</td>
+<td>Cannabis-related; not politically charged</td>
+</tr>
+<tr class="odd">
+<td><strong>May 1</strong></td>
+<td>May Day / International Workers’ Day</td>
+<td><strong>HIGH</strong></td>
+<td>Major left-wing mobilization day; labor, immigration, socialist</td>
+</tr>
+<tr class="even">
+<td><strong>May 25</strong></td>
+<td>George Floyd Anniversary</td>
+<td>MODERATE</td>
+<td>Commemorative marches; varies by year</td>
+</tr>
+<tr class="odd">
+<td><strong>June (Pride Month)</strong></td>
+<td>Various Pride events</td>
+<td><strong>HIGH</strong></td>
+<td>Drag events, parades draw counter-protests and JBGC</td>
+</tr>
+<tr class="even">
+<td><strong>June 19</strong></td>
+<td>Juneteenth</td>
+<td>MODERATE</td>
+<td>Federal holiday; marches, celebrations</td>
+</tr>
+<tr class="odd">
+<td><strong>July 4</strong></td>
+<td>Independence Day</td>
+<td><strong>ELEVATED</strong></td>
+<td>2025 Prairieland attack occurred; symbolic date</td>
+</tr>
+<tr class="even">
+<td><strong>August 28</strong></td>
+<td>March on Washington Anniversary</td>
+<td>LOW</td>
+<td>Occasional commemorations</td>
+</tr>
+<tr class="odd">
+<td><strong>September (Labor Day weekend)</strong></td>
+<td>Labor Day</td>
+<td>LOW-MOD</td>
+<td>Labor events, some protest activity</td>
+</tr>
+<tr class="even">
+<td><strong>October 11</strong></td>
+<td>Indigenous Peoples’ Day</td>
+<td>LOW</td>
+<td>Limited activity</td>
+</tr>
+<tr class="odd">
+<td><strong>November (Election Day)</strong></td>
+<td>Elections</td>
+<td><strong>HIGH</strong></td>
+<td>Peak political tension; varies by cycle</td>
+</tr>
+<tr class="even">
+<td><strong>November 20</strong></td>
+<td>Trans Day of Remembrance</td>
+<td>MODERATE</td>
+<td>Vigils; can draw opposition</td>
+</tr>
+<tr class="odd">
+<td><strong>December</strong></td>
+<td>Holiday period</td>
+<td>LOW</td>
+<td>Reduced activity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="specific-considerations">2026 Specific Considerations</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 29%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>November 3, 2026</strong></td>
+<td>Midterm Elections</td>
+<td>Major mobilization expected; TX Governor race</td>
+</tr>
+<tr class="even">
+<td><strong>Various</strong></td>
+<td>Prairieland trial dates</td>
+<td>Potential for solidarity protests</td>
+</tr>
+<tr class="odd">
+<td><strong>TBD</strong></td>
+<td>Supreme Court decisions</td>
+<td>Abortion, immigration rulings could trigger rapid mobilization</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="reactive-triggers">6.2 Reactive Triggers</h2>
+<p>These events can trigger rapid mobilization with little warning:</p>
+<h3 id="high-impact-triggers">High-Impact Triggers</h3>
+<p><strong>Police Shootings / Use of Force:</strong> - Any police
+killing of Black/Latino individual in DFW - Particularly if video
+emerges - 24-72 hour mobilization window typical</p>
+<p><strong>Court Decisions:</strong> - Supreme Court rulings on
+abortion, immigration, LGBTQ+ rights - High-profile criminal verdicts
+(police officers, political figures) - Local court decisions in
+significant cases</p>
+<p><strong>Federal Immigration Enforcement:</strong> - ICE raids
+(especially workplaces, schools) - High-profile deportations - Detention
+center incidents - Policy announcements</p>
+<p><strong>Political Violence:</strong> - Attacks on left-wing
+figures/groups - Mass shootings (especially with political/racial
+motivation) - White supremacist incidents</p>
+<h3 id="moderate-impact-triggers">Moderate-Impact Triggers</h3>
+<p><strong>Legislative Actions:</strong> - Texas legislature sessions
+(anti-trans bills, abortion restrictions, etc.) - Federal policy
+announcements</p>
+<p><strong>Local Government Actions:</strong> - City council votes on
+policing, homeless policy, development - School board decisions (book
+bans, DEI policy)</p>
+<p><strong>National Political Events:</strong> - Presidential speeches,
+rallies in Texas - Cabinet member visits - Major national protests with
+local solidarity actions</p>
+<hr />
+<h2 id="client-specific-triggers">6.3 Client-Specific Triggers</h2>
+<p>Conservative political organization events may specifically trigger
+response when:</p>
+<ol type="1">
+<li><strong>High-profile speakers</strong> — National figures attract
+more opposition</li>
+<li><strong>Controversial topics</strong> — Immigration, LGBTQ+ issues,
+election integrity</li>
+<li><strong>Public venues</strong> — Visible, accessible locations
+easier to protest</li>
+<li><strong>Media coverage</strong> — Pre-event publicity enables
+mobilization</li>
+<li><strong>Symbolic timing</strong> — Events near sensitive dates
+compound risk</li>
+</ol>
+<hr />
+<h2 id="monitoring-recommendations">6.4 Monitoring Recommendations</h2>
+<h3 id="sources-to-monitor">Sources to Monitor</h3>
+<p><strong>News:</strong> - Dallas Morning News - Fort Worth
+Star-Telegram - Dallas Observer - Texas Observer - KERA News - Local TV
+stations (WFAA, FOX4, NBC5)</p>
+<p><strong>Activist Channels:</strong> - DSA North Texas social media -
+Local antifa-aligned accounts - JBGC accounts - Action Network event
+listings - Mobilize.us - Facebook event searches</p>
+<p><strong>Law Enforcement:</strong> - Dallas PD alerts - Fort Worth PD
+alerts - Texas DPS bulletins (if accessible)</p>
+<p><strong>Encrypted Channels:</strong> - Difficult to access; requires
+dedicated OSINT capability - Telegram public channels may provide some
+visibility</p>
+<h3 id="monitoring-cadence">Monitoring Cadence</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Timeframe</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Ongoing</strong></td>
+<td>Automated social media monitoring</td>
+</tr>
+<tr class="even">
+<td><strong>Weekly</strong></td>
+<td>Review activist event calendars</td>
+</tr>
+<tr class="odd">
+<td><strong>Pre-event (7 days)</strong></td>
+<td>Intensified monitoring of specific threats</td>
+</tr>
+<tr class="even">
+<td><strong>Pre-event (48 hrs)</strong></td>
+<td>Check for mobilization calls</td>
+</tr>
+<tr class="odd">
+<td><strong>Day-of</strong></td>
+<td>Real-time social media monitoring</td>
+</tr>
+</tbody>
+</table>
+<h1 id="critical-locations">Critical Locations</h1>
+<h2 id="primary-protest-sites">7.1 Primary Protest Sites</h2>
+<p>These locations have historical protest activity and are likely
+targets for future demonstrations:</p>
+<h3 id="dallas">Dallas</h3>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 26%" />
+<col style="width: 30%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Location</th>
+<th>Address/Area</th>
+<th>Historical Use</th>
+<th>Risk Level</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Dealey Plaza</strong></td>
+<td>400 block Elm St</td>
+<td>Major rallies, marches; “No Kings” protests</td>
+<td><strong>HIGH</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Dallas City Hall</strong></td>
+<td>1500 Marilla St</td>
+<td>Government protests; BLM mural location</td>
+<td><strong>HIGH</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>Dallas Police HQ</strong></td>
+<td>1400 S Lamar St</td>
+<td>Police accountability protests</td>
+<td><strong>HIGH</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Thanks-Giving Square</strong></td>
+<td>1627 Pacific Ave</td>
+<td>Vigils, smaller gatherings</td>
+<td>MODERATE</td>
+</tr>
+<tr class="odd">
+<td><strong>Deep Ellum</strong></td>
+<td>Elm/Main St east of downtown</td>
+<td>Entertainment district; spontaneous gatherings</td>
+<td>MODERATE</td>
+</tr>
+<tr class="even">
+<td><strong>Fair Park</strong></td>
+<td>3921 Martin Luther King Jr Blvd</td>
+<td>Large permitted events</td>
+<td>LOW-MOD</td>
+</tr>
+<tr class="odd">
+<td><strong>Southern Dallas</strong></td>
+<td>Various</td>
+<td>Community-based protests</td>
+<td>MODERATE</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fort-worth">Fort Worth</h3>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 26%" />
+<col style="width: 30%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Location</th>
+<th>Address/Area</th>
+<th>Historical Use</th>
+<th>Risk Level</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Sundance Square</strong></td>
+<td>Main/Houston St downtown</td>
+<td>Central gathering point</td>
+<td><strong>HIGH</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Tarrant County Courthouse</strong></td>
+<td>100 W Weatherford St</td>
+<td>Legal/political protests</td>
+<td>MODERATE</td>
+</tr>
+<tr class="odd">
+<td><strong>Fort Worth PD HQ</strong></td>
+<td>350 W Belknap St</td>
+<td>Police accountability</td>
+<td>MODERATE</td>
+</tr>
+<tr class="even">
+<td><strong>Stockyards</strong></td>
+<td>N Main St</td>
+<td>Tourist area; less common for protests</td>
+<td>LOW</td>
+</tr>
+<tr class="odd">
+<td><strong>TCU Area</strong></td>
+<td>University Dr</td>
+<td>Student activism</td>
+<td>LOW-MOD</td>
+</tr>
+</tbody>
+</table>
+<h3 id="suburbanregional">Suburban/Regional</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Location</th>
+<th>City</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Collin County Courthouse</strong></td>
+<td>McKinney</td>
+<td>Growing activist presence</td>
+</tr>
+<tr class="even">
+<td><strong>Denton Square</strong></td>
+<td>Denton</td>
+<td>UNT student activism hub</td>
+</tr>
+<tr class="odd">
+<td><strong>Arlington City Hall</strong></td>
+<td>Arlington</td>
+<td>Occasional protests</td>
+</tr>
+<tr class="even">
+<td><strong>Frisco City Hall</strong></td>
+<td>Frisco</td>
+<td>Growing suburban target</td>
+</tr>
+<tr class="odd">
+<td><strong>Various drag venues</strong></td>
+<td>Multiple</td>
+<td>JBGC/right-wing flashpoints</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="federal-facilities">7.2 Federal Facilities</h2>
+<p>These locations attract immigration-related protests:</p>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 31%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Facility</th>
+<th>Location</th>
+<th>Risk Level</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Prairieland Detention Center</strong></td>
+<td>Alvarado (Johnson Co.)</td>
+<td><strong>CRITICAL</strong> — site of July 2025 attack</td>
+</tr>
+<tr class="even">
+<td><strong>Dallas ICE Field Office</strong></td>
+<td>8101 N Stemmons Fwy</td>
+<td><strong>HIGH</strong> — targeted Sept 2025</td>
+</tr>
+<tr class="odd">
+<td><strong>Earle Cabell Federal Building</strong></td>
+<td>1100 Commerce St, Dallas</td>
+<td>MODERATE — federal courthouse</td>
+</tr>
+<tr class="even">
+<td><strong>Fort Worth Federal Building</strong></td>
+<td>501 W 10th St</td>
+<td>MODERATE</td>
+</tr>
+<tr class="odd">
+<td><strong>DFW Airport</strong></td>
+<td>—</td>
+<td>Deportation flight protests</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="venues-for-political-events">7.3 Venues for Political
+Events</h2>
+<h3 id="considerations-for-site-selection">Considerations for Site
+Selection</h3>
+<p><strong>Higher Risk Venues:</strong> - Downtown hotels/convention
+centers (accessible, visible) - Public parks (no access control) -
+University campuses (student activist base) - Venues with prior protest
+history</p>
+<p><strong>Lower Risk Venues:</strong> - Suburban hotels with controlled
+access - Private clubs/facilities - Exurban locations (reduced activist
+presence) - Venues with dedicated parking (vs. street parking)</p>
+<h3 id="venue-security-features-to-prioritize">Venue Security Features
+to Prioritize</h3>
+<ol type="1">
+<li><strong>Controlled access</strong> — Single entry point, security
+screening capability</li>
+<li><strong>Private parking</strong> — Enclosed garage or fenced lot;
+prevents vehicle documentation</li>
+<li><strong>Buffer zone</strong> — Distance from public sidewalk to
+venue entrance</li>
+<li><strong>Secondary egress</strong> — Alternative exit routes for
+VIPs/speakers</li>
+<li><strong>Law enforcement relationship</strong> — Venue with existing
+LE coordination</li>
+<li><strong>No prior incident history</strong> — Avoid venues that have
+hosted controversial events</li>
+</ol>
+<hr />
+<h2 id="areas-of-concern">7.4 Areas of Concern</h2>
+<h3 id="incident-density-mapping">Incident Density Mapping</h3>
+<p>Based on historical data, conservative event planners should be aware
+of elevated risk in:</p>
+<p><strong>Highest Incident Density:</strong> - Downtown Dallas
+(Main/Elm/Commerce corridors) - Downtown Fort Worth (Sundance Square
+area) - Deep Ellum entertainment district - Areas near ICE
+facilities</p>
+<p><strong>Moderate Incident Density:</strong> - Uptown Dallas - Oak
+Lawn (LGBTQ+ neighborhood) - University areas (SMU, UNT, TCU) -
+Inner-ring suburbs with diverse politics</p>
+<p><strong>Lower Incident Density:</strong> - Outer suburbs (Frisco,
+McKinney, Southlake, Keller) - Exurban areas - Strongly Republican
+counties (Rockwall, Ellis)</p>
+<hr />
+<h2 id="route-planning">7.5 Route Planning</h2>
+<h3 id="considerations-for-event-transportation">Considerations for
+Event Transportation</h3>
+<p><strong>Arrival/Departure:</strong> - Avoid routes through downtown
+cores when possible - Identify protest-free ingress/egress routes - Have
+alternative routes planned - Consider timing to avoid peak protest hours
+(typically afternoon-evening)</p>
+<p><strong>VIP/Speaker Transportation:</strong> - Dedicated vehicles
+with security - Non-public arrival points (loading docks, private
+entrances) - Pre-positioned vehicles for rapid departure -
+Counter-surveillance awareness</p>
+<p><strong>Attendee Guidance:</strong> - Clear parking instructions
+(avoid street parking in protest-prone areas) - Recommended routes
+avoiding potential choke points - Communication plan for route changes
+day-of # Risk Assessment</p>
+<h2 id="threat-scenario-analysis">8.1 Threat Scenario Analysis</h2>
+<h3 id="scenario-1-protest-disruption-at-public-event">Scenario 1:
+Protest Disruption at Public Event</h3>
+<p><strong>Description:</strong> Left-wing activists learn of client
+event through public announcement or social media. They mobilize
+counter-protesters who gather outside venue, chant slogans, display
+banners, and attempt to block or harass attendees.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>HIGH — Standard tactic; low barrier to execution</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>MEDIUM — Disruption, negative media, attendee discomfort</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - Social media calls to action - Event
+shared in activist channels - Counter-event announced at same
+time/location</p>
+<p><strong>Mitigations:</strong> - Limit public announcement window -
+Select venue with buffer zone - Coordinate with law enforcement - Have
+security manage perimeter</p>
+<hr />
+<h3 id="scenario-2-physical-confrontation">Scenario 2: Physical
+Confrontation</h3>
+<p><strong>Description:</strong> Confrontation between attendees and
+protesters escalates to physical altercation. Could involve pushing,
+punches, pepper spray, or improvised weapons.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>MEDIUM — Requires escalation; depends on counter-protester
+posture</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>HIGH — Injuries, arrests, legal liability, media</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - Known confrontational groups (JBGC)
+mobilizing - Online rhetoric indicating intent to disrupt physically -
+Presence of armed counter-protesters</p>
+<p><strong>Mitigations:</strong> - Professional security with
+de-escalation training - Clear separation between attendees and
+protesters - Rapid law enforcement coordination for arrest authority -
+Instruct attendees to avoid engagement</p>
+<hr />
+<h3 id="scenario-3-doxxing-campaign">Scenario 3: Doxxing Campaign</h3>
+<p><strong>Description:</strong> Activists photograph attendees,
+vehicles, and identify individuals through OSINT. Information published
+online with calls for harassment, employer contact, etc.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>HIGH — Standard antifa tactic; requires only cameras and
+research</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>MEDIUM — Reputational/employment consequences for individuals</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - Photographers observed at event
+perimeter - Known doxxing accounts monitoring event - Post-event social
+media analysis activity</p>
+<p><strong>Mitigations:</strong> - OPSEC guidance to attendees (see
+Recommendations) - Limit photography opportunities (enclosed venues,
+private parking) - Monitor for doxxing posts; rapid legal response if
+defamatory</p>
+<hr />
+<h3 id="scenario-4-armed-standoff">Scenario 4: Armed Standoff</h3>
+<p><strong>Description:</strong> Armed left-wing group (e.g., JBGC)
+confronts event attendees or security. Situation escalates to armed
+standoff without shots fired.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>LOW — JBGC typically focuses on drag events; requires specific
+trigger</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>CRITICAL — Potential for lethal escalation; major media/legal</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - JBGC or similar group announces
+attendance - Event involves LGBTQ+ controversy (e.g., opposition to
+drag, trans issues) - Known armed individuals observed</p>
+<p><strong>Mitigations:</strong> - Law enforcement presence with clear
+rules of engagement - Avoid topics likely to draw armed response unless
+security is robust - Have de-escalation plan and secure retreat
+route</p>
+<hr />
+<h3 id="scenario-5-targeted-violence-active-threat">Scenario 5: Targeted
+Violence / Active Threat</h3>
+<p><strong>Description:</strong> Individual or small group attempts
+targeted violence against speakers, leadership, or attendees. Could
+range from assault to active shooter.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>LOW — No specific intelligence; requires significant
+planning/commitment</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>CRITICAL — Mass casualties, organizational devastation</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - Specific threats against
+organization/individuals - Surveillance detected - Online posts
+indicating targeting - Behavioral indicators (unusual inquiries,
+reconnaissance)</p>
+<p><strong>Mitigations:</strong> - Executive protection for high-profile
+speakers - Venue security screening (metal detectors for high-risk
+events) - Threat assessment and monitoring program - Coordination with
+law enforcement threat assessment units</p>
+<hr />
+<h3 id="scenario-6-infiltration">Scenario 6: Infiltration</h3>
+<p><strong>Description:</strong> Activist infiltrates organization or
+event to gather intelligence, disrupt from within, or create
+embarrassing incidents.</p>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Factor</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>LOW-MEDIUM — Requires sustained commitment; documented tactic</td>
+</tr>
+<tr class="even">
+<td><strong>Impact</strong></td>
+<td>MEDIUM — Intelligence compromise, embarrassment, internal
+disruption</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall Risk</strong></td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Indicators:</strong> - New members with limited verifiable
+background - Unusual interest in internal operations/security -
+Connections to known activist networks</p>
+<p><strong>Mitigations:</strong> - Vetting process for
+membership/volunteers - Compartmentalized information for sensitive
+operations - Background checks for positions with access</p>
+<hr />
+<h2 id="risk-matrix-summary">8.2 Risk Matrix Summary</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Scenario</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Overall Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Protest disruption</td>
+<td>HIGH</td>
+<td>MEDIUM</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="even">
+<td>Physical confrontation</td>
+<td>MEDIUM</td>
+<td>HIGH</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="odd">
+<td>Doxxing campaign</td>
+<td>HIGH</td>
+<td>MEDIUM</td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+<tr class="even">
+<td>Armed standoff</td>
+<td>LOW</td>
+<td>CRITICAL</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+<tr class="odd">
+<td>Targeted violence</td>
+<td>LOW</td>
+<td>CRITICAL</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+<tr class="even">
+<td>Infiltration</td>
+<td>LOW-MED</td>
+<td>MEDIUM</td>
+<td><strong>MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="client-specific-vulnerabilities">8.3 Client-Specific
+Vulnerabilities</h2>
+<p><em>Note: Specific vulnerabilities depend on client’s operational
+profile. General categories:</em></p>
+<h3 id="organizational-vulnerabilities">Organizational
+Vulnerabilities</h3>
+<ul>
+<li><strong>Public leadership</strong> — Named leaders are
+doxxing/targeting targets</li>
+<li><strong>Regular events</strong> — Predictable schedule enables
+planning by adversaries</li>
+<li><strong>Fixed locations</strong> — Known office/meeting
+locations</li>
+<li><strong>Online presence</strong> — Website, social media provide
+OSINT opportunities</li>
+<li><strong>Membership lists</strong> — Data breach or leak would enable
+mass targeting</li>
+</ul>
+<h3 id="event-vulnerabilities">Event Vulnerabilities</h3>
+<ul>
+<li><strong>Public ticketing</strong> — Enables adversary ticket
+purchase/infiltration</li>
+<li><strong>Accessible venues</strong> — No security screening</li>
+<li><strong>Street-level entrances</strong> — Direct protester access to
+attendees</li>
+<li><strong>VIP presence</strong> — High-profile speakers increase
+threat profile</li>
+<li><strong>Media coverage</strong> — Pre-event publicity enables
+mobilization</li>
+</ul>
+<h3 id="individual-member-vulnerabilities">Individual Member
+Vulnerabilities</h3>
+<ul>
+<li><strong>Social media presence</strong> — Personal accounts link to
+organizational affiliation</li>
+<li><strong>Vehicle identification</strong> — Bumper stickers, license
+plates enable tracking</li>
+<li><strong>Facial recognition</strong> — Unmasked attendance at events
+enables ID</li>
+<li><strong>Professional exposure</strong> — Employers may be
+targeted</li>
+</ul>
+<hr />
+<h2 id="comparative-risk-assessment">8.4 Comparative Risk
+Assessment</h2>
+<h3 id="dfw-vs.-other-texas-metros">DFW vs. Other Texas Metros</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metro</th>
+<th>Overall Risk</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Dallas-Fort Worth</strong></td>
+<td>ELEVATED</td>
+<td>Active JBGC, antifa presence; Prairieland incident</td>
+</tr>
+<tr class="even">
+<td><strong>Austin</strong></td>
+<td>ELEVATED</td>
+<td>State capital; high activist density; university</td>
+</tr>
+<tr class="odd">
+<td><strong>Houston</strong></td>
+<td>MODERATE</td>
+<td>Large but dispersed; less concentrated activism</td>
+</tr>
+<tr class="even">
+<td><strong>San Antonio</strong></td>
+<td>MODERATE</td>
+<td>Growing activist presence; less historical incident density</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dfw-vs.-national-high-risk-cities">DFW vs. National High-Risk
+Cities</h3>
+<table>
+<thead>
+<tr class="header">
+<th>City</th>
+<th>Risk Level</th>
+<th>Comparison</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Portland, OR</td>
+<td>CRITICAL</td>
+<td>Far exceeds DFW</td>
+</tr>
+<tr class="even">
+<td>Seattle, WA</td>
+<td>HIGH</td>
+<td>Exceeds DFW</td>
+</tr>
+<tr class="odd">
+<td>Los Angeles, CA</td>
+<td>HIGH</td>
+<td>Comparable to slightly higher</td>
+</tr>
+<tr class="even">
+<td><strong>Dallas-Fort Worth</strong></td>
+<td>ELEVATED</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>Phoenix, AZ</td>
+<td>ELEVATED</td>
+<td>Comparable</td>
+</tr>
+<tr class="even">
+<td>Denver, CO</td>
+<td>ELEVATED</td>
+<td>Comparable</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bottom Line:</strong> DFW presents elevated but manageable
+risk with appropriate security measures. It is not in the top tier of
+high-risk cities but has demonstrated capability for serious incidents
+(Prairieland). # Recommendations</p>
+<h2 id="physical-security-measures">9.1 Physical Security Measures</h2>
+<h3 id="event-security">Event Security</h3>
+<p><strong>Minimum Standards (All Events):</strong> - [ ] Professional
+security personnel (licensed, insured) - [ ] Coordination with local law
+enforcement (notify, request patrol) - [ ] Single controlled entry point
+where feasible - [ ] Security personnel at entry to manage access - [ ]
+Communication plan (radios, phones) - [ ] Emergency action plan
+(evacuation routes, rally points)</p>
+<p><strong>Enhanced Standards (Elevated Risk Events):</strong> - [ ]
+Uniformed law enforcement presence (off-duty or on-duty detail) - [ ]
+Metal detector screening at entry - [ ] Bag checks - [ ]
+Counter-surveillance sweep of venue and perimeter - [ ] Dedicated
+security operations center - [ ] Medical support on-site or staged
+nearby</p>
+<p><strong>High-Risk Events (VIPs, Controversial Topics):</strong> - [ ]
+Executive protection detail for speakers/principals - [ ] Advance team
+site survey - [ ] Secure transportation (armored vehicles if threat
+level warrants) - [ ] Alternative venue/date held in reserve - [ ]
+Real-time threat monitoring during event - [ ] Post-event security
+(departure, follow-on surveillance detection)</p>
+<h3 id="venue-selection-criteria">Venue Selection Criteria</h3>
+<p><strong>Prioritize:</strong> 1. Private property with controlled
+access 2. Enclosed or fenced parking 3. Buffer distance from public
+right-of-way 4. Multiple egress routes 5. Relationship with cooperative
+law enforcement jurisdiction 6. No history of protest incidents 7.
+Suburban or exurban location</p>
+<p><strong>Avoid:</strong> 1. Downtown Dallas/Fort Worth unless security
+is robust 2. Public parks or plazas 3. University campuses 4. Venues
+adjacent to ICE facilities 5. Street-level entrances with direct
+sidewalk access 6. Locations with prior incident history</p>
+<hr />
+<h2 id="event-planning-considerations">9.2 Event Planning
+Considerations</h2>
+<h3 id="pre-event">Pre-Event</h3>
+<p><strong>4+ Weeks Out:</strong> - Select venue with security criteria
+in mind - Begin law enforcement coordination - Establish security budget
+- Limit public announcement to necessary window</p>
+<p><strong>2 Weeks Out:</strong> - Finalize security plan - Brief event
+staff on security protocols - Begin social media monitoring for
+mobilization indicators - Confirm law enforcement support</p>
+<p><strong>1 Week Out:</strong> - Intensify monitoring - Conduct site
+walk-through with security - Finalize emergency action plan -
+Pre-position any equipment/supplies</p>
+<p><strong>48-24 Hours:</strong> - Final threat assessment - Check for
+counter-event announcements - Confirm all security personnel - Brief
+VIPs/speakers on security protocols</p>
+<p><strong>Day-Of:</strong> - Security arrives early for setup -
+Real-time monitoring active - Communication check - Final perimeter
+sweep</p>
+<h3 id="during-event">During Event</h3>
+<ul>
+<li>Maintain situational awareness</li>
+<li>Monitor perimeter for developing situations</li>
+<li>Document any protesters/incidents (video)</li>
+<li>Have decision authority present for security calls</li>
+<li>Maintain communication with law enforcement</li>
+</ul>
+<h3 id="post-event">Post-Event</h3>
+<ul>
+<li>Controlled departure (stagger if necessary)</li>
+<li>VIP departure via secure route</li>
+<li>Debrief security team</li>
+<li>Monitor social media for post-event targeting/doxxing</li>
+<li>Document lessons learned</li>
+</ul>
+<hr />
+<h2 id="opsec-for-members">9.3 OPSEC for Members</h2>
+<h3 id="personal-security-guidance">Personal Security Guidance</h3>
+<p><strong>Social Media:</strong> - Review privacy settings on all
+platforms - Avoid posting real-time location/attendance - Consider
+pseudonymous accounts for political activity - Audit tagged photos and
+check-ins - Remove or obscure identifying information (employer,
+address)</p>
+<p><strong>At Events:</strong> - Consider face coverings (legal,
+reciprocal to adversary tactics) - Avoid unique identifiable
+clothing/accessories - Park in enclosed/private areas - Remove or cover
+bumper stickers - Carpool to reduce vehicle exposure - Avoid engaging
+with protesters (do not provide content)</p>
+<p><strong>General:</strong> - Google yourself periodically; know your
+exposure - Set up alerts for your name - Inform family members of
+potential targeting risk - Have a response plan if doxxed (employer
+notification, legal counsel) - Secure home address (PO Box for
+organization mail, voter registration privacy if available)</p>
+<h3 id="leadershiphigh-profile-members">Leadership/High-Profile
+Members</h3>
+<ul>
+<li>Enhanced personal security assessment</li>
+<li>Consider professional OPSEC audit</li>
+<li>Vary routines (commute, locations)</li>
+<li>Secure home (cameras, alarm, hardening)</li>
+<li>Executive protection for high-risk appearances</li>
+<li>Legal retainer for defamation/harassment response</li>
+</ul>
+<hr />
+<h2 id="monitoring-early-warning">9.4 Monitoring &amp; Early
+Warning</h2>
+<h3 id="establish-monitoring-program">Establish Monitoring Program</h3>
+<p><strong>Minimum:</strong> - Google Alerts for organization name, key
+leaders - Weekly review of activist event calendars - Monitor major
+local activist social media accounts</p>
+<p><strong>Enhanced:</strong> - Dedicated OSINT analyst or contracted
+service - Real-time social media monitoring tools - Telegram/Discord
+monitoring (public channels) - Relationship with law enforcement fusion
+center (if accessible)</p>
+<h3 id="key-indicators-to-track">Key Indicators to Track</h3>
+<ul>
+<li>Calls to action mentioning organization or events</li>
+<li>Counter-events announced at same time/location</li>
+<li>Known threat actors (JBGC, antifa accounts) discussing
+organization</li>
+<li>Uptick in hostile online mentions</li>
+<li>Unusual inquiries or reconnaissance activity</li>
+</ul>
+<h3 id="response-triggers">Response Triggers</h3>
+<table>
+<colgroup>
+<col style="width: 52%" />
+<col style="width: 47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Indicator</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>General negative chatter</td>
+<td>Continue monitoring</td>
+</tr>
+<tr class="even">
+<td>Specific event mentioned by activists</td>
+<td>Elevate security posture; consider adjustments</td>
+</tr>
+<tr class="odd">
+<td>Mobilization call issued</td>
+<td>Notify law enforcement; enhance security</td>
+</tr>
+<tr class="even">
+<td>Specific threat against individuals</td>
+<td>Threat assessment; law enforcement report; executive protection</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="law-enforcement-coordination">9.5 Law Enforcement
+Coordination</h2>
+<h3 id="establishing-relationships">Establishing Relationships</h3>
+<ul>
+<li>Identify appropriate contacts (community liaison, special events,
+intelligence unit)</li>
+<li>Introduce organization and security concerns</li>
+<li>Provide advance notice of events (even private)</li>
+<li>Share relevant threat information</li>
+<li>Understand department capabilities and limitations</li>
+</ul>
+<h3 id="what-to-request">What to Request</h3>
+<ul>
+<li>Increased patrol during events</li>
+<li>Off-duty officer detail (paid)</li>
+<li>Rapid response commitment if situation escalates</li>
+<li>Intelligence sharing on known threats</li>
+<li>Post-event debrief</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>Keep records of all law enforcement coordination</li>
+<li>Obtain incident reports for any events requiring response</li>
+<li>This documentation supports legal action and insurance claims</li>
+</ul>
+<hr />
+<h2 id="legal-preparedness">9.6 Legal Preparedness</h2>
+<h3 id="retain-counsel-familiar-with">Retain Counsel Familiar With:</h3>
+<ul>
+<li>Texas protest/assembly law</li>
+<li>First Amendment issues</li>
+<li>Civil rights litigation (both offensive and defensive)</li>
+<li>Defamation/harassment</li>
+<li>Restraining orders</li>
+<li>Nonprofit organization law</li>
+</ul>
+<h3 id="proactive-legal-measures">Proactive Legal Measures</h3>
+<ul>
+<li>Review insurance coverage (event liability, D&amp;O)</li>
+<li>Template cease &amp; desist letters for doxxing/defamation</li>
+<li>Understand Texas law on self-defense, defense of others</li>
+<li>Know rules for lawful use of security</li>
+<li>Document all incidents for potential legal action</li>
+</ul>
+<h3 id="if-incidents-occur">If Incidents Occur</h3>
+<ul>
+<li>Preserve evidence (video, photos, witness statements)</li>
+<li>File police reports promptly</li>
+<li>Engage counsel before making public statements</li>
+<li>Consider civil action against identifiable bad actors</li>
+</ul>
+<hr />
+<h2 id="summary-priority-actions">9.7 Summary: Priority Actions</h2>
+<h3 id="immediate-0-30-days">Immediate (0-30 Days)</h3>
+<ol type="1">
+<li><strong>Establish monitoring</strong> — Set up basic social media
+alerts and tracking</li>
+<li><strong>Security vendor relationship</strong> — Identify and vet
+security provider for events</li>
+<li><strong>Law enforcement contact</strong> — Introduce organization to
+relevant LE contacts</li>
+<li><strong>OPSEC brief</strong> — Distribute personal security guidance
+to leadership/members</li>
+<li><strong>Legal retainer</strong> — Engage counsel for incident
+response</li>
+</ol>
+<h3 id="near-term-30-90-days">Near-Term (30-90 Days)</h3>
+<ol type="1">
+<li><strong>Security SOP</strong> — Develop standard operating
+procedures for events</li>
+<li><strong>Venue assessment</strong> — Evaluate current/planned venues
+against security criteria</li>
+<li><strong>Enhanced monitoring</strong> — Consider contracted OSINT
+service</li>
+<li><strong>Training</strong> — Security awareness training for
+staff/volunteers</li>
+<li><strong>Incident response plan</strong> — Document protocols for
+various scenarios</li>
+</ol>
+<h3 id="ongoing">Ongoing</h3>
+<ol type="1">
+<li><strong>Continuous monitoring</strong> — Maintain situational
+awareness</li>
+<li><strong>Regular assessment</strong> — Update threat picture
+quarterly or as conditions change</li>
+<li><strong>Relationship maintenance</strong> — Stay connected with LE,
+security providers</li>
+<li><strong>After-action reviews</strong> — Debrief every event; capture
+lessons learned</li>
+<li><strong>Update this study</strong> — Threat landscape evolves;
+refresh annually or after significant events # Appendix A: Group
+Profiles</li>
+</ol>
+<h2 id="a.1-left-wing-groups">A.1 Left-Wing Groups</h2>
+<h3 id="antifa-north-texas-networks">Antifa (North Texas Networks)</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Decentralized ideological movement</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Cell-based; no formal hierarchy</td>
+</tr>
+<tr class="odd">
+<td><strong>Ideology</strong></td>
+<td>Anti-fascist, anti-capitalist, anarchist/communist</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Presence</strong></td>
+<td>Confirmed active (Prairieland defendants)</td>
+</tr>
+<tr class="odd">
+<td><strong>Estimated Strength</strong></td>
+<td>Unknown; likely dozens of active participants</td>
+</tr>
+<tr class="even">
+<td><strong>Primary Activities</strong></td>
+<td>Direct action, counter-protests, property destruction</td>
+</tr>
+<tr class="odd">
+<td><strong>Armed Capability</strong></td>
+<td>YES — rifles, pistols, body armor documented</td>
+</tr>
+<tr class="even">
+<td><strong>Federal Status</strong></td>
+<td>Designated domestic terrorist organization (Sept 2025)</td>
+</tr>
+<tr class="odd">
+<td><strong>Social Media</strong></td>
+<td>Various accounts; frequently suspended; use pseudonyms</td>
+</tr>
+<tr class="even">
+<td><strong>Threat Level</strong></td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="elm-fork-john-brown-gun-club-1">Elm Fork John Brown Gun
+Club</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Armed left-wing community defense group</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Chapter of national JBGC network; some autonomy</td>
+</tr>
+<tr class="odd">
+<td><strong>Ideology</strong></td>
+<td>Anti-fascist, anti-racist, pro-LGBTQ+, armed left</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Presence</strong></td>
+<td>Active; primary operating area</td>
+</tr>
+<tr class="odd">
+<td><strong>Estimated Strength</strong></td>
+<td>Dozens (10-30+ at major events)</td>
+</tr>
+<tr class="even">
+<td><strong>Primary Activities</strong></td>
+<td>Armed presence at drag shows, LGBTQ+ events; counter-protests</td>
+</tr>
+<tr class="odd">
+<td><strong>Armed Capability</strong></td>
+<td>YES — open carry of rifles, pistols</td>
+</tr>
+<tr class="even">
+<td><strong>Social Media</strong></td>
+<td>Twitter/X, Instagram; active</td>
+</tr>
+<tr class="odd">
+<td><strong>Known Tactics</strong></td>
+<td>Armed deterrence, physical confrontation, pepper spray</td>
+</tr>
+<tr class="even">
+<td><strong>Legal History</strong></td>
+<td>April 2023 arrests; civil lawsuit pending</td>
+</tr>
+<tr class="odd">
+<td><strong>Threat Level</strong></td>
+<td><strong>ELEVATED</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Differentiator:</strong> More publicly visible than
+antifa due to open-carry activity; primarily focused on LGBTQ+ defense
+rather than general anti-conservative action.</p>
+<hr />
+<h3 id="black-lives-matter-dfw-affiliates">Black Lives Matter — DFW
+Affiliates</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Racial justice movement</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Loose network of affiliated groups; no single DFW chapter</td>
+</tr>
+<tr class="odd">
+<td><strong>Ideology</strong></td>
+<td>Racial justice, police accountability, progressive</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Presence</strong></td>
+<td>Present but reduced activity since 2020</td>
+</tr>
+<tr class="odd">
+<td><strong>Estimated Strength</strong></td>
+<td>Mobilization capacity of hundreds for major events</td>
+</tr>
+<tr class="even">
+<td><strong>Primary Activities</strong></td>
+<td>Marches, rallies, vigils, advocacy</td>
+</tr>
+<tr class="odd">
+<td><strong>Armed Capability</strong></td>
+<td>NO (as organizations)</td>
+</tr>
+<tr class="even">
+<td><strong>Social Media</strong></td>
+<td>Various; Next Generation Action Network most prominent</td>
+</tr>
+<tr class="odd">
+<td><strong>Threat Level</strong></td>
+<td><strong>LOW-MODERATE</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="dsa-north-texas">DSA North Texas</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Democratic socialist political organization</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Chapter of national DSA; elected leadership</td>
+</tr>
+<tr class="odd">
+<td><strong>Ideology</strong></td>
+<td>Democratic socialism; reformist left</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Presence</strong></td>
+<td>Active chapters in Dallas, Fort Worth, Collin, Denton</td>
+</tr>
+<tr class="odd">
+<td><strong>Estimated Strength</strong></td>
+<td>Several hundred members; ~5,400 Instagram followers</td>
+</tr>
+<tr class="even">
+<td><strong>Primary Activities</strong></td>
+<td>Electoral organizing, labor campaigns, mutual aid</td>
+</tr>
+<tr class="odd">
+<td><strong>Armed Capability</strong></td>
+<td>NO (as organization)</td>
+</tr>
+<tr class="even">
+<td><strong>Social Media</strong></td>
+<td><span class="citation"
+data-cites="dsanorthtexas">@dsanorthtexas</span> (Instagram);
+active</td>
+</tr>
+<tr class="odd">
+<td><strong>Threat Level</strong></td>
+<td><strong>LOW</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> DSA is not a direct security threat but
+members may participate in coalition protests. Some individual overlap
+with more confrontational groups.</p>
+<hr />
+<h3 id="socialist-rifle-association-sra-1">Socialist Rifle Association
+(SRA)</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Left-wing gun rights / firearms training</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>National organization with local chapters</td>
+</tr>
+<tr class="odd">
+<td><strong>Ideology</strong></td>
+<td>Socialist, pro-2A from left perspective</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Presence</strong></td>
+<td>Confirmed presence; lower profile than JBGC</td>
+</tr>
+<tr class="odd">
+<td><strong>Primary Activities</strong></td>
+<td>Firearms training, education; occasional event attendance</td>
+</tr>
+<tr class="even">
+<td><strong>Armed Capability</strong></td>
+<td>YES</td>
+</tr>
+<tr class="odd">
+<td><strong>Threat Level</strong></td>
+<td><strong>LOW</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a.2-right-wing-groups-contextual">A.2 Right-Wing Groups
+(Contextual)</h2>
+<h3 id="patriot-front-1">Patriot Front</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>White nationalist / neo-fascist</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Hierarchical; national organization</td>
+</tr>
+<tr class="odd">
+<td><strong>Headquarters</strong></td>
+<td><strong>Grapevine-Haslet, TX (DFW suburb)</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Ideology</strong></td>
+<td>White nationalism, fascism, ethnostate</td>
+</tr>
+<tr class="odd">
+<td><strong>Primary Activities</strong></td>
+<td>Propaganda distribution, flash demonstrations</td>
+</tr>
+<tr class="even">
+<td><strong>Armed Capability</strong></td>
+<td>Unknown; focus is propaganda not armed action</td>
+</tr>
+<tr class="odd">
+<td><strong>Relevance to Client</strong></td>
+<td>Association/optics risk; may attend conservative events</td>
+</tr>
+<tr class="even">
+<td><strong>Recommendation</strong></td>
+<td>Explicitly exclude; prepared to remove</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="proud-boys-1">Proud Boys</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Neo-fascist / far-right militant</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Chapter-based national organization</td>
+</tr>
+<tr class="odd">
+<td><strong>DFW Presence</strong></td>
+<td>Present but less prominent than Patriot Front</td>
+</tr>
+<tr class="even">
+<td><strong>Ideology</strong></td>
+<td>Western chauvinism, anti-left, willing to use violence</td>
+</tr>
+<tr class="odd">
+<td><strong>Primary Activities</strong></td>
+<td>Rallies, counter-protests, confrontational actions</td>
+</tr>
+<tr class="even">
+<td><strong>Armed Capability</strong></td>
+<td>YES</td>
+</tr>
+<tr class="odd">
+<td><strong>Legal Status</strong></td>
+<td>Multiple leaders convicted of seditious conspiracy (J6)</td>
+</tr>
+<tr class="even">
+<td><strong>Relevance to Client</strong></td>
+<td>Similar association risk; history of violence</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="new-columbia-movement-1">New Columbia Movement</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Type</strong></td>
+<td>Christian nationalist</td>
+</tr>
+<tr class="even">
+<td><strong>Structure</strong></td>
+<td>Small organized group</td>
+</tr>
+<tr class="odd">
+<td><strong>DFW Presence</strong></td>
+<td>Active; regular drag show protests</td>
+</tr>
+<tr class="even">
+<td><strong>Ideology</strong></td>
+<td>Christian nationalism, anti-LGBTQ+</td>
+</tr>
+<tr class="odd">
+<td><strong>Primary Activities</strong></td>
+<td>Protests at drag events</td>
+</tr>
+<tr class="even">
+<td><strong>Armed Capability</strong></td>
+<td>Some members have appeared armed</td>
+</tr>
+<tr class="odd">
+<td><strong>Legal Activity</strong></td>
+<td>Filed civil lawsuit against JBGC</td>
+</tr>
+<tr class="even">
+<td><strong>Relevance to Client</strong></td>
+<td>Potential attendees; lower reputational risk than PF</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a.3-organizational-relationships">A.3 Organizational
+Relationships</h2>
+<pre><code>                    ┌─────────────────┐
+                    │   ANTIFA        │
+                    │   (Ideology)    │
+                    └────────┬────────┘
+                             │ Overlap
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              ▼              ▼
+      ┌───────────┐  ┌───────────┐  ┌───────────┐
+      │   JBGC    │  │   SRA     │  │  Various  │
+      │  (Armed)  │  │ (Training)│  │  Cells    │
+      └───────────┘  └───────────┘  └───────────┘
+              │              │              
+              └──────────────┼──────────────┐
+                             │              │
+                             ▼              ▼
+                     ┌───────────┐  ┌───────────┐
+                     │    DSA    │  │   BLM     │
+                     │ (Political│  │ (Advocacy)│
+                     └───────────┘  └───────────┘
+
+Legend:
+- Solid lines = documented organizational/individual overlap
+- Ideological alignment across all groups
+- Individuals may participate in multiple groups simultaneously</code></pre>
+<h1 id="appendix-b-incident-log-2020present">Appendix B: Incident Log
+(2020–Present)</h1>
+<h2 id="chronological-incident-summary">Chronological Incident
+Summary</h2>
+<h3 id="section">2020</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>May 29, 2020</td>
+<td>George Floyd protest begins</td>
+<td>Dallas Police HQ</td>
+<td>NGAN, BLM affiliates</td>
+<td>~1,000 attendees; peaceful daytime</td>
+</tr>
+<tr class="even">
+<td>May 29-30, 2020</td>
+<td>Overnight escalation</td>
+<td>Downtown Dallas</td>
+<td>Various</td>
+<td>Looting (Neiman Marcus, others), fires, vandalism</td>
+</tr>
+<tr class="odd">
+<td>May 30, 2020</td>
+<td>Police use of force</td>
+<td>Downtown Dallas</td>
+<td>DPD vs. protesters</td>
+<td>Tear gas, pepper spray, less-lethal rounds; civilian injuries</td>
+</tr>
+<tr class="even">
+<td>May 30, 2020</td>
+<td>Fort Worth protests</td>
+<td>Downtown FW</td>
+<td>BLM affiliates</td>
+<td>Generally peaceful</td>
+</tr>
+<tr class="odd">
+<td>May-June 2020</td>
+<td>Sustained protests</td>
+<td>Multiple DFW</td>
+<td>Various</td>
+<td>Continued smaller demonstrations</td>
+</tr>
+<tr class="even">
+<td>June 2020</td>
+<td>BLM mural painted</td>
+<td>Dallas City Hall</td>
+<td>City-sanctioned</td>
+<td>“Black Lives Matter” street painting</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-1">2021</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Various</td>
+<td>Reduced protest activity</td>
+<td>Multiple</td>
+<td>Various</td>
+<td>Lower tempo than 2020</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-2">2022</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>June 2022</td>
+<td>Dobbs decision protests</td>
+<td>Multiple DFW</td>
+<td>Abortion rights groups</td>
+<td>Protests at courthouses, public spaces</td>
+</tr>
+<tr class="even">
+<td>Nov-Dec 2022</td>
+<td>Drag show confrontations begin</td>
+<td>Dallas suburbs</td>
+<td>JBGC vs. right-wing</td>
+<td>Armed counter-protests at drag events</td>
+</tr>
+<tr class="odd">
+<td>Dec 2022</td>
+<td>Suburban drag confrontation</td>
+<td>DFW area</td>
+<td>JBGC, militia</td>
+<td>Right-wing protester with barbed-wire bat; JBGC armed presence</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-3">2023</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>April 2023</td>
+<td>Fort Brewery drag show</td>
+<td>Fort Worth</td>
+<td>JBGC vs. NCM</td>
+<td>Physical confrontation; 3 JBGC arrests; viral video</td>
+</tr>
+<tr class="even">
+<td>Sept 2023</td>
+<td>NCM files lawsuit</td>
+<td>—</td>
+<td>NCM vs. JBGC</td>
+<td>Civil litigation initiated</td>
+</tr>
+<tr class="odd">
+<td>Various</td>
+<td>Continued drag confrontations</td>
+<td>Multiple DFW</td>
+<td>JBGC, various right-wing</td>
+<td>Ongoing low-level confrontations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-4">2024</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Various</td>
+<td>Drag event confrontations</td>
+<td>Multiple</td>
+<td>JBGC, right-wing</td>
+<td>Pattern continued; no major escalation</td>
+</tr>
+<tr class="even">
+<td>Nov 2024</td>
+<td>Election-related protests</td>
+<td>Multiple DFW</td>
+<td>Various</td>
+<td>Post-election demonstrations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-5">2025</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>April 5, 2025</td>
+<td>“Hands Off!” rally</td>
+<td>Dealey Plaza, Dallas</td>
+<td>Various left coalition</td>
+<td>Day of action protest</td>
+</tr>
+<tr class="even">
+<td>April 27, 2025</td>
+<td>May Day rally/march</td>
+<td>Dallas</td>
+<td>Labor, immigrant rights</td>
+<td>Pre-May Day mobilization</td>
+</tr>
+<tr class="odd">
+<td>May 1, 2025</td>
+<td>May Day protests</td>
+<td>Multiple DFW</td>
+<td>Labor, socialist, immigrant</td>
+<td>Hundreds across region</td>
+</tr>
+<tr class="even">
+<td>June 2025</td>
+<td>“No Kings” protests</td>
+<td>Multiple (10+ locations)</td>
+<td>Anti-Trump coalition</td>
+<td>Large coordinated regional protests</td>
+</tr>
+<tr class="odd">
+<td><strong>July 4, 2025</strong></td>
+<td><strong>Prairieland ICE attack</strong></td>
+<td><strong>Alvarado, TX</strong></td>
+<td><strong>Antifa-aligned cell</strong></td>
+<td><strong>Police officer shot; 11 arrested; terrorism
+charges</strong></td>
+</tr>
+<tr class="even">
+<td>July 2025</td>
+<td>Prairieland follow-up arrests</td>
+<td>DFW area</td>
+<td>—</td>
+<td>Additional suspects apprehended</td>
+</tr>
+<tr class="odd">
+<td>Sept 2025</td>
+<td>Dallas ICE office shooting</td>
+<td>Dallas</td>
+<td>Lone actor</td>
+<td>Separate incident; anti-ICE motivation</td>
+</tr>
+<tr class="even">
+<td>Sept 22, 2025</td>
+<td>Antifa terrorism designation</td>
+<td>National</td>
+<td>—</td>
+<td>Presidential action</td>
+</tr>
+<tr class="odd">
+<td>Sept-Oct 2025</td>
+<td>Prairieland defendants arraigned</td>
+<td>Fort Worth federal court</td>
+<td>—</td>
+<td>Terrorism, attempted murder charges</td>
+</tr>
+<tr class="even">
+<td>Nov 2025</td>
+<td>Additional Prairieland charges</td>
+<td>—</td>
+<td>—</td>
+<td>Some defendants face new charges; some plea deals</td>
+</tr>
+<tr class="odd">
+<td>Ongoing</td>
+<td>Prairieland prosecution</td>
+<td>Fort Worth</td>
+<td>—</td>
+<td>Case continues</td>
+</tr>
+</tbody>
+</table>
+<h3 id="to-date">2026 (To Date)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Incident</th>
+<th>Location</th>
+<th>Groups Involved</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TBD</td>
+<td>Prairieland trials</td>
+<td>Fort Worth</td>
+<td>—</td>
+<td>Scheduled</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="incident-categories">Incident Categories</h2>
+<h3 id="by-type">By Type</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Category</th>
+<th>Count (2020-Present)</th>
+<th>Trend</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Protest/March</td>
+<td>50+</td>
+<td>Stable</td>
+</tr>
+<tr class="even">
+<td>Property destruction</td>
+<td>10+</td>
+<td>Declining from 2020 peak</td>
+</tr>
+<tr class="odd">
+<td>Physical confrontation</td>
+<td>5-10</td>
+<td>Stable</td>
+</tr>
+<tr class="even">
+<td>Armed confrontation</td>
+<td>3-5</td>
+<td>Increasing</td>
+</tr>
+<tr class="odd">
+<td>Shooting incident</td>
+<td>2</td>
+<td>Concerning escalation</td>
+</tr>
+<tr class="even">
+<td>Terrorism charges</td>
+<td>1 case (11 defendants)</td>
+<td>Unprecedented</td>
+</tr>
+</tbody>
+</table>
+<h3 id="by-group-involvement">By Group Involvement</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Incidents Involved</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BLM affiliates</td>
+<td>Many (2020); few (2021-present)</td>
+</tr>
+<tr class="even">
+<td>Antifa networks</td>
+<td>Few confirmed; Prairieland major</td>
+</tr>
+<tr class="odd">
+<td>JBGC</td>
+<td>Multiple (2022-present drag events)</td>
+</tr>
+<tr class="even">
+<td>DSA</td>
+<td>Coalition events (non-confrontational)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="notable-legal-outcomes">Notable Legal Outcomes</h2>
+<h3 id="criminal">Criminal</h3>
+<ul>
+<li><strong>2020 protest arrests:</strong> 100+ arrests; most minor
+charges; some cases dismissed</li>
+<li><strong>April 2023 JBGC arrests:</strong> 3 arrested; charges
+unknown</li>
+<li><strong>July 2025 Prairieland:</strong> 11+ arrested; federal
+terrorism, attempted murder charges pending</li>
+</ul>
+<h3 id="civil">Civil</h3>
+<ul>
+<li><strong>DPD use of force lawsuits:</strong> Multiple filed following
+2020; some settled</li>
+<li><strong>NCM vs. JBGC (2023):</strong> Pending</li>
+</ul>
+<hr />
+<h2 id="key-observations">Key Observations</h2>
+<ol type="1">
+<li><strong>2020 was the peak</strong> — Nothing since has matched the
+scale/intensity of George Floyd protests</li>
+<li><strong>Drag events are current flashpoint</strong> — Consistent
+confrontation pattern since 2022</li>
+<li><strong>July 2025 was a major escalation</strong> — First armed
+attack on federal facility; terrorism charges unprecedented</li>
+<li><strong>Federal pressure is new variable</strong> — Terrorism
+designation may suppress or radicalize remaining actors</li>
+<li><strong>Lone actor incidents increasing</strong> — Sept 2025 Dallas
+ICE shooting was separate from Prairieland # Appendix C: Key Dates
+Calendar 2026</li>
+</ol>
+<h2 id="annual-recurring-dates">Annual Recurring Dates</h2>
+<h3 id="q1-january---march">Q1 (January - March)</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Jan 1</td>
+<td>New Year’s Day</td>
+<td>LOW</td>
+<td>Holiday</td>
+</tr>
+<tr class="even">
+<td>Jan 6</td>
+<td>J6 Anniversary</td>
+<td>MODERATE</td>
+<td>Counter-protests possible</td>
+</tr>
+<tr class="odd">
+<td>Jan 20</td>
+<td>MLK Day</td>
+<td>LOW-MOD</td>
+<td>Marches, peaceful</td>
+</tr>
+<tr class="even">
+<td>Feb 1-28</td>
+<td>Black History Month</td>
+<td>LOW</td>
+<td>Commemorative events</td>
+</tr>
+<tr class="odd">
+<td>Mar 8</td>
+<td>Int’l Women’s Day</td>
+<td>LOW-MOD</td>
+<td>Feminist actions</td>
+</tr>
+<tr class="even">
+<td>Mar 31</td>
+<td>Trans Day of Visibility</td>
+<td>MODERATE</td>
+<td>LGBTQ+ events; potential flashpoint</td>
+</tr>
+</tbody>
+</table>
+<h3 id="q2-april---june">Q2 (April - June)</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Apr 22</td>
+<td>Earth Day</td>
+<td>LOW</td>
+<td>Environmental events</td>
+</tr>
+<tr class="even">
+<td><strong>May 1</strong></td>
+<td><strong>May Day</strong></td>
+<td><strong>HIGH</strong></td>
+<td>Major left mobilization</td>
+</tr>
+<tr class="odd">
+<td>May 5</td>
+<td>Cinco de Mayo</td>
+<td>LOW</td>
+<td>Cultural; not political</td>
+</tr>
+<tr class="even">
+<td>May 25</td>
+<td>George Floyd Anniversary</td>
+<td>MODERATE</td>
+<td>Commemorative</td>
+</tr>
+<tr class="odd">
+<td>May (last Mon)</td>
+<td>Memorial Day</td>
+<td>LOW</td>
+<td>Holiday</td>
+</tr>
+<tr class="even">
+<td><strong>Jun 1-30</strong></td>
+<td><strong>Pride Month</strong></td>
+<td><strong>HIGH</strong></td>
+<td>Multiple events; JBGC active</td>
+</tr>
+<tr class="odd">
+<td>Jun 14</td>
+<td>Flag Day</td>
+<td>LOW</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Jun 19</strong></td>
+<td><strong>Juneteenth</strong></td>
+<td>MODERATE</td>
+<td>Federal holiday; marches</td>
+</tr>
+</tbody>
+</table>
+<h3 id="q3-july---september">Q3 (July - September)</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Jul 4</strong></td>
+<td><strong>Independence Day</strong></td>
+<td><strong>ELEVATED</strong></td>
+<td>2025 Prairieland anniversary</td>
+</tr>
+<tr class="even">
+<td>Jul (late)</td>
+<td>Prairieland anniversary</td>
+<td>MODERATE</td>
+<td>Potential solidarity actions</td>
+</tr>
+<tr class="odd">
+<td>Sep (first Mon)</td>
+<td>Labor Day</td>
+<td>LOW-MOD</td>
+<td>Labor events</td>
+</tr>
+<tr class="even">
+<td>Sep 22</td>
+<td>Antifa designation anniversary</td>
+<td>MODERATE</td>
+<td>Possible response</td>
+</tr>
+</tbody>
+</table>
+<h3 id="q4-october---december">Q4 (October - December)</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Oct 11</td>
+<td>Indigenous Peoples’ Day</td>
+<td>LOW</td>
+<td>Limited activity</td>
+</tr>
+<tr class="even">
+<td>Oct 31</td>
+<td>Halloween</td>
+<td>LOW</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Nov 3</strong></td>
+<td><strong>Election Day (Midterms)</strong></td>
+<td><strong>HIGH</strong></td>
+<td>TX Governor race; major</td>
+</tr>
+<tr class="even">
+<td>Nov 11</td>
+<td>Veterans Day</td>
+<td>LOW</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>Nov 20</td>
+<td>Trans Day of Remembrance</td>
+<td>MODERATE</td>
+<td>Vigils</td>
+</tr>
+<tr class="even">
+<td>Nov (4th Thu)</td>
+<td>Thanksgiving</td>
+<td>LOW</td>
+<td>Holiday</td>
+</tr>
+<tr class="odd">
+<td>Dec 25</td>
+<td>Christmas</td>
+<td>LOW</td>
+<td>Holiday</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="specific-events">2026 Specific Events</h2>
+<h3 id="knownanticipated">Known/Anticipated</h3>
+<table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 37%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Date</th>
+<th>Event</th>
+<th>Risk Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TBD</td>
+<td>Prairieland trial dates</td>
+<td>MODERATE</td>
+<td>Potential solidarity protests at courthouse</td>
+</tr>
+<tr class="even">
+<td>Nov 3, 2026</td>
+<td>Texas Midterm Elections</td>
+<td><strong>HIGH</strong></td>
+<td>Governor, AG, Legislature races</td>
+</tr>
+<tr class="odd">
+<td>TBD</td>
+<td>Texas Legislative Session</td>
+<td>MODERATE</td>
+<td>Jan-May 2027; preview activity in late 2026</td>
+</tr>
+<tr class="even">
+<td>TBD</td>
+<td>SCOTUS decisions</td>
+<td>VARIES</td>
+<td>Immigration, other cases could trigger</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring-required">Monitoring Required</h3>
+<ul>
+<li>Primary election dates (March 2026)</li>
+<li>Supreme Court oral arguments and decisions calendar</li>
+<li>Major policy announcements (federal immigration enforcement)</li>
+<li>Any high-profile police incidents in DFW</li>
+</ul>
+<hr />
+<h2 id="planning-calendar">Planning Calendar</h2>
+<h3 id="high-risk-windows-avoid-if-possible">High-Risk Windows (Avoid if
+Possible)</h3>
+<ol type="1">
+<li><strong>May 1 ± 3 days</strong> — May Day</li>
+<li><strong>June weekends</strong> — Pride events</li>
+<li><strong>July 4 ± 3 days</strong> — Independence Day / Prairieland
+anniversary</li>
+<li><strong>November 3 ± 7 days</strong> — Election period</li>
+</ol>
+<h3 id="lower-risk-windows">Lower-Risk Windows</h3>
+<ol type="1">
+<li><strong>Late December - early January</strong> — Holiday period;
+reduced activity</li>
+<li><strong>August</strong> — Hot weather; reduced outdoor activity</li>
+<li><strong>Mid-week dates</strong> — Lower mobilization than
+weekends</li>
+<li><strong>Early morning events</strong> — Activists mobilize later in
+day # Appendix D: Sources</li>
+</ol>
+<h2 id="primary-sources-consulted">Primary Sources Consulted</h2>
+<h3 id="government-official-sources">Government &amp; Official
+Sources</h3>
+<ul>
+<li>U.S. Census Bureau — Population estimates and demographics</li>
+<li>North Central Texas Council of Governments (NCTCOG) — Regional
+population data</li>
+<li>Texas Comptroller of Public Accounts — Economic and demographic
+data</li>
+<li>Department of Homeland Security — Statements on Prairieland, antifa
+designation</li>
+<li>White House — Presidential action designating antifa</li>
+<li>Federal court filings — Prairieland case documents</li>
+</ul>
+<h3 id="news-media">News Media</h3>
+<p><strong>Local:</strong> - Dallas Morning News (dallasnews.com) - Fort
+Worth Star-Telegram - Dallas Observer (dallasobserver.com) - WFAA (ABC
+Dallas) - FOX 4 Dallas-Fort Worth - KERA News (keranews.org) - NBC 5
+Dallas-Fort Worth - Dallas Voice - Dallas Weekly</p>
+<p><strong>National:</strong> - Associated Press - Reuters - The
+Guardian (US edition) - USA Today - NBC News</p>
+<p><strong>Specialized:</strong> - Texas Observer - Truthout - Rolling
+Stone (extremism coverage) - The Nation</p>
+<h3 id="research-analytical-sources">Research &amp; Analytical
+Sources</h3>
+<ul>
+<li>Counter Extremism Project — Group profiles</li>
+<li>Stanford Mapping Militants Project — Patriot Front profile</li>
+<li>KeyWiki — DSA chapter information</li>
+<li>New Tolerance Campaign — JBGC profiles</li>
+<li>Anti-Defamation League — Extremism resources</li>
+<li>Southern Poverty Law Center — Hate group tracking</li>
+</ul>
+<h3 id="social-media-direct-sources">Social Media &amp; Direct
+Sources</h3>
+<ul>
+<li>DSA North Texas (<span class="citation"
+data-cites="dsanorthtexas">@dsanorthtexas</span>) — Instagram,
+Twitter</li>
+<li>Elm Fork JBGC — Social media accounts (various)</li>
+<li>Event listings — Mobilize.us, Action Network, Facebook Events</li>
+<li>Reddit — r/liberalgunowners, r/ShermanPosting (JBGC
+discussions)</li>
+</ul>
+<h3 id="wikipedia">Wikipedia</h3>
+<ul>
+<li>Dallas-Fort Worth metroplex</li>
+<li>George Floyd protests</li>
+<li>Black Lives Matter</li>
+<li>John Brown Gun Club / Redneck Revolt</li>
+<li>Democratic Socialists of America</li>
+<li>Patriot Front</li>
+<li>Proud Boys</li>
+<li>2025 Alvarado ICE facility attack</li>
+</ul>
+<hr />
+<h2 id="source-evaluation-notes">Source Evaluation Notes</h2>
+<h3 id="reliability-considerations">Reliability Considerations</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Source Type</th>
+<th>Reliability</th>
+<th>Bias Consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Census/Government data</td>
+<td>HIGH</td>
+<td>Neutral</td>
+</tr>
+<tr class="even">
+<td>Major news (AP, Reuters)</td>
+<td>HIGH</td>
+<td>Generally neutral</td>
+</tr>
+<tr class="odd">
+<td>Local news</td>
+<td>HIGH</td>
+<td>Varies; generally factual</td>
+</tr>
+<tr class="even">
+<td>Activist sources</td>
+<td>MEDIUM</td>
+<td>Obvious bias; useful for intent</td>
+</tr>
+<tr class="odd">
+<td>Counter-extremism orgs</td>
+<td>MEDIUM-HIGH</td>
+<td>Generally anti-extremist bias</td>
+</tr>
+<tr class="even">
+<td>Wikipedia</td>
+<td>MEDIUM</td>
+<td>Verify with primary sources</td>
+</tr>
+<tr class="odd">
+<td>Social media</td>
+<td>LOW-MEDIUM</td>
+<td>Verify; useful for monitoring</td>
+</tr>
+</tbody>
+</table>
+<h3 id="information-gaps">Information Gaps</h3>
+<p>The following areas have limited open-source information:</p>
+<ol type="1">
+<li><strong>Antifa cell structure</strong> — Deliberately obscured;
+limited penetration</li>
+<li><strong>Current JBGC membership</strong> — Anonymity maintained</li>
+<li><strong>Specific threat intelligence</strong> — Requires law
+enforcement access</li>
+<li><strong>Encrypted communications</strong> — Not accessible via
+OSINT</li>
+<li><strong>Future planned actions</strong> — Short notice; limited
+warning</li>
+</ol>
+<h3 id="recommendations-for-continued-research">Recommendations for
+Continued Research</h3>
+<ol type="1">
+<li><strong>Law enforcement liaison</strong> — Access to fusion center
+products</li>
+<li><strong>Commercial threat intelligence</strong> — Services
+monitoring encrypted channels</li>
+<li><strong>Continuous social media monitoring</strong> — Automated
+tools</li>
+<li><strong>Local source development</strong> — Relationships with
+journalists, community contacts</li>
+<li><strong>Regular update cycle</strong> — Refresh assessment
+quarterly</li>
+</ol>
+<hr />
+<h2 id="urls-referenced">URLs Referenced</h2>
+<p><em>Note: URLs current as of January 2026; may change</em></p>
+<h3 id="demographics-area">Demographics &amp; Area</h3>
+<ul>
+<li>https://www.census.gov</li>
+<li>https://rdc.dfwmaps.com</li>
+<li>https://comptroller.texas.gov/economy/economic-data/regions/</li>
+</ul>
+<h3 id="incidents-news">Incidents &amp; News</h3>
+<ul>
+<li>https://www.dallasnews.com</li>
+<li>https://www.keranews.org</li>
+<li>https://www.wfaa.com</li>
+<li>https://www.fox4news.com</li>
+<li>https://www.dallasobserver.com</li>
+<li>https://www.texasobserver.org</li>
+</ul>
+<h3 id="group-information">Group Information</h3>
+<ul>
+<li>https://www.counterextremism.com</li>
+<li>https://newtolerance.org</li>
+<li>https://mappingmilitants.org</li>
+<li>https://keywiki.org</li>
+</ul>
+<h3 id="government">Government</h3>
+<ul>
+<li>https://www.dhs.gov</li>
+<li>https://www.whitehouse.gov</li>
+</ul>
+<hr />
+<h2 id="classification-handling">Classification &amp; Handling</h2>
+<p><strong>Classification:</strong> UNCLASSIFIED // FOR OFFICIAL USE
+ONLY</p>
+<p><strong>Distribution:</strong> Limited to client organization
+leadership and security personnel</p>
+<p><strong>Handling:</strong> - Do not post publicly - Do not share with
+media - Secure storage recommended - Update and re-disseminate as
+conditions change # Appendix E: Detailed Intelligence Supplement</p>
+<p><em>This appendix provides enhanced detail on key organizations,
+named individuals, locations, funding, and social media
+presence.</em></p>
+<hr />
+<h2 id="e.1-named-leadership-key-figures">E.1 Named Leadership &amp; Key
+Figures</h2>
+<h3 id="left-wing-organizations">Left-Wing Organizations</h3>
+<h4 id="next-generation-action-network-ngan">Next Generation Action
+Network (NGAN)</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Founder &amp; CEO</strong></td>
+<td><strong>Minister Dominique Alexander</strong></td>
+<td>Born/raised Oak Cliff, Dallas. Criminal history: prison (2016,
+probation violation), felony theft charge (2018, Denton County). Serves
+on City of Dallas boards.</td>
+</tr>
+<tr class="even">
+<td>Co-Founder</td>
+<td>Damon Crenshaw</td>
+<td>Original 2014 co-founder</td>
+</tr>
+<tr class="odd">
+<td>Co-Founder</td>
+<td>Keyaira Saunders</td>
+<td>Original 2014 co-founder</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Social Media:</strong> - Twitter: <a
+href="https://twitter.com/niquealex"><span class="citation"
+data-cites="niquealex">@niquealex</span></a> - Facebook: <a
+href="https://facebook.com/dominique.alexander.169">dominique.alexander.169</a>
+- Org Facebook: <a
+href="https://facebook.com/NextGenAction">NextGenAction</a> — 20,314
+likes</p>
+<hr />
+<h4 id="dsa-north-texas-1">DSA North Texas</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Co-Chair</strong></td>
+<td><strong>Kristian (Steffany) Hernandez</strong></td>
+<td>Also serves on DSA National Political Committee (NPC); sits on
+Dallas Community Police Oversight Board; former co-chair 2016-2018</td>
+</tr>
+<tr class="even">
+<td>Co-Chair</td>
+<td>Deborah Beltran</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>Co-Chair</td>
+<td>Tyler Davis</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Social Media:</strong> - Instagram: <a
+href="https://instagram.com/dsanorthtexas"><span class="citation"
+data-cites="dsanorthtexas">@dsanorthtexas</span></a> — 5,476 followers -
+Facebook: <a href="https://facebook.com/DSANorthTexas">DSANorthTexas</a>
+— 5,142 likes - Twitter: <span class="citation"
+data-cites="DSANorthTX">@DSANorthTX</span> - Action Network: <a
+href="https://actionnetwork.org/groups/north-texas-dsa">north-texas-dsa</a></p>
+<p><strong>Website:</strong> <a
+href="https://dsa-ntx.org">dsa-ntx.org</a></p>
+<hr />
+<h4 id="elm-fork-john-brown-gun-club-2">Elm Fork John Brown Gun
+Club</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Leadership</td>
+<td><strong>UNKNOWN</strong></td>
+<td>Deliberate anonymity; no public leadership</td>
+</tr>
+<tr class="even">
+<td>Deceased member</td>
+<td>“Shelly”</td>
+<td>Mentioned in memorial post as “great organizer and pillar of the
+community”</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Social Media:</strong> - Twitter: <a
+href="https://twitter.com/EFJBGC"><span class="citation"
+data-cites="EFJBGC">@EFJBGC</span></a> - Linktree: <a
+href="https://linktr.ee/elmfork">linktr.ee/elmfork</a> - Website: <a
+href="https://efjbgc.noblogs.org">efjbgc.noblogs.org</a></p>
+<p><strong>Self-Description:</strong> “Gays with Guns”</p>
+<p><strong>Affiliation:</strong> Member of Anarchist Federation
+network</p>
+<hr />
+<h4 id="black-cat-rifle-group">Black Cat Rifle Group</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Co-Founder</strong></td>
+<td><strong>“El Gato”</strong></td>
+<td>Pseudonym; met through Socialist Rifle Association</td>
+</tr>
+<tr class="even">
+<td><strong>Co-Founder</strong></td>
+<td><strong>“Azad”</strong></td>
+<td>Pseudonym; met through Socialist Rifle Association</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Description:</strong> Dallas-based volunteer organization
+providing free firearm instruction, focusing on marginalized groups.
+Split from SRA in 2022 to focus on training.</p>
+<hr />
+<h4 id="party-for-socialism-and-liberation-dfw-psl-dfw">Party for
+Socialism and Liberation — DFW (PSL DFW)</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Local Leadership</td>
+<td><strong>UNKNOWN</strong></td>
+<td>No public local officers identified</td>
+</tr>
+<tr class="even">
+<td>National Leaders</td>
+<td>Brian Becker, Larry Holmes</td>
+<td>Founders of national PSL</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Social Media:</strong> - Instagram: <a
+href="https://instagram.com/psl.dfw"><span class="citation"
+data-cites="psl.dfw">@psl.dfw</span></a> — <strong>11,000+
+followers</strong> - Facebook: <a
+href="https://facebook.com/PSLDFW">PSLDFW</a> — 2,744 likes, 23K
+talking</p>
+<p><strong>Description:</strong> DFW branch of Marxist-Leninist Party
+for Socialism and Liberation. Very active on social media. Linked to
+ANSWER Coalition.</p>
+<hr />
+<h4 id="socialist-rifle-association-dfw">Socialist Rifle Association —
+DFW</h4>
+<p><strong>Social Media:</strong> - Twitter: <a
+href="https://twitter.com/SRA_DFW"><span class="citation"
+data-cites="SRA_DFW">@SRA_DFW</span></a></p>
+<p><strong>Description:</strong> “Safe space for marginalized groups.
+Mutual aid &amp; firearms education.”</p>
+<hr />
+<h4 id="antifa-dfw">Antifa DFW</h4>
+<p><strong>Social Media:</strong> - Twitter: <a
+href="https://twitter.com/AntifaDFW"><span class="citation"
+data-cites="AntifaDFW">@AntifaDFW</span></a> — Est. September 2015</p>
+<p><strong>Status:</strong> Account exists but activity level
+unclear.</p>
+<hr />
+<h3 id="prairieland-defendants-july-2025-ice-attack">Prairieland
+Defendants (July 2025 ICE Attack)</h3>
+<p><strong>Total Charged:</strong> 18 individuals<br />
+<strong>Pleaded Guilty:</strong> 7 (as of November 2025)<br />
+<strong>Trial Date:</strong> February 17, 2026</p>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 22%" />
+<col style="width: 16%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>A/K/A</th>
+<th>Age</th>
+<th>Key Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Cameron Arnold</strong></td>
+<td>Autumn Hill</td>
+<td>30</td>
+<td>Lived with Morris in Dallas; arrested day after shooting</td>
+</tr>
+<tr class="even">
+<td><strong>Zachary Evetts</strong></td>
+<td>—</td>
+<td>36</td>
+<td>Named in initial terrorism indictment</td>
+</tr>
+<tr class="odd">
+<td><strong>Benjamin Song</strong></td>
+<td>—</td>
+<td>32</td>
+<td>Former Marine Corps reservist; <strong>alleged sole
+shooter</strong>; stated intent to “shoot at police rather than be
+arrested”</td>
+</tr>
+<tr class="even">
+<td>Savanna Batten</td>
+<td>—</td>
+<td>—</td>
+<td>Prior protest-related arrests</td>
+</tr>
+<tr class="odd">
+<td><strong>Bradford Morris</strong></td>
+<td>Meagan Morris</td>
+<td>—</td>
+<td>Home used as staging location; “gear check” held there</td>
+</tr>
+<tr class="even">
+<td>Maricela Rueda</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>Elizabeth Soto</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>Ines Soto</td>
+<td>—</td>
+<td>—</td>
+<td>Prior protest-related arrests</td>
+</tr>
+<tr class="odd">
+<td>Daniel Rolando Sanchez-Estrada</td>
+<td>—</td>
+<td>—</td>
+<td>Charged with conspiracy to conceal evidence</td>
+</tr>
+<tr class="even">
+<td>Nathan Baumann</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>+ 8 others</td>
+<td>—</td>
+<td>—</td>
+<td>Names in court records</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Defense Support:</strong> <a
+href="https://prairielanddefendants.com">prairielanddefendants.com</a> —
+“DFW Support Committee”</p>
+<p><strong>Key Location:</strong> Morris/Hill residence in Dallas served
+as staging area.</p>
+<hr />
+<h3 id="right-wing-figures-context">Right-Wing Figures (Context)</h3>
+<h4 id="protect-texas-kids-anti-drag-movement">Protect Texas Kids /
+Anti-Drag Movement</h4>
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Name</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Founder</strong></td>
+<td><strong>Kelly Neidert</strong></td>
+<td>UNT graduate; former leader of UNT Young Conservatives of Texas
+chapter; joined women’s arm of New Columbia Movement</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Social Media:</strong> Various (frequently suspended)</p>
+<p><strong>Related Groups:</strong> - Texas Family Project - Defend Our
+Kids Texas - New Columbia Movement (Catholic Christian Nationalist)</p>
+<hr />
+<h2 id="e.2-physical-locations">E.2 Physical Locations</h2>
+<h3 id="confirmed-addresses">Confirmed Addresses</h3>
+<table>
+<colgroup>
+<col style="width: 46%" />
+<col style="width: 30%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Organization</th>
+<th>Address</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>NGAN</strong></td>
+<td><strong>1808 S. Good Latimer Expressway, Dallas, TX
+75226</strong></td>
+<td>Headquarters; South Dallas</td>
+</tr>
+<tr class="even">
+<td>NGAN (planned)</td>
+<td>South Dallas (new location announced)</td>
+<td>Expansion plans</td>
+</tr>
+<tr class="odd">
+<td>Prairieland staging</td>
+<td>Dallas (Morris/Hill residence)</td>
+<td>Specific address in court records</td>
+</tr>
+<tr class="even">
+<td>DSA North Texas</td>
+<td>No public office</td>
+<td>Meetings at various locations</td>
+</tr>
+<tr class="odd">
+<td>Elm Fork JBGC</td>
+<td>No public location</td>
+<td>Operates anonymously</td>
+</tr>
+<tr class="even">
+<td>PSL DFW</td>
+<td>No public office</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="meeting-event-locations">Meeting / Event Locations</h3>
+<ul>
+<li><strong>DFW Anarchist Bookfair</strong> — Held May 4, 2024 (location
+TBD annually)</li>
+<li><strong>DSA Meetings</strong> — Various community spaces; check
+social media for announcements</li>
+<li><strong>JBGC Events</strong> — At drag venues they’re protecting
+(various)</li>
+</ul>
+<hr />
+<h2 id="e.3-funding-financial-information">E.3 Funding &amp; Financial
+Information</h2>
+<h3 id="next-generation-action-network">Next Generation Action
+Network</h3>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Item</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Tax Status</strong></td>
+<td>501(c)(4) (NGAN) and 501(c)(3) (NGAN Foundation)</td>
+</tr>
+<tr class="even">
+<td><strong>EIN</strong></td>
+<td>81-2565213 (Foundation)</td>
+</tr>
+<tr class="odd">
+<td><strong>Form 990</strong></td>
+<td>Files 990-EZ (smaller organization)</td>
+</tr>
+<tr class="even">
+<td><strong>2020 Grants</strong></td>
+<td>$4,000 distributed</td>
+</tr>
+<tr class="odd">
+<td><strong>ProPublica Profile</strong></td>
+<td><a
+href="https://projects.propublica.org/nonprofits/organizations/812565213">Nonprofit
+Explorer</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> Limited financial detail available;
+organization uses 990-EZ indicating smaller budget.</p>
+<h3 id="dsa-north-texas-2">DSA North Texas</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Item</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Structure</td>
+<td>Chapter of national DSA (501(c)(4))</td>
+</tr>
+<tr class="even">
+<td>Funding</td>
+<td>Member dues; national DSA support</td>
+</tr>
+<tr class="odd">
+<td>Budget</td>
+<td>Not separately disclosed</td>
+</tr>
+</tbody>
+</table>
+<h3 id="other-groups">Other Groups</h3>
+<p>Most other organizations (JBGC, PSL, SRA, antifa) do not have
+transparent funding. They likely rely on: - Member contributions -
+Merchandise sales - Mutual aid networks - National organization support
+(PSL, SRA, DSA)</p>
+<hr />
+<h2 id="e.4-social-media-directory">E.4 Social Media Directory</h2>
+<h3 id="quick-reference">Quick Reference</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Organization</th>
+<th>Platform</th>
+<th>Handle</th>
+<th>Followers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>PSL DFW</strong></td>
+<td>Instagram</td>
+<td><span class="citation" data-cites="psl.dfw">@psl.dfw</span></td>
+<td><strong>11,000+</strong></td>
+</tr>
+<tr class="even">
+<td>DSA North Texas</td>
+<td>Instagram</td>
+<td><span class="citation"
+data-cites="dsanorthtexas">@dsanorthtexas</span></td>
+<td>5,476</td>
+</tr>
+<tr class="odd">
+<td>NGAN</td>
+<td>Facebook</td>
+<td>NextGenAction</td>
+<td>20,314</td>
+</tr>
+<tr class="even">
+<td>DSA North Texas</td>
+<td>Facebook</td>
+<td>DSANorthTexas</td>
+<td>5,142</td>
+</tr>
+<tr class="odd">
+<td>PSL DFW</td>
+<td>Facebook</td>
+<td>PSLDFW</td>
+<td>2,744</td>
+</tr>
+<tr class="even">
+<td>Elm Fork JBGC</td>
+<td>Twitter</td>
+<td><span class="citation" data-cites="EFJBGC">@EFJBGC</span></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>SRA DFW</td>
+<td>Twitter</td>
+<td><span class="citation" data-cites="SRA_DFW">@SRA_DFW</span></td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>Antifa DFW</td>
+<td>Twitter</td>
+<td><span class="citation" data-cites="AntifaDFW">@AntifaDFW</span></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>Dominique Alexander</td>
+<td>Twitter</td>
+<td><span class="citation" data-cites="niquealex">@niquealex</span></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring-priority">Monitoring Priority</h3>
+<ol type="1">
+<li><strong>HIGH:</strong> PSL DFW (largest following, most active)</li>
+<li><strong>HIGH:</strong> DSA North Texas (established, connected to
+national)</li>
+<li><strong>HIGH:</strong> NGAN (Dominique Alexander personally)</li>
+<li><strong>MEDIUM:</strong> Elm Fork JBGC (armed group)</li>
+<li><strong>MEDIUM:</strong> SRA DFW</li>
+<li><strong>LOW:</strong> Antifa DFW (unclear activity)</li>
+</ol>
+<hr />
+<h2 id="e.5-additional-groups-identified">E.5 Additional Groups
+Identified</h2>
+<p>Groups not in original report that warrant monitoring:</p>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 16%" />
+<col style="width: 44%" />
+<col style="width: 19%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Type</th>
+<th>Activity Level</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Party for Socialism and Liberation DFW</strong></td>
+<td>Marxist-Leninist party</td>
+<td><strong>HIGH</strong></td>
+<td>11K Instagram followers; very active</td>
+</tr>
+<tr class="even">
+<td><strong>Black Cat Rifle Group</strong></td>
+<td>Armed left firearms training</td>
+<td>MODERATE</td>
+<td>Dallas-based; SRA spinoff</td>
+</tr>
+<tr class="odd">
+<td><strong>Communist Party USA - DFW Club</strong></td>
+<td>Communist party</td>
+<td>LOW</td>
+<td>Active in labor organizing</td>
+</tr>
+<tr class="even">
+<td><strong>DFW Anarchist network</strong></td>
+<td>Loose anarchist collective</td>
+<td>MODERATE</td>
+<td>Hosts annual bookfair</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="e.6-network-connections">E.6 Network Connections</h2>
+<h3 id="prairieland-cell-connections">Prairieland Cell Connections</h3>
+<p>Per court filings, defendants had connections to: - Anarchist
+ideology / literature - “All Cops Are Bastards” (ACAB) movement -
+Socialist Rifle Association (some members) - Each other through activist
+networks</p>
+<h3 id="organizational-overlap">Organizational Overlap</h3>
+<pre><code>Individual activists often participate in multiple groups:
+
+     DSA ←→ PSL ←→ Antifa networks
+      ↓       ↓           ↓
+     SRA ←→ JBGC ←→ Black Cat
+      
+NGAN operates more independently (civil rights focus)</code></pre>
+<h3 id="event-coalition-patterns">Event Coalition Patterns</h3>
+<p>Major protests typically involve coalition of: - PSL DFW (often
+leads/organizes) - DSA North Texas - NGAN - Various single-issue groups
+- Labor unions (when labor-related)</p>
+<p>Armed security (when present): - Elm Fork JBGC - Occasionally SRA
+members</p>
+<hr />
+<h2 id="e.7-imagery-notes">E.7 Imagery Notes</h2>
+<h3 id="available-visual-documentation">Available Visual
+Documentation</h3>
+<ul>
+<li><strong>Elm Fork JBGC:</strong> Numerous photos/videos from drag
+show events showing armed members in tactical gear, pride flags, face
+masks</li>
+<li><strong>NGAN/Dominique Alexander:</strong> Public figure; many
+photos from protests, press conferences</li>
+<li><strong>Prairieland defendants:</strong> Booking photos in court
+records; some media coverage photos</li>
+<li><strong>DSA:</strong> Event photos on social media (generally
+permitted)</li>
+<li><strong>PSL:</strong> Event photos on social media</li>
+</ul>
+<h3 id="collection-recommendations">Collection Recommendations</h3>
+<p>For operational intelligence, client should: 1. Document any
+activists observed at their events 2. Capture license plates in parking
+areas 3. Screenshot social media threats/calls to action 4. Preserve all
+video of incidents</p>
+<p><em>Note: All collection should be legal and ethical; consult
+counsel.</em></p>
+</body>
+</html>
