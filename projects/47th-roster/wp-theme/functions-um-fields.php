@@ -15,12 +15,12 @@ function legion_um_add_custom_fields($fields) {
     $fields['discord_id'] = array(
         'title' => 'Discord ID',
         'metakey' => 'discord_id',
+        'public' => 0,  // Hidden from public profile
+        'editable' => 0, // Auto-filled by Discord login
         'type' => 'text',
         'label' => 'Discord User ID',
         'placeholder' => '179481162710908928',
         'required' => 0,
-        'public' => 1,
-        'editable' => 1,
         'icon' => 'um-faicon-discord',
     );
     
@@ -271,20 +271,45 @@ add_action('um_after_profile_header_name_args', 'legion_display_game_badges', 20
 function legion_um_profile_css() {
     ?>
     <style>
-    .legion-profile-rank {
-        display: inline-flex;
+    /* Rank display in profile HEADER - below the big gold name */
+    .legion-profile-header-rank {
+        display: flex !important;
         align-items: center;
-        gap: 5px;
+        gap: 8px;
         font-family: 'Cinzel', serif;
         color: #c9a227;
+        margin-top: 5px;
+        width: 100%;
+        clear: both;
     }
-    .legion-profile-rank .rank-grade {
+    .legion-profile-header-rank::before {
+        content: '';
+        display: table;
+        clear: both;
+    }
+    .legion-profile-header-rank .rank-name {
+        font-weight: 600;
+        font-size: 1em;
+    }
+    .legion-profile-header-rank .rank-grade {
         color: #888;
-        font-size: 0.85em;
+        font-size: 0.9em;
     }
     .legion-rank-insignia {
         height: 24px;
         width: auto;
+        vertical-align: middle;
+    }
+    
+    /* Force rank to its own line in UM header */
+    .um-profile-headericon-name .legion-profile-header-rank,
+    .um-name .legion-profile-header-rank {
+        display: block !important;
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    .um-name .legion-profile-header-rank {
+        display: flex !important;
     }
     .legion-years-of-service {
         color: #c9a227;

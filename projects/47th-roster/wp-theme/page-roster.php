@@ -2,13 +2,41 @@
 /**
  * Template Name: 47th Legion Roster
  * 
- * Full-width roster page template
+ * Full-width roster page template with Ultimate Member profile linking
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Build map of Discord IDs to UM profile URLs (primary method)
+// Also keep username fallback for users without Discord ID set
+$um_profiles_by_discord = array();
+$um_profiles_by_name = array();
+if ( function_exists( 'um_user_profile_url' ) ) {
+    $users = get_users( array( 'fields' => array( 'ID', 'user_login', 'display_name' ) ) );
+    foreach ( $users as $user ) {
+        $profile_url = um_user_profile_url( $user->ID );
+        
+        // Primary: Map by Discord ID (most reliable)
+        $discord_id = get_user_meta( $user->ID, 'discord_id', true );
+        if ( ! empty( $discord_id ) ) {
+            $um_profiles_by_discord[ $discord_id ] = $profile_url;
+        }
+        
+        // Fallback: Map by user_login and display_name
+        $um_profiles_by_name[ strtolower( $user->user_login ) ] = $profile_url;
+        if ( strtolower( $user->display_name ) !== strtolower( $user->user_login ) ) {
+            $um_profiles_by_name[ strtolower( $user->display_name ) ] = $profile_url;
+        }
+        
+        // Also map by discord_username if set
+        $discord_username = get_user_meta( $user->ID, 'discord_username', true );
+        if ( ! empty( $discord_username ) ) {
+            $um_profiles_by_name[ strtolower( $discord_username ) ] = $profile_url;
+        }
+    }
+}
 get_header(); 
 ?>
 
@@ -219,6 +247,17 @@ article.page {
   margin-bottom: 0.25rem;
 }
 
+.member-name a.member-profile-link {
+  color: #c9a227;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.member-name a.member-profile-link:hover {
+  color: #d4af37;
+  text-decoration: underline;
+}
+
 .member-rank {
   display: flex;
   align-items: center;
@@ -353,8 +392,12 @@ article.page {
 <script>
 (function() {
   const ASSET_BASE = '<?php echo get_stylesheet_directory_uri(); ?>/assets';
+  const UM_PROFILES_BY_DISCORD = <?php echo json_encode( $um_profiles_by_discord ); ?>;
+  const UM_PROFILES_BY_NAME = <?php echo json_encode( $um_profiles_by_name ); ?>;
   let rosterData = null;
   let currentFilter = 'all';
+
+  function formatRankCode(code) { return code.replace(/^([A-Z])(\d+)$/, "$1-$2"); }
 
   const rankImages = {
     'E1': 'ranks/e1.png', 'E2': 'ranks/e2.png', 'E3': 'ranks/e3.png',
@@ -367,17 +410,72 @@ article.page {
 
   const awardPrecedence = {
     'corona_obsidionalis': 1, 'corona_civica': 2, 'medal': 3, 'corona_aurea': 4,
-    'corona_vallaris': 5, 'corona_muralis': 6, 'prisoner': 7, 'wounded': 8,
-    'torques': 9, 'commendation': 10, 'achievement': 11, 'armillae': 12,
-    'mng_2014': 13, 'defense': 14, 'swg': 20, 'tabula_rasa': 21,
-    'fallen_earth': 22, 'global_agenda': 23, 'earthrise': 24, 'swtor': 25,
-    'sto': 26, 'defiance': 27, 'firefall': 28, 'planetside2': 29,
-    'repopulation': 30, 'star_citizen': 31, 'division': 32, 'division2': 33,
-    'empyrion': 34, 'elder_scrolls': 35, 'MWO': 36, 'fallout76': 37,
-    'helldivers': 38, 'colonial_marines': 39,
-    'joint_operations': 50, 'army_occupation': 51, 'organizational_excellence': 52,
-    'good_conduct': 53, 'humane_action': 54, 'nco_development': 55,
-    'recruiter': 56, 'joint_training': 57, 'service': 99,
+    'corona_vallaris': 5, 'corona_muralis': 6, 'prisoner': 7, 'wounded': 8, 'torques': 9,
+    'commendation': 10, 'achievement': 11, 'armillae': 12,
+    'organizational_excellence': 13, 'nco_development': 14, 'recruiter': 15,
+    'good_conduct': 16, 'humane_action': 17, 'service': 18, 'defense': 19,
+    'joint_operations': 20, 'army_occupation': 21, 'joint_training': 22, 'mng_2014': 23,
+    'swg': 50, 'tabula_rasa': 51, 'fallen_earth': 52, 'global_agenda': 53, 'sto': 54,
+    'swtor': 55, 'earthrise': 56, 'planetside2': 57, 'defiance': 58, 'MWO': 59,
+    'star_citizen': 60, 'elder_scrolls': 61, 'firefall': 62, 'empyrion': 63,
+    'repopulation': 64, 'division': 65, 'division2': 66,
+    'dune_awakening': 70, 'fallout76': 71, 'colonial_marines': 72,
+    'war_thunder': 73, 'helldivers': 74, 'space_marine2': 75,
+    'stars_reach': 80
+  };
+
+  // Full display names for awards/ribbons (used in hover tooltips)
+  const awardNames = {
+    // Decorations (highest precedence)
+    'corona_obsidionalis': 'Corona Obsidionalis',
+    'corona_civica': 'Corona Civica',
+    'medal': 'Medal of Honor',
+    'corona_aurea': 'Corona Aurea',
+    'corona_vallaris': 'Corona Vallaris',
+    'corona_muralis': 'Corona Muralis',
+    'prisoner': 'Prisoner of War Medal',
+    'wounded': 'Purple Heart',
+    'torques': 'Torques',
+    // Service Awards
+    'commendation': 'Commendation Medal',
+    'achievement': 'Achievement Medal',
+    'armillae': 'Armillae',
+    'organizational_excellence': 'Organizational Excellence Award',
+    'nco_development': 'NCO Professional Development Ribbon',
+    'recruiter': 'Recruiter Ribbon',
+    'good_conduct': 'Good Conduct Medal',
+    'humane_action': 'Humanitarian Action Medal',
+    'service': 'Legion Service Ribbon',
+    'defense': 'Defense Service Ribbon',
+    'joint_operations': 'Joint Operations Service Ribbon',
+    'army_occupation': 'Occupation Service Medal',
+    'joint_training': 'Joint Training Service Ribbon',
+    'mng_2014': 'MNG 2014 Campaign Ribbon',
+    // Game Campaign Ribbons
+    'swg': 'Star Wars Galaxies Campaign',
+    'tabula_rasa': 'Tabula Rasa Campaign',
+    'fallen_earth': 'Fallen Earth Campaign',
+    'global_agenda': 'Global Agenda Campaign',
+    'sto': 'Star Trek Online Campaign',
+    'swtor': 'Star Wars: The Old Republic Campaign',
+    'earthrise': 'Earthrise Campaign',
+    'planetside2': 'PlanetSide 2 Campaign',
+    'defiance': 'Defiance Campaign',
+    'MWO': 'MechWarrior Online Campaign',
+    'star_citizen': 'Star Citizen Campaign',
+    'elder_scrolls': 'Elder Scrolls Online Campaign',
+    'firefall': 'Firefall Campaign',
+    'empyrion': 'Empyrion Campaign',
+    'repopulation': 'The Repopulation Campaign',
+    'division': 'The Division Campaign',
+    'division2': 'The Division 2 Campaign',
+    'dune_awakening': 'Dune: Awakening Campaign',
+    'fallout76': 'Fallout 76 Campaign',
+    'colonial_marines': 'Aliens: Colonial Marines Campaign',
+    'war_thunder': 'War Thunder Campaign',
+    'helldivers': 'Helldivers 2 Campaign',
+    'space_marine2': 'Space Marine 2 Campaign',
+    'stars_reach': 'Stars Reach Campaign'
   };
 
   function getServicePips(years) {
@@ -411,7 +509,7 @@ article.page {
     }
     return `<div class="ribbon-rack">
       ${rows.map(row => `<div class="ribbon-row${row.isPartial ? ' ribbon-row-partial' : ''}">
-        ${row.ribbons.map(a => `<img src="${ASSET_BASE}/ribbons/${a}.png" alt="${a}" title="${a}" class="ribbon">`).join('')}
+        ${row.ribbons.map(a => `<img src="${ASSET_BASE}/ribbons/${a}.png" alt="${awardNames[a] || a}" title="${awardNames[a] || a}" class="ribbon">`).join('')}
       </div>`).join('')}
     </div>`;
   }
@@ -421,6 +519,14 @@ article.page {
     const rankImg = rankImages[member.rank.code];
     const awardsHtml = buildRibbonRack(member.awards);
     
+    // Check for UM profile - prefer Discord ID match, fallback to username/displayName (case-insensitive)
+    const profileUrl = UM_PROFILES_BY_DISCORD[member.id]  // Discord ID (most reliable)
+                    || UM_PROFILES_BY_NAME[member.username?.toLowerCase()] 
+                    || UM_PROFILES_BY_NAME[member.displayName?.toLowerCase()];
+    const nameHtml = profileUrl 
+      ? `<a href="${profileUrl}" class="member-profile-link">${member.displayName}</a>`
+      : member.displayName;
+    
     return `
       <div class="member-card" data-category="${member.rank.category}">
         <div class="member-avatar">
@@ -429,10 +535,10 @@ article.page {
             : '<div class="member-avatar-placeholder">👤</div>'}
         </div>
         <div class="member-info">
-          <div class="member-name">${member.displayName}</div>
+          <div class="member-name">${nameHtml}</div>
           <div class="member-rank">
             ${rankImg ? `<img src="${ASSET_BASE}/${rankImg}" alt="${member.rank.code}" class="rank-img">` : ''}
-            <span class="rank-name">${member.rank.name} (${member.rank.code})</span>
+            <span class="rank-name">${member.rank.name} (${formatRankCode(member.rank.code)})</span>
           </div>
           <div class="member-service">
             <span class="service-pips">${servicePips.map(p => `<img src="${ASSET_BASE}/${p}" alt="pip" class="service-pip">`).join('')}</span>
