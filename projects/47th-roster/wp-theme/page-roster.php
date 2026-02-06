@@ -409,19 +409,22 @@ article.page {
   };
 
   const awardPrecedence = {
+    // Highest decorations
     'corona_obsidionalis': 1, 'corona_civica': 2, 'medal': 3, 'corona_aurea': 4,
     'corona_vallaris': 5, 'corona_muralis': 6, 'prisoner': 7, 'wounded': 8, 'torques': 9,
-    'commendation': 10, 'achievement': 11, 'armillae': 12,
-    'organizational_excellence': 13, 'nco_development': 14, 'recruiter': 15,
-    'good_conduct': 16, 'humane_action': 17, 'service': 18, 'defense': 19,
-    'joint_operations': 20, 'army_occupation': 21, 'joint_training': 22, 'mng_2014': 23,
-    'swg': 50, 'tabula_rasa': 51, 'fallen_earth': 52, 'global_agenda': 53, 'sto': 54,
-    'swtor': 55, 'earthrise': 56, 'planetside2': 57, 'defiance': 58, 'MWO': 59,
-    'star_citizen': 60, 'elder_scrolls': 61, 'firefall': 62, 'empyrion': 63,
-    'repopulation': 64, 'division': 65, 'division2': 66,
-    'dune_awakening': 70, 'fallout76': 71, 'colonial_marines': 72,
-    'war_thunder': 73, 'helldivers': 74, 'space_marine2': 75,
-    'stars_reach': 80
+    'commendation': 10, 'achievement': 11, 'armillae': 12, 'mng_2014': 13,
+    'defense': 14,
+    // Campaign ribbons (chronological by game release/adoption)
+    'swg': 20, 'tabula_rasa': 21, 'fallen_earth': 22, 'global_agenda': 23,
+    'earthrise': 24, 'swtor': 25, 'sto': 26, 'defiance': 27, 'firefall': 28,
+    'planetside2': 29, 'repopulation': 30, 'star_citizen': 31, 'division': 32,
+    'division2': 33, 'empyrion': 34, 'elder_scrolls': 35, 'MWO': 36,
+    'fallout76': 37, 'helldivers': 38, 'colonial_marines': 39,
+    'dune_awakening': 40, 'war_thunder': 41, 'space_marine2': 42, 'stars_reach': 43,
+    // Service awards (lowest precedence, displayed last)
+    'joint_operations': 50, 'army_occupation': 51, 'organizational_excellence': 52,
+    'good_conduct': 53, 'humane_action': 54, 'nco_development': 55,
+    'recruiter': 56, 'joint_training': 57, 'service': 99
   };
 
   // Full display names for awards/ribbons (used in hover tooltips)
