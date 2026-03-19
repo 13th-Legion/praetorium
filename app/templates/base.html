@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Praetorium{% endblock %} — 13th Legion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/portal.css?v=pp027rsvp">
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if user %}
+    <nav class="nav-bar">
+        <div class="nav-brand">
+            <img src="/static/img/13th_crest.png" alt="13th Legion" class="nav-crest" style="height:32px;width:auto;">
+            <span class="nav-title">PRAETORIUM</span>
+            <img src="/static/img/tsm_seal_sm.png" alt="TSM" class="nav-crest" style="height:32px;width:auto;">
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/profile" class="nav-link">Profile</a>
+            <a href="/api/training/claim" class="nav-link">Training</a>
+            <a href="/roster" class="nav-link">Roster</a>
+            <a href="/events" class="nav-link">📅 Events</a>
+            {% set shop_roles = namespace(shops=[]) %}
+            {% if "s1" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s1") %}
+            {% endif %}
+            {% if "s2" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s2") %}
+            {% endif %}
+            {% if "s3" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s3") %}
+            {% endif %}
+            {% if "s4" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s4") %}
+            {% endif %}
+            {% if "s5" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s5") %}
+            {% endif %}
+            {% if "s6" in user.roles or "command" in user.roles or "admin" in user.roles %}
+                {% set _ = shop_roles.shops.append("s6") %}
+            {% endif %}
+            {% if shop_roles.shops %}
+            <div class="nav-dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">Shops ▾</a>
+                <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 200px; z-index: 100; top: 100%; left: 0;">
+                    {% if "s1" in shop_roles.shops %}
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/s1" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📋 S1 — Personnel</a>
+                        <a href="/api/s1/pipeline" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruit Pipeline</a>
+                        <a href="/api/s1/payments" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Payments</a>
+                        <a href="/api/s1/documents/status" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Documents</a>
+                        <a href="/api/s1/recruiters" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruiters</a>
+                        <a href="/api/training/claims/review" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Training Claims</a>
+                        <a href="/api/awards" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Awards & Sign-offs</a>
+                        <a href="/api/s1/offboard" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Offboarding</a>
+                    </div>
+                    {% endif %}
+                    {% if "s2" in shop_roles.shops %}
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/s2" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">🔍 S2 — Intel & Security</a>
+                    </div>
+                    {% endif %}
+                    {% if "s3" in shop_roles.shops %}
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/s3" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">⚔️ S3 — Ops & Training</a>
+                    </div>
+                    {% endif %}
+                    {% if "s4" in shop_roles.shops %}
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/s4" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📦 S4 — Logistics</a>
+                    </div>
+                    {% endif %}
+                    {% if "s5" in shop_roles.shops %}
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/s5" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">🩹 S5 — Medical</a>
+                    </div>
+                    {% endif %}
+                    {% if "s6" in shop_roles.shops %}
+                    <div>
+                        <a href="/shops/s6" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📡 S6 — Comms</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name">{{ user.display_name }}</span>
+            <a href="/auth/logout" class="nav-link nav-logout">Logout</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="content {% block content_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>13th Legion — Nunquam Non Paratus</p>
+    </footer>
+
+    <script>
+    // Nav dropdown toggle
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(function(m) {
+            if (!m.parentElement.contains(e.target)) m.classList.remove('show');
+        });
+    });
+    document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+        m.style.display = '';
+        m.classList.add('dropdown-hidden');
+    });
+    </script>
+    <style>
+    .dropdown-menu { display: none !important; }
+    .dropdown-menu.show { display: block !important; }
+    .dropdown-menu a:hover { background: #333; color: #d4a537; }
+    </style>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

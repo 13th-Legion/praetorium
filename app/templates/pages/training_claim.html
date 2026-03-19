@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Submit Training Claim{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+    <h1>📋 Submit Training Claim</h1>
+    <p style="color:#aaa;margin-bottom:20px;">Request a TRADOC sign-off or certification. Your claim will be reviewed by leadership.</p>
+
+    {% if request.query_params.get('submitted') %}
+    <div style="padding:12px 16px;background:rgba(46,125,50,0.15);border-left:4px solid #2e7d32;border-radius:4px;margin-bottom:20px;">
+        ✅ Claim submitted! You'll be notified when it's reviewed.
+    </div>
+    {% endif %}
+
+    <!-- Pending Claims -->
+    {% if pending %}
+    <div class="card" style="margin-bottom:20px;">
+        <h3 class="card-title">⏳ Your Pending Claims</h3>
+        <div class="card-body">
+            {% for p in pending %}
+            <div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;display:flex;justify-content:space-between;">
+                <span>
+                    {% if p.claim.claim_type == 'tradoc' %}📝{% else %}🏅{% endif %}
+                    {{ p.name }}
+                    {% if p.claim.doc_path %}<span style="color:#888;">📎</span>{% endif %}
+                </span>
+                <span style="color:#ef6c00;">Pending</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/api/training/claim" enctype="multipart/form-data">
+        <!-- Claim Type -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">What are you claiming?</h3>
+            <div class="card-body">
+                <div style="display:flex;gap:12px;margin-bottom:16px;">
+                    <label style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;" id="type-tradoc-label">
+                        <input type="radio" name="claim_type" value="tradoc" onclick="toggleClaimType('tradoc')" style="display:none;">
+                        <div style="font-size:24px;">📝</div>
+                        <div style="font-weight:600;font-size:13px;margin-top:4px;">TRADOC Item</div>
+                    </label>
+                    <label style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;" id="type-cert-label">
+                        <input type="radio" name="claim_type" value="certification" onclick="toggleClaimType('certification')" style="display:none;">
+                        <div style="font-size:24px;">🏅</div>
+                        <div style="font-weight:600;font-size:13px;margin-top:4px;">Certification / Tab</div>
+                    </label>
+                </div>
+
+                <!-- TRADOC items (multi-select checkboxes) -->
+                <div id="tradoc-section" style="display:none;">
+                    <label class="edit-label">TRADOC Items <span style="color:#888;font-weight:400;">(select all that apply)</span></label>
+                    {% if tradoc_items %}
+                    <div style="max-height:300px;overflow-y:auto;border:1px solid #444;border-radius:4px;padding:8px;margin-bottom:12px;">
+                        {% set current_block = namespace(val=-1) %}
+                        {% for item in tradoc_items %}
+                        {% if item.block != current_block.val %}
+                        {% set current_block.val = item.block %}
+                        <div style="font-size:11px;font-weight:700;color:#d4a537;padding:6px 0 2px;{% if not loop.first %}border-top:1px solid rgba(255,255,255,0.08);margin-top:6px;{% endif %}">
+                            {% if item.block == 0 %}Every FTX{% else %}Block {{ item.block }}{% endif %}
+                        </div>
+                        {% endif %}
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;">
+                            <input type="checkbox" name="tradoc_ids" value="{{ item.id }}">
+                            {{ item.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color:#2e7d32;font-size:13px;">✅ All TRADOC items complete!</p>
+                    {% endif %}
+                </div>
+
+                <!-- Cert dropdown (usually fewer, single select is fine) -->
+                <div id="cert-section" style="display:none;">
+                    <label class="edit-label">Certification / Tab</label>
+                    <select name="cert_id" id="cert-select" class="edit-input" style="margin-bottom:12px;" disabled>
+                        <option value="">— Select certification —</option>
+                        {% for cert in certs %}
+                        <option value="{{ cert.id }}">{{ cert.icon }} {{ cert.name }} ({{ cert.category }})</option>
+                        {% endfor %}
+                    </select>
+                    {% if not certs %}
+                    <p style="color:#2e7d32;font-size:13px;">✅ All certifications earned!</p>
+                    {% endif %}
+
+                    <!-- Callsign input (shown for communications certs) -->
+                    <div id="callsign-section" style="display:none;margin-top:12px;padding:12px;background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.2);border-radius:6px;">
+                        <label class="edit-label" style="color:#d4a537;">📡 FCC Callsign <span style="color:#888;font-weight:400;">(required for radio certs)</span></label>
+                        <input type="text" name="callsign" id="callsign-input" class="edit-input" placeholder="e.g. KI5ABC or WRQX123" style="text-transform:uppercase;">
+                        <p style="font-size:11px;color:#888;margin-top:4px;">Your FCC-assigned callsign. This will appear on your profile's Communications card once approved.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Details (optional)</h3>
+            <div class="card-body">
+                <textarea name="description" class="edit-input" rows="3" placeholder="When did you complete this? Any context for the reviewer..." style="margin-bottom:12px;"></textarea>
+
+                <label class="edit-label">Supporting Documentation</label>
+                <div style="position:relative;border:2px dashed #444;border-radius:6px;padding:20px;text-align:center;cursor:pointer;" onclick="document.getElementById('doc-upload').click()">
+                    <input type="file" name="document" id="doc-upload" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx" style="display:none;" onchange="updateFileName(this)">
+                    <div id="upload-label">
+                        <div style="font-size:24px;margin-bottom:4px;">📎</div>
+                        <div style="font-size:13px;color:#aaa;">Click to upload a file</div>
+                        <div style="font-size:11px;color:#666;margin-top:4px;">PDF, images, or Word docs · Max 10MB</div>
+                    </div>
+                    <div id="upload-selected" style="display:none;">
+                        <div style="font-size:16px;margin-bottom:4px;">✅</div>
+                        <div style="font-size:13px;color:#2e7d32;font-weight:600;" id="selected-filename"></div>
+                        <div style="font-size:11px;color:#888;margin-top:4px;" id="selected-size"></div>
+                    </div>
+                </div>
+                <p style="font-size:11px;color:#666;margin-top:6px;">Examples: training certificate, course completion screenshot, qualification card photo</p>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:space-between;margin-bottom:32px;">
+            <a href="/profile" style="padding:8px 20px;color:#888;text-decoration:none;font-size:14px;">← Back to Profile</a>
+            <button type="submit" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+                Submit Claim
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.edit-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.edit-input {
+    width:100%; padding:6px 8px; font-size:13px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+</style>
+
+<script>
+// Cert category map for showing callsign field
+var certCategories = {
+    {% for cert in certs %}
+    "{{ cert.id }}": "{{ cert.category }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+function updateFileName(input) {
+    var label = document.getElementById('upload-label');
+    var selected = document.getElementById('upload-selected');
+    var fname = document.getElementById('selected-filename');
+    var fsize = document.getElementById('selected-size');
+    if (input.files && input.files[0]) {
+        var f = input.files[0];
+        label.style.display = 'none';
+        selected.style.display = 'block';
+        fname.textContent = f.name;
+        var mb = (f.size / 1024 / 1024).toFixed(1);
+        fsize.textContent = mb + ' MB';
+    } else {
+        label.style.display = 'block';
+        selected.style.display = 'none';
+    }
+}
+
+function toggleClaimType(type) {
+    var tradocSec = document.getElementById('tradoc-section');
+    var certSec = document.getElementById('cert-section');
+    var certSel = document.getElementById('cert-select');
+    var tradocLabel = document.getElementById('type-tradoc-label');
+    var certLabel = document.getElementById('type-cert-label');
+
+    var callsignSec = document.getElementById('callsign-section');
+
+    if (type === 'tradoc') {
+        tradocSec.style.display = 'block';
+        certSec.style.display = 'none';
+        certSel.disabled = true;
+        callsignSec.style.display = 'none';
+        tradocLabel.style.borderColor = '#d4a537';
+        certLabel.style.borderColor = 'transparent';
+    } else {
+        tradocSec.style.display = 'none';
+        certSec.style.display = 'block';
+        certSel.disabled = false;
+        certLabel.style.borderColor = '#d4a537';
+        tradocLabel.style.borderColor = 'transparent';
+        toggleCallsign();
+    }
+}
+
+function toggleCallsign() {
+    var certSel = document.getElementById('cert-select');
+    var callsignSec = document.getElementById('callsign-section');
+    var selectedId = certSel.value;
+    if (selectedId && certCategories[selectedId] === 'communications') {
+        callsignSec.style.display = 'block';
+    } else {
+        callsignSec.style.display = 'none';
+    }
+}
+
+document.getElementById('cert-select').addEventListener('change', toggleCallsign);
+</script>
+{% endblock %}

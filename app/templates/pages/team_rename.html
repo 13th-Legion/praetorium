@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Rename Team{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 2rem auto;">
+    <h1 style="color: var(--accent); margin-bottom: 0.5rem;">⚔️ Rename Team</h1>
+    <p class="text-muted" style="margin-bottom: 1.5rem;">
+        Team name must start with the designation letter.
+        {% if locked_team %}You can rename <strong>{{ locked_team }}</strong>.{% else %}Command can rename any team.{% endif %}
+    </p>
+
+    {% if error %}
+    <div style="background: rgba(198,40,40,0.15); border: 1px solid #c62828; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; color: #ef5350;">
+        ❌ {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div style="background: rgba(46,125,50,0.15); border: 1px solid #2e7d32; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; color: #66bb6a;">
+        ✅ Renamed: {{ success }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/team/rename" style="display: flex; flex-direction: column; gap: 1rem;">
+        <label style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Team</label>
+        {% if locked_team %}
+            <input type="hidden" name="team" value="{{ locked_team }}">
+            <div style="padding: 0.6rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+                {{ locked_team }} <span class="text-muted">({{ designations.get(locked_team, '?') }})</span>
+            </div>
+        {% else %}
+            <select name="team" style="padding: 0.6rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.95rem;" onchange="updateHint(this)">
+                {% for t in teams %}
+                <option value="{{ t }}">{{ t }} ({{ designations.get(t, '?') }})</option>
+                {% endfor %}
+            </select>
+        {% endif %}
+
+        <label style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">New Name</label>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="letter-hint" style="font-size: 1.5rem; font-weight: 700; color: var(--accent); min-width: 1.5rem;">
+                {{ designations.get(locked_team or teams[0], '?') if (locked_team or teams) else '?' }}
+            </span>
+            <input type="text" name="new_name" placeholder="e.g. Arrow, Anvil, Apex..." required
+                   style="flex: 1; padding: 0.6rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.95rem;"
+                   pattern="[A-Za-z][A-Za-z0-9 \-]*" minlength="2" maxlength="24">
+        </div>
+        <p class="text-muted" style="font-size: 0.8rem; margin-top: -0.5rem;">
+            Must start with the designation letter. Updates roster, map, and Nextcloud Talk channel.
+        </p>
+
+        <button type="submit" class="btn btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+            Rename Team
+        </button>
+    </form>
+
+    <a href="/roster" class="text-muted" style="display: inline-block; margin-top: 1.5rem; font-size: 0.85rem;">← Back to Roster</a>
+</div>
+
+{% if not locked_team %}
+<script>
+function updateHint(sel) {
+    const designations = {{ designations | tojson }};
+    document.getElementById('letter-hint').textContent = designations[sel.value] || '?';
+}
+</script>
+{% endif %}
+{% endblock %}

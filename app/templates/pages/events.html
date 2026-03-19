@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<div class="events-page">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <h1>Events</h1>
+        {% if is_admin %}
+        <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('create-modal').style.display='flex'"
+                class="btn btn-primary" style="font-size:13px;padding:6px 14px;">
+                ➕ New Event
+            </button>
+            <form hx-post="/api/events/sync" hx-target="#sync-result" hx-swap="innerHTML" style="display:inline;">
+                <button type="submit" class="btn" style="font-size:13px;padding:6px 14px;background:#2e7d32;color:#fff;">
+                    🔄 Sync Calendar
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="sync-result"></div>
+
+    <!-- Filter Tabs -->
+    <div class="events-tabs" style="display:flex;gap:4px;margin-bottom:1.5rem;flex-wrap:wrap;">
+        {% for key, tab in filter_tabs.items() %}
+        <a href="/events?tab={{ key }}"
+           class="events-tab {% if current_tab == key %}events-tab-active{% endif %}"
+           style="padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;
+                  {% if current_tab == key %}background:#d4a537;color:#1a1a2e;{% else %}background:#2a2a4a;color:#a0a0b0;{% endif %}
+                  transition:all 0.2s;">
+            {{ tab.label }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Needs Finalization Banner (Command/S3/S1 only) -->
+    {% if needs_finalization %}
+    <div style="background:rgba(212,165,55,0.1);border:1px solid rgba(212,165,55,0.4);border-radius:8px;padding:16px;margin-bottom:1.5rem;">
+        <h2 style="font-size:0.9rem;color:#d4a537;margin:0 0 12px 0;text-transform:uppercase;letter-spacing:0.05em;">
+            ⚠️ Needs Attendance Confirmation ({{ needs_finalization|length }})
+        </h2>
+        <div style="display:grid;gap:8px;">
+            {% for e in needs_finalization %}
+            <a href="/events/{{ e.event.id }}" style="text-decoration:none;color:inherit;">
+            <div style="background:#0f3460;border:1px solid #d4a537;border-radius:6px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background 0.2s;"
+                 onmouseover="this.style.background='#153a6e'" onmouseout="this.style.background='#0f3460'">
+                <div style="font-size:24px;">{{ e.icon }}</div>
+                <div style="flex:1;">
+                    <span style="font-weight:600;font-size:14px;">{{ e.event.title }}</span>
+                    <span style="font-size:12px;color:#aaa;margin-left:8px;">{{ e.date_display }}</span>
+                    {% if e.event.training_block %}
+                    <span style="font-size:11px;color:#888;margin-left:6px;">· Block {{ e.event.training_block }}</span>
+                    {% endif %}
+                </div>
+                <div style="font-size:12px;color:#d4a537;font-weight:600;white-space:nowrap;">
+                    {{ e.attending }} attending → Confirm & Finalize
+                </div>
+            </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming Events -->
+    {% if upcoming %}
+    <h2 style="font-size:1rem;color:#d4a537;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em;">
+        Upcoming Events ({{ upcoming|length }})
+    </h2>
+    <div class="events-grid" style="display:grid;gap:12px;margin-bottom:2rem;">
+        {% for e in upcoming %}
+        <a href="/events/{{ e.event.id }}" style="text-decoration:none;color:inherit;">
+        <div class="event-card" style="background:#0f3460;border:1px solid #2a2a4a;border-radius:8px;padding:16px;display:flex;align-items:flex-start;gap:14px;transition:border-color 0.2s,transform 0.1s;cursor:pointer;"
+             onmouseover="this.style.borderColor='#d4a537';this.style.transform='translateY(-1px)'"
+             onmouseout="this.style.borderColor='#2a2a4a';this.style.transform='none'">
+            <div style="font-size:32px;min-width:40px;text-align:center;">{{ e.icon }}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:15px;">{{ e.event.title }}</span>
+                    <span style="background:#d4a537;color:#1a1a2e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;">{{ e.category_label }}</span>
+                    {% if e.my_rsvp == "attending" %}
+                    <span style="background:#27ae60;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;">GOING</span>
+                    {% elif e.my_rsvp == "declined" %}
+                    <span style="background:#e74c3c;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;">DECLINED</span>
+                    {% elif e.my_rsvp == "pending" %}
+                    <span style="background:#f39c12;color:#000;font-size:10px;padding:2px 6px;border-radius:8px;">PENDING</span>
+                    {% endif %}
+                </div>
+                <div style="font-size:13px;color:#aaa;margin-bottom:4px;">{{ e.date_display }}</div>
+                {% if e.event.location %}
+                <div style="font-size:12px;color:#888;">📍 {{ e.event.location }}</div>
+                {% endif %}
+            </div>
+            <div style="text-align:right;min-width:80px;">
+                {% if e.total > 0 %}
+                <div style="font-size:13px;font-weight:600;color:#27ae60;">{{ e.attending }}/{{ e.total }}</div>
+                <div style="font-size:11px;color:#888;">attending</div>
+                <div style="background:#2a2a4a;border-radius:4px;height:6px;margin-top:4px;overflow:hidden;">
+                    <div style="background:#27ae60;height:100%;width:{{ (e.attending / e.total * 100) if e.total > 0 else 0 }}%;border-radius:4px;transition:width 0.3s;"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:2rem;margin-bottom:2rem;">
+        <p style="color:#888;">No upcoming events.{% if is_admin %} Use "Sync Calendar" or "New Event" to add some.{% endif %}</p>
+    </div>
+    {% endif %}
+
+    <!-- Past Events -->
+    {% if past %}
+    <details style="margin-bottom:2rem;">
+        <summary style="cursor:pointer;font-family:'Oswald',sans-serif;font-size:1rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;padding:8px 0;">
+            Past Events ({{ past|length }}) ▸
+        </summary>
+        <div class="events-grid" style="display:grid;gap:12px;margin-top:12px;">
+            {% for e in past %}
+            <a href="/events/{{ e.event.id }}" style="text-decoration:none;color:inherit;">
+            <div class="event-card" style="background:#0f3460;border:1px solid #2a2a4a;border-radius:8px;padding:14px;display:flex;align-items:flex-start;gap:14px;opacity:0.7;cursor:pointer;"
+                 onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+                <div style="font-size:28px;min-width:36px;text-align:center;">{{ e.icon }}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+                        <span style="font-weight:600;font-size:14px;">{{ e.event.title }}</span>
+                        <span style="background:#555;color:#ccc;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;">{{ e.category_label }}</span>
+                    </div>
+                    <div style="font-size:13px;color:#888;">{{ e.date_display }}</div>
+                </div>
+                <div style="font-size:13px;color:#666;min-width:60px;text-align:right;">
+                    {{ e.attending }}/{{ e.total }}
+                </div>
+            </div>
+            </a>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+</div>
+
+<!-- Create Event Modal -->
+{% if is_admin %}
+<div id="create-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center;"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#1a1a2e;border:1px solid #d4a537;border-radius:8px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;">
+        <h2 style="color:#d4a537;margin-bottom:16px;font-size:1.1rem;">Create Event</h2>
+        <form hx-post="/api/events/create" hx-target="#create-result" hx-swap="innerHTML">
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Title *</label>
+                <input type="text" name="title" required
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Category</label>
+                <select name="category" style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ category_labels[cat] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Start Date *</label>
+                    <input type="date" name="date_start_date" required
+                        style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Start Time (e.g. 0600)</label>
+                    <input type="text" name="date_start_time" placeholder="0600" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
+                        style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;font-family:monospace;">
+                    <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Central Time — 24hr military (blank = all day)</span>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">End Date</label>
+                    <input type="date" name="date_end_date"
+                        style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">End Time (e.g. 1800)</label>
+                    <input type="text" name="date_end_time" placeholder="1800" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
+                        style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;font-family:monospace;">
+                    <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Central Time — 24hr military (blank = all day)</span>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
+                <input type="text" name="location"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Description</label>
+                <textarea name="description" rows="3"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Training Block (1-4, blank if N/A)</label>
+                <input type="number" name="training_block" min="1" max="4"
+                    style="width:80px;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div id="create-result"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('create-modal').style.display='none'"
+                    style="padding:8px 16px;background:#333;color:#ccc;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Event Builder — {{ event.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+            <a href="/shops/s3" style="color: #999; font-size: 12px; text-decoration: none;">← S3 Dashboard</a>
+            <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 4px 0 0;">{{ event.title }}</h1>
+            <div style="color: #999; font-size: 14px;">
+                {{ event.date_start.strftime("%b %d") }}{% if event.date_end %} – {{ event.date_end.strftime("%b %d, %Y") }}{% else %}, {{ event.date_start.strftime("%Y") }}{% endif %}
+                {% if event.location %} · {{ event.location }}{% endif %}
+                {% if event.training_block %} · <span style="color: #d4a537;">Block {{ event.training_block }}</span>{% endif %}
+            </div>
+        </div>
+        <a href="/events/{{ event.id }}" style="color: #d4a537; font-size: 13px; text-decoration: none; border: 1px solid #d4a537; padding: 6px 12px; border-radius: 4px;">View Event →</a>
+    </div>
+
+    <!-- Training Site -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <label style="color: #999; font-size: 13px; font-weight: 500;">📍 Training Site</label>
+            <select name="training_site"
+                    hx-post="/api/s3/builder/{{ event.id }}/set-training-site"
+                    hx-target="#site-maps"
+                    hx-swap="innerHTML"
+                    style="background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 12px; border-radius: 4px; font-size: 13px;">
+                <option value="">— Select Site —</option>
+                {% for key, site in training_sites.items() %}
+                <option value="{{ key }}" {% if event.training_site == key %}selected{% endif %}>
+                    {{ site.name }} — {{ site.nickname }} ({{ site.address }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="site-maps">
+            {% if event.training_site and site_maps %}
+            <div style="margin-top: 8px;">
+                <div style="color: #999; font-size: 13px;">📍 {{ training_sites[event.training_site].address }}</div>
+                <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    {% for m in site_maps %}
+                    <a href="{{ m.url }}" target="_blank" style="color: #d4a537; font-size: 12px; border: 1px solid #d4a537; padding: 4px 10px; border-radius: 4px; text-decoration: none;">🗺️ {{ m.label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif not event.training_site %}
+            <div style="color: #666; font-size: 13px; margin-top: 8px;">No training site selected.</div>
+            {% endif %}
+        </div>
+
+        <!-- Rally Point -->
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a2a3e;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="color: #999; font-size: 13px; font-weight: 500;">🏁 Rally Point</span>
+                {% if event.rally_point %}
+                <a href="https://www.google.com/maps/search/{{ event.rally_point | urlencode }}" target="_blank" style="color: #d4a537; font-size: 13px; text-decoration: none;">{{ event.rally_point }} ↗</a>
+                <span style="color: #666; font-size: 11px;">{% if event.rally_point_set_by %}(set by {{ event.rally_point_set_by }}){% endif %}</span>
+                {% endif %}
+            </div>
+            <form hx-post="/api/s2/rally-point/{{ event.id }}" hx-target="#rp-result" hx-swap="innerHTML" style="margin-top: 8px; display: flex; gap: 8px;">
+                <input name="rally_point" value="{{ event.rally_point or '' }}" placeholder="Rally point address / description"
+                       style="flex: 1; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" required>
+                <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
+            </form>
+            <div id="rp-result" style="margin-top: 4px;"></div>
+        </div>
+    </div>
+
+    <!-- Schedule by Day -->
+    {% for day_num in range(1, days + 1) %}
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0; font-size: 18px;">
+                Day {{ day_num }}
+                {% if days == 3 %}
+                    {% if day_num == 1 %} — Friday{% elif day_num == 2 %} — Saturday{% elif day_num == 3 %} — Sunday{% endif %}
+                {% elif days == 2 %}
+                    {% if day_num == 1 %} — Saturday{% elif day_num == 2 %} — Sunday{% endif %}
+                {% endif %}
+            </h2>
+            <span style="color: #666; font-size: 12px;">{{ (blocks_by_day.get(day_num, []) | length) }} blocks</span>
+        </div>
+
+        <!-- Existing blocks -->
+        {% if blocks_by_day.get(day_num) %}
+        <div style="margin-bottom: 16px;">
+            {% for block in blocks_by_day.get(day_num, []) %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #2a2a3e; font-size: 14px;"
+                 id="block-{{ block.id }}">
+                <!-- Time -->
+                <div style="min-width: 90px; color: #d4a537; font-family: monospace; font-weight: 600;">
+                    {{ block.start_time[:2] }}{{ block.start_time[2:] }}{% if block.end_time %}-{{ block.end_time[:2] }}{{ block.end_time[2:] }}{% endif %}
+                </div>
+                <!-- Type badge -->
+                <div style="min-width: 70px;">
+                    {% if block.activity_type == "class" %}
+                    <span style="background: #1565c0; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">CLASS</span>
+                    {% elif block.activity_type == "mission" %}
+                    <span style="background: #b71c1c; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">MISSION</span>
+                    {% elif block.activity_type == "meal" %}
+                    <span style="background: #33691e; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">MEAL</span>
+                    {% elif block.activity_type == "formation" %}
+                    <span style="background: #4a148c; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">FORM</span>
+                    {% elif block.activity_type == "admin" %}
+                    <span style="background: #555; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">ADMIN</span>
+                    {% else %}
+                    <span style="background: #333; color: #999; padding: 2px 6px; border-radius: 3px; font-size: 11px;">{{ block.activity_type | upper }}</span>
+                    {% endif %}
+                </div>
+                <!-- Title & instructor -->
+                <div style="flex: 1;">
+                    <span style="color: #e0e0e0;">{{ block.title }}</span>
+                    {% if block.instructor_id and member_lookup.get(block.instructor_id) %}
+                    {% set instr = member_lookup[block.instructor_id] %}
+                    <span style="color: #999; font-size: 12px;"> — {{ rank_abbr.get(instr.rank_grade, "") }} {{ instr.last_name }}{% if instr.callsign %} ({{ instr.callsign }}){% endif %}</span>
+                    {% endif %}
+                    {% if block.notes %}
+                    <div style="color: #666; font-size: 12px; margin-top: 2px;">{{ block.notes }}</div>
+                    {% endif %}
+                </div>
+                <!-- Actions -->
+                <div style="display: flex; gap: 4px;">
+                    <button onclick="document.getElementById('edit-{{ block.id }}').style.display = document.getElementById('edit-{{ block.id }}').style.display === 'none' ? 'block' : 'none'"
+                            style="background: none; border: 1px solid #555; color: #999; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">✏️</button>
+                    <button hx-delete="/api/s3/builder/{{ event.id }}/block/{{ block.id }}"
+                            hx-confirm="Delete this block?"
+                            hx-target="#block-{{ block.id }}"
+                            hx-swap="outerHTML"
+                            style="background: none; border: 1px solid #555; color: #999; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️</button>
+                </div>
+            </div>
+            <!-- Inline edit form (hidden) -->
+            <div id="edit-{{ block.id }}" style="display: none; padding: 12px; background: #12121e; border: 1px solid #333; border-radius: 4px; margin: 4px 0;">
+                <form hx-post="/api/s3/builder/{{ event.id }}/update-block/{{ block.id }}" hx-target="#edit-result-{{ block.id }}" hx-swap="innerHTML">
+                    <input type="hidden" name="day_number" value="{{ block.day_number }}">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: end;">
+                        <div>
+                            <label style="color: #999; font-size: 11px; display: block;">Start</label>
+                            <input name="start_time" value="{{ block.start_time }}" style="width: 60px; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" maxlength="4">
+                        </div>
+                        <div>
+                            <label style="color: #999; font-size: 11px; display: block;">End</label>
+                            <input name="end_time" value="{{ block.end_time or '' }}" style="width: 60px; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" maxlength="4">
+                        </div>
+                        <div>
+                            <label style="color: #999; font-size: 11px; display: block;">Type</label>
+                            <select name="activity_type" style="background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                                {% for val, label in activity_types %}
+                                <option value="{{ val }}" {% if val == block.activity_type %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="color: #999; font-size: 11px; display: block;">Title</label>
+                            <select name="title_select" onchange="const inp = this.nextElementSibling; if(this.value === 'custom') { inp.style.display='block'; inp.value=''; inp.focus(); } else { inp.style.display='none'; inp.value=this.value; }" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px; margin-bottom: 4px;">
+                                <option value="custom">— Custom Title —</option>
+                                {% for t in tradoc_items %}
+                                <option value="CLASS: {{ t.name }}" {% if block.title == "CLASS: " ~ t.name %}selected{% endif %}>CLASS: {{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <input name="title" value="{{ block.title }}" style="display: none; width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" required>
+                            <script>
+                                // Auto-hide input if it matches a select option
+                                setTimeout(() => {
+                                    const selects = document.querySelectorAll('select[name="title_select"]');
+                                    selects.forEach(sel => {
+                                        const inp = sel.nextElementSibling;
+                                        let found = false;
+                                        for(let i=0; i<sel.options.length; i++){
+                                            if(sel.options[i].value === inp.value && sel.options[i].value !== 'custom') {
+                                                sel.selectedIndex = i;
+                                                inp.style.display = 'none';
+                                                found = true;
+                                                break;
+                                            }
+                                        }
+                                        if(!found) {
+                                            sel.value = 'custom';
+                                            inp.style.display = 'block';
+                                        }
+                                    });
+                                }, 50);
+                            </script>
+                        </div>
+                        <div>
+                            <label style="color: #999; font-size: 11px; display: block;">Instructor</label>
+                            <select name="instructor_id" style="background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                                <option value="">— None —</option>
+                                {% for m in members %}
+                                <option value="{{ m.id }}" {% if block.instructor_id == m.id %}selected{% endif %}>{{ rank_abbr.get(m.rank_grade, "") }} {{ m.last_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Save</button>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <input name="notes" value="{{ block.notes or '' }}" placeholder="Notes (optional)" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                    </div>
+                    <div id="edit-result-{{ block.id }}" style="margin-top: 8px;"></div>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="color: #666; font-size: 13px; padding: 8px 0; margin-bottom: 16px;">No schedule blocks yet.</div>
+        {% endif %}
+
+        <!-- Add block form -->
+        <details style="margin-top: 8px;">
+            <summary style="color: #d4a537; cursor: pointer; font-size: 13px; font-weight: 500;">+ Add block to Day {{ day_num }}</summary>
+            <form hx-post="/api/s3/builder/{{ event.id }}/add-block" hx-target="#add-result-day-{{ day_num }}" hx-swap="innerHTML"
+                  style="margin-top: 12px; padding: 12px; background: #12121e; border: 1px solid #333; border-radius: 4px;">
+                <input type="hidden" name="day_number" value="{{ day_num }}">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: end;">
+                    <div>
+                        <label style="color: #999; font-size: 11px; display: block;">Start</label>
+                        <input name="start_time" placeholder="0800" style="width: 60px; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" maxlength="4" required>
+                    </div>
+                    <div>
+                        <label style="color: #999; font-size: 11px; display: block;">End</label>
+                        <input name="end_time" placeholder="0900" style="width: 60px; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" maxlength="4">
+                    </div>
+                    <div>
+                        <label style="color: #999; font-size: 11px; display: block;">Type</label>
+                        <select name="activity_type" style="background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                            {% for val, label in activity_types %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="color: #999; font-size: 11px; display: block;">Title / Class</label>
+                        <select name="title_select" onchange="const inp = this.nextElementSibling; if(this.value === 'custom') { inp.style.display='block'; inp.value=''; inp.focus(); } else { inp.style.display='none'; inp.value=this.value; }" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px; margin-bottom: 4px;">
+                            <option value="custom">— Custom Title —</option>
+                            {% for t in tradoc_items %}
+                            <option value="CLASS: {{ t.name }}">CLASS: {{ t.name }} (Block {{ t.block }})</option>
+                            {% endfor %}
+                        </select>
+                        <input name="title" placeholder="e.g., CLASS: React to Contact" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" required>
+                    </div>
+                    <div>
+                        <label style="color: #999; font-size: 11px; display: block;">Instructor</label>
+                        <select name="instructor_id" style="background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                            <option value="">— None —</option>
+                            {% for m in members %}
+                            <option value="{{ m.id }}">{{ rank_abbr.get(m.rank_grade, "") }} {{ m.last_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Add</button>
+                </div>
+                <div style="margin-top: 8px;">
+                    <input name="notes" placeholder="Notes (optional)" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
+                </div>
+                <div id="add-result-day-{{ day_num }}" style="margin-top: 8px;"></div>
+            </form>
+        </details>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

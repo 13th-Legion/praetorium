@@ -1,0 +1,238 @@
+        {% for stack_id in stack_order %}
+        {% set col = columns.get(stack_id, {"name": "Unknown", "cards": [], "count": 0}) %}
+
+        <!-- Column -->
+        <div style="min-width:220px;max-width:260px;flex:1;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+            <!-- Column Header -->
+            <div style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-weight:700;font-size:13px;">
+                    {% if stack_id == 11 %}🆕
+                    {% elif stack_id == 12 %}🔍
+                    {% elif stack_id == 13 %}🗣️
+                    {% elif stack_id == 14 %}📝
+                    {% elif stack_id == 15 %}✅
+                    {% elif stack_id == 16 %}🏁
+                    {% endif %}
+                    {{ col.name }}
+                </span>
+                <span style="
+                    background:{% if col.count > 0 %}#d4a537{% else %}rgba(255,255,255,0.1){% endif %};
+                    color:{% if col.count > 0 %}#1a1a2e{% else %}#888{% endif %};
+                    font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;
+                ">{{ col.count }}</span>
+            </div>
+
+            <!-- Cards -->
+            <div style="padding:8px;display:flex;flex-direction:column;gap:8px;">
+                {% for card in col.cards %}
+                <div style="background:rgba(255,255,255,0.06);border-radius:6px;padding:10px;border:1px solid rgba(255,255,255,0.06);">
+                    <!-- Name -->
+                    <div style="font-weight:600;font-size:14px;margin-bottom:4px;">{{ card.name }}</div>
+
+                    <!-- Assigned recruiter -->
+                    {% if card.assigned %}
+                    <div style="font-size:11px;color:#d4a537;margin-bottom:4px;">
+                        👤 {{ card.assigned | join(', ') }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Days in stage -->
+                    <div style="font-size:11px;margin-bottom:8px;
+                        {% if card.days > 30 %}color:#c62828;font-weight:600;
+                        {% elif card.days > 14 %}color:#ef6c00;
+                        {% else %}color:#888;{% endif %}
+                    ">
+                        {% if card.days > 0 %}{{ card.days }}d in stage{% else %}Today{% endif %}
+                    </div>
+
+                    <!-- Proton Mail -->
+                    {% if card.proton_email %}
+                    <div style="font-size:11px;color:#2e7d32;margin-bottom:6px;">
+                        📧 {{ card.proton_email }}
+                    </div>
+                    {% else %}
+                    <div id="proton-{{ card.id }}" style="margin-bottom:6px;">
+                        <form hx-post="/api/s1/pipeline/{{ card.id }}/protonmail" hx-target="#proton-{{ card.id }}" hx-swap="innerHTML"
+                              style="display:flex;gap:3px;">
+                            <input type="email" name="proton_email" placeholder="Proton email..." 
+                                   style="flex:1;padding:3px 5px;font-size:11px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;min-width:0;">
+                            <button type="submit" style="padding:3px 6px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">📧</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    <!-- Payment status (stacks 14 & 15) -->
+                    {% if card.stack_id in [14, 15] %}
+                    <div id="payment-{{ card.id }}" style="margin-bottom:6px;">
+                        {% if card.payment_status == 'paid' %}
+                        <span style="font-size:11px;color:#2e7d32;font-weight:600;">💰 {{ card.payment_method or 'Paid' }}</span>
+                        {% elif card.payment_status == 'waived' %}
+                        <span style="font-size:11px;color:#1565c0;font-weight:600;">💰 Waived</span>
+                        {% else %}
+                        <form hx-post="/api/s1/pipeline/{{ card.id }}/payment" hx-target="#payment-{{ card.id }}" hx-swap="innerHTML"
+                              style="display:flex;gap:3px;align-items:center;">
+                            <input type="hidden" name="status" value="paid">
+                            <select name="method" style="flex:1;padding:2px 4px;font-size:10px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;">
+                                <option value="cash">Cash</option>
+                                <option value="venmo">Venmo</option>
+                                <option value="zelle">Zelle</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <button type="submit" style="padding:2px 6px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">💰 Paid</button>
+                        </form>
+                        <form hx-post="/api/s1/pipeline/{{ card.id }}/payment" hx-target="#payment-{{ card.id }}" hx-swap="innerHTML"
+                              style="margin-top:2px;">
+                            <input type="hidden" name="status" value="waived">
+                            <button type="submit" style="width:100%;padding:2px 6px;background:rgba(255,255,255,0.08);color:#aaa;border:none;border-radius:3px;cursor:pointer;font-size:10px;">Waive</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Action buttons -->
+                    <div id="kanban-action-{{ card.id }}" style="display:flex;flex-direction:column;gap:4px;">
+                        {% if card.has_next %}
+                        <!-- Advance -->
+                        {% if card.is_approve %}
+                        <button onclick="if(confirm('Approve {{ card.name }}? This triggers onboarding.')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                            style="padding:4px 8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;width:100%;">
+                            {{ card.advance_label }}
+                        </button>
+                        {% else %}
+                        <button onclick="if(confirm('Move {{ card.name }} to {{ card.next_stage }}?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                            style="padding:4px 8px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
+                            {{ card.advance_label }} →
+                        </button>
+                        {% endif %}
+                        {% endif %}
+
+                        <!-- View Application button -->
+                        <button onclick="
+                            var el = document.getElementById('details-{{ card.id }}');
+                            if(el.style.display === 'none' || el.style.display === '') {
+                                el.style.display = 'flex';
+                                htmx.ajax('GET', '/api/s1/pipeline/{{ card.id }}/details', {target:'#details-content-{{ card.id }}', swap:'innerHTML'});
+                            } else { el.style.display = 'none'; }
+                        " style="width:100%;padding:4px 8px;background:rgba(212,165,55,0.15);border:1px solid rgba(212,165,55,0.3);border-radius:4px;cursor:pointer;font-size:11px;color:#d4a537;font-weight:600;margin-bottom:4px;">
+                            📄 View Application
+                        </button>
+
+                        <!-- Application details panel (hidden) — renders as modal overlay -->
+                        <div id="details-{{ card.id }}" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;"
+                             onclick="if(event.target===this) this.style.display='none';">
+                            <div style="background:#1e1e2f;border:1px solid rgba(212,165,55,0.3);border-radius:8px;padding:20px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation();">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;">
+                                    <span style="font-weight:700;font-size:15px;color:#d4a537;">📄 Application — {{ card.name }}</span>
+                                    <button onclick="document.getElementById('details-{{ card.id }}').style.display='none'" 
+                                            style="background:none;border:none;color:#888;cursor:pointer;font-size:18px;padding:0 4px;">✕</button>
+                                </div>
+                                <div id="details-content-{{ card.id }}">
+                                    <p style="color:#888;font-size:12px;">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom row: Notes, Files, Assign, Decline -->
+                        <div style="display:flex;gap:3px;margin-top:2px;">
+                            <!-- Notes toggle -->
+                            <button onclick="
+                                var el = document.getElementById('notes-{{ card.id }}');
+                                if(el.style.display === 'none') {
+                                    el.style.display = 'block';
+                                    htmx.ajax('GET', '/api/s1/pipeline/{{ card.id }}/comments', {target:'#comments-{{ card.id }}', swap:'innerHTML'});
+                                } else { el.style.display = 'none'; }
+                            " style="flex:1;padding:3px;background:rgba(255,255,255,0.08);border:none;border-radius:3px;cursor:pointer;font-size:10px;color:#aaa;">
+                                💬
+                            </button>
+
+                            <!-- Files toggle -->
+                            <button onclick="
+                                var el = document.getElementById('files-{{ card.id }}');
+                                if(el.style.display === 'none') {
+                                    el.style.display = 'block';
+                                    htmx.ajax('GET', '/api/s1/pipeline/{{ card.id }}/attachments', {target:'#attach-{{ card.id }}', swap:'innerHTML'});
+                                } else { el.style.display = 'none'; }
+                            " style="flex:1;padding:3px;background:rgba(255,255,255,0.08);border:none;border-radius:3px;cursor:pointer;font-size:10px;color:#aaa;">
+                                📎
+                            </button>
+
+                            <!-- Assign toggle -->
+                            {% if not card.assigned %}
+                            <button onclick="
+                                var el = document.getElementById('assign-{{ card.id }}');
+                                el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                            " style="flex:1;padding:3px;background:rgba(255,255,255,0.08);border:none;border-radius:3px;cursor:pointer;font-size:10px;color:#aaa;">
+                                👤
+                            </button>
+                            {% endif %}
+
+                            <!-- Decline -->
+                            {% if stack_id != 16 %}
+                            <button onclick="
+                                var el = document.getElementById('decline-{{ card.id }}');
+                                el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                            " style="flex:1;padding:3px;background:rgba(255,255,255,0.08);border:none;border-radius:3px;cursor:pointer;font-size:10px;color:#c62828;">
+                                ✕
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notes panel (hidden) -->
+                        <div id="notes-{{ card.id }}" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:4px;padding:8px;">
+                            <div id="comments-{{ card.id }}" style="max-height:150px;overflow-y:auto;">
+                                <p style="color:#888;font-size:11px;">Loading...</p>
+                            </div>
+                            <form hx-post="/api/s1/pipeline/{{ card.id }}/comment" hx-target="#note-result-{{ card.id }}" hx-swap="innerHTML"
+                                  style="margin-top:6px;display:flex;gap:4px;">
+                                <input type="text" name="message" placeholder="Add note..." style="flex:1;padding:4px 6px;font-size:11px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;">
+                                <button type="submit" style="padding:4px 8px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">+</button>
+                            </form>
+                            <div id="note-result-{{ card.id }}" style="margin-top:4px;"></div>
+                        </div>
+
+                        <!-- Files panel (hidden) -->
+                        <div id="files-{{ card.id }}" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:4px;padding:8px;">
+                            <div id="attach-{{ card.id }}">
+                                <p style="color:#888;font-size:11px;">Loading...</p>
+                            </div>
+                        </div>
+
+                        <!-- Assign recruiter panel (hidden) -->
+                        <div id="assign-{{ card.id }}" style="display:none;margin-top:6px;">
+                            <form hx-post="/api/s1/pipeline/{{ card.id }}/assign-recruiter" hx-target="#assign-{{ card.id }}" hx-swap="innerHTML"
+                                  style="display:flex;gap:4px;">
+                                <select name="recruiter" style="flex:1;padding:3px;font-size:11px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;">
+                                    {% for r in recruiters %}
+                                    <option value="{{ r.nc_username }}">{{ r.display_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" style="padding:3px 8px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">Assign</button>
+                            </form>
+                        </div>
+
+                        <!-- Decline panel (hidden) -->
+                        <div id="decline-{{ card.id }}" style="display:none;margin-top:6px;">
+                            <form hx-post="/api/s1/pipeline/{{ card.id }}/decline" hx-target="#kanban-action-{{ card.id }}" hx-swap="innerHTML">
+                                <select name="reason" style="width:100%;padding:3px;font-size:11px;margin-bottom:4px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;">
+                                    <option value="failed_bg">Failed background</option>
+                                    <option value="no_show">No-show interview</option>
+                                    <option value="withdrew">Withdrew</option>
+                                    <option value="ineligible">Ineligible</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button type="submit" style="width:100%;padding:3px;background:#c62828;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">
+                                    Confirm Decline
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if col.count == 0 %}
+                <div style="padding:20px;text-align:center;color:#555;font-size:12px;">Empty</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ user.display_name }}</h1>
+
+    <!-- TLAS Banner — front and center -->
+    <div id="tlas-banner" hx-get="/api/tlas/current" hx-trigger="load" hx-swap="innerHTML">
+        <div style="padding: 16px; background: #e8f5e9; border-left: 6px solid #2e7d32; border-radius: 8px; margin-bottom: 24px;">
+            <span style="color: #999;">Loading threat level...</span>
+        </div>
+    </div>
+
+    {% if is_command %}
+    <div style="margin-bottom: 16px; text-align: right;">
+        <a href="/api/tlas/admin" style="
+            display: inline-block; padding: 6px 16px; background: #d4a537; color: #1a1a2e;
+            border-radius: 4px; font-weight: 600; font-size: 13px; text-decoration: none;
+        ">⚙️ Set Threat Level</a>
+    </div>
+    {% endif %}
+
+    <!-- WARNO Banner — auto-loaded for next FTX/MCFTX with issued WARNO -->
+    <div id="warno-banner-area" hx-get="/api/events/warno-banner" hx-trigger="load" hx-swap="innerHTML"></div>
+
+    <!-- Pending Finalization — past FTX/MCFTX needing attendance confirmation (Command/S3/S1) -->
+    <div id="pending-finalization" hx-get="/api/events/pending-finalization" hx-trigger="load" hx-swap="innerHTML"></div>
+
+    <!-- Announcements — full width, right under TLAS -->
+    <div class="card" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 class="card-title" style="margin:0;">Announcements</h2>
+            {% if is_command or is_s1_lead %}
+            <button hx-get="/api/announcements/compose" hx-target="#announce-area" hx-swap="innerHTML"
+                style="padding:4px 12px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:12px;">
+                ✏️ New Announcement
+            </button>
+            {% endif %}
+        </div>
+        <div id="announce-area"></div>
+        <div class="card-body" id="announcements-content" hx-get="/api/announcements" hx-trigger="load" hx-swap="innerHTML">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Quick Info -->
+        <div class="card">
+            <h2 class="card-title">Your Status</h2>
+            <div class="card-body" id="user-status" hx-get="/api/profile/summary" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-muted">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Upcoming Events -->
+        <div class="card">
+            <h2 class="card-title">Upcoming Events</h2>
+            <div class="card-body" id="upcoming-events" hx-get="/api/events/upcoming" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-muted">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Training & To-Dos -->
+        <div class="card">
+            <h2 class="card-title">Training & To-Dos</h2>
+            <div class="card-body" id="training-progress" hx-get="/api/training/progress" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-muted">Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

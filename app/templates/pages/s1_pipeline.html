@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}S1 — Recruit Pipeline{% endblock %}
+
+{% block content %}
+<div style="max-width: 100%; margin: 0 auto; padding: 0 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h1 style="margin:0;">📋 Recruit Pipeline</h1>
+        <a href="/api/s1/recruiters" style="color:#d4a537;text-decoration:none;font-size:13px;font-weight:600;">⚙️ Manage Recruiters</a>
+    </div>
+
+    <!-- Kanban Board — auto-refreshes on stage changes -->
+    <div id="pipeline-board"
+         hx-get="/api/s1/pipeline/board" hx-trigger="pipelineChanged from:body" hx-swap="innerHTML"
+         style="display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;min-height:400px;"
+         class="pipeline-scroll">
+        {% include "partials/pipeline_board.html" %}
+    </div>
+</div>
+
+<style>
+.pipeline-scroll {
+    scrollbar-width: auto;
+    scrollbar-color: #d4a537 rgba(255,255,255,0.05);
+}
+.pipeline-scroll::-webkit-scrollbar {
+    height: 12px;
+}
+.pipeline-scroll::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+}
+.pipeline-scroll::-webkit-scrollbar-thumb {
+    background: #d4a537;
+    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.05);
+}
+.pipeline-scroll::-webkit-scrollbar-thumb:hover {
+    background: #e0b84e;
+}
+</style>
+{% endblock %}

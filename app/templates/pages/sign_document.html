@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Sign — {{ doc_title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1>📝 {{ doc_title }}</h1>
+
+    <!-- Document content -->
+    <div style="
+        background: #fafafa; border: 1px solid #ddd; border-radius: 8px;
+        padding: 24px; margin-bottom: 24px; max-height: 500px; overflow-y: auto;
+        font-size: 14px; line-height: 1.7; color: #1a1a1a;
+    ">
+        {{ doc_content | safe }}
+    </div>
+
+    <!-- Signature form -->
+    <div class="card" style="padding: 20px;">
+        <h2 class="card-title">Digital Signature</h2>
+        <form method="POST" action="/api/s1/documents/sign/{{ doc_type }}">
+            <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Your Full Legal Name</label>
+                <input type="text" name="full_name" required placeholder="e.g., John Michael Smith"
+                    style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 4px; font-size: 14px; background: #2a2a3e; color: #eee;">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">
+                    Type Your Signature (your full name as written above)
+                </label>
+                <input type="text" name="signature" required placeholder="Type your full name exactly"
+                    style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 4px; font-family: 'Brush Script MT', cursive; font-size: 22px; background: #2a2a3e; color: #eee;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" name="agree" value="yes" required style="margin-top: 4px;">
+                    <span style="font-size: 14px;">
+                        I have read and understand the above {{ doc_title }}. I agree to be bound by its terms.
+                        I understand that this electronic signature has the same legal effect as a handwritten signature.
+                    </span>
+                </label>
+            </div>
+
+            <button type="submit" style="
+                padding: 12px 32px; background: #d4a537; color: #1a1a2e; border: none;
+                border-radius: 6px; font-weight: 700; font-size: 16px; cursor: pointer;
+            ">Sign Document</button>
+        </form>
+    </div>
+
+    <p style="margin-top: 12px; font-size: 12px; color: #999;">
+        Your IP address and browser information will be recorded with your signature for verification purposes.
+    </p>
+</div>
+{% endblock %}

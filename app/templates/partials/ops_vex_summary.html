@@ -1,0 +1,110 @@
+{# HTMX Partial: Vexillation Summary with Field Status Toggles — PP-070e #}
+{# Polled every 30s from ops_console.html #}
+<div id="vex-summary-panel" style="margin-bottom:16px;">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="font-size:0.85rem;margin:0;color:#d4a537;">⚔️ Vexillations</h3>
+      {% if can_vex_create %}
+      <button class="ops-btn ops-btn-primary" style="font-size:11px;"
+              onclick="document.getElementById('modal-vex-create').classList.add('show')">+ Vexillation</button>
+      {% endif %}
+    </div>
+
+    {% if not vexillations %}
+    <div style="color:#555;font-size:13px;">No vexillations created yet.</div>
+    {% else %}
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% for vex in vexillations %}
+      {% set status_class = 'status-assembly' if vex.field_status == 'in_assembly' else ('status-infield' if vex.field_status == 'in_field' else 'status-released') %}
+      {% set status_label = 'In Assembly Area' if vex.field_status == 'in_assembly' else ('In Field (SP)' if vex.field_status == 'in_field' else 'Released (RP)') %}
+
+      <div style="background:#111122;border:1px solid #2a2a4a;border-radius:8px;padding:12px;">
+        <!-- Vex header row -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:14px;color:#eee;">{{ vex.name }}</div>
+
+          <!-- Field status badge + toggle (S3/Command only) -->
+          <span class="vex-status-badge {{ status_class }}">{{ status_label }}</span>
+
+          {% if can_vex_create %}
+          <div style="display:flex;gap:4px;margin-left:auto;">
+            {% for status_val, status_text in [('in_assembly', 'Assembly'), ('in_field', 'SP → Field'), ('released', 'RP → Released')] %}
+            <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/status" style="display:inline;">
+              <input type="hidden" name="field_status" value="{{ status_val }}">
+              <button type="submit"
+                      class="ops-btn {% if vex.field_status == status_val %}ops-btn-primary{% endif %}"
+                      style="font-size:10px;padding:2px 7px;">{{ status_text }}</button>
+            </form>
+            {% endfor %}
+            <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/delete"
+                  onsubmit="return confirm('Delete {{ vex.name }}? This removes all assignments.')">
+              <button type="submit" class="ops-btn ops-btn-danger"
+                      style="font-size:10px;padding:2px 7px;"
+                      hx-post="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/delete"
+                      hx-target="#vex-summary-panel" hx-swap="outerHTML"
+                      hx-confirm="Delete {{ vex.name }}?">Delete</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Commander -->
+        {% if vex.commander_id %}
+        {% set cmdr = member_map.get(vex.commander_id) %}
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">
+          ⭐ <strong style="color:#d4a537;">Praepositus:</strong>
+          {% if cmdr %}{{ cmdr.rank_grade or '' }} {{ cmdr.last_name }}, {{ cmdr.first_name }} ({{ cmdr.callsign or '—' }}){% else %}Member #{{ vex.commander_id }}{% endif %}
+        </div>
+        {% elif can_vex_create and vex.assignments %}
+        <div style="font-size:12px;color:#555;margin-bottom:6px;">
+          ⭐ No commander assigned
+        </div>
+        {% endif %}
+
+        <!-- Set commander (S3/Command) -->
+        {% if can_vex_create and vex.assignments %}
+        <details style="margin-bottom:8px;">
+          <summary style="font-size:11px;color:#666;cursor:pointer;outline:none;">Set commander</summary>
+          <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/commander" style="margin-top:6px;display:flex;gap:6px;">
+            <select name="commander_id" style="flex:1;padding:4px;background:#111;border:1px solid #333;color:#ccc;font-size:12px;border-radius:4px;">
+              <option value="">— Clear commander —</option>
+              {% for assign in vex.assignments %}
+              {% if assign.member_id %}
+              {% set m = member_map.get(assign.member_id) %}
+              <option value="{{ assign.member_id }}" {% if vex.commander_id == assign.member_id %}selected{% endif %}>
+                {% if m %}{{ m.last_name }}, {{ m.first_name }}{% else %}Member #{{ assign.member_id }}{% endif %}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </select>
+            <button type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;">Set</button>
+          </form>
+        </details>
+        {% endif %}
+
+        <!-- Assigned members -->
+        {% if vex.assignments %}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          {% for assign in vex.assignments %}
+          {% set m = member_map.get(assign.member_id) if assign.member_id else None %}
+          <span style="background:#1e1e35;border:1px solid {% if vex.commander_id == assign.member_id %}rgba(212,165,55,0.4){% else %}#333{% endif %};padding:3px 10px;border-radius:10px;font-size:11px;color:{% if vex.commander_id == assign.member_id %}#d4a537{% else %}#ccc{% endif %};">
+            {% if assign.member_id and m %}
+            {{ m.last_name }}, {{ m.first_name }}
+            {% if vex.commander_id == assign.member_id %} ⭐{% endif %}
+            {% elif assign.member_id %}
+            Member #{{ assign.member_id }}
+            {% elif assign.guest_id %}
+            Guest #{{ assign.guest_id }}
+            {% endif %}
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:#444;font-size:12px;font-style:italic;">No members assigned yet</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>

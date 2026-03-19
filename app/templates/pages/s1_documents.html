@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}S1 — Document Status{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <h1>📋 Document Signatures</h1>
+    <p style="color: #666;">Track NDA and Waiver signatures for all members.</p>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Name</th>
+                <th style="text-align: left; padding: 8px;">Status</th>
+                <th style="text-align: center; padding: 8px;">NDA</th>
+                <th style="text-align: center; padding: 8px;">Waiver</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in members %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;">{{ m.first_name }} {{ m.last_name }} {% if m.callsign %}({{ m.callsign }}){% endif %}</td>
+                <td style="padding: 8px;">{{ m.status }}</td>
+                <td style="padding: 8px; text-align: center;">
+                    {% if m.nda_signed_at %}
+                    <span style="color: #2e7d32;" title="{{ m.nda_signed_at.strftime('%Y-%m-%d %H:%M') }}">✅ {{ m.nda_signed_at.strftime('%m/%d/%y') }}</span>
+                    {% else %}
+                    <span style="color: #e65100;">❌ Unsigned</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 8px; text-align: center;">
+                    {% if m.waiver_signed_at %}
+                    <span style="color: #2e7d32;" title="{{ m.waiver_signed_at.strftime('%Y-%m-%d %H:%M') }}">✅ {{ m.waiver_signed_at.strftime('%m/%d/%y') }}</span>
+                    {% else %}
+                    <span style="color: #e65100;">❌ Unsigned</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

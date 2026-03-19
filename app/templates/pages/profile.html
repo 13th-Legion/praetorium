@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+{% block title %}{{ member.display_name if member else "Profile" }}{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    {% if not member %}
+    <div class="card">
+        <h2 class="card-title">Profile Not Found</h2>
+        <p class="card-body">No roster record found for your account. Contact S1 (Admin) if this is an error.</p>
+    </div>
+    {% else %}
+
+    <div class="profile-header">
+        <div class="profile-identity">
+            <span class="rank-badge-lg rank-{{ member.rank_grade[:1] if member.rank_grade else 'E' }}">
+                {{ rank_abbr.get(member.rank_grade, '—') }}
+            </span>
+            <div>
+                <h1 class="profile-name">{{ member.first_name }} {{ member.last_name }}</h1>
+                <p class="profile-rank">{{ rank_title.get(member.rank_grade, '') }}</p>
+                {% if member.callsign %}
+                <p class="profile-callsign">"{{ member.callsign }}"</p>
+                {% endif %}
+                {% if member.leadership_title %}
+                <p class="profile-position">{{ member.leadership_title }}</p>
+                {% endif %}
+                {% if member.serial_number %}
+                <p class="profile-serial">{{ member.serial_number }}</p>
+                {% endif %}
+                {% if member.is_founder %}
+                <p class="profile-founder">🏛 Conditor Legionis</p>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button onclick="toggleProfileQR()" id="qr-toggle-btn"
+                    style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#ccc;border:1px solid #444;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">
+                    📱 QR Code
+                </button>
+            {% if "command" in user.roles or "admin" in user.roles or "s1" in user.roles %}
+                <a href="/api/members/{{ member.id }}/edit" style="padding:6px 14px;background:#d4a537;color:#1a1a2e;border-radius:4px;font-size:12px;font-weight:600;text-decoration:none;">✏️ Edit</a>
+                {% if member.status in ['separated', 'inactive'] %}
+                <button onclick="document.getElementById('reactivate-modal').style.display='flex'"
+                    style="padding:6px 14px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">🔄 Reactivate</button>
+                {% endif %}
+            {% endif %}
+            </div>
+
+            {% if member.status in ['separated', 'inactive'] %}
+            <!-- Reactivate Modal -->
+            <div id="reactivate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;justify-content:center;align-items:center;"
+                 onclick="if(event.target===this) this.style.display='none';">
+                <div style="background:#1e1e2f;border:1px solid rgba(212,165,55,0.3);border-radius:8px;padding:24px;width:420px;max-width:90vw;" onclick="event.stopPropagation();">
+                    <h3 style="color:#d4a537;margin:0 0 16px;">Reactivate {{ member.first_name }} {{ member.last_name }}</h3>
+                    <form hx-post="/api/s1/reactivate/{{ member.id }}" hx-target="#reactivate-result" hx-swap="innerHTML">
+                        <input type="hidden" name="status" value="active">
+                        <p style="font-size:13px;color:#ccc;margin-bottom:12px;">Member will be restored to <strong style="color:#2e7d32;">Active</strong> status with their existing rank, team, and training records intact.</p>
+                        <label style="display:block;margin-bottom:12px;">
+                            <input type="checkbox" name="enable_nc" checked> Re-enable Nextcloud account
+                        </label>
+                        <label style="display:block;margin-bottom:12px;">
+                            <input type="checkbox" name="restore_groups" checked> Restore NC group memberships
+                        </label>
+                        <label style="display:block;margin-bottom:12px;font-size:13px;color:#ccc;">
+                            Notes (optional):
+                            <textarea name="notes" rows="2" style="width:100%;padding:6px;margin-top:4px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:4px;resize:vertical;"></textarea>
+                        </label>
+                        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                            <button type="button" onclick="document.getElementById('reactivate-modal').style.display='none'"
+                                style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#ccc;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+                            <button type="submit" style="padding:6px 14px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;">✅ Reactivate</button>
+                        </div>
+                    </form>
+                    <div id="reactivate-result" style="margin-top:12px;"></div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="profile-meta">
+                <span class="status-badge status-{{ member.status }}">{{ member.status|capitalize }}</span>
+                {% if member.non_promotable_until and member.non_promotable_until > now.date() %}
+                {% if is_own or "command" in user.roles or "admin" in user.roles or "s1" in user.roles %}
+                <span class="status-badge" style="background:rgba(220,53,69,0.2);color:#dc3545;border:1px solid rgba(220,53,69,0.3);">⛔ Non-Promotable until {{ member.non_promotable_until.strftime('%b %Y') }}</span>
+                {% endif %}
+                {% endif %}
+                <span class="team-badge">{{ member.team or 'Unassigned' }}</span>
+                {% if member.primary_billet %}
+                {% for shop in member.primary_billet.split(', ') %}
+                <span class="shop-badge">{{ shop.split(':')[0] }}</span>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Panel (hidden by default) -->
+    <div id="profile-qr-panel" style="display:none;margin-bottom:16px;">
+        <div class="card" style="text-align:center;padding:20px;">
+            <div id="profile-qr-code" style="display:inline-block;background:#fff;padding:12px;border-radius:8px;"></div>
+            <p style="font-size:12px;color:#888;margin-top:10px;">{{ rank_abbr.get(member.rank_grade, '') }} {{ member.last_name }}{% if member.callsign %} — {{ member.callsign }}{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="profile-grid">
+        <!-- Assignment -->
+        <div class="card">
+            <h3 class="card-title">Assignment</h3>
+            <div class="card-body">
+                <div class="detail-row">
+                    <span class="detail-label">Company</span>
+                    <span>{{ member.company }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Team</span>
+                    <span>{{ member.team or '—' }}</span>
+                </div>
+                {% if member.leadership_title %}
+                <div class="detail-row">
+                    <span class="detail-label">Position</span>
+                    <span class="text-accent">{{ member.leadership_title }}</span>
+                </div>
+                {% endif %}
+                {% if member.primary_billet %}
+                <div class="detail-row">
+                    <span class="detail-label">Shop{{ 's' if ', ' in (member.primary_billet or '') else '' }}</span>
+                    <span>{{ member.primary_billet }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Service Record -->
+        <div class="card">
+            <h3 class="card-title">Service Record</h3>
+            <div class="card-body">
+                <div class="detail-row">
+                    <span class="detail-label">Entry Date</span>
+                    <span>{{ member.join_date.strftime('%b %Y') if member.join_date else '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Patched</span>
+                    <span>{{ member.patch_date.strftime('%b %Y') if member.patch_date else '—' }}</span>
+                </div>
+                {% if rank_history %}
+                <div class="detail-row">
+                    <span class="detail-label">Last Promotion</span>
+                    <span>{{ rank_history[0].effective_date.strftime('%b %d, %Y') }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Time in Grade</span>
+                    <span>
+                        {% set days = (now - rank_history[0].effective_date).days if now else 0 %}
+                        {% if days >= 365 %}{{ (days // 365) }}y {{ ((days % 365) // 30) }}m
+                        {% elif days >= 30 %}{{ (days // 30) }}m {{ (days % 30) }}d
+                        {% else %}{{ days }}d{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                <div class="detail-row">
+                    <span class="detail-label">FTX Attendance</span>
+                    <span>{% if ftx_history is defined %}{{ ftx_history|selectattr('category', 'in', ['ftx','mcftx'])|list|length }}{% else %}{{ member.ftx_count or 0 }}{% endif %}</span>
+                </div>
+                {% if member.is_veteran %}
+                <div class="detail-row">
+                    <span class="detail-label">Veteran</span>
+                    <span class="text-accent">✓ {{ member.mos or '' }}</span>
+                </div>
+                {% endif %}
+                {% if nc_last_login %}
+                <div class="detail-row">
+                    <span class="detail-label">Last Login</span>
+                    <span class="text-muted">{{ nc_last_login.strftime('%b %d, %Y') }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- FTX Attendance History -->
+        {% if ftx_history is defined and ftx_history %}
+        {% set can_see_ftx = is_own or "command" in user.roles or "admin" in user.roles or "s1" in user.roles or "leader" in user.roles %}
+        {% if can_see_ftx %}
+        <div class="card">
+            <h3 class="card-title">
+                FTX Attendance
+                <span style="background:#d4a537;color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:700;">
+                    {{ ftx_history|selectattr('category', 'in', ['ftx','mcftx'])|list|length }}
+                </span>
+            </h3>
+            <div class="card-body" style="max-height:300px;overflow-y:auto;">
+                {% for ev in ftx_history %}
+                <div class="detail-row" style="align-items:center;">
+                    <span style="font-size:18px;min-width:28px;text-align:center;">
+                        {% if ev.category == 'ftx' %}🏕️{% elif ev.category == 'mcftx' %}⚔️{% elif ev.category == 'family_day' %}👨‍👩‍👧‍👦{% elif ev.category == 'external_training' %}🎓{% else %}📅{% endif %}
+                    </span>
+                    <span style="flex:1;">
+                        <a href="/events/{{ ev.id }}" style="color:#e0e0e0;text-decoration:none;">{{ ev.title }}</a>
+                        {% if ev.training_block %}
+                        <span style="font-size:11px;color:#888;margin-left:4px;">BLK{{ ev.training_block }}</span>
+                        {% endif %}
+                    </span>
+                    <span class="text-muted" style="font-size:12px;white-space:nowrap;">{{ ev.date_start.strftime('%b %d, %Y') }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Communications -->
+        <div class="card">
+            <h3 class="card-title">Communications</h3>
+            <div class="card-body">
+                {% if member.ham_callsign %}
+                <div class="detail-row">
+                    <span class="detail-label">HAM Callsign</span>
+                    <span>{{ member.ham_callsign }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">License Class</span>
+                    <span>{{ member.ham_license_class or '—' }}</span>
+                </div>
+                {% endif %}
+                {% if member.gmrs_callsign %}
+                <div class="detail-row">
+                    <span class="detail-label">GMRS Callsign</span>
+                    <span>{{ member.gmrs_callsign }}</span>
+                </div>
+                {% endif %}
+                {% if not member.ham_callsign and not member.gmrs_callsign %}
+                <p class="text-muted">No radio licenses on file</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if rank_history %}
+        <!-- Promotion History -->
+        <div class="card">
+            <h3 class="card-title">Promotion History</h3>
+            <div class="card-body">
+                {% for rh in rank_history %}
+                <div class="detail-row" style="align-items:flex-start;">
+                    <span class="detail-label" style="min-width:100px;">{{ rh.effective_date.strftime('%b %d, %Y') }}</span>
+                    <span>
+                        {% if rh.old_rank %}
+                        <span style="color:#888;">{{ rank_abbr.get(rh.old_rank, rh.old_rank) }}</span>
+                        <span style="color:#666;margin:0 4px;">→</span>
+                        {% endif %}
+                        <span style="color:#d4a537;font-weight:600;">{{ rank_abbr.get(rh.new_rank, rh.new_rank) }}</span>
+                        {% if rh.changed_by and rh.changed_by != 'system_backfill' %}
+                        <span class="text-muted" style="margin-left:8px;font-size:12px;">by {{ rh.changed_by }}</span>
+                        {% endif %}
+                        {% if rh.notes and 'Backfilled' not in rh.notes %}
+                        <span class="text-muted" style="display:block;font-size:12px;margin-top:2px;">{{ rh.notes }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if can_see_pii %}
+        <!-- Contact (PII — self + leaders) -->
+        <div class="card card-pii">
+            <h3 class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                Contact Info 🔒
+                {% if is_own %}
+                <button hx-get="/api/profile/contact-edit" hx-target="#contact-card-body" hx-swap="innerHTML"
+                    style="padding:4px 10px;background:rgba(212,165,55,0.15);color:#d4a537;border:1px solid rgba(212,165,55,0.3);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">
+                    ✏️ Edit
+                </button>
+                {% endif %}
+            </h3>
+            <div id="contact-card-body" class="card-body">
+                <div class="detail-row">
+                    <span class="detail-label">Email</span>
+                    <span>{% if member.email %}<a href="mailto:{{ member.email }}" style="color:#d4a537;text-decoration:none;">{{ member.email }}</a>{% else %}—{% endif %}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone</span>
+                    <span>{{ member.phone|phone }}</span>
+                </div>
+                {% if member.address %}
+                <div class="detail-row">
+                    <span class="detail-label">Address</span>
+                    {% set full_address = member.address ~ ', ' ~ member.city ~ ', ' ~ member.state ~ ' ' ~ (member.zip_code or '') %}
+                    <span><a href="https://www.google.com/maps/search/?api=1&query={{ full_address | urlencode }}" target="_blank" style="color: #64b5f6; text-decoration: none;">{{ member.address }}{% if member.city %}, {{ member.city }}{% endif %}{% if member.state %}, {{ member.state }}{% endif %} {{ member.zip_code or '' }}</a></span>
+                </div>
+                {% endif %}
+                {% if member.personal_email %}
+                <div class="detail-row">
+                    <span class="detail-label">Personal Email</span>
+                    <span><a href="mailto:{{ member.personal_email }}" style="color:#d4a537;text-decoration:none;">{{ member.personal_email }}</a></span>
+                </div>
+                {% endif %}
+                {% if member.emergency_contact %}
+                <div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+                    <span class="detail-label">Emergency Contact</span>
+                    <span>{{ member.emergency_contact }}{% if member.emergency_phone %} — {{ member.emergency_phone|phone }}{% endif %}</span>
+                </div>
+                {% endif %}
+                {% if member.contact_verified_at %}
+                <div style="margin-top:10px;font-size:11px;color:#666;">
+                    ✓ Last verified {{ member.contact_verified_at.strftime('%b %d, %Y') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if training %}
+    <!-- Submit Claim Button (own profile only) -->
+    {% if is_own %}
+    <div style="text-align:right;margin:16px 0;">
+        <a href="/api/training/claim" style="display:inline-block;padding:8px 18px;background:#d4a537;color:#1a1a2e;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none;">
+            📋 Request Training Sign-off
+        </a>
+    </div>
+    {% endif %}
+    <!-- Awards -->
+    {% if training.awards %}
+    <div class="profile-section">
+        <h2 class="section-title">Awards</h2>
+        <div class="awards-list">
+            {% for award in training.awards %}
+            <div class="award-card">
+                <div class="award-icon">🗡️</div>
+                <div class="award-details">
+                    <span class="award-name">{{ award.award_name }}</span>
+                    <span class="award-reason">{{ award.reason or '' }}</span>
+                    <span class="award-meta text-muted">
+                        {{ award.awarded_at.strftime('%b %Y') }}
+                        {% if award.awarded_by %} — Awarded by {{ award.awarded_by }}{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Certifications -->
+    <div class="profile-section">
+        <h2 class="section-title">Certifications & Tabs</h2>
+        {% set cert_categories = [
+            ("communications", "Communications", "📡"),
+            ("elite", "Legion", "🏅"),
+            ("marksmanship", "Marksmanship", "🎯"),
+            ("medical", "Medical", "🩹"),
+            ("search_rescue", "Search & Rescue", "🔍"),
+            ("specialty", "Specialty", "📋"),
+        ] %}
+        {% for cat_key, cat_label, cat_icon in cert_categories %}
+            {% set cat_certs = training.certs | selectattr("category", "equalto", cat_key) | list %}
+            {% if cat_certs %}
+            <div class="cert-category" style="margin-bottom:20px;">
+                <h3 style="color:#d4a537;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px;border-bottom:1px solid rgba(212,165,55,0.2);padding-bottom:4px;">
+                    {{ cat_icon }} {{ cat_label }}
+                </h3>
+                <div class="cert-grid">
+                    {% for cert in cat_certs %}
+                    <div class="cert-badge {% if cert.earned %}cert-earned{% else %}cert-locked{% endif %}"
+                         style="cursor:pointer;" onclick="openCertModal({{ cert.id }})">
+                        <span class="cert-icon">{{ cert.icon }}</span>
+                        <span class="cert-name">{{ cert.name }}</span>
+                        {% if cert.earned and cert.award %}
+                        <span class="cert-date">{{ cert.award.awarded_at.strftime('%b %Y') }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Cert detail modal -->
+    <div id="cert-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;"
+         onclick="if(event.target===this) this.style.display='none';">
+        <div style="background:#1e1e2f;border:1px solid rgba(212,165,55,0.3);border-radius:8px;padding:24px;width:480px;max-width:90vw;max-height:80vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation();">
+            <button onclick="document.getElementById('cert-modal').style.display='none'" 
+                    style="position:absolute;top:12px;right:12px;background:none;border:none;color:#888;cursor:pointer;font-size:18px;">✕</button>
+            <div id="cert-modal-content">
+                <p style="color:#888;">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openCertModal(certId) {
+        var modal = document.getElementById('cert-modal');
+        modal.style.display = 'flex';
+        htmx.ajax('GET', '/api/training/cert/' + certId, {target: '#cert-modal-content', swap: 'innerHTML'});
+    }
+    </script>
+
+    <!-- TRADOC Progress -->
+    <div class="profile-section">
+        <h2 class="section-title">
+            TRADOC Progress
+            <span class="tradoc-summary">{{ training.done }}/{{ training.total }} — {{ training.pct }}%</span>
+        </h2>
+
+        <div class="tradoc-bar-wrap">
+            <div class="tradoc-bar" style="width: {{ training.pct }}%"></div>
+        </div>
+
+        {% if training.pct == 100 %}
+        <p class="tradoc-complete">✅ All training complete</p>
+        {% endif %}
+
+        <div class="tradoc-blocks">
+            {% for block_num, block in training.blocks.items() %}
+            <div class="card tradoc-block">
+                <h3 class="card-title">
+                    {% if block_num == 0 %}Every FTX{% else %}Block {{ block_num }}: {{ block['name'] }}{% endif %}
+                    <span class="tradoc-block-count">
+                        {{ block['items']|selectattr('done')|list|length }}/{{ block['items']|length }}
+                    </span>
+                </h3>
+                <div class="card-body">
+                    {% for item in block['items'] %}
+                    <div class="tradoc-item {% if item.done %}tradoc-done{% endif %}">
+                        <span class="tradoc-check">{% if item.done %}☑{% else %}☐{% endif %}</span>
+                        <span class="tradoc-name">{{ item.name }}</span>
+                        {% if item.done and item.signoff %}
+                        <span class="tradoc-signoff text-muted">
+                            — {{ item.signoff.signed_off_by or '' }}
+                            {% if item.signoff.ftx_date %}({{ item.signoff.ftx_date.strftime('%b %Y') }}){% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+<!-- QR Code Library + Toggle Script -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+function toggleProfileQR() {
+    var panel = document.getElementById('profile-qr-panel');
+    var btn = document.getElementById('qr-toggle-btn');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        btn.style.background = 'rgba(212,165,55,0.15)';
+        btn.style.borderColor = '#d4a537';
+        btn.style.color = '#d4a537';
+        // Generate QR if not already done
+        var container = document.getElementById('profile-qr-code');
+        if (!container.hasChildNodes()) {
+            var qr = qrcode(0, 'M');
+            qr.addData('{{ request.url_for("view_profile", member_id=member.id) }}');
+            qr.make();
+            container.innerHTML = qr.createSvgTag(5, 0);
+        }
+    } else {
+        panel.style.display = 'none';
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.borderColor = '#444';
+        btn.style.color = '#ccc';
+    }
+}
+</script>
+{% endblock %}

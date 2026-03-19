@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Document Signed{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 16px;">✅</div>
+    <h1>{{ doc_title }} Signed</h1>
+    <p style="color: #666; font-size: 16px; margin-bottom: 24px;">
+        Your digital signature has been recorded. Thank you.
+    </p>
+    <a href="/dashboard" style="
+        display: inline-block; padding: 10px 24px; background: #d4a537; color: #1a1a2e;
+        border-radius: 6px; font-weight: 600; text-decoration: none;
+    ">Return to Dashboard</a>
+</div>
+{% endblock %}

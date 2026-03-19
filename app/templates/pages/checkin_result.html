@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Check-In{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:60px auto;text-align:center;">
+  {% if success %}
+  <div style="font-size:80px;margin-bottom:16px;">✅</div>
+  <h1 style="font-size:1.5rem;color:#56d364;margin-bottom:12px;">Checked In</h1>
+  <p style="color:#ccc;font-size:15px;">{{ message }}</p>
+
+  {% if is_walkin %}
+  <div style="margin-top:16px;padding:12px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:8px;font-size:13px;color:#fb923c;">
+    ⚠️ Walk-in flagged — RSVP was not "Attending". S1 has been notified.
+  </div>
+  {% endif %}
+
+  {% if event %}
+  <div style="margin-top:24px;">
+    <a href="/events/{{ event.id }}" class="ops-btn ops-btn-primary" style="display:inline-block;padding:8px 20px;font-size:14px;text-decoration:none;">
+      View Event →
+    </a>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div style="font-size:80px;margin-bottom:16px;">❌</div>
+  <h1 style="font-size:1.5rem;color:#ef5350;margin-bottom:12px;">Check-In Failed</h1>
+  <p style="color:#ccc;font-size:15px;">{{ message }}</p>
+  <div style="margin-top:24px;">
+    <a href="/" class="ops-btn" style="display:inline-block;padding:8px 20px;font-size:14px;text-decoration:none;">
+      ← Home
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

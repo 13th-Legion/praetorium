@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Edit — {{ member.last_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+    <h1>✏️ Edit Member: {{ member.first_name }} {{ member.last_name }}</h1>
+
+    <form method="POST" action="/api/members/{{ member.id }}/edit">
+        <!-- Identity -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Identity</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="edit-label">First Name</label>
+                    <input type="text" name="first_name" value="{{ member.first_name }}" class="edit-input" required>
+                </div>
+                <div>
+                    <label class="edit-label">Last Name</label>
+                    <input type="text" name="last_name" value="{{ member.last_name }}" class="edit-input" required>
+                </div>
+                <div>
+                    <label class="edit-label">Callsign</label>
+                    <input type="text" name="callsign" value="{{ member.callsign or '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">Email</label>
+                    <input type="email" name="email" value="{{ member.email or '' }}" class="edit-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Assignment</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="edit-label">Rank</label>
+                    <select name="rank_grade" class="edit-input">
+                        {% for val, label in rank_options %}
+                        <option value="{{ val }}" {% if member.rank_grade == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="edit-label">Status</label>
+                    <select name="status" class="edit-input">
+                        {% for s in status_options %}
+                        <option value="{{ s }}" {% if member.status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="edit-label">Team</label>
+                    <select name="team" class="edit-input">
+                        <option value="">— Unassigned —</option>
+                        {% for t in team_options %}
+                        <option value="{{ t }}" {% if member.team == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="edit-label">Leadership Title</label>
+                    <input type="text" name="leadership_title" value="{{ member.leadership_title or '' }}" class="edit-input" placeholder="CO, XO, TL, ATL...">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label class="edit-label">Primary Billet(s)</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:4px;">
+                        {% for val, label in billet_options %}
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:2px 0;">
+                            <input type="checkbox" name="billets" value="{{ val }}" {% if val in current_billets %}checked{% endif %}>
+                            {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Record -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Service Record</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="edit-label">Join Date</label>
+                    <input type="date" name="join_date" value="{{ member.join_date.isoformat() if member.join_date else '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">Patch Date</label>
+                    <input type="date" name="patch_date" value="{{ member.patch_date.isoformat() if member.patch_date else '' }}" class="edit-input">
+                </div>
+                {% if "command" in user.roles or "admin" in user.roles or "s1" in user.roles %}
+                <div>
+                    <label class="edit-label">Non-Promotable Until</label>
+                    <input type="date" name="non_promotable_until" value="{{ member.non_promotable_until.isoformat() if member.non_promotable_until else '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">Non-Promotable Reason</label>
+                    <input type="text" name="non_promotable_reason" value="{{ member.non_promotable_reason or '' }}" class="edit-input" placeholder="CoC violation, etc.">
+                </div>
+                {% endif %}
+                <div>
+                    <label class="edit-label" style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" name="is_veteran" {% if member.is_veteran %}checked{% endif %}> Veteran
+                    </label>
+                </div>
+                <div>
+                    <label class="edit-label">Branch</label>
+                    <select name="mos" class="edit-input">
+                        <option value="">— None —</option>
+                        <option value="Army" {% if member.mos == 'Army' %}selected{% endif %}>Army</option>
+                        <option value="Air Force" {% if member.mos == 'Air Force' %}selected{% endif %}>Air Force</option>
+                        <option value="Coast Guard" {% if member.mos == 'Coast Guard' %}selected{% endif %}>Coast Guard</option>
+                        <option value="Marines" {% if member.mos == 'Marines' %}selected{% endif %}>Marines</option>
+                        <option value="Navy" {% if member.mos == 'Navy' %}selected{% endif %}>Navy</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="edit-label" style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" name="is_founder" {% if member.is_founder %}checked{% endif %}> Founder
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Contact Info 🔒</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="edit-label">Phone</label>
+                    <input type="text" name="phone" value="{{ member.phone or '' }}" class="edit-input">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label class="edit-label">Street Address</label>
+                    <input type="text" name="address" value="{{ member.address or '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">City</label>
+                    <input type="text" name="city" value="{{ member.city or '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">State</label>
+                    <input type="text" name="state" value="{{ member.state or 'TX' }}" class="edit-input" maxlength="2">
+                </div>
+                <div>
+                    <label class="edit-label">ZIP</label>
+                    <input type="text" name="zip_code" value="{{ member.zip_code or '' }}" class="edit-input" maxlength="10">
+                </div>
+                <div>
+                    <label class="edit-label">Personal Email</label>
+                    <input type="email" name="personal_email" value="{{ member.personal_email or '' }}" class="edit-input">
+                </div>
+                <div style="grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size:11px;font-weight:700;color:#d4a537;margin-bottom:8px;">Emergency Contact</div>
+                </div>
+                <div>
+                    <label class="edit-label">Emergency Contact Name</label>
+                    <input type="text" name="emergency_contact" value="{{ member.emergency_contact or '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">Emergency Contact Phone</label>
+                    <input type="tel" name="emergency_phone" value="{{ member.emergency_phone or '' }}" class="edit-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Radio -->
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Radio Licenses</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                <div>
+                    <label class="edit-label">HAM Callsign</label>
+                    <input type="text" name="ham_callsign" value="{{ member.ham_callsign or '' }}" class="edit-input">
+                </div>
+                <div>
+                    <label class="edit-label">License Class</label>
+                    <select name="ham_license_class" class="edit-input">
+                        <option value="">—</option>
+                        <option value="Technician" {% if member.ham_license_class == 'Technician' %}selected{% endif %}>Technician</option>
+                        <option value="General" {% if member.ham_license_class == 'General' %}selected{% endif %}>General</option>
+                        <option value="Extra" {% if member.ham_license_class == 'Extra' %}selected{% endif %}>Extra</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="edit-label">GMRS Callsign</label>
+                    <input type="text" name="gmrs_callsign" value="{{ member.gmrs_callsign or '' }}" class="edit-input">
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:space-between;margin-bottom:32px;">
+            <a href="/profile/{{ member.id }}" style="padding:8px 20px;color:#888;text-decoration:none;font-size:14px;">Cancel</a>
+            <button type="submit" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.edit-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.edit-input {
+    width:100%; padding:6px 8px; font-size:13px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+.edit-input:focus { border-color:#d4a537; outline:none; }
+</style>
+{% endblock %}

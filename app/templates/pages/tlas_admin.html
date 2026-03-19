@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}TLAS Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1>Threat Level Assignment System</h1>
+    <p style="color: #666;">Set the current threat level for the unit. This is visible to all members on the dashboard.</p>
+
+    <!-- Current level -->
+    <div id="tlas-current" hx-get="/api/tlas/current" hx-trigger="load" hx-swap="innerHTML">
+        <p class="text-muted">Loading current level...</p>
+    </div>
+
+    <!-- Set new level -->
+    <div class="card" style="margin-top: 24px;">
+        <h2 class="card-title">Set Threat Level</h2>
+        <form hx-post="/api/tlas/set" hx-target="#tlas-current" hx-swap="innerHTML" style="padding: 16px;">
+            <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Level</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    {% for lvl in levels %}
+                    <label style="
+                        display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+                        border: 2px solid {{ lvl.color }}; border-radius: 6px; cursor: pointer;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='{{ lvl.color }}22'" onmouseout="this.style.background='transparent'">
+                        <input type="radio" name="level" value="{{ lvl.value }}" required>
+                        <span style="color: {{ lvl.color }}; font-weight: 600;">{{ lvl.label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label for="note" style="font-weight: 600; display: block; margin-bottom: 8px;">Reason / Note (optional)</label>
+                <textarea name="note" id="note" rows="3" placeholder="e.g., Severe weather incoming for DFW..."
+                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></textarea>
+            </div>
+
+            <button type="submit" style="
+                padding: 10px 24px; background: #d4a537; color: #1a1a2e; border: none;
+                border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            ">Set Threat Level</button>
+        </form>
+    </div>
+
+    <!-- History -->
+    <div class="card" style="margin-top: 24px;">
+        <h2 class="card-title">Level History</h2>
+        <div id="tlas-history" hx-get="/api/tlas/history" hx-trigger="load" hx-swap="innerHTML" style="padding: 16px;">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

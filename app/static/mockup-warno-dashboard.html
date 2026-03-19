@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — 13th Legion (WARNO Mockup)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #0f3460;
+            --bg-input: #1a1a2e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0b0;
+            --text-muted: #707080;
+            --accent: #c9a227;
+            --accent-hover: #dbb63a;
+            --border: #2a2a4a;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --info: #3498db;
+            --font-heading: 'Oswald', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-heading);
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+
+        /* Nav */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--accent);
+        }
+        .nav-brand { display: flex; align-items: center; gap: 0.5rem; }
+        .nav-logo { font-size: 1.5rem; }
+        .nav-title { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); }
+        .nav-links { display: flex; gap: 1.5rem; }
+        .nav-link { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
+        .nav-user { display: flex; align-items: center; gap: 1rem; }
+        .nav-user-name { color: var(--text-primary); font-weight: 500; font-size: 0.9rem; }
+
+        /* Content */
+        .content { flex: 1; padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .card-title {
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-body { font-size: 0.9rem; }
+
+        /* Dashboard Grid */
+        .dashboard h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .text-muted { color: var(--text-muted); }
+
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* =============================================
+           WARNO BANNER — new component
+           ============================================= */
+        .warno-banner {
+            background: linear-gradient(135deg, rgba(201, 162, 39, 0.12), rgba(201, 162, 39, 0.04));
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .warno-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: var(--accent);
+        }
+        .warno-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-left: 12px;
+        }
+        .warno-label {
+            font-family: var(--font-heading);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(201, 162, 39, 0.2);
+            padding: 2px 10px;
+            border-radius: 3px;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        .warno-event-name {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .warno-meta {
+            display: flex;
+            gap: 2rem;
+            padding-left: 12px;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .warno-meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .warno-meta-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .warno-meta-value {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .warno-actions {
+            display: flex;
+            gap: 0.75rem;
+            padding-left: 12px;
+            align-items: center;
+        }
+        .warno-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.25rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .warno-btn-attend {
+            background: var(--success);
+            color: #fff;
+        }
+        .warno-btn-attend:hover { background: #2ecc71; }
+        .warno-btn-decline {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .warno-btn-decline:hover { color: var(--danger); border-color: var(--danger); }
+        .warno-btn-active {
+            background: var(--success);
+            color: #fff;
+            box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.4);
+        }
+        .warno-rsvp-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+        .warno-countdown {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: right;
+        }
+        .warno-countdown-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .warno-rsvp-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding-left: 12px;
+            margin-top: 0.75rem;
+        }
+        .warno-rsvp-count strong { color: var(--success); }
+
+        /* OPORD available state */
+        .warno-opord-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--info);
+            background: rgba(52, 152, 219, 0.15);
+            padding: 3px 10px;
+            border-radius: 3px;
+            margin-left: 0.75rem;
+        }
+
+        /* =============================================
+           EVENTS WIDGET — enhanced with RSVP status
+           ============================================= */
+        .event-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .event-icon { font-size: 24px; min-width: 32px; text-align: center; }
+        .event-details { flex: 1; }
+        .event-name { font-weight: 600; }
+        .event-date { font-size: 13px; color: #aaa; }
+        .event-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+        .badge-soon { background: #2e7d32; color: #fff; }
+        .badge-far { color: #888; }
+        .badge-today { background: #c62828; color: #fff; }
+
+        .event-rsvp-pill {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .rsvp-attending { background: rgba(39, 174, 96, 0.2); color: var(--success); }
+        .rsvp-pending { background: rgba(201, 162, 39, 0.2); color: var(--accent); }
+        .rsvp-declined { background: rgba(160, 160, 176, 0.15); color: var(--text-muted); }
+
+        /* =============================================
+           MOCKUP NOTICE
+           ============================================= */
+        .mockup-notice {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px dashed var(--info);
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin-bottom: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--info);
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .nav-bar { flex-direction: column; gap: 0.5rem; }
+            .nav-links { flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+            .content { padding: 1rem; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .warno-meta { gap: 1rem; }
+            .warno-header { flex-direction: column; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="nav-brand">
+            <span class="nav-logo">⚔️</span>
+            <span class="nav-title">PRAETORIUM</span>
+        </div>
+        <div class="nav-links">
+            <a href="#" class="nav-link" style="color: var(--accent);">Dashboard</a>
+            <a href="#" class="nav-link">Profile</a>
+            <a href="#" class="nav-link">Training</a>
+            <a href="#" class="nav-link">Roster</a>
+            <a href="#" class="nav-link">S1 Admin ▾</a>
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name">1LT Kavadas (Cav)</span>
+            <a href="#" class="nav-link" style="color: var(--text-muted); font-size: 0.85rem;">Logout</a>
+        </div>
+    </nav>
+
+    <main class="content">
+        <div class="dashboard">
+            <h1>Welcome, 1LT Kavadas (Cav)</h1>
+
+            <div class="mockup-notice">
+                🎨 <strong>MOCKUP</strong> — WARNO/RSVP dashboard integration concept. Not live.
+            </div>
+
+            <!-- TLAS Banner (placeholder) -->
+            <div style="padding: 16px; background: rgba(39, 174, 96, 0.1); border-left: 6px solid #2e7d32; border-radius: 8px; margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; color: #2e7d32;">THREAT LEVEL: LOW</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 8px;">Normal operations</span>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Set Mar 8</span>
+                </div>
+            </div>
+
+            <!-- ⚡ WARNO BANNER -->
+            <div class="warno-banner">
+                <div class="warno-header">
+                    <div>
+                        <span class="warno-label">⚡ WARNING ORDER</span>
+                        <div class="warno-event-name">
+                            March FTX
+                            <span class="event-badge badge-soon">11d</span>
+                        </div>
+                    </div>
+                    <div class="warno-countdown">
+                        <div class="warno-countdown-label">OPORD Drops In</div>
+                        8d 6h
+                    </div>
+                </div>
+                <div class="warno-meta">
+                    <div class="warno-meta-item">
+                        <span class="warno-meta-label">Category</span>
+                        <span class="warno-meta-value">🏕️ FTX</span>
+                    </div>
+                    <div class="warno-meta-item">
+                        <span class="warno-meta-label">Dates</span>
+                        <span class="warno-meta-value">Fri, Mar 21 – Sun, Mar 23</span>
+                    </div>
+                    <div class="warno-meta-item">
+                        <span class="warno-meta-label">Location</span>
+                        <span class="warno-meta-value">Camp Bullis, TX</span>
+                    </div>
+                    <div class="warno-meta-item">
+                        <span class="warno-meta-label">WARNO Released</span>
+                        <span class="warno-meta-value">Mar 10, 2026</span>
+                    </div>
+                </div>
+                <div class="warno-actions">
+                    <button class="warno-btn warno-btn-active" onclick="toggleRSVP(this, 'attend')">
+                        ✓ Attending
+                    </button>
+                    <button class="warno-btn warno-btn-decline" onclick="toggleRSVP(this, 'decline')">
+                        ✗ Decline
+                    </button>
+                    <span class="warno-rsvp-status">RSVP'd Mar 10 at 1423</span>
+                </div>
+                <div class="warno-rsvp-count">
+                    <strong>18</strong> attending · 3 declined · 14 pending
+                </div>
+            </div>
+
+            <!-- Announcements -->
+            <div class="card" style="margin-bottom: 24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 class="card-title" style="margin:0;">Announcements</h2>
+                    <button style="padding:4px 12px;background:var(--accent);color:var(--bg-primary);border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:12px;">
+                        ✏️ New Announcement
+                    </button>
+                </div>
+                <div class="card-body" style="margin-top: 1rem;">
+                    <div style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <strong style="color: var(--accent);">April FTX WARNO Released</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Mar 10</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                            April FTX dates confirmed: Apr 4–6 at Camp Bullis. RSVP on your dashboard. OPORD drops Apr 2.
+                        </p>
+                    </div>
+                    <div style="padding: 12px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <strong style="color: var(--accent);">New Members — Welcome Aboard</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Mar 8</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                            Welcome our newest recruits. Make sure to log in to Nextcloud and check your portal profile.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Quick Info -->
+                <div class="card">
+                    <h2 class="card-title">Your Status</h2>
+                    <div class="card-body">
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Rank</span>
+                            <span>O-2 · Tribune</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Status</span>
+                            <span style="color:var(--success);">Active</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Team</span>
+                            <span>Headquarters</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Billet</span>
+                            <span>XO / S2 / S3</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Events Attended</span>
+                            <a href="#" style="font-weight:600;">14</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events — enhanced with RSVP pills -->
+                <div class="card">
+                    <h2 class="card-title">Upcoming Events</h2>
+                    <div class="card-body">
+                        <div class="event-item">
+                            <div class="event-icon">🏕️</div>
+                            <div class="event-details">
+                                <div class="event-name">
+                                    April FTX
+                                    <span class="event-badge badge-soon">25d</span>
+                                    <span class="event-rsvp-pill rsvp-attending">✓ Attending</span>
+                                </div>
+                                <div class="event-date">Fri, Apr 4 – Sun, Apr 6 · Camp Bullis</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-icon">⚔️</div>
+                            <div class="event-details">
+                                <div class="event-name">
+                                    April MCFTX
+                                    <span class="event-badge badge-soon">32d</span>
+                                    <span class="event-rsvp-pill rsvp-attending">✓ Attending</span>
+                                </div>
+                                <div class="event-date">Thu, Apr 10 – Sun, Apr 13 · Houston</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-icon">💻</div>
+                            <div class="event-details">
+                                <div class="event-name">
+                                    Online Training
+                                    <span class="event-badge badge-soon">1d</span>
+                                </div>
+                                <div class="event-date">Tue, Mar 11 · 2000 CDT</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-icon">🏕️</div>
+                            <div class="event-details">
+                                <div class="event-name">
+                                    May FTX
+                                    <span class="event-badge badge-far">56d</span>
+                                    <span class="event-rsvp-pill rsvp-pending">Pending</span>
+                                </div>
+                                <div class="event-date">Fri, May 2 – Sun, May 4 · TBD</div>
+                            </div>
+                        </div>
+                        <div class="event-item">
+                            <div class="event-icon">🏃</div>
+                            <div class="event-details">
+                                <div class="event-name">
+                                    Urban Evasion Course
+                                    <span class="event-badge badge-far">70d</span>
+                                </div>
+                                <div class="event-date">Sat, May 17 · Dallas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training & To-Dos -->
+                <div class="card">
+                    <h2 class="card-title">Training & To-Dos</h2>
+                    <div class="card-body">
+                        <div style="margin-bottom: 12px;">
+                            <span style="font-size: 0.8rem; color: var(--success); font-weight: 600;">✓ TRADOC Complete</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Certifications</span>
+                            <span>6 / 8</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Next Cert Available</span>
+                            <span style="color:var(--accent);">Praecisio Teli</span>
+                        </div>
+                        <div style="padding: 10px 0 0; font-size: 0.8rem; color: var(--text-muted);">
+                            <strong style="color: var(--accent);">📋 To-Do:</strong>
+                            <div style="margin-top: 4px;">• Verify contact info (Settings)</div>
+                            <div>• RSVP for May FTX (WARNO pending)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>13th Legion — Nunquam Non Paratus</p>
+    </footer>
+
+    <script>
+        function toggleRSVP(btn, action) {
+            // Just a visual mockup toggle
+            const parent = btn.closest('.warno-actions');
+            const attendBtn = parent.querySelector('.warno-btn-attend, [onclick*="attend"]');
+            const declineBtn = parent.querySelector('.warno-btn-decline, [onclick*="decline"]');
+
+            if (action === 'attend') {
+                btn.classList.add('warno-btn-active');
+                btn.innerHTML = '✓ Attending';
+                if (declineBtn) {
+                    declineBtn.classList.remove('warno-btn-active');
+                    declineBtn.style.color = '';
+                    declineBtn.style.borderColor = '';
+                }
+            } else {
+                btn.style.color = 'var(--danger)';
+                btn.style.borderColor = 'var(--danger)';
+                btn.innerHTML = '✗ Declined';
+                const attendBtns = parent.querySelectorAll('.warno-btn-active');
+                attendBtns.forEach(b => {
+                    if (b !== btn) {
+                        b.classList.remove('warno-btn-active');
+                        b.innerHTML = '✓ Attend';
+                        b.style.background = 'var(--success)';
+                        b.style.color = '#fff';
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

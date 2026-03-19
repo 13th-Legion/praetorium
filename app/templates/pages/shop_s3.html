@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}S3 — Ops & Training{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <span style="font-size: 32px;">⚔️</span>
+        <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">S3 — Ops & Training</h1>
+    </div>
+
+    <!-- Event Builder Section -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0; font-size: 20px;">📋 Event Builder</h2>
+        </div>
+        <p style="color: #999; font-size: 14px; margin-bottom: 16px;">
+            Build schedules, assign instructors, and plan missions for upcoming events.
+        </p>
+
+        <!-- Upcoming events that need planning -->
+        <div id="s3-ftx-list" hx-get="/api/s3/events-needing-planning" hx-trigger="load" hx-swap="innerHTML">
+            <div style="color: #666; font-size: 13px; padding: 12px;">Loading upcoming events...</div>
+        </div>
+    </div>
+
+    <!-- Training Blocks Overview -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 12px; font-size: 20px;">🎯 Training Block Rotation</h2>
+        <p style="color: #999; font-size: 14px; margin-bottom: 16px;">
+            Four rotating blocks: Theory/Medical → Weapons Qual → Supplemental (Comms/Land Nav) → Combat Fundamentals
+        </p>
+        <div id="s3-block-rotation" hx-get="/api/s3/block-rotation" hx-trigger="load" hx-swap="innerHTML">
+            <div style="color: #666; font-size: 13px; padding: 12px;">Loading block rotation...</div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <a href="/events" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📅</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Events Calendar</div>
+        </a>
+        <a href="/roster" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">👥</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Personnel Roster</div>
+        </a>
+        <a href="#" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center; opacity: 0.5;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Training Analytics</div>
+            <div style="color: #666; font-size: 11px;">Coming soon</div>
+        </a>
+    </div>
+</div>
+{% endblock %}

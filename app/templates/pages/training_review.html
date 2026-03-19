@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}S1 — Training Claims Review{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+    <h1>📋 Training Claims Review</h1>
+
+    <h2 style="color:#ef6c00;">Pending ({{ pending | length }})</h2>
+    {% if pending %}
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <thead>
+            <tr style="border-bottom:2px solid #333;">
+                <th style="text-align:left;padding:8px;">Member</th>
+                <th style="text-align:left;padding:8px;">Type</th>
+                <th style="text-align:left;padding:8px;">Item</th>
+                <th style="text-align:left;padding:8px;">Notes</th>
+                <th style="text-align:left;padding:8px;">Submitted</th>
+                <th style="text-align:left;padding:8px;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in pending %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                <td style="padding:8px;font-weight:600;">{{ d.member.last_name }}, {{ d.member.first_name }}</td>
+                <td style="padding:8px;">
+                    {% if d.claim.claim_type == 'tradoc' %}
+                    <span style="background:#1565c0;color:#fff;font-size:11px;padding:2px 6px;border-radius:8px;">TRADOC</span>
+                    {% else %}
+                    <span style="background:#6a1b9a;color:#fff;font-size:11px;padding:2px 6px;border-radius:8px;">CERT</span>
+                    {% endif %}
+                </td>
+                <td style="padding:8px;">{{ d.item_name }}</td>
+                <td style="padding:8px;color:#aaa;font-size:12px;max-width:200px;">
+                    {{ d.claim.description or '—' }}
+                    {% if d.claim.doc_path %}
+                    <div style="margin-top:4px;">
+                        <a href="/api/training/claims/{{ d.claim.id }}/document" target="_blank" style="color:#d4a537;font-size:11px;text-decoration:none;">📎 View Document</a>
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="padding:8px;font-size:12px;color:#888;">{{ d.claim.created_at.strftime('%b %d') }}</td>
+                <td style="padding:8px;" id="review-{{ d.claim.id }}">
+                    <div style="display:flex;gap:4px;">
+                        <form hx-post="/api/training/claims/{{ d.claim.id }}/approve" hx-target="#review-{{ d.claim.id }}" hx-swap="innerHTML">
+                            <button type="submit" style="padding:4px 10px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Approve</button>
+                        </form>
+                        <form hx-post="/api/training/claims/{{ d.claim.id }}/deny" hx-target="#review-{{ d.claim.id }}" hx-swap="innerHTML">
+                            <input type="hidden" name="notes" value="">
+                            <button type="submit" style="padding:4px 10px;background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Deny</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#999;">No pending claims.</p>
+    {% endif %}
+
+    <h2 style="color:#888;">Recently Reviewed</h2>
+    {% if reviewed %}
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #333;">
+                <th style="text-align:left;padding:8px;">Member</th>
+                <th style="text-align:left;padding:8px;">Item</th>
+                <th style="text-align:left;padding:8px;">Status</th>
+                <th style="text-align:left;padding:8px;">Reviewed By</th>
+                <th style="text-align:left;padding:8px;">Date</th>
+                <th style="text-align:left;padding:8px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in reviewed %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                <td style="padding:8px;">{{ d.member.last_name }}</td>
+                <td style="padding:8px;font-size:13px;">{{ d.item_name }}</td>
+                <td style="padding:8px;">
+                    {% if d.claim.status == 'approved' %}
+                    <span style="color:#2e7d32;font-weight:600;">✅ Approved</span>
+                    {% else %}
+                    <span style="color:#c62828;font-weight:600;">❌ Denied</span>
+                    {% endif %}
+                </td>
+                <td style="padding:8px;font-size:12px;">{{ d.claim.reviewed_by or '—' }}</td>
+                <td style="padding:8px;font-size:12px;color:#888;">{{ d.claim.reviewed_at.strftime('%b %d') if d.claim.reviewed_at else '—' }}</td>
+                <td style="padding:8px;" id="revoke-{{ d.claim.id }}">
+                    {% if d.claim.status == 'approved' %}
+                    <form hx-post="/api/training/claims/{{ d.claim.id }}/revoke" hx-target="#revoke-{{ d.claim.id }}" hx-swap="innerHTML"
+                          hx-confirm="Revoke this approval? This will remove the cert/TRADOC sign-off from the member's record.">
+                        <button type="submit" style="padding:3px 8px;background:transparent;color:#ff8f00;border:1px solid #ff8f00;border-radius:4px;cursor:pointer;font-size:11px;">↩️ Revoke</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#999;">No recent reviews.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h1 class="login-heading">PRAETORIUM</h1>
+        <p class="login-subtitle">13th Legion — Unit Portal</p>
+
+        {% if error %}
+        <p class="login-error">{{ error }}</p>
+        {% endif %}
+
+        <a href="/auth/login" class="btn btn-primary btn-lg">
+            Sign in with Nextcloud
+        </a>
+
+        <p class="login-help">
+            You'll be redirected to cloud.13thlegion.org to authenticate.
+        </p>
+    </div>
+</div>
+{% endblock %}

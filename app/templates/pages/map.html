@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13th Legion — DFW Team Zone Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; }
+  #map { height: calc(100vh - 180px); width: 100%; }
+  .header { background: #1a1a2e; padding: 12px 20px; border-bottom: 2px solid #d4a537; display: flex; align-items: center; gap: 15px; }
+  .header h1 { color: #d4a537; font-size: 20px; }
+  .header .subtitle { color: #999; font-size: 13px; }
+  .stats { background: #16213e; padding: 10px 20px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; border-bottom: 1px solid #333; }
+  .stat-group { display: flex; align-items: center; gap: 6px; }
+  .stat-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .stat-label { color: #ccc; }
+  .stat-count { color: #fff; font-weight: bold; }
+  .controls { background: #16213e; padding: 8px 20px; display: flex; gap: 15px; font-size: 13px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  .controls label { color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .controls input[type="checkbox"] { accent-color: #d4a537; }
+  .legend { position: absolute; bottom: 30px; right: 10px; background: rgba(26,26,46,0.95); padding: 12px; border-radius: 6px; z-index: 1000; font-size: 12px; border: 1px solid #d4a537; }
+  .legend h4 { color: #d4a537; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .legend h4 .toggle { font-size: 10px; color: #999; }
+  .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); }
+  .legend-body.collapsed { display: none; }
+  @media (max-width: 768px) {
+    .legend { bottom: 10px; right: 10px; left: 10px; max-width: none; padding: 8px 12px; }
+    .legend-body { display: none; }
+    .legend-body.expanded { display: block; }
+    .controls { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; gap: 10px; }
+    .stats { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; }
+    #map { height: calc(100vh - 140px); }
+  }
+  .leaflet-popup-content-wrapper { background: #1a1a2e; color: #eee; border: 1px solid #d4a537; }
+  .leaflet-popup-tip { background: #1a1a2e; }
+  .member-popup { font-size: 13px; }
+  .member-popup strong { color: #d4a537; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚔️ 13th Legion — Geographic Team Zone Map</h1>
+  <span class="subtitle">6 equal 60° zones from I-30 & N Great Southwest Pkwy</span>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="controls">
+  <label><input type="checkbox" id="toggleZones" checked> Zone Boundaries</label>
+  <span style="color:#555; margin: 0 5px;">|</span>
+  <label><input type="checkbox" id="toggleLabels" checked> Names</label>
+  <label><input type="checkbox" id="toggleInactive"> Inactive</label>
+  <label><input type="checkbox" id="toggleBearingLines"> Bearing Lines</label>
+  <label><input type="checkbox" id="toggleHQRings" checked> HQ Rings</label>
+  <span style="color:#555; margin: 0 5px;">|</span>
+  <label><input type="checkbox" class="team-toggle" data-team="Alpha" checked> <span style="color:#22c55e">● Alpha</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Bravo" checked> <span style="color:#3b82f6">● Bravo</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Charlie" checked> <span style="color:#ef4444">● Charlie</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Delta" checked> <span style="color:#eab308">● Delta</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Echo" checked> <span style="color:#f97316">● Echo</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Foxtrot" checked> <span style="color:#8b5cf6">● Foxtrot</span></label>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const MAP_DATA = {"center": {"lat": 32.7512, "lon": -97.0457}, "members": [{"name": "Gavin Alford", "status": "recruit", "lat": 33.711139, "lon": -96.592468, "zip": "75020", "bearing": 21.4, "hq": false}, {"name": "Jayson Barker", "status": "recruit", "lat": 33.241689, "lon": -96.615399, "zip": "75071", "bearing": 36.2, "hq": false}, {"name": "Nick Bartlett", "status": "active", "lat": 32.981806, "lon": -96.238406, "zip": "75189", "bearing": 71.0, "hq": false}, {"name": "Christian Boyd", "status": "recruit", "lat": 32.498129, "lon": -97.365515, "zip": "76028", "bearing": 226.9, "hq": false}, {"name": "Clint Bunker", "status": "active", "lat": 33.240872, "lon": -96.229523, "zip": "75423", "bearing": 54.2, "hq": false}, {"name": "Cody Camp", "status": "active", "lat": 32.342206, "lon": -97.344725, "zip": "76031", "bearing": 211.7, "hq": true}, {"name": "James Canzanella", "status": "active", "lat": 32.750161, "lon": -97.22882, "zip": "76112", "bearing": 269.7, "hq": false}, {"name": "Christian Chavez", "status": "active", "lat": 32.571488, "lon": -97.143132, "zip": "76063", "bearing": 204.6, "hq": false}, {"name": "Charles Corder", "status": "recruit", "lat": 32.467572, "lon": -97.540586, "zip": "76044", "bearing": 235.9, "hq": false}, {"name": "Paul Cyr", "status": "active", "lat": 32.777248, "lon": -97.090993, "zip": "76006", "bearing": 304.4, "hq": false}, {"name": "Russ Deaton", "status": "active", "lat": 33.227564, "lon": -97.157978, "zip": "76201", "bearing": 348.8, "hq": false}, {"name": "Jessica Eastman", "status": "active", "lat": 33.100106, "lon": -96.865085, "zip": "75056", "bearing": 23.4, "hq": true}, {"name": "Brandon Farmer", "status": "recruit", "lat": 32.352396, "lon": -97.369962, "zip": "76031", "bearing": 214.5, "hq": false}, {"name": "Christopher Garrett", "status": "active", "lat": 33.378198, "lon": -94.117067, "zip": "75501", "bearing": 74.9, "hq": false}, {"name": "Ramiro Gonzalez", "status": "active", "lat": 32.753247, "lon": -97.517574, "zip": "76108", "bearing": 270.4, "hq": false}, {"name": "Antaeus Harris", "status": "active", "lat": 33.193929, "lon": -97.88681, "zip": "76426", "bearing": 302.3, "hq": false}, {"name": "Randy Harter", "status": "recruit", "lat": 32.573769, "lon": -99.656707, "zip": "79601", "bearing": 266.1, "hq": false}, {"name": "Jason Henriques", "status": "active", "lat": 34.654982, "lon": -94.179434, "zip": "71953", "bearing": 50.6, "hq": true}, {"name": "Asa Hooper", "status": "recruit", "lat": 33.016365, "lon": -96.536619, "zip": "75098", "bearing": 58.1, "hq": false}, {"name": "Will Husler", "status": "recruit", "lat": 32.418017, "lon": -96.814547, "zip": "75165", "bearing": 149.6, "hq": false}, {"name": "Levi Kavadas", "status": "active", "lat": 33.100106, "lon": -96.865085, "zip": "75056", "bearing": 23.4, "hq": true}, {"name": "Adam Locy", "status": "active", "lat": 33.057191, "lon": -96.844414, "zip": "75056", "bearing": 28.9, "hq": true}, {"name": "Albert Moreno", "status": "active", "lat": 32.800969, "lon": -97.201731, "zip": "76118", "bearing": 290.8, "hq": true}, {"name": "Jason Pati", "status": "active", "lat": 32.870573, "lon": -96.934794, "zip": "75039", "bearing": 38.0, "hq": false}, {"name": "Zachary Pope", "status": "active", "lat": 32.41133, "lon": -97.361789, "zip": "76031", "bearing": 218.2, "hq": false}, {"name": "Joseph Rankin", "status": "recruit", "lat": 31.555893, "lon": -97.167626, "zip": "76707", "bearing": 185.0, "hq": false}, {"name": "James Richardson", "status": "active", "lat": 31.988774, "lon": -98.028848, "zip": "76457", "bearing": 227.7, "hq": false}, {"name": "William Richardson", "status": "active", "lat": 33.039775, "lon": -96.810456, "zip": "75093", "bearing": 34.3, "hq": true}, {"name": "Cherie Shugrue", "status": "recruit", "lat": 31.073577, "lon": -97.95049, "zip": "76539", "bearing": 204.8, "hq": false}, {"name": "Eric Standlee", "status": "active", "lat": 32.747135, "lon": -97.265239, "zip": "76103", "bearing": 268.8, "hq": false}, {"name": "Paul Turner", "status": "active", "lat": 32.858614, "lon": -97.297033, "zip": "76137", "bearing": 297.0, "hq": true}, {"name": "Christian Turnley", "status": "recruit", "lat": 32.946953, "lon": -97.299453, "zip": "76244", "bearing": 312.6, "hq": false}, {"name": "Stefano Ventimiglio", "status": "active", "lat": 32.900477, "lon": -96.653809, "zip": "75042", "bearing": 65.5, "hq": false}, {"name": "Scott Wall", "status": "active", "lat": 33.062964, "lon": -96.737834, "zip": "75023", "bearing": 39.6, "hq": false}, {"name": "Matt Wellman", "status": "active", "lat": 32.836348, "lon": -97.166402, "zip": "76053", "bearing": 310.0, "hq": true}, {"name": "Lucas Matos", "status": "recruit", "lat": 32.905, "lon": -96.752, "zip": "75243", "bearing": 58.1, "hq": false}, {"name": "Shane Brassell", "status": "recruit", "lat": 32.006, "lon": -97.112, "zip": "76645", "bearing": 184.3, "hq": false}, {"name": "Chad Harris", "status": "recruit", "lat": 32.75, "lon": -97.33, "zip": "", "bearing": 0, "hq": false}, {"name": "Mark Horner", "status": "recruit", "lat": 32.476, "lon": -97.406, "zip": "76058", "bearing": 227.9, "hq": false}, {"name": "Zack Leverette", "status": "recruit", "lat": 32.722, "lon": -97.149, "zip": "76013", "bearing": 251.5, "hq": false}, {"name": "Andrew Maxey", "status": "recruit", "lat": 32.901, "lon": -96.746, "zip": "75243", "bearing": 59.2, "hq": false}]};
+
+const INACTIVE = [{"name": "Bob Adams", "team": "None", "status": "inactive", "zip": "75092", "lat": 33.63, "lon": -96.62}, {"name": "Kenneth Bernhard", "team": "None", "status": "inactive", "zip": "75044", "lat": 32.97, "lon": -96.64}, {"name": "Cameron Biggs", "team": "None", "status": "inactive", "zip": "75287", "lat": 32.99, "lon": -96.84}, {"name": "Noah Block", "team": "None", "status": "inactive", "zip": "76457", "lat": 31.99, "lon": -98.03}, {"name": "Everett Chastain", "team": "None", "status": "inactive", "zip": "76132", "lat": 32.68, "lon": -97.41}, {"name": "Jacob Chitwood", "team": "None", "status": "inactive", "zip": "76132", "lat": 32.69, "lon": -97.4}, {"name": "Michael Cole", "team": "None", "status": "inactive", "zip": "76226", "lat": 33.08, "lon": -97.14}, {"name": "Kevin Cooper", "team": "None", "status": "inactive", "zip": "75033", "lat": 33.15, "lon": -96.82}, {"name": "Trey Culberson", "team": "None", "status": "inactive", "zip": "76401", "lat": 32.22, "lon": -98.2}, {"name": "Kyle Douglas", "team": "None", "status": "inactive", "zip": "75117", "lat": 32.69, "lon": -95.88}, {"name": "Preston Douglas", "team": "None", "status": "inactive", "zip": "75081", "lat": 32.95, "lon": -96.71}, {"name": "Desmond Dusina", "team": "None", "status": "inactive", "zip": "76048", "lat": 32.44, "lon": -97.79}, {"name": "Larson Ernst", "team": "None", "status": "inactive", "zip": "76063", "lat": 32.56, "lon": -97.13}, {"name": "Aaron Hall", "team": "None", "status": "inactive", "zip": "75126", "lat": 32.76, "lon": -96.47}, {"name": "Lance Howell", "team": "None", "status": "inactive", "zip": "76102", "lat": 32.7, "lon": -97.12}, {"name": "Cassius Hughes", "team": "None", "status": "inactive", "zip": "76102", "lat": 32.76, "lon": -97.33}, {"name": "Ashton Jordan", "team": "None", "status": "inactive", "zip": "76017", "lat": 32.69, "lon": -97.16}, {"name": "Andrew Krznarich", "team": "None", "status": "inactive", "zip": "76028", "lat": 32.54, "lon": -97.3}, {"name": "Jimmy Lillie", "team": "None", "status": "inactive", "zip": "76085", "lat": 32.76, "lon": -97.69}, {"name": "Kenneth Mann", "team": "None", "status": "inactive", "zip": "76210", "lat": 33.17, "lon": -97.1}, {"name": "Houston Mannis", "team": "None", "status": "inactive", "zip": "76209", "lat": 33.22, "lon": -97.16}, {"name": "Jeremy Mata", "team": "None", "status": "inactive", "zip": "75407", "lat": 33.18, "lon": -96.5}, {"name": "Michael Maulden", "team": "None", "status": "inactive", "zip": "76262", "lat": 33.0, "lon": -97.23}, {"name": "Dawn Maulden", "team": "None", "status": "inactive", "zip": "76262", "lat": 33.01, "lon": -97.22}, {"name": "Denver Meyer", "team": "None", "status": "inactive", "zip": "75035", "lat": 33.16, "lon": -96.81}, {"name": "Cortlend Novak", "team": "None", "status": "inactive", "zip": "75071", "lat": 33.2, "lon": -96.68}, {"name": "Jeff Oldham", "team": "None", "status": "inactive", "zip": "76108", "lat": 32.77, "lon": -97.49}, {"name": "Eric Olguin", "team": "None", "status": "inactive", "zip": "76053", "lat": 32.83, "lon": -97.17}, {"name": "Brandon Parker", "team": "None", "status": "inactive", "zip": "76021", "lat": 32.85, "lon": -97.14}, {"name": "Edward Parker", "team": "None", "status": "inactive", "zip": "76028", "lat": 32.53, "lon": -97.32}, {"name": "Tom Pfingst", "team": "None", "status": "inactive", "zip": "75072", "lat": 33.2, "lon": -96.66}, {"name": "Justin Reyes", "team": "None", "status": "inactive", "zip": "75009", "lat": 33.32, "lon": -96.78}, {"name": "Stephen Ricci", "team": "None", "status": "inactive", "zip": "76137", "lat": 32.87, "lon": -97.3}, {"name": "Aaron Roberts", "team": "None", "status": "inactive", "zip": "76426", "lat": 33.2, "lon": -97.8}, {"name": "Chris Robinson", "team": "None", "status": "inactive", "zip": "75056", "lat": 33.09, "lon": -96.89}, {"name": "Justin Rodriguez", "team": "None", "status": "inactive", "zip": "76131", "lat": 32.88, "lon": -97.38}, {"name": "Bret Sebastian", "team": "None", "status": "inactive", "zip": "76177", "lat": 32.93, "lon": -97.3}, {"name": "Nicholas Sheetz", "team": "None", "status": "inactive", "zip": "76208", "lat": 33.19, "lon": -97.09}, {"name": "Justin Shelton", "team": "None", "status": "inactive", "zip": "75189", "lat": 32.98, "lon": -96.3}, {"name": "Donald Strout", "team": "None", "status": "inactive", "zip": "76054", "lat": 32.87, "lon": -97.08}, {"name": "Jett Ubben", "team": "None", "status": "inactive", "zip": "75238", "lat": 32.87, "lon": -96.68}, {"name": "Trent Watts", "team": "None", "status": "inactive", "zip": "76051", "lat": 32.93, "lon": -97.07}, {"name": "Sarah Wellman", "team": "None", "status": "inactive", "zip": "76041", "lat": 32.25, "lon": -96.85}, {"name": "Cody Wright", "team": "None", "status": "inactive", "zip": "76259", "lat": 33.18, "lon": -97.28}, {"name": "William Woolf", "team": "None", "status": "inactive", "zip": "76033", "lat": 32.36, "lon": -97.37}];
+
+const TEAM_COLORS = {
+  "Alpha": "#22c55e",
+  "Bravo": "#3b82f6",
+  "Charlie": "#ef4444",
+  "Delta": "#eab308",
+  "Echo": "#f97316",
+  "Foxtrot": "#8b5cf6",
+  "None": "#666",
+};
+
+const TEAM_LIST = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"];
+const TEAM_DIRS = ["N", "NE", "E/SE", "S", "SW/W", "NW"];
+
+// Zone config: 6 equal 60° slices, Alpha starts at 330° (i.e. 330°–30° = North)
+const ZONE_START = 330;
+const ZONE_SIZE = 60;
+
+function assignTeam(bearing) {
+  const idx = Math.floor(((bearing - ZONE_START + 360) % 360) / ZONE_SIZE);
+  return { name: TEAM_LIST[idx], color: TEAM_COLORS[TEAM_LIST[idx]], dir: TEAM_DIRS[idx] };
+}
+
+// Init map
+const map = L.map('map').setView([MAP_DATA.center.lat, MAP_DATA.center.lon], 9);
+
+const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' });
+streets.addTo(map);
+L.control.layers({"Streets": streets, "Satellite": satellite, "Topo": topo}).addTo(map);
+
+// Center marker
+L.circleMarker([MAP_DATA.center.lat, MAP_DATA.center.lon], {
+  radius: 8, color: '#d4a537', fillColor: '#d4a537', fillOpacity: 1, weight: 2
+}).addTo(map).bindPopup('<strong style="color:#d4a537">CENTER POINT</strong><br>I-30 & N Great Southwest Pkwy');
+
+// Generate zone polygons from bearings
+function bearingToPoint(lat, lon, bearing, distKm) {
+  const R = 6371;
+  const d = distKm / R;
+  const brng = bearing * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lon1 = lon * Math.PI / 180;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+  const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+  return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+}
+
+function generateZonePolygon(startBearing, endBearing, center, radiusKm) {
+  const pts = [[center.lat, center.lon]];
+  const steps = 30;
+  for (let i = 0; i <= steps; i++) {
+    const b = startBearing + (((endBearing - startBearing + 360) % 360) / steps) * i;
+    pts.push(bearingToPoint(center.lat, center.lon, b % 360, radiusKm));
+  }
+  pts.push([center.lat, center.lon]);
+  return pts;
+}
+
+const zoneLayer = L.layerGroup();
+TEAM_LIST.forEach((team, i) => {
+  const startB = (ZONE_START + i * ZONE_SIZE) % 360;
+  const endB = (startB + ZONE_SIZE) % 360;
+  const polygon = generateZonePolygon(startB, endB, MAP_DATA.center, 170);
+  const color = TEAM_COLORS[team];
+  L.polygon(polygon, {
+    color: color + 'aa',
+    fillColor: color + '44',
+    fillOpacity: 0.15,
+    weight: 2,
+    dashArray: '5,5',
+  }).addTo(zoneLayer).bindPopup('<strong>' + team + ' (' + TEAM_DIRS[i] + ')</strong><br>' + startB + '° – ' + endB + '°');
+});
+zoneLayer.addTo(map);
+
+// ─── Dynamic Member Rendering ────────────────────────────────────────────────
+const memberLayer = L.layerGroup().addTo(map);
+const hqRingLayer = L.layerGroup().addTo(map);
+const inactiveLayer = L.layerGroup();
+const bearingLineLayer = L.layerGroup();
+
+function renderMembers() {
+  memberLayer.clearLayers();
+  hqRingLayer.clearLayers();
+  bearingLineLayer.clearLayers();
+  const showLabels = document.getElementById('toggleLabels').checked;
+  const showBearing = document.getElementById('toggleBearingLines').checked;
+  const teamCounts = {};
+
+  // Check which teams are toggled on
+  const enabledTeams = new Set();
+  document.querySelectorAll('.team-toggle').forEach(cb => {
+    if (cb.checked) enabledTeams.add(cb.dataset.team);
+  });
+
+  MAP_DATA.members.forEach(function(m) {
+    const t = assignTeam(m.bearing);
+    teamCounts[t.name] = (teamCounts[t.name] || 0) + 1;
+
+    if (!enabledTeams.has(t.name)) return;
+
+    const radius = m.status === 'active' ? 8 : 6;
+    const marker = L.circleMarker([m.lat, m.lon], {
+      radius: radius, color: '#fff', weight: 2, fillColor: t.color, fillOpacity: 1,
+    }).addTo(memberLayer);
+
+    if (m.hq) {
+      L.circleMarker([m.lat, m.lon], {
+        radius: radius + 4, color: '#d4a537', weight: 2, fillOpacity: 0, dashArray: '4,3',
+      }).addTo(hqRingLayer);
+    }
+
+    const statusIcon = m.status === 'active' ? '🟢' : '🟡';
+    const hqBadge = m.hq ? '<br><span style="color:#d4a537">⭐ HQ Element</span>' : '';
+    marker.bindPopup('<div class="member-popup"><strong>' + m.name + '</strong><br>' + statusIcon + ' ' + m.status.charAt(0).toUpperCase() + m.status.slice(1) + '<br>Team: <span style="color:' + t.color + '">' + t.name + '</span> (' + t.dir + ')' + hqBadge + '<br>ZIP: ' + m.zip + '<br>Bearing: ' + m.bearing + '°</div>');
+
+    if (showLabels) {
+      marker.bindTooltip(m.name.split(' ')[1] || m.name, {permanent: true, direction: 'right', offset: [10, 0], className: 'name-label'});
+    }
+    if (showBearing) {
+      L.polyline([[MAP_DATA.center.lat, MAP_DATA.center.lon], [m.lat, m.lon]], {
+        color: t.color, weight: 1, opacity: 0.3, dashArray: '3,6'
+      }).addTo(bearingLineLayer);
+    }
+  });
+
+  // Update stats
+  const hqCount = MAP_DATA.members.filter(function(m){return m.hq}).length;
+  let statsHTML = '<div class="stat-group"><span class="stat-label">Total:</span> <span class="stat-count">' + MAP_DATA.members.length + '</span></div>';
+  TEAM_LIST.forEach(function(name) {
+    statsHTML += '<div class="stat-group"><span class="stat-dot" style="background:' + TEAM_COLORS[name] + '"></span><span class="stat-label">' + name + ':</span> <span class="stat-count">' + (teamCounts[name]||0) + '</span></div>';
+  });
+  statsHTML += '<div class="stat-group"><span class="stat-dot" style="background:#d4a537; border: 1px dashed #fff;"></span><span class="stat-label">HQ:</span> <span class="stat-count">' + hqCount + '</span></div>';
+  statsHTML += '<div class="stat-group"><span class="stat-dot" style="background:#666"></span><span class="stat-label">Inactive:</span> <span class="stat-count">' + INACTIVE.length + '</span></div>';
+  document.getElementById('stats').innerHTML = statsHTML;
+
+  if (showBearing) map.addLayer(bearingLineLayer);
+  if (document.getElementById('toggleHQRings').checked) map.addLayer(hqRingLayer);
+}
+
+// Inactive (static)
+INACTIVE.forEach(function(m) {
+  L.circleMarker([m.lat, m.lon], {
+    radius: 5, color: '#fff', weight: 1, fillColor: '#666', fillOpacity: 0.4,
+  }).addTo(inactiveLayer).bindPopup('<div class="member-popup"><strong>' + m.name + '</strong><br>Inactive<br>ZIP: ' + m.zip + '</div>');
+});
+
+renderMembers();
+
+// ─── Controls ────────────────────────────────────────────────────────────────
+document.getElementById('toggleZones').addEventListener('change', function() {
+  this.checked ? map.addLayer(zoneLayer) : map.removeLayer(zoneLayer);
+});
+document.getElementById('toggleLabels').addEventListener('change', function() { renderMembers(); });
+document.getElementById('toggleInactive').addEventListener('change', function() {
+  this.checked ? map.addLayer(inactiveLayer) : map.removeLayer(inactiveLayer);
+});
+document.getElementById('toggleBearingLines').addEventListener('change', function() {
+  if (!this.checked) map.removeLayer(bearingLineLayer);
+  renderMembers();
+});
+document.getElementById('toggleHQRings').addEventListener('change', function() {
+  this.checked ? map.addLayer(hqRingLayer) : map.removeLayer(hqRingLayer);
+});
+document.querySelectorAll('.team-toggle').forEach(cb => {
+  cb.addEventListener('change', function() { renderMembers(); });
+});
+</script>
+
+<div class="legend">
+  <h4 onclick="document.getElementById('legendBody').classList.toggle('collapsed'); document.getElementById('legendBody').classList.toggle('expanded'); this.querySelector('.toggle').textContent = document.getElementById('legendBody').classList.contains('collapsed') ? '▶' : '▼';">Legend <span class="toggle">▼</span></h4>
+  <div id="legendBody" class="legend-body">
+    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Alpha (N) — 330°–30°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Bravo (NE) — 30°–90°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Charlie (E/SE) — 90°–150°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Delta (S) — 150°–210°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Echo (SW/W) — 210°–270°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Foxtrot (NW) — 270°–330°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#666"></div> Inactive</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d4a537"></div> Center Point</div>
+    <div class="legend-item" style="margin-top:6px; color:#d4a537; font-size:11px;">◌ Gold ring = HQ element</div>
+    <div class="legend-item" style="color:#999; font-size:11px;">● Large = Active &nbsp; ● Medium = Recruit &nbsp; ● Small = Inactive</div>
+  </div>
+</div>
+
+</body>
+</html>

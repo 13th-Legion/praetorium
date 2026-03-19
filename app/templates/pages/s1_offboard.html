@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}S1 — Offboarding{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <h1>🚪 Offboarding / Separation</h1>
+
+    <!-- Initiate separation -->
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="card-title">Initiate Separation</h2>
+        <form hx-post="" hx-swap="innerHTML" hx-target="#offboard-result" id="offboard-form"
+              style="padding: 16px;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Member</label>
+                <select name="member_id" id="member-select" required
+                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    onchange="document.getElementById('offboard-form').setAttribute('hx-post', '/api/s1/offboard/' + this.value); htmx.process(document.getElementById('offboard-form'));">
+                    <option value="">Select member...</option>
+                    {% for m in active_members %}
+                    <option value="{{ m.id }}">{{ m.last_name }}, {{ m.first_name }} {% if m.callsign %}({{ m.callsign }}){% endif %} — {{ m.status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Reason</label>
+                <select name="reason" required style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="voluntary">Voluntary Separation</option>
+                    <option value="involuntary">Involuntary Separation</option>
+                    <option value="inactivity">Inactivity</option>
+                    <option value="blacklisted">Blacklisted</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Notes</label>
+                <textarea name="notes" rows="3" placeholder="Reason details..."
+                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></textarea>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Actions</label>
+                <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" name="disable_nc" checked>
+                    Disable Nextcloud account
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" name="remove_groups" checked>
+                    Remove from all NC groups
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" name="revoke_portal" checked>
+                    Revoke portal access
+                </label>
+            </div>
+
+            <button type="submit" style="
+                padding: 10px 24px; background: #b71c1c; color: #fff; border: none;
+                border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            ">Process Separation</button>
+        </form>
+        <div id="offboard-result" style="padding: 0 16px 16px;"></div>
+    </div>
+
+    <!-- Recent separations log -->
+    <h2>Recent Separations</h2>
+    {% if recent_separations %}
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Name</th>
+                <th style="text-align: left; padding: 8px;">Reason</th>
+                <th style="text-align: left; padding: 8px;">Initiated By</th>
+                <th style="text-align: left; padding: 8px;">Date</th>
+                <th style="text-align: left; padding: 8px;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in recent_separations %}
+            {% set log = s.log %}
+            {% set m = s.member %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;">
+                    {% if m %}{{ m.rank_display }} {{ m.last_name }}, {{ m.first_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %}{% else %}#{{ log.member_id }}{% endif %}
+                </td>
+                <td style="padding: 8px;">
+                    <span style="
+                        padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+                        {% if log.reason == 'blacklisted' %}background: #000; color: #fff;
+                        {% elif log.reason == 'involuntary' %}background: #ffebee; color: #b71c1c;
+                        {% elif log.reason == 'inactivity' %}background: #fff3e0; color: #e65100;
+                        {% else %}background: #e3f2fd; color: #1565c0;{% endif %}
+                    ">{{ log.reason }}</span>
+                </td>
+                <td style="padding: 8px;">{{ log.initiated_by }}</td>
+                <td style="padding: 8px;">{{ log.created_at.strftime('%Y-%m-%d') }}</td>
+                <td style="padding: 8px; color: #aaa; font-size: 12px;">{{ log.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #999;">No separations recorded.</p>
+    {% endif %}
+</div>
+{% endblock %}

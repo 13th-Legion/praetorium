@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}S1 — Payment Tracking{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <h1>💰 Payment Tracking</h1>
+    <p style="color: #666;">Application fee: $50.00 per applicant</p>
+
+    <h2 style="color: #e65100;">Pending ({{ pending | length }})</h2>
+    {% if pending %}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Applicant</th>
+                <th style="text-align: left; padding: 8px;">Pipeline Stage</th>
+                <th style="text-align: left; padding: 8px;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in pending %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <td style="padding: 8px; font-weight: 600;">{{ p.name }}</td>
+                <td style="padding: 8px;">
+                    <span style="font-size: 12px; color: #aaa;">{{ p.stage }}</span>
+                </td>
+                <td style="padding: 8px;" id="pay-{{ p.id }}">
+                    {% if p.member_id %}
+                    <form hx-post="/api/s1/payments/{{ p.member_id }}/record" hx-target="#pay-{{ p.id }}" hx-swap="innerHTML" style="display: flex; gap: 6px; align-items: center;">
+                        <select name="method" style="padding: 4px; font-size: 13px;">
+                            <option value="cash">Cash</option>
+                            <option value="venmo">Venmo</option>
+                            <option value="zelle">Zelle</option>
+                            <option value="paypal">PayPal</option>
+                        </select>
+                        <input type="hidden" name="status" value="paid">
+                        <button type="submit" style="padding: 4px 12px; background: #2e7d32; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Paid</button>
+                    </form>
+                    <form hx-post="/api/s1/payments/{{ p.member_id }}/record" hx-target="#pay-{{ p.id }}" hx-swap="innerHTML" style="margin-top: 4px;">
+                        <input type="hidden" name="status" value="waived">
+                        <input type="hidden" name="method" value="waived">
+                        <button type="submit" style="padding: 2px 8px; background: transparent; color: #1565c0; border: 1px solid #1565c0; border-radius: 4px; cursor: pointer; font-size: 11px;">Waive</button>
+                    </form>
+                    {% else %}
+                    <span style="color: #888; font-size: 12px;">Not yet onboarded</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #999;">No pending payments.</p>
+    {% endif %}
+
+    <h2 style="color: #2e7d32;">Paid ({{ paid | length }})</h2>
+    {% if paid %}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Applicant</th>
+                <th style="text-align: left; padding: 8px;">Method</th>
+                <th style="text-align: left; padding: 8px;">Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in paid %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <td style="padding: 8px;">{{ p.name }}</td>
+                <td style="padding: 8px;">{{ p.fee_method or '—' }}</td>
+                <td style="padding: 8px;">{{ p.fee_paid_at.strftime('%Y-%m-%d') if p.fee_paid_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #999;">No payments recorded yet.</p>
+    {% endif %}
+
+    {% if waived %}
+    <h2 style="color: #1565c0;">Waived ({{ waived | length }})</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Applicant</th>
+                <th style="text-align: left; padding: 8px;">Stage</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in waived %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <td style="padding: 8px;">{{ p.name }}</td>
+                <td style="padding: 8px; color: #aaa;">{{ p.stage }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

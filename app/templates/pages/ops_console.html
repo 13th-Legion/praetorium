@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% block title %}OPS — {{ event.title }}{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Ops Console Styles ───────────────────────────────────────── */
+  .ops-page { max-width: {% if display_mode == 'tv' %}100%{% else %}1200px{% endif %}; }
+
+  /* QR Section */
+  .qr-section { text-align: center; padding: 24px 16px; }
+  .qr-container { display: inline-block; background: #fff; padding: 16px; border-radius: 12px; }
+  .qr-container svg { width: {% if display_mode == 'tv' %}380px{% else %}280px{% endif %}; height: auto; display: block; }
+  .qr-meta { margin-top: 12px; font-size: 13px; color: #888; }
+  .qr-refresh-time { color: #d4a537; font-weight: 600; }
+
+  /* Headcount banner */
+  .headcount-bar {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+    padding: 12px 16px; background: rgba(212,165,55,0.1);
+    border: 1px solid rgba(212,165,55,0.3); border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  .headcount-num { font-size: {% if display_mode == 'tv' %}2rem{% else %}1.6rem{% endif %}; font-weight: 700; color: #d4a537; }
+  .headcount-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Roster table */
+  .ops-roster-table { width: 100%; border-collapse: collapse; font-size: {% if display_mode == 'tv' %}15px{% else %}13px{% endif %}; }
+  .ops-roster-table th {
+    text-align: left; padding: 8px 10px;
+    background: #1a1a2e; color: #888;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    border-bottom: 1px solid #2a2a4a; position: sticky; top: 0; z-index: 2;
+  }
+  .ops-roster-table td { padding: 8px 10px; border-bottom: 1px solid #1e1e35; vertical-align: middle; }
+  .ops-roster-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  /* Status badges */
+  .badge-checkedin { background: rgba(46,160,67,0.2); color: #56d364; border: 1px solid rgba(46,160,67,0.4); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-pending   { background: rgba(255,193,7,0.15); color: #ffc107; border: 1px solid rgba(255,193,7,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-guest     { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-walkin    { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+
+  /* Field status badges for vexillations */
+  .status-assembly { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .status-infield  { background: rgba(46,160,67,0.2);   color: #56d364; }
+  .status-released { background: rgba(107,114,128,0.2); color: #9ca3af; }
+
+  .vex-status-badge { padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+  /* Action buttons */
+  .ops-btn { padding: 4px 10px; font-size: 12px; border-radius: 4px; border: 1px solid #444; background: #1e1e35; color: #ccc; cursor: pointer; text-decoration: none; }
+  .ops-btn:hover { background: #2a2a4a; border-color: #666; }
+  .ops-btn-danger { border-color: rgba(183,28,28,0.5); color: #ef5350; }
+  .ops-btn-danger:hover { background: rgba(183,28,28,0.15); }
+  .ops-btn-primary { border-color: rgba(212,165,55,0.5); color: #d4a537; }
+  .ops-btn-primary:hover { background: rgba(212,165,55,0.1); }
+
+  /* Collapsible */
+  .collapsible-toggle { cursor: pointer; user-select: none; }
+  .collapsible-content { overflow: hidden; transition: max-height 0.3s ease; }
+
+  /* TV auto-scroll */
+  {% if display_mode == 'tv' %}
+  .ops-roster-wrapper { max-height: 60vh; overflow-y: auto; }
+  body { font-size: 16px; }
+  {% endif %}
+
+  /* Modal */
+  .ops-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+  .ops-modal-overlay.show { display: flex; }
+  .ops-modal { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; min-width: 360px; max-width: 90vw; }
+  .ops-modal h3 { margin: 0 0 16px; font-size: 1rem; color: #d4a537; }
+  .ops-form-row { margin-bottom: 12px; }
+  .ops-form-row label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+  .ops-form-row input, .ops-form-row select, .ops-form-row textarea {
+    width: 100%; padding: 8px 10px; background: #111122; border: 1px solid #333;
+    border-radius: 6px; color: #eee; font-size: 13px; box-sizing: border-box;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ops-page">
+  <!-- Back link (hidden in TV mode) -->
+  {% if display_mode != 'tv' %}
+  <a href="/events/{{ event.id }}" style="font-size:13px;color:#888;text-decoration:none;display:inline-block;margin-bottom:12px;">← Back to Event</a>
+  {% endif %}
+
+  <!-- ── Event Header ── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+    <div>
+      <h1 style="font-size:{% if display_mode == 'tv' %}1.8rem{% else %}1.3rem{% endif %};margin:0;color:#d4a537;">{{ event.title }}</h1>
+      <div style="font-size:12px;color:#888;margin-top:4px;">
+        {{ event.category | upper }} ·
+        {{ event.date_start | cdt | string | truncate(16, True, '') }}
+        {% if event.location %} · 📍 {{ event.location }}{% endif %}
+      </div>
+    </div>
+
+    <!-- Headcount summary -->
+    <div class="headcount-bar">
+      {% set checked_in_count = roster | selectattr("row_type", "equalto", "member") | selectattr("rsvp.checked_in") | list | length %}
+      {% set total_attending = roster | selectattr("row_type", "equalto", "member") | list | length %}
+      {% set guest_count = roster | selectattr("row_type", "equalto", "guest") | list | length %}
+      <div>
+        <div class="headcount-num">{{ checked_in_count }} / {{ total_attending }}</div>
+        <div class="headcount-label">Members Checked In</div>
+      </div>
+      {% if guest_count > 0 %}
+      <div>
+        <div class="headcount-num" style="font-size:1.2rem;color:#818cf8;">+{{ guest_count }}</div>
+        <div class="headcount-label">Guests</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── QR Code Section ── -->
+  <div class="card" id="qr-section" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 class="card-title collapsible-toggle" style="font-size:0.9rem;margin:0;" onclick="toggleQR()">
+        📱 QR Check-In <span id="qr-chevron">▲</span>
+      </h2>
+      {% if display_mode != 'tv' %}
+      <a href="/events/{{ event.id }}/ops?display=tv" class="ops-btn" target="_blank">📺 TV Mode</a>
+      {% endif %}
+    </div>
+
+    <div id="qr-content" class="collapsible-content">
+      <div class="qr-section">
+        {% if qr_svg %}
+        <div class="qr-container">
+          {{ qr_svg | safe }}
+        </div>
+        {% else %}
+        <div style="width:280px;height:280px;background:#111;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#555;margin:0 auto;">
+          QR unavailable
+        </div>
+        {% endif %}
+        <div class="qr-meta">
+          Scan to check in · Refreshes <span class="qr-refresh-time">{{ next_refresh.strftime('%H%M') }}</span>
+          <br>
+          <span style="font-size:11px;word-break:break-all;color:#555;">{{ qr_url }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Action Bar (hidden in TV mode) ── -->
+  {% if display_mode != 'tv' %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    {% if can_add_guest %}
+    <button class="ops-btn ops-btn-primary" onclick="document.getElementById('modal-guest').classList.add('show')">
+      👤 Add Walk-In Guest
+    </button>
+    {% endif %}
+
+    {% if can_guard and show_tactical %}
+    <button class="ops-btn" onclick="document.getElementById('modal-guard-config').classList.add('show')">
+      🔒 Guard Slots
+    </button>
+    {% endif %}
+
+    {% if can_vex_create and show_tactical %}
+    <button class="ops-btn" onclick="document.getElementById('modal-vex-create').classList.add('show')">
+      ⚔️ + Vexillation
+    </button>
+    {% endif %}
+
+    {% if can_checkin %}
+    <button class="ops-btn" onclick="document.getElementById('modal-manual-checkin').classList.add('show')">
+      ✅ Manual Check-In
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Vexillation Summary (tactical events only) ── -->
+  {% if show_tactical and vexillations %}
+  <div id="vex-summary-panel"
+       hx-get="/events/{{ event.id }}/ops/vexillations"
+       hx-trigger="every 30s"
+       hx-swap="outerHTML">
+    {% include "partials/ops_vex_summary.html" %}
+  </div>
+  {% endif %}
+
+  <!-- ── Live Roster ── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 class="card-title" style="font-size:0.9rem;margin:0;">📋 Live Roster</h2>
+      <span style="font-size:11px;color:#555;">Auto-refreshes every 10s</span>
+    </div>
+
+    <div class="ops-roster-wrapper">
+      <div id="ops-roster"
+           hx-get="/events/{{ event.id }}/ops/roster"
+           hx-trigger="every 10s"
+           hx-swap="innerHTML">
+        {% include "partials/ops_roster.html" %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Modals (hidden in TV mode) ── -->
+{% if display_mode != 'tv' %}
+
+<!-- Walk-In Guest Modal -->
+<div id="modal-guest" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="ops-modal">
+    <h3>👤 Add Walk-In Guest</h3>
+    <form method="POST" action="/events/{{ event.id }}/ops/guest">
+      <div class="ops-form-row">
+        <label>Sponsor (bringing them)</label>
+        <select name="sponsor_id" required>
+          <option value="">— Select member —</option>
+          {% for row in roster %}
+          {% if row.row_type == 'member' %}
+          <option value="{{ row.member.id }}">{{ row.member.last_name }}, {{ row.member.first_name }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="ops-form-row" style="flex:1;">
+          <label>First Name *</label>
+          <input type="text" name="first_name" required>
+        </div>
+        <div class="ops-form-row" style="flex:1;">
+          <label>Last Name *</label>
+          <input type="text" name="last_name" required>
+        </div>
+      </div>
+      <div class="ops-form-row">
+        <label>Relationship</label>
+        <select name="relation">
+          <option value="spouse_partner">Spouse / Partner</option>
+          <option value="family">Family</option>
+          <option value="friend">Friend</option>
+          <option value="prospect">Prospect (recruiting)</option>
+          <option value="inter_unit">Inter-Unit</option>
+          <option value="other" selected>Other</option>
+        </select>
+      </div>
+      <div class="ops-form-row">
+        <label>Phone (optional)</label>
+        <input type="tel" name="phone">
+      </div>
+      <div class="ops-form-row">
+        <label>Notes (optional)</label>
+        <textarea name="notes" rows="2"></textarea>
+      </div>
+      <div class="ops-form-row" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" name="waiver_ack" id="waiver" value="true" style="width:auto;">
+        <label for="waiver" style="margin:0;text-transform:none;font-size:13px;color:#ccc;">Waiver acknowledged</label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="ops-btn" onclick="document.getElementById('modal-guest').classList.remove('show')">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Add Guest</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Manual Check-In Modal -->
+<div id="modal-manual-checkin" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="ops-modal">
+    <h3>✅ Manual Check-In</h3>
+    <form method="POST" action="/events/{{ event.id }}/ops/manual-checkin">
+      <div class="ops-form-row">
+        <label>Member</label>
+        <select name="member_id" required>
+          <option value="">— Select member —</option>
+          {% for row in roster %}
+          {% if row.row_type == 'member' and not row.rsvp.checked_in %}
+          <option value="{{ row.member.id }}">{{ row.member.last_name }}, {{ row.member.first_name }} ({{ row.member.callsign or '—' }})</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="ops-btn" onclick="document.getElementById('modal-manual-checkin').classList.remove('show')">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Check In</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Guard Slot Config Modal -->
+{% if can_guard and show_tactical %}
+<div id="modal-guard-config" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="ops-modal">
+    <h3>🔒 Configure Guard Duty</h3>
+    <form method="POST" action="/events/{{ event.id }}/ops/guard/slots" id="guard-config-form">
+      <input type="hidden" name="slot_count" id="guard-slot-count" value="{{ guard_slots | length or 6 }}">
+      <input type="hidden" name="slot_labels" id="guard-slot-labels" value="{{ guard_slots | map(attribute='slot_label') | select | join(', ') }}">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="ops-form-row">
+          <label>Start Time</label>
+          <input type="text" id="guard-start" value="0000" maxlength="4" placeholder="0000"
+                 style="font-family:monospace;" onchange="generateGuardSlots()">
+        </div>
+        <div class="ops-form-row">
+          <label>End Time</label>
+          <input type="text" id="guard-end" value="0600" maxlength="4" placeholder="0600"
+                 style="font-family:monospace;" onchange="generateGuardSlots()">
+        </div>
+      </div>
+      <div class="ops-form-row" style="margin-bottom:12px;">
+        <label>Shift Length</label>
+        <select id="guard-shift-length" onchange="generateGuardSlots()">
+          <option value="60" selected>1 hour</option>
+          <option value="90">1.5 hours</option>
+          <option value="120">2 hours</option>
+          <option value="180">3 hours</option>
+        </select>
+      </div>
+
+      <!-- Preview -->
+      <div id="guard-preview" style="margin-bottom:12px;padding:10px;background:#111122;border:1px solid #2a2a4a;border-radius:6px;font-size:13px;color:#ccc;">
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="ops-btn" onclick="document.getElementById('modal-guard-config').classList.remove('show')">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Save Slots</button>
+      </div>
+    </form>
+    {% if guard_slots %}
+    <div style="margin-top:16px;border-top:1px solid #2a2a4a;padding-top:12px;">
+      <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:8px;">Auto-Assign</div>
+      <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign">
+        <button type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
+          ⚡ Auto-distribute checked-in members
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Vexillation Create Modal -->
+{% if can_vex_create and show_tactical %}
+<div id="modal-vex-create" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="ops-modal">
+    <h3>⚔️ Create Vexillation</h3>
+    <form method="POST" action="/events/{{ event.id }}/ops/vexillation">
+      <div class="ops-form-row">
+        <label>Team Name (e.g. Red Team, OPFOR, Vex 1)</label>
+        <input type="text" name="name" required placeholder="Red Team">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="ops-btn" onclick="document.getElementById('modal-vex-create').classList.remove('show')">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}{# end not tv mode #}
+
+<script>
+function toggleQR() {
+  const content = document.getElementById('qr-content');
+  const chevron = document.getElementById('qr-chevron');
+  if (content.style.maxHeight === '0px') {
+    content.style.maxHeight = content.scrollHeight + 'px';
+    chevron.textContent = '▲';
+  } else {
+    content.style.maxHeight = '0px';
+    chevron.textContent = '▼';
+  }
+}
+// Start with QR expanded
+document.addEventListener('DOMContentLoaded', function() {
+  const content = document.getElementById('qr-content');
+  content.style.maxHeight = content.scrollHeight + 'px';
+});
+
+// Guard duty slot generator
+function generateGuardSlots() {
+  var startEl = document.getElementById('guard-start');
+  if (!startEl) return;
+  var startStr = startEl.value.padStart(4, '0');
+  var endStr = document.getElementById('guard-end').value.padStart(4, '0');
+  var shiftMin = parseInt(document.getElementById('guard-shift-length').value);
+
+  var startMin = parseInt(startStr.slice(0,2)) * 60 + parseInt(startStr.slice(2,4));
+  var endMin = parseInt(endStr.slice(0,2)) * 60 + parseInt(endStr.slice(2,4));
+
+  // Handle overnight (e.g., 2200-0600)
+  if (endMin <= startMin) endMin += 1440;
+
+  var slots = [];
+  var cur = startMin;
+  while (cur < endMin) {
+    var next = Math.min(cur + shiftMin, endMin);
+    var sH = Math.floor((cur % 1440) / 60);
+    var sM = (cur % 1440) % 60;
+    var eH = Math.floor((next % 1440) / 60);
+    var eM = (next % 1440) % 60;
+    var label = String(sH).padStart(2,'0') + String(sM).padStart(2,'0') + '-' + String(eH).padStart(2,'0') + String(eM).padStart(2,'0');
+    slots.push(label);
+    cur = next;
+  }
+
+  document.getElementById('guard-slot-count').value = slots.length;
+  document.getElementById('guard-slot-labels').value = slots.join(', ');
+
+  var preview = document.getElementById('guard-preview');
+  if (slots.length === 0) {
+    preview.innerHTML = '<span style="color:#555;">No slots — check your times</span>';
+  } else {
+    preview.innerHTML = '<div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:6px;">' + slots.length + ' shifts</div>' +
+      slots.map(function(s, i) { return '<span style="display:inline-block;background:#1e1e35;border:1px solid #333;padding:3px 10px;border-radius:10px;font-size:12px;margin:2px 4px;font-family:monospace;">Slot ' + (i+1) + ' · ' + s + '</span>'; }).join('');
+  }
+}
+document.addEventListener('DOMContentLoaded', generateGuardSlots);
+
+{% if display_mode == 'tv' %}
+// TV mode: auto-scroll roster
+(function autoScroll() {
+  const wrapper = document.querySelector('.ops-roster-wrapper');
+  if (!wrapper) return;
+  let dir = 1;
+  let pauseUntil = 0;
+  setInterval(() => {
+    const now = Date.now();
+    if (now < pauseUntil) return;
+    const atBottom = wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - 2;
+    const atTop = wrapper.scrollTop <= 0;
+    if (atBottom && dir === 1) {
+      dir = -1;
+      pauseUntil = now + 3000; // pause 3s at bottom
+      return;
+    }
+    if (atTop && dir === -1) {
+      dir = 1;
+      pauseUntil = now + 3000; // pause 3s at top
+      return;
+    }
+    wrapper.scrollTop += dir * 1;
+  }, 50);
+})();
+{% endif %}
+</script>
+{% endblock %}

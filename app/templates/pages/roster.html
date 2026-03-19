@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Roster{% endblock %}
+{% block content_class %}content-wide{% endblock %}
+
+{% block content %}
+<div class="roster-page">
+    <div class="page-header">
+        <h1>{{ page_title }}</h1>
+        <span class="text-muted">{{ total }} members</span>
+    </div>
+
+    {% if can_see_full %}
+    <div class="roster-tabs">
+        <a href="/roster?show={{ show_tab }}&view=team" class="roster-tab {% if view_mode == 'team' %}roster-tab-active{% endif %}" title="Geographic fireteams">🗺️ By Team</a>
+        <a href="/roster?show={{ show_tab }}&view=element" class="roster-tab {% if view_mode == 'element' %}roster-tab-active{% endif %}" title="HQ element + fireteams">🏛️ By Element</a>
+        <span style="border-left: 1px solid #444; margin: 0 8px;"></span>
+        <a href="/roster?view={{ view_mode }}" class="roster-tab {% if show_tab == 'active' %}roster-tab-active{% endif %}">Active</a>
+        <a href="/roster?show=inactive&view={{ view_mode }}" class="roster-tab {% if show_tab == 'inactive' %}roster-tab-active{% endif %}">Inactive</a>
+        <a href="/roster?show=blacklist&view={{ view_mode }}" class="roster-tab {% if show_tab == 'blacklist' %}roster-tab-active{% endif %}">Blacklist</a>
+    </div>
+    {% endif %}
+
+    {% if view_scope != "full" %}
+    <p class="text-muted" style="margin-bottom: 1.5rem; font-size: 0.85rem;">
+        Showing your {{ view_scope }}. Full roster is available to Command and S1.
+    </p>
+    {% endif %}
+
+    <div class="roster-table-wrap">
+        <table class="roster-table roster-table-wide">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Callsign</th>
+                    <th>Billet</th>
+                    <th>Joined</th>
+                    <th>TIS</th>
+                    <th>{% if view_mode == 'element' %}Geo Team{% else %}Last FTX{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# ── HQ Element section (element view only) ── #}
+                {% if view_mode == 'element' and hq_members %}
+                <tr class="team-header-row">
+                    <td colspan="6">
+                        <span class="team-icon">🏛️</span>
+                        Headquarters
+                        <span class="team-count">({{ hq_members|length }})</span>
+                    </td>
+                </tr>
+                {% for m in hq_members %}
+                {% set _t = (m.leadership_title or '')|lower %}
+                {% set _is_command = 'commanding officer' in _t or 'executive officer' in _t or 'first sergeant' in _t or 'platoon sergeant' in _t or 'training nco' in _t %}
+                {% set _is_tl = 'team leader' in _t and 'assistant' not in _t %}
+                <tr class="roster-row {% if _is_tl %} row-tl{% elif 'assistant team leader' in _t %} row-atl{% elif _is_command %} row-command{% endif %}">
+                    <td class="name-cell">
+                        <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
+                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}
+                    </td>
+                    <td>{{ m.callsign or '—' }}</td>
+                    <td class="text-muted" title="{{ m.primary_billet or '' }}">{{ m.primary_billet or '—' }}</td>
+                    <td class="text-muted">{{ m.join_date.strftime('%b %Y') if m.join_date else '—' }}</td>
+                    <td class="text-muted">{{ tis(m.join_date) }}</td>
+                    <td class="text-muted">{{ m.team or '—' }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+
+                {# ── Team sections ── #}
+                {% for team_name, members in teams %}
+                <tr class="team-header-row">
+                    <td colspan="6">
+                        <span class="team-icon">
+                            {% if team_name == "Headquarters" %}🏛️
+                            {% elif team_name == "Alpha" %}🅰️
+                            {% elif team_name == "Bravo" %}🅱️
+                            {% elif team_name == "Charlie" %}©️
+                            {% elif team_name == "Delta" %}🔺
+                            {% elif team_name == "Echo" %}📢
+                            {% elif team_name == "Foxtrot" %}🦊
+                            {% else %}⚔️{% endif %}
+                        </span>
+                        {{ team_name }}
+                        <span class="team-count">({{ members|length }})</span>
+                        {% if team_name in renameable_teams %}<a href="/team/rename" title="Rename team" style="color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem; text-decoration: none; opacity: 0.5; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✏️</a>{% endif %}
+                    </td>
+                </tr>
+                {% for m in members %}
+                {% set _t = (m.leadership_title or '')|lower %}
+                {% set _is_command = 'commanding officer' in _t or 'executive officer' in _t or 'first sergeant' in _t or 'platoon sergeant' in _t or 'training nco' in _t %}
+                {% set _is_tl = 'team leader' in _t and 'assistant' not in _t %}
+                <tr class="roster-row {% if m.rank_grade in ('E-1', 'E-2') %}row-recruit{% endif %}{% if _is_tl %} row-tl{% elif 'assistant team leader' in _t %} row-atl{% elif _is_command %} row-command{% endif %}">
+                    <td class="name-cell">
+                        <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
+                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}{% if view_mode == 'team' and m.is_hq %}<span style="color:#d4a537; font-size:0.75rem; margin-left:4px;" title="HQ Element">⭐</span>{% endif %}
+                    </td>
+                    <td>{{ m.callsign or '—' }}</td>
+                    <td class="text-muted" title="{{ m.primary_billet or '' }}">{{ m.primary_billet or '—' }}</td>
+                    <td class="text-muted">{{ m.join_date.strftime('%b %Y') if m.join_date else '—' }}</td>
+                    <td class="text-muted">{{ tis(m.join_date) }}</td>
+                    <td class="text-muted">{% if view_mode == 'element' %}{{ m.team or '—' }}{% else %}{{ m.last_ftx.strftime('%b %Y') if m.last_ftx else '—' }}{% endif %}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

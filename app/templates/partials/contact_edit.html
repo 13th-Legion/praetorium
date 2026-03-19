@@ -1,0 +1,65 @@
+<!-- Self-service contact info edit form (HTMX partial) -->
+<form hx-post="/api/profile/contact" hx-target="#contact-card-body" hx-swap="outerHTML">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+            <label class="edit-label">Phone</label>
+            <input type="tel" name="phone" value="{{ member.phone or '' }}" class="edit-input" placeholder="(555) 123-4567">
+        </div>
+        <div>
+            <label class="edit-label">Personal Email</label>
+            <input type="email" name="personal_email" value="{{ member.personal_email or '' }}" class="edit-input">
+        </div>
+        <div style="grid-column:1/-1;">
+            <label class="edit-label">Street Address</label>
+            <input type="text" name="address" value="{{ member.address or '' }}" class="edit-input">
+        </div>
+        <div>
+            <label class="edit-label">City</label>
+            <input type="text" name="city" value="{{ member.city or '' }}" class="edit-input">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+                <label class="edit-label">State</label>
+                <input type="text" name="state" value="{{ member.state or 'TX' }}" class="edit-input" maxlength="2" style="text-transform:uppercase;">
+            </div>
+            <div>
+                <label class="edit-label">ZIP</label>
+                <input type="text" name="zip_code" value="{{ member.zip_code or '' }}" class="edit-input" maxlength="10">
+            </div>
+        </div>
+
+        <div style="grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:11px;font-weight:700;color:#d4a537;margin-bottom:8px;">Emergency Contact</div>
+        </div>
+        <div>
+            <label class="edit-label">Name</label>
+            <input type="text" name="emergency_contact" value="{{ member.emergency_contact or '' }}" class="edit-input">
+        </div>
+        <div>
+            <label class="edit-label">Phone</label>
+            <input type="tel" name="emergency_phone" value="{{ member.emergency_phone or '' }}" class="edit-input">
+        </div>
+
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" hx-get="/api/profile/contact-card" hx-target="#contact-card-body" hx-swap="outerHTML"
+            style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#ccc;border:none;border-radius:4px;cursor:pointer;font-size:13px;">
+            Cancel
+        </button>
+        <button type="submit"
+            style="padding:6px 14px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
+            💾 Save
+        </button>
+    </div>
+</form>
+
+<style>
+.edit-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.edit-input {
+    width:100%; padding:6px 8px; font-size:13px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+.edit-input:focus { border-color:#d4a537; outline:none; }
+</style>

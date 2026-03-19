@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ shop_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 80px auto; text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 16px;">{{ shop_icon }}</div>
+    <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin-bottom: 8px;">{{ shop_name }}</h1>
+    <p style="color: #999; font-size: 15px;">Dashboard coming soon.</p>
+    <a href="/dashboard" style="color: #d4a537; font-size: 13px;">← Back to Dashboard</a>
+</div>
+{% endblock %}

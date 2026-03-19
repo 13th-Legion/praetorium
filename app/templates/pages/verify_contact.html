@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Verify Your Contact Info{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+    <h1>📋 Verify Your Contact Information</h1>
+    <p style="color:#aaa;margin-bottom:20px;">Please review and update your info below. This is required before accessing the portal.</p>
+
+    <form method="POST" action="/verify-contact">
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Personal Info</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="vf-label">Phone Number <span style="color:#c62828;">*</span></label>
+                    <input type="tel" name="phone" value="{{ member.phone or '' }}" required class="vf-input" placeholder="555-555-5555">
+                </div>
+                <div>
+                    <label class="vf-label">Personal Email</label>
+                    <input type="email" name="personal_email" value="{{ member.personal_email or '' }}" class="vf-input" placeholder="your@email.com">
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Address</h3>
+            <div class="card-body">
+                <div style="margin-bottom:10px;">
+                    <label class="vf-label">Street Address <span style="color:#c62828;">*</span></label>
+                    <input type="text" name="address" value="{{ member.address or '' }}" required class="vf-input" placeholder="123 Main St">
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
+                    <div>
+                        <label class="vf-label">City <span style="color:#c62828;">*</span></label>
+                        <input type="text" name="city" value="{{ member.city or '' }}" required class="vf-input" placeholder="Dallas">
+                    </div>
+                    <div>
+                        <label class="vf-label">State</label>
+                        <input type="text" name="state" value="{{ member.state or 'TX' }}" class="vf-input" maxlength="2" placeholder="TX">
+                    </div>
+                    <div>
+                        <label class="vf-label">ZIP <span style="color:#c62828;">*</span></label>
+                        <input type="text" name="zip_code" value="{{ member.zip_code or '' }}" required class="vf-input" maxlength="10" placeholder="75001">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+            <h3 class="card-title">Emergency Contact</h3>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label class="vf-label">Contact Name <span style="color:#c62828;">*</span></label>
+                    <input type="text" name="emergency_contact" value="{{ member.emergency_contact or '' }}" required class="vf-input" placeholder="Jane Doe">
+                </div>
+                <div>
+                    <label class="vf-label">Contact Phone <span style="color:#c62828;">*</span></label>
+                    <input type="tel" name="emergency_phone" value="{{ member.emergency_phone or '' }}" required class="vf-input" placeholder="555-555-5555">
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" style="
+            width:100%;padding:12px;background:#d4a537;color:#1a1a2e;border:none;
+            border-radius:6px;font-weight:700;font-size:16px;cursor:pointer;
+        ">Confirm & Continue</button>
+    </form>
+</div>
+
+<style>
+.vf-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.vf-input {
+    width:100%; padding:8px 10px; font-size:14px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+.vf-input:focus { border-color:#d4a537; outline:none; }
+</style>
+{% endblock %}

@@ -1,0 +1,25 @@
+# Core
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+python-multipart==0.0.*
+
+# Templates
+jinja2==3.1.*
+
+# Database
+sqlalchemy==2.0.*
+alembic==1.14.*
+asyncpg==0.30.*          # async PostgreSQL driver
+psycopg2-binary==2.9.*   # sync driver (for alembic)
+
+# Auth
+authlib==1.4.*            # OAuth2/OIDC client
+itsdangerous==2.2.*       # session signing
+httpx==0.28.*             # async HTTP client (NC API)
+
+# Utils
+python-dotenv==1.0.*
+pydantic-settings==2.7.*
+python-dateutil==2.9.*    # RRULE expansion for recurring calendar events
+pytz
+qrcode[pil]==8.*          # QR code generation (PP-070 ops console)

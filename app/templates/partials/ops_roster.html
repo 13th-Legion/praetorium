@@ -1,0 +1,217 @@
+{# HTMX Partial: Live Roster Table Body — PP-070b #}
+{# Polled every 10s from ops_console.html #}
+<table class="ops-roster-table">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Name</th>
+      <th>Callsign</th>
+      <th>Team</th>
+      <th>Status</th>
+      {% if show_tactical %}
+      <th>Buddy</th>
+      <th>Guard</th>
+      <th>Vexillation</th>
+      {% endif %}
+      {% if not display_mode or display_mode != 'tv' %}
+      <th>Actions</th>
+      {% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in roster %}
+
+    {# ── Member Row ── #}
+    {% if row.row_type == 'member' %}
+    {% set rsvp = row.rsvp %}
+    {% set member = row.member %}
+    <tr {% if rsvp.checked_in %}style="color:#eee;"{% else %}style="color:#777;"{% endif %}>
+      <td>{{ member.rank_grade or '—' }}</td>
+      <td>
+        <strong>{{ member.last_name }}</strong>, {{ member.first_name }}
+      </td>
+      <td>{{ member.callsign or '—' }}</td>
+      <td>{{ member.team or '—' }}</td>
+      <td>
+        {% if rsvp.checked_in %}
+          <span class="badge-checkedin">✅ Checked In</span>
+        {% elif rsvp.status == 'attending' %}
+          <span class="badge-pending">⏳ Attending</span>
+        {% else %}
+          <span style="color:#555;font-size:11px;">{{ rsvp.status | capitalize }}</span>
+        {% endif %}
+      </td>
+
+      {% if show_tactical %}
+      {# Battle Buddy Column #}
+      <td>
+        {% if row.buddy_name %}
+          <span title="Pair ID {{ row.buddy_pair_id }}">{{ row.buddy_name }}</span>
+          {% if can_buddy %}
+          <form method="POST" action="/events/{{ event.id }}/ops/buddy/{{ row.buddy_pair_id }}/delete"
+                style="display:inline;" onsubmit="return confirm('Remove buddy pairing?')">
+            <button type="submit" class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
+                    hx-post="/events/{{ event.id }}/ops/buddy/{{ row.buddy_pair_id }}/delete"
+                    hx-target="#ops-roster" hx-swap="innerHTML"
+                    hx-confirm="Remove buddy pairing?">✕</button>
+          </form>
+          {% endif %}
+        {% elif rsvp.checked_in and can_buddy %}
+          <span style="color:#555;font-size:11px;">⚠️ Unpaired</span>
+          <button class="ops-btn" style="font-size:10px;padding:2px 6px;margin-left:4px;"
+                  onclick="openBuddyPair({{ member.id }}, '{{ member.last_name }}, {{ member.first_name }}')">
+            Pair
+          </button>
+        {% elif not rsvp.checked_in %}
+          <span style="color:#333;font-size:11px;">—</span>
+        {% else %}
+          <span style="color:#555;font-size:11px;">⚠️ Unpaired</span>
+        {% endif %}
+      </td>
+
+      {# Guard Duty Column #}
+      <td>
+        {% if row.guard_duty %}
+          <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
+          {% if can_guard %}
+          <button class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
+                  hx-delete="/events/{{ event.id }}/ops/guard/{{ row.guard_duty.id }}"
+                  hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Remove guard assignment?">✕</button>
+          {% endif %}
+        {% elif rsvp.checked_in and can_guard and guard_slots %}
+          <form method="POST" action="/events/{{ event.id }}/ops/guard/assign" style="display:flex;gap:4px;align-items:center;">
+            <input type="hidden" name="member_id" value="{{ member.id }}">
+            <select name="slot_number" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;">
+              {% for slot in guard_slots %}
+              <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>
+          </form>
+        {% else %}
+          <span style="color:#333;font-size:11px;">—</span>
+        {% endif %}
+      </td>
+
+      {# Vexillation Column #}
+      <td>
+        {% if row.vexillation %}
+          <span style="color:#818cf8;">{{ row.vexillation.name }}</span>
+          {% if can_vex_assign %}
+          <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ row.vexillation.id }}/assign" style="display:inline;">
+            <input type="hidden" name="member_id" value="{{ member.id }}">
+            <select name="vexillation_id" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;"
+                    onchange="this.form.action='/events/{{ event.id }}/ops/vexillation/'+this.value+'/assign';this.form.submit()">
+              <option value="">— Change —</option>
+              {% for vex in vexillations %}
+              <option value="{{ vex.id }}" {% if row.vexillation.id == vex.id %}selected{% endif %}>{{ vex.name }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          {% endif %}
+        {% elif rsvp.checked_in and can_vex_assign and vexillations %}
+          <form method="POST" style="display:flex;gap:4px;align-items:center;">
+            <input type="hidden" name="member_id" value="{{ member.id }}">
+            <select name="vex_select" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;"
+                    onchange="var v=this.value; if(v) { fetch('/events/{{ event.id }}/ops/vexillation/'+v+'/assign', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'member_id={{ member.id }}&assigned_by=ui'}).then(()=>htmx.trigger('#ops-roster','revealed')); }">
+              <option value="">— Assign —</option>
+              {% for vex in vexillations %}
+              <option value="{{ vex.id }}">{{ vex.name }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        {% else %}
+          <span style="color:#333;font-size:11px;">—</span>
+        {% endif %}
+      </td>
+      {% endif %}{# end show_tactical #}
+
+      {% if not display_mode or display_mode != 'tv' %}
+      <td>
+        {% if not rsvp.checked_in and can_checkin %}
+        <form method="POST" action="/events/{{ event.id }}/ops/manual-checkin" style="display:inline;">
+          <input type="hidden" name="member_id" value="{{ member.id }}">
+          <button type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;">Check In</button>
+        </form>
+        {% endif %}
+      </td>
+      {% endif %}
+    </tr>
+
+    {# ── Guest Row ── #}
+    {% elif row.row_type == 'guest' %}
+    {% set guest = row.guest %}
+    {% set sponsor = row.sponsor %}
+    <tr style="color:#9ca3af;">
+      <td>—</td>
+      <td>
+        <span style="color:#818cf8;">👤</span>
+        {{ guest.last_name }}, {{ guest.first_name }}
+        {% if guest.is_walkin %}<span class="badge-walkin" style="margin-left:4px;">Walk-in</span>{% endif %}
+      </td>
+      <td>—</td>
+      <td style="font-size:11px;color:#666;">w/ {{ sponsor.last_name }}</td>
+      <td>
+        {% if guest.checked_in_at %}
+          <span class="badge-guest">✅ Guest</span>
+        {% else %}
+          <span class="badge-guest">👤 Pre-reg</span>
+        {% endif %}
+      </td>
+      {% if show_tactical %}<td>—</td><td>—</td><td>—</td>{% endif %}
+      {% if not display_mode or display_mode != 'tv' %}<td>—</td>{% endif %}
+    </tr>
+    {% endif %}
+    {% else %}
+    <tr>
+      <td colspan="{% if show_tactical %}9{% else %}6{% endif %}" style="color:#555;text-align:center;padding:24px;">
+        No attendees yet. Waiting for check-ins…
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Buddy Pair Modal (rendered inside partial for HTMX refresh support) -->
+{% if can_buddy and show_tactical %}
+<div id="modal-buddy-pair" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="ops-modal">
+    <h3 id="buddy-pair-title">⚔️ Pair Battle Buddy</h3>
+    <form id="buddy-pair-form" method="POST" action="/events/{{ event.id }}/ops/buddy">
+      <input type="hidden" id="buddy-a-id" name="member_a_id" value="">
+      <div class="ops-form-row">
+        <label>Pairing with</label>
+        <select name="member_b_id" required id="buddy-b-select">
+          <option value="">— Select buddy —</option>
+          {% for row in roster %}
+          {% if row.row_type == 'member' and row.rsvp.checked_in and not row.buddy_pair %}
+          <option value="{{ row.member.id }}">{{ row.member.last_name }}, {{ row.member.first_name }} ({{ row.member.callsign or '—' }})</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="ops-btn" onclick="document.getElementById('modal-buddy-pair').classList.remove('show')">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Create Pairing</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function openBuddyPair(memberId, memberName) {
+  document.getElementById('buddy-a-id').value = memberId;
+  document.getElementById('buddy-pair-title').textContent = '⚔️ Pair Buddy for ' + memberName;
+  // Remove the member themselves from the B dropdown
+  var select = document.getElementById('buddy-b-select');
+  for (var i = 0; i < select.options.length; i++) {
+    if (select.options[i].value == memberId) {
+      select.options[i].disabled = true;
+    } else {
+      select.options[i].disabled = false;
+    }
+  }
+  document.getElementById('modal-buddy-pair').classList.add('show');
+}
+</script>

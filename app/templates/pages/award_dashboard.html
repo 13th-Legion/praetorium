@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Award & Sign-off Dashboard{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+    <h1>🏅 Award & Sign-off Dashboard</h1>
+    <p style="color:#aaa;margin-bottom:20px;">Directly award certifications, TRADOC sign-offs, and gladii to members.</p>
+
+    <!-- Member Selector -->
+    <div class="card" style="margin-bottom:20px;">
+        <h3 class="card-title">Select Member</h3>
+        <div class="card-body">
+            <select id="member-select" class="edit-input" style="max-width:400px;"
+                    onchange="updateMemberStatus(this.value)">
+                <option value="">— Select member —</option>
+                {% for m in members %}
+                <option value="{{ m.id }}">{{ m.rank_display }} {{ m.last_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %} — {{ m.team or 'Unassigned' }}</option>
+                {% endfor %}
+            </select>
+            <div id="member-status" style="margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- Three award sections side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+
+        <!-- TRADOC Sign-offs -->
+        <div class="card">
+            <h3 class="card-title">📝 TRADOC Sign-offs</h3>
+            <div class="card-body">
+                <form hx-post="/api/awards/tradoc" hx-target="#tradoc-result" hx-swap="innerHTML">
+                    <input type="hidden" name="member_id" id="tradoc-member-id">
+                    <div style="max-height:280px;overflow-y:auto;border:1px solid #444;border-radius:4px;padding:8px;margin-bottom:10px;">
+                        {% set current_block = namespace(val=-1) %}
+                        {% for item in tradoc_items %}
+                        {% if item.block != current_block.val %}
+                        {% set current_block.val = item.block %}
+                        <div style="font-size:11px;font-weight:700;color:#d4a537;padding:6px 0 2px;{% if not loop.first %}border-top:1px solid rgba(255,255,255,0.08);margin-top:6px;{% endif %}">
+                            {% if item.block == 0 %}Every FTX{% else %}Block {{ item.block }}{% endif %}
+                        </div>
+                        {% endif %}
+                        <label class="tradoc-check-label" data-item-id="{{ item.id }}" style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:12px;">
+                            <input type="checkbox" name="tradoc_ids" value="{{ item.id }}">
+                            {{ item.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn-award">Sign Off Selected</button>
+                    <div id="tradoc-result" style="margin-top:8px;"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Certifications -->
+        <div class="card">
+            <h3 class="card-title">🏅 Certifications & Tabs</h3>
+            <div class="card-body">
+                <form hx-post="/api/awards/cert" hx-target="#cert-result" hx-swap="innerHTML">
+                    <input type="hidden" name="member_id" id="cert-member-id">
+                    <div style="margin-bottom:10px;">
+                        {% for cert in certs %}
+                        <label class="cert-check-label" data-cert-id="{{ cert.id }}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;font-size:13px;">
+                            <input type="radio" name="cert_id" value="{{ cert.id }}">
+                            <span style="font-size:18px;">{{ cert.icon }}</span>
+                            <div>
+                                <div style="font-weight:600;">{{ cert.name }}</div>
+                                <div style="font-size:11px;color:#888;">{{ cert.category }}</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn-award">Award Certification</button>
+                    <div id="cert-result" style="margin-top:8px;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gladius Award — full width -->
+    <div class="card" style="margin-bottom:24px;">
+        <h3 class="card-title">⚔️ Award Gladius</h3>
+        <div class="card-body">
+            <form hx-post="/api/awards/gladius" hx-target="#gladius-result" hx-swap="innerHTML">
+                <input type="hidden" name="member_id" id="gladius-member-id">
+                <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
+                    <div>
+                        <label class="edit-label">Award Type</label>
+                        <select name="award_name" class="edit-input">
+                            <option value="Gladius">⚔️ Gladius</option>
+                            <option value="Gladius Aurum">🥇 Gladius Aurum (Gold)</option>
+                            <option value="Gladius Argentum">🥈 Gladius Argentum (Silver)</option>
+                            <option value="Gladius Aes">🥉 Gladius Aes (Bronze)</option>
+                            <option value="Corona Civica">🌿 Corona Civica</option>
+                            <option value="Phalerae">🎖️ Phalerae</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="edit-label">Citation / Reason <span style="color:#c62828;">*</span></label>
+                        <input type="text" name="reason" class="edit-input" required placeholder="For exceptional performance at FTX...">
+                    </div>
+                </div>
+                <button type="submit" class="btn-award" style="background:#d4a537;">Award</button>
+                <div id="gladius-result" style="margin-top:8px;"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.edit-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.edit-input {
+    width:100%; padding:6px 8px; font-size:13px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+.btn-award {
+    padding:6px 16px; background:#1565c0; color:#fff; border:none;
+    border-radius:4px; font-weight:600; cursor:pointer; font-size:13px;
+}
+.btn-award:hover { opacity:0.9; }
+.tradoc-done { opacity:0.4; text-decoration:line-through; }
+.cert-done { opacity:0.4; }
+</style>
+
+<script>
+function updateMemberStatus(memberId) {
+    if (!memberId) {
+        document.getElementById('member-status').innerHTML = '';
+        return;
+    }
+    // Set member ID on all forms
+    document.getElementById('tradoc-member-id').value = memberId;
+    document.getElementById('cert-member-id').value = memberId;
+    document.getElementById('gladius-member-id').value = memberId;
+
+    // Fetch member status
+    htmx.ajax('GET', '/api/awards/member/' + memberId + '/status', {target: '#member-status', swap: 'innerHTML'}).then(function() {
+        // After status loads, gray out already-completed items
+        setTimeout(function() {
+            var doneTradoc = (document.getElementById('done-tradoc') || {}).value || '';
+            var doneCerts = (document.getElementById('done-certs') || {}).value || '';
+            var tradocIds = doneTradoc ? doneTradoc.split(',') : [];
+            var certIds = doneCerts ? doneCerts.split(',') : [];
+
+            document.querySelectorAll('.tradoc-check-label').forEach(function(el) {
+                var id = el.getAttribute('data-item-id');
+                var cb = el.querySelector('input[type=checkbox]');
+                if (tradocIds.indexOf(id) >= 0) {
+                    el.classList.add('tradoc-done');
+                    cb.disabled = true;
+                    cb.checked = false;
+                } else {
+                    el.classList.remove('tradoc-done');
+                    cb.disabled = false;
+                }
+            });
+
+            document.querySelectorAll('.cert-check-label').forEach(function(el) {
+                var id = el.getAttribute('data-cert-id');
+                var rb = el.querySelector('input[type=radio]');
+                if (certIds.indexOf(id) >= 0) {
+                    el.classList.add('cert-done');
+                    rb.disabled = true;
+                } else {
+                    el.classList.remove('cert-done');
+                    rb.disabled = false;
+                }
+            });
+        }, 200);
+    });
+}
+</script>
+{% endblock %}

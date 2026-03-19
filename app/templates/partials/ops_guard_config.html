@@ -1,0 +1,78 @@
+{# HTMX Partial: Guard Slot Configuration Panel — PP-070d #}
+<div id="guard-config-panel" style="margin-bottom:16px;">
+  <div class="card">
+    <h3 style="font-size:0.85rem;margin:0 0 12px;color:#d4a537;">🔒 Guard Duty</h3>
+
+    {% if not guard_slots %}
+    <div style="color:#555;font-size:13px;margin-bottom:12px;">No guard slots configured.</div>
+    {% else %}
+    <!-- Slot summary with assignments -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      {% for slot in guard_slots %}
+      {% set slot_members = guard_duties | selectattr("slot_number", "equalto", slot.slot_number) | list %}
+      <div style="background:#111122;border:1px solid #2a2a4a;border-radius:6px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-weight:600;color:#ccc;font-size:13px;">
+            Slot {{ slot.slot_number }}
+            {% if slot.slot_label %}
+            <span style="color:#888;font-weight:400;font-size:12px;margin-left:6px;">{{ slot.slot_label }}</span>
+            {% endif %}
+          </div>
+          <span style="font-size:11px;color:#555;">{{ slot_members | length }} assigned</span>
+        </div>
+        {% if slot_members %}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          {% for duty in slot_members %}
+          <span style="background:#1e1e35;border:1px solid #333;padding:2px 8px;border-radius:10px;font-size:11px;color:#ccc;display:flex;align-items:center;gap:6px;">
+            {% if duty.member_id %}
+            {% set m = member_map.get(duty.member_id) %}
+            {% if m %}{{ m.last_name }}, {{ m.first_name }}{% else %}Member #{{ duty.member_id }}{% endif %}
+            {% elif duty.guest_id %}
+            Guest #{{ duty.guest_id }}
+            {% endif %}
+            <button class="ops-btn ops-btn-danger" style="padding:0 4px;font-size:10px;border:none;background:none;"
+                    hx-delete="/events/{{ event.id }}/ops/guard/{{ duty.id }}"
+                    hx-target="#guard-config-panel" hx-swap="outerHTML"
+                    hx-confirm="Remove from slot?">✕</button>
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:#444;font-size:12px;font-style:italic;">No assignments yet</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Configure form -->
+    <details style="margin-top:8px;">
+      <summary style="cursor:pointer;font-size:12px;color:#888;outline:none;">⚙️ Configure slots</summary>
+      <form method="POST" action="/events/{{ event.id }}/ops/guard/slots" style="margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div>
+            <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">Number of slots</label>
+            <input type="number" name="slot_count" min="1" max="12"
+                   value="{{ guard_slots | length or 2 }}"
+                   style="width:70px;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">Labels (comma-separated)</label>
+            <input type="text" name="slot_labels"
+                   value="{{ guard_slots | map(attribute='slot_label') | select | join(', ') }}"
+                   placeholder="2200-0000, 0000-0200"
+                   style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <button type="submit" class="ops-btn ops-btn-primary">Save</button>
+        </div>
+      </form>
+      {% if guard_slots %}
+      <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign" style="margin-top:8px;">
+        <button type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
+          ⚡ Auto-assign checked-in members to slots
+        </button>
+      </form>
+      {% endif %}
+    </details>
+  </div>
+</div>
