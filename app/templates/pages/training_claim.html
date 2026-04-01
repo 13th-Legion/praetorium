@@ -20,7 +20,7 @@
             {% for p in pending %}
             <div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;display:flex;justify-content:space-between;">
                 <span>
-                    {% if p.claim.claim_type == 'tradoc' %}📝{% else %}🏅{% endif %}
+                    {% if p.claim.claim_type == 'tradoc' %}📝{% elif p.claim.claim_type == 'ftx_attendance' %}🏕️{% else %}🏅{% endif %}
                     {{ p.name }}
                     {% if p.claim.doc_path %}<span style="color:#888;">📎</span>{% endif %}
                 </span>
@@ -41,6 +41,11 @@
                         <input type="radio" name="claim_type" value="tradoc" onclick="toggleClaimType('tradoc')" style="display:none;">
                         <div style="font-size:24px;">📝</div>
                         <div style="font-weight:600;font-size:13px;margin-top:4px;">TRADOC Item</div>
+                    </label>
+                    <label style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;" id="type-ftx-label">
+                        <input type="radio" name="claim_type" value="ftx_attendance" onclick="toggleClaimType('ftx_attendance')" style="display:none;">
+                        <div style="font-size:24px;">🏕️</div>
+                        <div style="font-weight:600;font-size:13px;margin-top:4px;">FTX Attendance</div>
                     </label>
                     <label style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;" id="type-cert-label">
                         <input type="radio" name="claim_type" value="certification" onclick="toggleClaimType('certification')" style="display:none;">
@@ -70,6 +75,20 @@
                     </div>
                     {% else %}
                     <p style="color:#2e7d32;font-size:13px;">✅ All TRADOC items complete!</p>
+                    {% endif %}
+                </div>
+
+                <!-- FTX dropdown -->
+                <div id="ftx-section" style="display:none;">
+                    <label class="edit-label">Past Event</label>
+                    <select name="ftx_id" id="ftx-select" class="edit-input" style="margin-bottom:12px;" disabled>
+                        <option value="">— Select FTX —</option>
+                        {% for evt in ftx_events %}
+                        <option value="{{ evt.id }}">{{ evt.date_start.strftime('%b %Y') }} — {{ evt.title }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not ftx_events %}
+                    <p style="color:#2e7d32;font-size:13px;">✅ You have attended all past FTXs!</p>
                     {% endif %}
                 </div>
 
@@ -146,6 +165,8 @@ var certCategories = {
     {% endfor %}
 };
 
+// Buffer file into memory on selection to prevent ERR_UPLOAD_FILE_CHANGED
+var bufferedFile = null;
 function updateFileName(input) {
     var label = document.getElementById('upload-label');
     var selected = document.getElementById('upload-selected');
@@ -158,34 +179,90 @@ function updateFileName(input) {
         fname.textContent = f.name;
         var mb = (f.size / 1024 / 1024).toFixed(1);
         fsize.textContent = mb + ' MB';
+        // Read file into memory immediately so it can't change before submit
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            bufferedFile = { data: e.target.result, name: f.name, type: f.type };
+        };
+        reader.readAsArrayBuffer(f);
     } else {
         label.style.display = 'block';
         selected.style.display = 'none';
+        bufferedFile = null;
     }
 }
+
+// On form submit: validate selection + replace file input with buffered version
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Check that at least one item is selected
+    var claimType = document.querySelector('input[name="claim_type"]:checked');
+    var hasSelection = false;
+    if (claimType && claimType.value === 'tradoc') {
+        hasSelection = document.querySelectorAll('input[name="tradoc_ids"]:checked').length > 0;
+    } else if (claimType && claimType.value === 'ftx_attendance') {
+        var ftxSel = document.getElementById('ftx-select');
+        hasSelection = ftxSel && ftxSel.value;
+    } else if (claimType && claimType.value === 'certification') {
+        var certSel = document.getElementById('cert-select');
+        hasSelection = certSel && certSel.value;
+    }
+    if (!hasSelection) {
+        e.preventDefault();
+        var msg = document.getElementById('validation-msg');
+        if (!msg) {
+            msg = document.createElement('div');
+            msg.id = 'validation-msg';
+            msg.style.cssText = 'padding:12px 16px;background:rgba(198,40,40,0.15);border-left:4px solid #c62828;border-radius:4px;margin-bottom:16px;color:#ef5350;font-size:14px;';
+            document.querySelector('form').prepend(msg);
+        }
+        msg.textContent = '⚠️ Select at least one TRADOC item or certification before submitting.';
+        msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    // Buffer file swap
+    if (bufferedFile) {
+        var input = document.getElementById('doc-upload');
+        var dt = new DataTransfer();
+        var blob = new Blob([bufferedFile.data], { type: bufferedFile.type });
+        var file = new File([blob], bufferedFile.name, { type: bufferedFile.type });
+        dt.items.add(file);
+        input.files = dt.files;
+    }
+});
 
 function toggleClaimType(type) {
     var tradocSec = document.getElementById('tradoc-section');
     var certSec = document.getElementById('cert-section');
+    var ftxSec = document.getElementById('ftx-section');
     var certSel = document.getElementById('cert-select');
+    var ftxSel = document.getElementById('ftx-select');
     var tradocLabel = document.getElementById('type-tradoc-label');
     var certLabel = document.getElementById('type-cert-label');
+    var ftxLabel = document.getElementById('type-ftx-label');
 
     var callsignSec = document.getElementById('callsign-section');
 
+    tradocSec.style.display = 'none';
+    certSec.style.display = 'none';
+    ftxSec.style.display = 'none';
+    certSel.disabled = true;
+    ftxSel.disabled = true;
+    callsignSec.style.display = 'none';
+    tradocLabel.style.borderColor = 'transparent';
+    certLabel.style.borderColor = 'transparent';
+    ftxLabel.style.borderColor = 'transparent';
+
     if (type === 'tradoc') {
         tradocSec.style.display = 'block';
-        certSec.style.display = 'none';
-        certSel.disabled = true;
-        callsignSec.style.display = 'none';
         tradocLabel.style.borderColor = '#d4a537';
-        certLabel.style.borderColor = 'transparent';
+    } else if (type === 'ftx_attendance') {
+        ftxSec.style.display = 'block';
+        ftxSel.disabled = false;
+        ftxLabel.style.borderColor = '#d4a537';
     } else {
-        tradocSec.style.display = 'none';
         certSec.style.display = 'block';
         certSel.disabled = false;
         certLabel.style.borderColor = '#d4a537';
-        tradocLabel.style.borderColor = 'transparent';
         toggleCallsign();
     }
 }

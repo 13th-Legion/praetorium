@@ -25,6 +25,8 @@ class Event(Base):
     # categories: ftx, mcftx, online_training, meeting, external_training, family_day, social, volunteering, other
     description: Mapped[Optional[str]] = mapped_column(Text)
     location: Mapped[Optional[str]] = mapped_column(Text)
+    instructor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    instructor: Mapped[Optional["Member"]] = relationship(foreign_keys=[instructor_id])
 
     # Schedule
     date_start: Mapped[datetime] = mapped_column(DateTime)

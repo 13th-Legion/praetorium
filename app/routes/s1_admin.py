@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/s1", tags=["s1-admin"])
 templates = Jinja2Templates(directory="app/templates")
 
 # Groups with S1 admin access
-from app.constants import S1_ROLES
+from app.constants import S1_ROLES, PIPELINE_ROLES
 
 NC_URL = "https://cloud.13thlegion.org"
 
@@ -171,6 +171,16 @@ def is_s1(user: dict) -> bool:
 def require_s1(user: dict):
     if not is_s1(user):
         raise HTTPException(status_code=403, detail="S1 / Command access required")
+
+
+def is_pipeline(user: dict) -> bool:
+    roles = set(user.get("roles", []))
+    return bool(roles & PIPELINE_ROLES)
+
+
+def require_pipeline(user: dict):
+    if not is_pipeline(user):
+        raise HTTPException(status_code=403, detail="S1 / Recruiter access required")
 
 
 # ─── PP-021: Payment Tracking ───────────────────────────────────────────────
@@ -646,7 +656,7 @@ async def _fetch_full_pipeline() -> dict:
 async def pipeline_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     """Kanban-style pipeline dashboard."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     columns = await _fetch_full_pipeline()
 
@@ -667,7 +677,7 @@ async def pipeline_dashboard(request: Request, db: AsyncSession = Depends(get_db
 async def pipeline_board_partial(request: Request, db: AsyncSession = Depends(get_db)):
     """Return just the kanban board columns (HTMX partial refresh)."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     columns = await _fetch_full_pipeline()
 
@@ -911,7 +921,7 @@ V/R,
 async def advance_pipeline_stage(request: Request, card_id: int):
     """Move a Deck card to the next pipeline stage."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
@@ -993,7 +1003,7 @@ async def advance_pipeline_stage(request: Request, card_id: int):
 async def decline_applicant(request: Request, card_id: int):
     """Decline/reject an applicant — archives the Deck card."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     form = await request.form()
     reason = form.get("reason", "other")
@@ -1074,7 +1084,7 @@ async def decline_applicant(request: Request, card_id: int):
 async def get_card_comments(request: Request, card_id: int):
     """Fetch comments for a Deck card."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -1120,7 +1130,7 @@ async def get_card_comments(request: Request, card_id: int):
 async def get_card_details(request: Request, card_id: int):
     """Fetch the Deck card description (form submission data)."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     try:
         # Search all stacks for this card
@@ -1193,7 +1203,7 @@ async def set_protonmail(request: Request, card_id: int):
     """Update the Proton Mail field in a Deck card description."""
     import re
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     form = await request.form()
     proton_email = form.get("proton_email", "").strip()
@@ -1270,7 +1280,7 @@ async def set_card_payment(request: Request, card_id: int):
     """Update payment status on a Deck card description."""
     import re
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     form = await request.form()
     status = form.get("status", "paid")  # paid or waived
@@ -1362,7 +1372,7 @@ async def set_card_payment(request: Request, card_id: int):
 async def add_card_comment(request: Request, card_id: int):
     """Add a comment to a Deck card."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     form = await request.form()
     message = form.get("message", "").strip()
@@ -1396,7 +1406,7 @@ async def add_card_comment(request: Request, card_id: int):
 async def get_card_attachments(request: Request, card_id: int):
     """Fetch attachments for a Deck card."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -1465,7 +1475,7 @@ async def download_attachment(request: Request, card_id: int, attachment_id: int
     from fastapi.responses import StreamingResponse
 
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -1516,7 +1526,7 @@ async def download_attachment(request: Request, card_id: int, attachment_id: int
 async def assign_recruiter_to_card(request: Request, card_id: int, db: AsyncSession = Depends(get_db)):
     """Assign a recruiter to a Deck card (adds as card member) and tracks in DB."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_pipeline(user)
 
     form = await request.form()
     recruiter_username = form.get("recruiter", "").strip()

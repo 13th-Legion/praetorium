@@ -22,6 +22,7 @@ from app.models.events import Event, EventRSVP, EventDocument
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc
 from config import get_settings
+from app.constants import RANK_ABBR
 
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
@@ -427,7 +428,7 @@ async def events_page(request: Request):
         member_id = member_row[0] if member_row else None
 
         # Build query
-        query = select(Event).order_by(Event.date_start.desc())
+        query = select(Event).options(selectinload(Event.instructor)).order_by(Event.date_start.desc())
 
         # Apply category filter
         tab_config = FILTER_TABS.get(tab, FILTER_TABS["all"])
@@ -488,6 +489,10 @@ async def events_page(request: Request):
                 "my_rsvp": my_rsvps_map.get(event.id),
                 "is_past": is_past,
             })
+            
+        # Get members for the instructor dropdown
+        all_members_result = await db.scalars(select(Member).where(Member.status.in_(["active", "recruit"])).order_by(Member.last_name))
+        members = all_members_result.all()
 
     # Split into upcoming and past
     upcoming = [e for e in events_data if not e["is_past"]]
@@ -514,6 +519,8 @@ async def events_page(request: Request):
         "filter_tabs": FILTER_TABS,
         "categories": VALID_CATEGORIES,
         "category_labels": CATEGORY_LABELS,
+        "members": members,
+        "rank_abbr": RANK_ABBR,
     })
 
 
@@ -528,7 +535,8 @@ async def event_detail(request: Request, event_id: int):
     async with async_session() as db:
         result = await db.execute(
             select(Event).options(
-                selectinload(Event.documents)
+                selectinload(Event.documents),
+                selectinload(Event.instructor)
             ).where(Event.id == event_id)
         )
         event = result.scalar_one_or_none()
@@ -567,10 +575,14 @@ async def event_detail(request: Request, event_id: int):
 
         all_day = (event.date_start.hour == 0 and event.date_start.minute == 0
                    and (not event.date_end or (event.date_end.hour == 0 and event.date_end.minute == 0)))
+        
+        all_members = await db.scalars(select(Member).where(Member.status.in_(["active", "recruit"])).order_by(Member.last_name))
+        members = all_members.all()
 
     rsvp_locked = bool(event.rsvp_deadline and _now_ct() > event.rsvp_deadline)
 
     return templates.TemplateResponse("pages/event_detail.html", {
+        "members": members,
         "request": request,
         "user": user,
         "is_admin": _is_admin(user),
@@ -581,6 +593,7 @@ async def event_detail(request: Request, event_id: int):
         "my_rsvp": my_rsvp,
         "rsvp_locked": rsvp_locked,
         "attending": attending,
+        "rank_abbr": RANK_ABBR,
         "declined": declined,
         "pending": pending,
         "documents": event.documents,
@@ -753,6 +766,7 @@ async def create_event(request: Request):
     location = form.get("location", "").strip() or None
     description = form.get("description", "").strip() or None
     training_block = form.get("training_block", "").strip()
+    instructor_id = form.get("instructor_id", "").strip()
 
     # Parse split date + military time fields
     date_start_date = form.get("date_start_date", "").strip()
@@ -791,6 +805,7 @@ async def create_event(request: Request):
             rsvp_enabled=rsvp_on,
             warno_scheduled_at=warno_sched,
             training_block=int(training_block) if training_block else None,
+            instructor_id=int(instructor_id) if instructor_id else None,
             created_by=user.get("username", "unknown"),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -871,6 +886,9 @@ async def edit_event(request: Request, event_id: int):
         if form.get("training_block") is not None:
             tb = form["training_block"].strip()
             event.training_block = int(tb) if tb else None
+        if form.get("instructor_id") is not None:
+            iid = form["instructor_id"].strip()
+            event.instructor_id = int(iid) if iid else None
 
         # RSVP controls
         if "rsvp_enabled" in form.keys():
@@ -970,7 +988,7 @@ async def upcoming_events(request: Request):
                 date_str = _format_date(event.date_start, all_day)
 
                 # Days-until badge
-                delta = (event.date_start.date() - date.today()).days
+                delta = (event.date_start.date() - _now_ct().date()).days
                 if delta == 0:
                     badge = '<span style="background:#c62828;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">TODAY</span>'
                 elif delta == 1:
@@ -1049,7 +1067,7 @@ async def _caldav_fallback_widget() -> HTMLResponse:
             all_day = ev["start"].hour == 0 and ev["start"].minute == 0
             date_str = _format_range(ev["start"], ev["end"], all_day)
             icon = _get_icon(_guess_category(ev["summary"]))
-            delta = (ev["start"].date() - date.today()).days
+            delta = (ev["start"].date() - _now_ct().date()).days
             if delta == 0:
                 badge = '<span style="background:#c62828;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">TODAY</span>'
             elif delta == 1:
@@ -1206,7 +1224,7 @@ async def warno_banner(request: Request):
                     my_responded = local_responded.strftime("RSVP'd %b %d at %H%M %Z")
 
     # Calculate days until event
-    delta_days = (event.date_start.date() - date.today()).days
+    delta_days = (event.date_start.date() - _now_ct().date()).days
 
     # OPORD countdown
     opord_html = ""

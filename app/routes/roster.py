@@ -291,11 +291,52 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/map")
 @require_auth
-async def member_map(request: Request):
+async def member_map(request: Request, db: AsyncSession = Depends(get_db)):
     """Geographic team map — Leaders, Command, S1 only."""
     user = get_current_user(request)
     roles = set(user.get("roles", []))
     allowed = {"command", "admin", "s1", "leader"}
     if not (roles & allowed):
         raise HTTPException(status_code=403, detail="Map access restricted to leadership")
-    return templates.TemplateResponse("pages/map.html", {"request": request, "user": user})
+        
+    result = await db.execute(select(Member).where(Member.latitude.isnot(None)))
+    all_members = result.scalars().all()
+    
+    from app.geo import calc_bearing
+    
+    active_data = []
+    inactive_data = []
+    
+    for m in all_members:
+        bearing = calc_bearing(m.latitude, m.longitude)
+        # Check if HQ
+        is_hq = getattr(m, "is_hq", False)
+        
+        md = {
+            "id": m.id,
+            "name": f"{m.first_name} {m.last_name}",
+            "status": m.status,
+            "lat": m.latitude,
+            "lon": m.longitude,
+            "zip": m.zip_code or "",
+            "bearing": round(bearing, 1),
+            "hq": is_hq,
+            "team": m.team or "None"
+        }
+        
+        if m.status in ("active", "recruit", "Active", "Recruit"):
+            active_data.append(md)
+        else:
+            inactive_data.append(md)
+            
+    map_data = {
+        "center": {"lat": 32.7512, "lon": -97.0457},
+        "members": active_data,
+        "inactive": inactive_data
+    }
+        
+    return templates.TemplateResponse("pages/map.html", {
+        "request": request, 
+        "user": user,
+        "map_data": map_data
+    })

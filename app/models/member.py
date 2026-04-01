@@ -3,7 +3,7 @@
 from datetime import datetime, date
 from typing import Optional
 
-from sqlalchemy import String, Text, Date, DateTime, Boolean, Enum, Integer, ForeignKey
+from sqlalchemy import String, Text, Date, DateTime, Boolean, Enum, Integer, ForeignKey, Float, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -46,6 +46,8 @@ class Member(Base):
     phone: Mapped[Optional[str]] = mapped_column(String(20))
     address: Mapped[Optional[str]] = mapped_column(Text)
     city: Mapped[Optional[str]] = mapped_column(String(64))
+    latitude: Mapped[Optional[float]] = mapped_column(Float)
+    longitude: Mapped[Optional[float]] = mapped_column(Float)
     state: Mapped[Optional[str]] = mapped_column(String(2), default="TX")
     zip_code: Mapped[Optional[str]] = mapped_column(String(10))
     personal_email: Mapped[Optional[str]] = mapped_column(String(128))

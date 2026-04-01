@@ -132,6 +132,14 @@ def geo_assign_team(lat, lon):
 
 DEFAULT_TEAM = "Alpha"  # Fallback if geocoding fails
 
+# Rank grade → abbreviation (mirrors app.constants.RANK_ABBR)
+RANK_ABBR = {
+    "E-1": "RCT", "E-2": "PV2", "E-3": "PFC", "E-4": "CPL",
+    "E-5": "SGT", "E-6": "SSG", "E-7": "SFC", "E-8": "1SG",
+    "E-9": "SGM", "W-1": "WO1", "W-2": "CW2",
+    "O-1": "2LT", "O-2": "1LT", "O-3": "CPT", "O-4": "MAJ",
+}
+
 # NC Talk room tokens for notifications
 NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
 
@@ -1206,67 +1214,55 @@ def move_card_to_stack(card_id, from_stack, to_stack):
         return False
 
 
-def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
+def get_team_leader(team):
+    """Look up the Team Leader for a given team from the portal DB.
+
+    Returns a formatted string like 'SGT Clint "Digger" Bunker' or None.
+    """
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            host=PORTAL_DB_HOST, port=PORTAL_DB_PORT,
+            dbname=PORTAL_DB_NAME, user=PORTAL_DB_USER,
+            password=PORTAL_DB_PASS,
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT first_name, last_name, callsign, rank_grade "
+            "FROM members "
+            "WHERE team = %s AND leadership_title = 'Team Leader' "
+            "LIMIT 1",
+            (team,),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return None
+        first, last, callsign, grade = row
+        abbr = RANK_ABBR.get(grade, grade or "")
+        if callsign:
+            return f'{abbr} {first} \u201c{callsign}\u201d {last}'
+        return f"{abbr} {first} {last}"
+    except Exception as e:
+        log.warning(f"Failed to look up team leader for {team}: {e}")
+        return None
+
+
+def send_welcome_email(recipient_email, name, nc_username, nc_password, team, team_leader=None):
     """Send welcome email to new recruit via Proton Bridge SMTP (PP-019)."""
 
-    # 2026 training calendar
-    calendar_html = """
-    <ul style="margin: 5px 0; padding-left: 20px;">
-        <li><s>09–11 JAN — BTBLK-04</s></li>
-        <li><s>06–08 FEB — BTBLK-01</s></li>
-        <li><s>21 FEB — Urban Evasion Course</s></li>
-        <li>13–15 MAR — BTBLK-02</li>
-        <li>09–12 APR — MCFTX (Multi-Company)</li>
-        <li>15–17 MAY — BTBLK-03</li>
-        <li>12–14 JUN — BTBLK-04</li>
-        <li>10–12 JUL — BTBLK-01</li>
-        <li>08 AUG — Family Day</li>
-        <li>11–13 SEP — BTBLK-02</li>
-        <li>08–11 OCT — MCFTX (Multi-Company)</li>
-        <li>13–15 NOV — BTBLK-03</li>
-        <li>11–13 DEC — BTBLK-04</li>
-    </ul>"""
-
-    tradoc_html = """
-    <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin: 10px 0;">
-        <tr style="background: #1a1a2e; color: #d4a537;">
-            <td style="padding: 8px; font-weight: bold;">Block 01 — Theory &amp; Medical</td>
-            <td style="padding: 8px; font-weight: bold;">Block 02 — Weapons Qualification</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px; vertical-align: top;">
-                • Customs &amp; Courtesies<br>
-                • Drill &amp; Ceremony<br>
-                • Gear Review<br>
-                • History &amp; Philosophy<br>
-                • Medical
-            </td>
-            <td style="padding: 8px; vertical-align: top;">
-                • Weapons Familiarization<br>
-                • Basic Rifle Marksmanship<br>
-                • Rifle Qualification<br>
-                • Shooting Drills<br>
-                • Use of Force
-            </td>
-        </tr>
-        <tr style="background: #1a1a2e; color: #d4a537;">
-            <td style="padding: 8px; font-weight: bold;">Block 03 — Supplemental Skills</td>
-            <td style="padding: 8px; font-weight: bold;">Block 04 — Combat Fundamentals</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px; vertical-align: top;">
-                • Comms<br>
-                • Land Navigation<br>
-                • Convoy
-            </td>
-            <td style="padding: 8px; vertical-align: top;">
-                • Individual Movement Techniques<br>
-                • Patrolling<br>
-                • React to Contact<br>
-                • Recon 101
-            </td>
-        </tr>
-    </table>"""
+    # ── Recruit Packet attachments (from NC Group Folder) ────────────────
+    RECRUIT_PACKET_DIR = Path("/var/lib/docker/volumes/nextcloud_nextcloud_data/_data/data/__groupfolders/1/Recruit Packet")
+    ATTACH_FILES = [
+        "13lg_code_of_conduct.pdf",
+        "13lg_activity_policy.pdf",
+        "13lg_first_ftx.pdf",
+        "13lg_tradoc_checklist.pdf",
+        "13lg_medical_card.pdf",
+        "13lg_chaplain_message.pdf",
+        "tsm_bylaws_2023.pdf",
+        "tsm_uniform_sop.pdf",
+    ]
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -1280,7 +1276,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
-            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia &mdash; Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
@@ -1289,154 +1285,184 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
 </div>
 
 <div style="padding: 20px;">
-    <p>Welcome to the 13th Legion, {name}!</p>
+    <p>Welcome to the 13th Legion, {name}.</p>
 
-    <p>Thank you for joining us. The Texas State Militia offers excellent training and service opportunities, and the 13th is proud to be DFW's unit. Aside from our monthly field training exercises we also offer optional fitness, charity, and training activities — great opportunities to meet your fellow members and build skills that matter.</p>
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Assignment
-    </h3>
-    <p>You've been assigned to <strong>{team} Team</strong>. Your team leader will reach out to you shortly. By now you should be invited to your team's Signal messaging group.</p>
-    <p>You can view the 13th's overall chain of command <a href="https://coc.13thlegion.org/">here</a>.</p>
+    <p>The 13th Legion is a company of the Texas State Militia &mdash; a lawful, all-volunteer citizens&rsquo; militia organized under the U.S. and Texas Constitutions. We exist to serve our local and state communities through disaster response, mutual aid, and community preparedness. We are not a social club or a weekend hobby &mdash; we are an organization of citizens who take the responsibility of community readiness seriously.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Your Nextcloud Account
+        &#x1F539; What to Expect
     </h3>
-    <p>Nextcloud is our secure, self-hosted platform for files, calendar, chat, and more. Everything lives here.</p>
+    <p>We run monthly field training exercises (FTXs) &mdash; typically from 1900 CT Friday through noon Sunday &mdash; covering medical, communications, land navigation, weapons qualification, and combat fundamentals. We also host optional fitness events, community service projects, and inter-unit training &mdash; great opportunities to meet your fellow members and build skills that matter.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        &#x1F539; What We Expect from You
+    </h3>
+    <p>Show up, stay in contact with your team leader, and put in the work. You don&rsquo;t need to be prior military or have fancy gear &mdash; just bring a willingness to learn and a commitment to your team. The members who get the most out of this are the ones who engage: ask questions, attend FTXs, and stay connected.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        &#x1F539; Assignment
+    </h3>
+    <p>You&rsquo;ve been assigned to <strong>{team} Team</strong>.{f' Your team leader is <strong>{team_leader}</strong> &mdash; expect' if team_leader else ' Your team leader will'} to hear from them shortly. By now you should be invited to your team&rsquo;s Signal messaging group.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        &#x1F539; Your Account
+    </h3>
+    <p>Your credentials below are used for both <strong>Praetorium</strong> (our unit portal) and <strong>Nextcloud Talk</strong> (our chat platform).</p>
     <table style="margin: 10px 0; font-size: 14px;">
-        <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">URL:</td>
-            <td><a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Username:</td>
             <td><code>{nc_username}</code></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Temporary Password:</td>
             <td><code>{nc_password}</code></td></tr>
     </table>
-    <p><strong>Change your password on first login.</strong> Then enable 2FA (TOTP) in your security settings — this is mandatory.</p>
-
-    <p style="margin-top: 12px;"><strong>Download the apps:</strong></p>
-    <ul>
-        <li><strong>Nextcloud</strong> (files, calendar, contacts) — <a href="https://apps.apple.com/app/nextcloud/id1125420102">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.client">Android</a> · <a href="https://nextcloud.com/install/#install-clients">Desktop</a></li>
-        <li><strong>Nextcloud Talk</strong> (chat &amp; calls) — <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2">Android</a></li>
-    </ul>
-    <p>When logging in to the apps, enter <strong>cloud.13thlegion.org</strong> as the server address, then use your username and password above.</p>
+    <p><strong>Change your password and enable 2FA before your first FTX</strong> &mdash; this is required. Go to <a href="https://cloud.13thlegion.org/settings/user/security" style="color:#d4a537;">cloud.13thlegion.org/settings/user/security</a>, log in with the credentials above, change your password, and enable TOTP two-factor authentication.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Unit Portal
+        &#x1F539; Praetorium (Unit Portal)
     </h3>
-    <p>Access the unit portal at <a href="https://portal.13thlegion.org">portal.13thlegion.org</a> — log in with the same Nextcloud account above. Your TRADOC checklist, training progress, certifications, and profile are all tracked there.</p>
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Communications
-    </h3>
+    <p><a href="https://portal.13thlegion.org" style="color:#d4a537;font-weight:600;">portal.13thlegion.org</a> &mdash; click &ldquo;Login with Nextcloud&rdquo; and use the credentials above. This is your hub for everything in the unit:</p>
     <ul>
-        <li><strong>Signal</strong> — Your team leader will add you to the team chat. Make sure you have Signal installed. <strong>Please stay in contact with your team leader on Signal. Failing to do so, outside of gross negligence or misconduct, is the only way to get removed from the unit.</strong></li>
-        <li><strong>Nextcloud Talk</strong> — Unit-wide chat channels are in your Nextcloud account.</li>
+        <li><a href="https://portal.13thlegion.org/roster" style="color:#d4a537;">Roster</a> &mdash; unit roster and chain of command</li>
+        <li><a href="https://portal.13thlegion.org/calendar" style="color:#d4a537;">Training &amp; Events Calendar</a> &mdash; FTX dates, RSVPs, and event details</li>
+        <li><a href="https://portal.13thlegion.org/library" style="color:#d4a537;">Resource Library</a> &mdash; field manuals, SOPs, and reference material</li>
+        <li><strong>Your Profile</strong> &mdash; TRADOC progress, certifications, training history, and contact info</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Training Calendar
+        &#x1F539; Communications
     </h3>
-    <p>Below is this year's training calendar. You can always view our <a href="https://cloud.13thlegion.org/apps/calendar">training and events calendar here</a>.</p>
-    {calendar_html}
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Basic Training (TRADOC)
-    </h3>
-    <p>Pay special attention to the TRADOC blocks below — these are the subjects you'll be trained and tested on to become a fully patched member. Your progress is tracked on the <a href="https://portal.13thlegion.org">unit portal</a>.</p>
-    {tradoc_html}
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Your First FTX
-    </h3>
-    <p><strong>Bring:</strong> Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing. Don't stress about gear — show up with what you have.</p>
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        🔹 Additional Resources
-    </h3>
-    <p>Your Nextcloud account includes a <strong>Recruit Packet</strong> folder in "13th Legion Shared" with all the documents you need to get started: code of conduct, bylaws, TRADOC checklist, medical card, uniform SOP, and more.</p>
-    <p>The <a href="https://portal.13thlegion.org">unit portal</a> is your one-stop shop for everything else:</p>
     <ul>
-        <li><a href="https://portal.13thlegion.org/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
-        <li><a href="https://portal.13thlegion.org/coc">Chain of Command</a></li>
-        <li><a href="https://portal.13thlegion.org/calendar">Training &amp; Events Calendar</a></li>
+        <li><strong>Signal</strong> &mdash; Your team leader will add you to the team chat. Make sure you have Signal installed. <strong>Stay in contact with your team leader on Signal. Failing to do so, outside of gross negligence or misconduct, is the only way to get removed from the unit.</strong></li>
+        <li><strong>Nextcloud Talk</strong> &mdash; Unit-wide chat channels. Download the app on your phone:
+            <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574" style="color:#d4a537;">iOS</a> &middot;
+            <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2" style="color:#d4a537;">Android</a>.
+            When logging in, enter <strong>cloud.13thlegion.org</strong> as the server address and use the credentials above.</li>
+    </ul>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        &#x1F539; Your First FTX
+    </h3>
+    <p><strong>Bring:</strong> Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing. Don&rsquo;t stress about gear &mdash; show up with what you have. Check the <a href="https://portal.13thlegion.org/calendar" style="color:#d4a537;">calendar on Praetorium</a> for upcoming FTX dates and RSVP.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        &#x1F539; Attached Documents
+    </h3>
+    <p>Your recruit packet is attached to this email. Please review these documents before your first FTX:</p>
+    <ul>
+        <li><strong>Code of Conduct</strong> &mdash; standards of behavior and expectations</li>
+        <li><strong>Activity Policy</strong> &mdash; attendance and participation requirements</li>
+        <li><strong>First FTX Guide</strong> &mdash; what to expect and what to bring</li>
+        <li><strong>TRADOC Checklist</strong> &mdash; the training requirements to become a patched member</li>
+        <li><strong>Medical Card</strong> &mdash; fill this out and bring it to your first FTX</li>
+        <li><strong>Chaplain&rsquo;s Message</strong> &mdash; a welcome from our chaplain</li>
+        <li><strong>TSM Bylaws</strong> &mdash; the state organization&rsquo;s governing document</li>
+        <li><strong>Uniform SOP</strong> &mdash; uniform and equipment standards</li>
     </ul>
 </div>
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #d4a537; margin: 0; font-style: italic;">
-        Nunquam Non Paratus — Never Not Ready
+        Nunquam Non Paratus &mdash; Never Not Ready
     </p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion • Texas State Militia • 13thlegion.org
+        13th Legion &bull; Texas State Militia &bull; 13thlegion.org
     </p>
 </div>
 
 </body>
 </html>"""
 
-    plain = f"""Welcome to the 13th Legion, {name}!
+    tl_plain = f" Your team leader is {team_leader} — expect" if team_leader else " Your team leader will"
+    plain = f"""Welcome to the 13th Legion, {name}.
 
-Thank you for joining us. The Texas State Militia offers excellent training and service opportunities, and the 13th is proud to be DFW's unit. Aside from our monthly field training exercises we also offer optional fitness, charity, and training activities — great opportunities to meet your fellow members and build skills that matter.
+The 13th Legion is a company of the Texas State Militia — a lawful, all-volunteer citizens' militia organized under the U.S. and Texas Constitutions. We exist to serve our local and state communities through disaster response, mutual aid, and community preparedness. We are not a social club or a weekend hobby — we are an organization of citizens who take the responsibility of community readiness seriously.
+
+WHAT TO EXPECT
+  We run monthly field training exercises (FTXs) — typically from 1900 CT
+  Friday through noon Sunday — covering medical, communications, land
+  navigation, weapons qualification, and combat fundamentals. We also host
+  optional fitness events, community service projects, and inter-unit
+  training.
+
+WHAT WE EXPECT FROM YOU
+  Show up, stay in contact with your team leader, and put in the work. You
+  don't need to be prior military or have fancy gear — just bring a
+  willingness to learn and a commitment to your team.
 
 ASSIGNMENT
-  You've been assigned to {team} Team. Your team leader will reach out shortly.
-  Chain of Command: https://coc.13thlegion.org/
+  You've been assigned to {team} Team.{tl_plain} to hear from them shortly.
 
-YOUR NEXTCLOUD ACCOUNT
-  URL: https://cloud.13thlegion.org
+YOUR ACCOUNT
   Username: {nc_username}
   Temporary Password: {nc_password}
-  Change your password on first login. Enable 2FA (mandatory).
+  These credentials work for both Praetorium and Nextcloud Talk.
+  Change your password and enable 2FA (required before first FTX):
+  https://cloud.13thlegion.org/settings/user/security
 
-  Download the apps:
-  - Nextcloud (files/calendar): iOS, Android, or Desktop — https://nextcloud.com/install/#install-clients
-  - Nextcloud Talk (chat/calls): search "Nextcloud Talk" in your app store
-  When logging in, enter cloud.13thlegion.org as the server address.
-
-UNIT PORTAL
-  https://portal.13thlegion.org — log in with your Nextcloud account.
-  Your TRADOC checklist, training progress, and profile are tracked here.
+PRAETORIUM (UNIT PORTAL)
+  https://portal.13thlegion.org — click "Login with Nextcloud"
+  - Roster & Chain of Command
+  - Training & Events Calendar (FTX dates, RSVPs)
+  - Resource Library (field manuals, SOPs)
+  - Your Profile (TRADOC progress, certs, training history)
 
 COMMUNICATIONS
-  - Signal: your TL will add you to the team chat. STAY IN CONTACT — failing
-    to communicate (outside of gross negligence/misconduct) is the only way
-    to get removed from the unit.
-  - Nextcloud Talk: unit-wide chat channels in your NC account
-2026 TRAINING CALENDAR
-  13-15 MAR — BTBLK-02          09-12 APR — MCFTX
-  15-17 MAY — BTBLK-03          12-14 JUN — BTBLK-04
-  10-12 JUL — BTBLK-01          08 AUG — Family Day
-  11-13 SEP — BTBLK-02          08-11 OCT — MCFTX
-  13-15 NOV — BTBLK-03          11-13 DEC — BTBLK-04
-  Full calendar: https://cloud.13thlegion.org/apps/calendar
-
-BASIC TRAINING (TRADOC)
-  Block 01 — Theory & Medical: Customs, Drill, Gear Review, History, Medical
-  Block 02 — Weapons Qual: Familiarization, BRM, Qual, Drills, Use of Force
-  Block 03 — Supplemental: Comms, Land Nav, Convoy
-  Block 04 — Combat Fundamentals: IMT, Patrolling, React to Contact, Recon
+  - Signal: your TL will add you to the team chat. STAY IN CONTACT —
+    failing to communicate (outside of gross negligence/misconduct) is
+    the only way to get removed from the unit.
+  - Nextcloud Talk: unit-wide chat. Download the app (iOS/Android),
+    enter cloud.13thlegion.org as server, log in with your creds above.
 
 YOUR FIRST FTX
-  Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing.
-  Don't stress about gear — show up with what you have.
+  Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate
+  clothing. Don't stress about gear — show up with what you have.
+  Check the calendar on Praetorium for upcoming dates and RSVP.
 
-ADDITIONAL RESOURCES
-  Your NC account has a "Recruit Packet" folder with all key documents.
-  The unit portal (https://portal.13thlegion.org) is your one-stop shop:
-  - Resource Library: https://portal.13thlegion.org/library
-  - Chain of Command: https://portal.13thlegion.org/coc
-  - Training & Events Calendar: https://portal.13thlegion.org/calendar
+ATTACHED DOCUMENTS
+  Your recruit packet is attached. Please review before your first FTX:
+  - Code of Conduct
+  - Activity Policy
+  - First FTX Guide
+  - TRADOC Checklist
+  - Medical Card (fill out and bring to first FTX)
+  - Chaplain's Message
+  - TSM Bylaws
+  - Uniform SOP
 
 Nunquam Non Paratus — Never Not Ready.
 — 13th Legion, Texas State Militia
 """
 
-    msg = MIMEMultipart("alternative")
+    # ── Build email with attachments ─────────────────────────────────────
+    msg = MIMEMultipart("mixed")
     msg["Subject"] = "Welcome to the 13th Legion — Texas State Militia"
     msg["From"] = SMTP_FROM
     msg["To"] = recipient_email
-    msg.attach(MIMEText(plain, "plain"))
-    msg.attach(MIMEText(html, "html"))
+
+    # HTML + plain text alternative part
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(plain, "plain"))
+    alt.attach(MIMEText(html, "html"))
+    msg.attach(alt)
+
+    # Attach recruit packet PDFs
+    attached_count = 0
+    for filename in ATTACH_FILES:
+        filepath = RECRUIT_PACKET_DIR / filename
+        if filepath.exists():
+            try:
+                with open(filepath, "rb") as f:
+                    part = MIMEBase("application", "pdf")
+                    part.set_payload(f.read())
+                    encoders.encode_base64(part)
+                    part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                    msg.attach(part)
+                    attached_count += 1
+            except Exception as e:
+                log.warning(f"Could not attach {filename}: {e}")
+        else:
+            log.warning(f"Recruit packet file not found: {filepath}")
+
+    log.info(f"Attached {attached_count}/{len(ATTACH_FILES)} recruit packet files")
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
@@ -1535,8 +1561,9 @@ def onboard_member(card, state, dry_run=False):
     # 4. Move applicant files to S1 recruiting folder
     move_applicant_files(name)
 
-    # 5. Send welcome email (to Proton Mail address)
-    send_welcome_email(proton_email, name, nc_username, nc_password, team)
+    # 5. Look up team leader and send welcome email (to Proton Mail address)
+    team_leader = get_team_leader(team)
+    send_welcome_email(proton_email, name, nc_username, nc_password, team, team_leader=team_leader)
 
     # 6. Move card to Complete
     move_card_to_stack(card_id, STACKS["approved"], STACKS["complete"])
@@ -1590,12 +1617,15 @@ def main():
     # Test email mode
     if args.test_email:
         log.info(f"Sending test welcome email to {args.test_email}")
+        test_team = "Bravo"
+        test_tl = get_team_leader(test_team)
         send_welcome_email(
             args.test_email,
             name="Test Recruit",
             nc_username="test.recruit",
             nc_password="TestP@ssw0rd123!",
-            team="Arrow",
+            team=test_team,
+            team_leader=test_tl,
         )
         return
 

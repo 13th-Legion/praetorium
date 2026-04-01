@@ -17,6 +17,9 @@ authlib==1.4.*            # OAuth2/OIDC client
 itsdangerous==2.2.*       # session signing
 httpx==0.28.*             # async HTTP client (NC API)
 
+# HTML sanitization
+bleach==6.*
+
 # Utils
 python-dotenv==1.0.*
 pydantic-settings==2.7.*

@@ -31,7 +31,8 @@ RANK_CHOICES: list[tuple[str, str]] = [
 # ─── Authorization Role Sets ─────────────────────────────────────────────────
 
 COMMAND_ROLES: set[str] = {"command", "admin"}
-S1_ROLES: set[str] = {"command", "admin", "s1"}
+S1_ROLES: set[str] = {"command", "admin", "s1_lead"}
+PIPELINE_ROLES: set[str] = {"command", "admin", "s1", "s1_lead"}
 AWARD_ROLES: set[str] = {"command", "admin", "s1", "leader"}
 
 # ─── Team / Element Constants ────────────────────────────────────────────────
@@ -68,7 +69,9 @@ LEADERSHIP_TITLES = [
     "Commanding Officer",
     "Executive Officer",
     "First Sergeant",
-    "Platoon Sergeant, Training NCO",
+    "Platoon Leader",
+    "Platoon Sergeant",
+    "Squad Leader",
     "Team Leader",
     "Assistant Team Leader",
 ]

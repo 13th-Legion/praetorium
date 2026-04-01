@@ -176,15 +176,21 @@
         </div>
 
         <!-- FTX Attendance History -->
-        {% if ftx_history is defined and ftx_history %}
         {% set can_see_ftx = is_own or "command" in user.roles or "admin" in user.roles or "s1" in user.roles or "leader" in user.roles %}
         {% if can_see_ftx %}
         <div class="card">
-            <h3 class="card-title">
-                FTX Attendance
-                <span style="background:#d4a537;color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:700;">
-                    {{ ftx_history|selectattr('category', 'in', ['ftx','mcftx'])|list|length }}
-                </span>
+            <h3 class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    FTX Attendance
+                    <span style="background:#d4a537;color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:700;">
+                        {{ ftx_history|selectattr('category', 'in', ['ftx','mcftx'])|list|length }}
+                    </span>
+                </div>
+                {% if is_own %}
+                <a href="/api/training/claim" title="Claim missing FTX attendance" style="padding:4px 10px;background:rgba(212,165,55,0.15);color:#d4a537;border:1px solid rgba(212,165,55,0.3);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;text-decoration:none;">
+                    ➕ Claim Past
+                </a>
+                {% endif %}
             </h3>
             <div class="card-body" style="max-height:300px;overflow-y:auto;">
                 {% for ev in ftx_history %}
@@ -304,6 +310,47 @@
                     ✓ Last verified {{ member.contact_verified_at.strftime('%b %d, %Y') }}
                 </div>
                 {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if is_own %}
+        <!-- Security & Login -->
+        <div class="card card-pii" style="margin-top: 20px; border-color: rgba(212,165,55,0.2);">
+            <h3 class="card-title">🔒 Security & Login</h3>
+            <div class="card-body">
+                <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.85rem;">Manage your portal password and two-factor authentication.</p>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <a href="https://cloud.13thlegion.org/settings/user/security" target="_blank" style="padding:6px 12px;background:rgba(212,165,55,0.15);color:#d4a537;border:1px solid rgba(212,165,55,0.3);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;">
+                        Set Up 2FA ↗
+                    </a>
+                    <div class="text-muted" style="font-size: 0.75rem; margin-top: 6px;">Opens identity settings in a new tab to scan the authenticator QR code.</div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+
+                <div id="password-form-container">
+                    <button onclick="document.getElementById('pwd-form').style.display='block'; this.style.display='none';" style="padding:6px 12px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">
+                        Change Password
+                    </button>
+                    
+                    <form id="pwd-form" hx-post="/api/profile/change-password" hx-target="#pwd-result" style="display: none; margin-top: 0.5rem;">
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; font-size: 0.8rem; color: #888; margin-bottom:4px;">New Password</label>
+                            <input type="password" name="new_password" class="edit-input" required minlength="8" style="width: 100%; padding:6px; border:1px solid #333; background:#111; color:#fff; border-radius:4px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-size: 0.8rem; color: #888; margin-bottom:4px;">Confirm Password</label>
+                            <input type="password" name="confirm_password" class="edit-input" required minlength="8" style="width: 100%; padding:6px; border:1px solid #333; background:#111; color:#fff; border-radius:4px;">
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button type="submit" style="padding:6px 12px;background:#d4a537;color:#111;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
+                            <button type="button" onclick="document.getElementById('pwd-form').style.display='none'; document.querySelector('#password-form-container > button').style.display='block'; document.getElementById('pwd-result').innerHTML='';" style="padding:6px 12px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
+                        </div>
+                        <div id="pwd-result" style="margin-top: 15px; font-weight: 500; font-size: 0.85rem;"></div>
+                    </form>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -439,7 +486,6 @@
     </div>
     {% endif %}
 
-    {% endif %}
 </div>
 
 <!-- QR Code Library + Toggle Script -->

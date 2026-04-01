@@ -17,7 +17,26 @@ from app.models.events import Event, EventRSVP
 router = APIRouter(prefix="/profile", tags=["profile"])
 templates = Jinja2Templates(directory="app/templates")
 
+
 import re
+import httpx
+from config import get_settings
+
+async def _fetch_single_nc_login(username: str) -> int:
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"{settings.nc_url}/ocs/v2.php/cloud/users/{username}",
+                auth=(settings.nc_api_user, settings.nc_api_password),
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                timeout=3
+            )
+            r.raise_for_status()
+            udata = r.json().get("ocs", {}).get("data", {})
+            return udata.get("lastLogin", 0)
+    except Exception:
+        return 0
 from markupsafe import Markup
 
 def _format_phone(value: str) -> Markup:
@@ -170,10 +189,8 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
     # Fetch NC last login for this member
     nc_last_login = None
     if member.nc_username:
-        from app.routes.roster import _fetch_nc_users
         try:
-            nc_users = await _fetch_nc_users()
-            login_ms = nc_users.get(member.nc_username, 0)
+            login_ms = await _fetch_single_nc_login(member.nc_username)
             if login_ms and login_ms > 0:
                 nc_last_login = datetime.utcfromtimestamp(login_ms / 1000)
         except Exception:
@@ -221,10 +238,8 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
     # Fetch NC last login for this member
     nc_last_login = None
     if member.nc_username:
-        from app.routes.roster import _fetch_nc_users
         try:
-            nc_users = await _fetch_nc_users()
-            login_ms = nc_users.get(member.nc_username, 0)
+            login_ms = await _fetch_single_nc_login(member.nc_username)
             if login_ms and login_ms > 0:
                 nc_last_login = datetime.utcfromtimestamp(login_ms / 1000)
         except Exception:

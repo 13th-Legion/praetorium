@@ -20,5 +20,5 @@ async def dashboard(request: Request):
         "request": request,
         "user": user,
         "is_command": bool(roles & COMMAND_ROLES),
-        "is_s1_lead": "s1" in roles,
+        "is_s1_lead": "s1_lead" in roles or bool(roles & {"command", "admin"}),
     })

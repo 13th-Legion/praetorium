@@ -309,6 +309,21 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
     )
     certs = [c for c in cert_result.scalars().all() if c.id not in earned_ids]
 
+    # Get un-attended past FTXs
+    from app.models.events import Event, EventRSVP
+    attended_result = await db.execute(
+        select(EventRSVP.event_id).where(EventRSVP.member_id == member.id, EventRSVP.attended == True)
+    )
+    attended_ids = {row[0] for row in attended_result.all()}
+
+    ftx_result = await db.execute(
+        select(Event)
+        .where(Event.category.in_(["ftx", "mcftx"]))
+        .where(Event.date_start < datetime.utcnow())
+        .order_by(desc(Event.date_start))
+    )
+    ftx_events = [e for e in ftx_result.scalars().all() if e.id not in attended_ids]
+
     # Get existing pending claims with resolved names
     pending_result = await db.execute(
         select(TrainingClaim)
@@ -321,11 +336,16 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
     tradoc_names = {t.id: t.name for t in all_tradoc_result.scalars().all()}
     all_certs_result = await db.execute(select(Certification))
     cert_names = {c.id: f"{c.icon} {c.name}" for c in all_certs_result.scalars().all()}
+    from app.models.events import Event
+    all_ftx_result = await db.execute(select(Event).where(Event.category.in_(["ftx", "mcftx"])))
+    ftx_names = {e.id: e.title for e in all_ftx_result.scalars().all()}
 
     pending = []
     for c in pending_raw:
         if c.claim_type == "tradoc":
             name = tradoc_names.get(c.reference_id, f"Item #{c.reference_id}")
+        elif c.claim_type == "ftx_attendance":
+            name = ftx_names.get(c.reference_id, f"FTX: {c.reference_id}")
         else:
             name = cert_names.get(c.reference_id, f"Cert #{c.reference_id}")
         pending.append({"claim": c, "name": name})
@@ -336,6 +356,7 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
         "member": member,
         "tradoc_items": tradoc_items,
         "certs": certs,
+        "ftx_events": ftx_events,
         "pending": pending,
     })
 
@@ -353,11 +374,11 @@ async def submit_claim(request: Request, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Member not found")
 
     form = await request.form()
-    claim_type = form.get("claim_type", "")  # tradoc, certification
+    claim_type = form.get("claim_type", "")  # tradoc, certification, ftx_attendance
     description = form.get("description", "").strip()
     callsign = form.get("callsign", "").strip().upper()
 
-    if claim_type not in ("tradoc", "certification"):
+    if claim_type not in ("tradoc", "certification", "ftx_attendance"):
         raise HTTPException(status_code=400, detail="Invalid claim type")
 
     # Handle file upload (shared across all claims in this submission)
@@ -380,6 +401,10 @@ async def submit_claim(request: Request, db: AsyncSession = Depends(get_db)):
     reference_ids = []
     if claim_type == "tradoc":
         reference_ids = [int(v) for v in form.getlist("tradoc_ids") if v]
+    elif claim_type == "ftx_attendance":
+        ftx_id = form.get("ftx_id", "")
+        if ftx_id:
+            reference_ids = [int(ftx_id)]
     else:
         cert_id = form.get("cert_id", "")
         if cert_id:
@@ -496,6 +521,7 @@ async def claims_review(request: Request, db: AsyncSession = Depends(get_db)):
     tradoc_cache = {}
     cert_cache = {}
 
+    ftx_cache = {}
     async def get_item_name(claim):
         if claim.claim_type == "tradoc":
             if claim.reference_id not in tradoc_cache:
@@ -503,6 +529,13 @@ async def claims_review(request: Request, db: AsyncSession = Depends(get_db)):
                 item = r.scalar_one_or_none()
                 tradoc_cache[claim.reference_id] = item.name if item else f"Item #{claim.reference_id}"
             return tradoc_cache[claim.reference_id]
+        elif claim.claim_type == "ftx_attendance":
+            if claim.reference_id not in ftx_cache:
+                from app.models.events import Event
+                r = await db.execute(select(Event).where(Event.id == claim.reference_id))
+                event = r.scalar_one_or_none()
+                ftx_cache[claim.reference_id] = f"FTX: {event.title}" if event else f"FTX #{claim.reference_id}"
+            return ftx_cache[claim.reference_id]
         else:
             if claim.reference_id not in cert_cache:
                 r = await db.execute(select(Certification).where(Certification.id == claim.reference_id))
@@ -624,6 +657,37 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
 
         # Auto-populate comms fields on member profile for radio certs
         await _sync_radio_cert(claim, db)
+    elif claim.claim_type == "ftx_attendance":
+        from app.models.events import EventRSVP, Event
+        rsvp_result = await db.execute(select(EventRSVP).where(EventRSVP.event_id == claim.reference_id, EventRSVP.member_id == claim.member_id))
+        rsvp = rsvp_result.scalar_one_or_none()
+        if not rsvp:
+            rsvp = EventRSVP(
+                event_id=claim.reference_id,
+                member_id=claim.member_id,
+                status="attending",
+                checked_in=True,
+                checked_in_at=datetime.utcnow(),
+                checked_in_by=reviewer,
+                attended=True
+            )
+            db.add(rsvp)
+        else:
+            rsvp.attended = True
+            rsvp.checked_in = True
+            if not rsvp.checked_in_by:
+                rsvp.checked_in_by = reviewer
+                rsvp.checked_in_at = datetime.utcnow()
+        
+        # update last_ftx
+        evt_result = await db.execute(select(Event).where(Event.id == claim.reference_id))
+        evt = evt_result.scalar_one_or_none()
+        if evt and evt.date_start:
+            member_result = await db.execute(select(Member).where(Member.id == claim.member_id))
+            member_obj = member_result.scalar_one_or_none()
+            if member_obj:
+                if not member_obj.last_ftx or evt.date_start.date() > member_obj.last_ftx:
+                    member_obj.last_ftx = evt.date_start.date()
 
     await db.commit()
 

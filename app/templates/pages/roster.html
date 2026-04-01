@@ -4,9 +4,16 @@
 
 {% block content %}
 <div class="roster-page">
-    <div class="page-header">
-        <h1>{{ page_title }}</h1>
-        <span class="text-muted">{{ total }} members</span>
+    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h1>{{ page_title }}</h1>
+            <span class="text-muted">{{ total }} members</span>
+        </div>
+        {% if can_see_full %}
+        <a href="/roster/map" class="btn btn-outline" style="text-decoration:none; padding:6px 12px; font-size:13px; font-weight:600; color:#d4a537; border-color:rgba(212,165,55,0.3); background:rgba(212,165,55,0.1);">
+            🗺️ Interactive Map
+        </a>
+        {% endif %}
     </div>
 
     {% if can_see_full %}

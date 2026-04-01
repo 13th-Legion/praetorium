@@ -78,6 +78,8 @@ GROUP_ROLE_MAP = {
     "Team - Badger": "team_badger",
     "Team - Chaos": "team_chaos",
     "Team - Delta": "team_delta",
+    "Recruiters": "recruiter",
+    "[S-1] Lead": "s1_lead",
 }
 
 

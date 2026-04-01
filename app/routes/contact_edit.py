@@ -134,6 +134,28 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
     member.emergency_contact = form.get("emergency_contact", "").strip() or None
     member.emergency_phone = form.get("emergency_phone", "").strip() or None
 
+    # Re-geocode if address changed
+    from app.geo import geocode_address, geocode_zip, assign_zone
+    new_addr = f"{member.address}, {member.city}, {member.state} {member.zip_code}".strip()
+    try:
+        lat, lon = None, None
+        if member.address and member.city and member.state:
+            lat, lon = geocode_address(new_addr)
+        if lat is None and member.zip_code:
+            lat, lon = geocode_zip(member.zip_code)
+            
+        if lat is not None:
+            member.latitude = lat
+            member.longitude = lon
+            geo_team, bearing = assign_zone(lat, lon)
+            if geo_team != member.team and geo_team:
+                member.team = geo_team
+                import logging
+                log = logging.getLogger(__name__)
+                log.info(f"Contact edit: Geo-reassigned {member.first_name} {member.last_name} to {geo_team} (bearing {bearing:.1f}°)")
+    except Exception:
+        pass
+
     # Mark verified
     member.contact_verified_at = datetime.utcnow()
     member.updated_at = datetime.utcnow()
@@ -150,3 +172,43 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
         '✅ Contact info updated</div>'
     )
     return HTMLResponse(flash + html)
+
+from fastapi import Form
+from config import get_settings
+import httpx
+
+@router.post("/change-password")
+@require_auth
+async def change_password(
+    request: Request,
+    new_password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    """Self-service password change. Updates Nextcloud via API."""
+    user = get_current_user(request)
+    username = user.get("username")
+    
+    if not username:
+        return HTMLResponse("<div style='color: #ff4444;'>Error: No Nextcloud account linked.</div>")
+        
+    if new_password != confirm_password:
+        return HTMLResponse("<div style='color: #ff4444;'>Error: Passwords do not match.</div>")
+        
+    if len(new_password) < 8:
+        return HTMLResponse("<div style='color: #ff4444;'>Error: Password must be at least 8 characters.</div>")
+
+    settings = get_settings()
+    
+    async with httpx.AsyncClient() as client:
+        r = await client.put(
+            f"{settings.nc_url}/ocs/v2.php/cloud/users/{username}",
+            auth=(settings.nc_api_user, settings.nc_api_password),
+            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+            data={"key": "password", "value": new_password},
+            timeout=10
+        )
+        
+        if r.status_code == 200:
+            return HTMLResponse("<div style='color: #00C851;'>✅ Password updated successfully! You will need to use this new password next time you log in.</div>")
+        else:
+            return HTMLResponse("<div style='color: #ff4444;'>Error: Failed to communicate with identity server.</div>")

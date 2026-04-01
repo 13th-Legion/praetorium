@@ -300,14 +300,31 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     # --- Geo team auto-recalculation on address change ---
     new_zip = member.zip_code
     old_team = form.get("team", "").strip() or None  # what was submitted in the form
+    from app.geo import geocode_address
+    
+    new_address = member.address
+    new_city = member.city
+    new_state = member.state
+    new_zip = member.zip_code
+    
+    full_addr = f"{new_address}, {new_city}, {new_state} {new_zip}".strip()
+    old_team = form.get("team", "").strip() or None  # what was submitted in the form
+    
     if new_zip:
         try:
-            lat, lon = geocode_zip(new_zip)
+            lat, lon = None, None
+            if new_address and new_city and new_state:
+                lat, lon = geocode_address(full_addr)
+            if lat is None:
+                lat, lon = geocode_zip(new_zip)
+                
             if lat is not None:
+                member.latitude = lat
+                member.longitude = lon
                 geo_team, bearing = assign_zone(lat, lon)
                 if geo_team != old_team:
                     log.info(f"Geo-reassigned {member.first_name} {member.last_name}: "
-                             f"{old_team} → {geo_team} (ZIP {new_zip}, bearing {bearing:.1f}°)")
+                             f"{old_team} → {geo_team} (address {full_addr}, bearing {bearing:.1f}°)")
                     member.team = geo_team
         except Exception as e:
             log.warning(f"Geo-recalculation failed for {member.last_name}: {e}")

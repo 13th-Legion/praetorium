@@ -1,5 +1,39 @@
 {% extends "base.html" %}
-{% block title %}{{ event.title }}{% endblock %}
+{% block title %}{{ event.title }}
+<!-- Quill JS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    if(document.getElementById('editor-container')) {
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
+        });
+        
+        var catSelect = document.querySelector('select[name="category"]');
+        if (catSelect) {
+            catSelect.addEventListener('change', function(e) {
+                var loc = document.getElementById('evt-location');
+                var inst = document.getElementById('instructor-block');
+                if (e.target.value === 'online_training') {
+                    if (!loc.value) loc.value = 'Nextcloud Talk: T2 · Training';
+                    if (inst) inst.style.display = 'block';
+                } else {
+                    if (inst) inst.style.display = 'none';
+                }
+            });
+        }
+
+        quill.on('text-change', function() {
+            document.getElementById('hidden-desc').value = quill.root.innerHTML;
+        });
+        document.getElementById('hidden-desc').value = quill.root.innerHTML;
+    }
+});
+</script>
+{% endblock %}
+
 
 {% block content %}
 <div class="event-detail-page" style="max-width:800px;">
@@ -21,6 +55,9 @@
                 {% if event.location %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📍 {{ event.location }}</div>
                 {% endif %}
+                {% if event.instructor %}
+                <div style="font-size:14px;color:#aaa;margin-bottom:4px;">👨‍🏫 Instructor: <a href="/profile/{{ event.instructor.id }}" style="color:#d4a537; text-decoration:none;">{{ rank_abbr.get(event.instructor.rank_grade, '') }} {{ event.instructor.last_name }}, {{ event.instructor.first_name }}</a></div>
+                {% endif %}
                 {% if event.training_block %}
                 <div style="font-size:13px;color:#888;">🎓 Training Block {{ event.training_block }}</div>
                 {% endif %}
@@ -29,7 +66,7 @@
 
         {% if event.description %}
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #2a2a4a;">
-            <p style="font-size:14px;color:#ccc;white-space:pre-line;">{{ event.description }}</p>
+            <div style="font-size:14px;color:#ccc;">{{ event.description | safe }}</div>
         </div>
         {% endif %}
     </div>
@@ -58,7 +95,7 @@
         <h2 class="card-title" style="font-size:0.9rem;">Your RSVP</h2>
         {% if rsvp_locked %}
         <div style="padding:8px 12px;background:rgba(183,28,28,0.15);border:1px solid rgba(183,28,28,0.3);border-radius:6px;font-size:13px;color:#ef5350;">
-            🔒 RSVP closed{% if event.rsvp_deadline %} (deadline was {{ (event.rsvp_deadline|cdt).strftime('%d %b %Y · %H%M %Z') }}){% endif %}
+            🔒 RSVP closed{% if event.rsvp_deadline %} (deadline was {{ event.rsvp_deadline.strftime('%d %b %Y · %H%M CT') }}){% endif %}
         </div>
         {% else %}
         <div id="rsvp-controls-{{ event.id }}" class="rsvp-controls">
@@ -75,7 +112,7 @@
                 </button>
             </form>
             {% if event.rsvp_deadline %}
-            <div style="font-size:11px;color:#888;margin-top:6px;">Deadline: {{ (event.rsvp_deadline|cdt).strftime('%d %b %Y · %H%M %Z') }}</div>
+            <div style="font-size:11px;color:#888;margin-top:6px;">Deadline: {{ event.rsvp_deadline.strftime('%d %b %Y · %H%M CT') }}</div>
             {% endif %}
         </div>
         {% endif %}
@@ -250,7 +287,7 @@
         <summary style="cursor:pointer;font-family:'Oswald',sans-serif;font-size:0.9rem;color:#d4a537;text-transform:uppercase;letter-spacing:0.05em;">
             ✏️ Edit Event
         </summary>
-        <form hx-post="/api/events/{{ event.id }}/edit" hx-target="#edit-result" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) setTimeout(()=>window.location.reload(),500)" style="margin-top:16px;">
+        <form id="edit-form" hx-post="/api/events/{{ event.id }}/edit" hx-target="#edit-result" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) setTimeout(()=>window.location.reload(),500)" style="margin-top:16px;">
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Title</label>
                 <input type="text" name="title" value="{{ event.title }}"
@@ -278,7 +315,7 @@
                 </div>
                 <div>
                     <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Start Time (e.g. 0600)</label>
-                    <input type="text" name="date_start_time" value="{{ (event.date_start|cdt).strftime('%H%M') if event.date_start and ((event.date_start|cdt).hour or (event.date_start|cdt).minute) else '' }}" placeholder="0600" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
+                    <input type="text" name="date_start_time" value="{{ event.date_start.strftime('%H%M') if event.date_start and (event.date_start.hour or event.date_start.minute) else '' }}" placeholder="0600" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
                         style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;font-family:monospace;">
                     <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Central Time — 24hr military (blank = all day)</span>
                 </div>
@@ -291,20 +328,32 @@
                 </div>
                 <div>
                     <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">End Time (e.g. 1800)</label>
-                    <input type="text" name="date_end_time" value="{{ (event.date_end|cdt).strftime('%H%M') if event.date_end and ((event.date_end|cdt).hour or (event.date_end|cdt).minute) else '' }}" placeholder="1800" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
+                    <input type="text" name="date_end_time" value="{{ event.date_end.strftime('%H%M') if event.date_end and (event.date_end.hour or event.date_end.minute) else '' }}" placeholder="1800" maxlength="4" pattern="[0-2][0-9][0-5][0-9]"
                         style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;font-family:monospace;">
                     <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Central Time — 24hr military (blank = all day)</span>
                 </div>
             </div>
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
-                <input type="text" name="location" value="{{ event.location or '' }}"
+                <input type="text" name="location" id="evt-location" value="{{ event.location or '' }}"
                     style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;" id="instructor-block" {% if event.category != 'online_training' %}style="display:none;"{% endif %}>
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Instructor</label>
+                <select name="instructor_id"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="">-- Select Instructor --</option>
+                    {% for m in members %}
+                    <option value="{{ m.id }}" {% if event.instructor_id == m.id %}selected{% endif %}>{{ rank_abbr.get(m.rank_grade, "") }} {{ m.last_name }}, {{ m.first_name }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Description</label>
-                <textarea name="description" rows="3"
-                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;resize:vertical;">{{ event.description or '' }}</textarea>
+                <input type="hidden" name="description" id="hidden-desc" value="{{ event.description or '' }}">
+                <div id="editor-container" style="background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;min-height:100px;">
+                    {{ event.description | safe if event.description else '' }}
+                </div>
             </div>
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Training Block</label>
@@ -327,7 +376,7 @@
                     </div>
                     <div>
                         <label style="display:block;font-size:12px;color:#888;margin-bottom:4px;">Deadline Time (e.g. 2359 CT)</label>
-                        <input type="text" name="rsvp_deadline_time" value="{{ (event.rsvp_deadline|cdt).strftime('%H%M') if event.rsvp_deadline and ((event.rsvp_deadline|cdt).hour or (event.rsvp_deadline|cdt).minute) else '' }}" placeholder="2359" maxlength="4"
+                        <input type="text" name="rsvp_deadline_time" value="{{ event.rsvp_deadline.strftime('%H%M') if event.rsvp_deadline and (event.rsvp_deadline.hour or event.rsvp_deadline.minute) else '' }}" placeholder="2359" maxlength="4"
                             style="width:100%;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;font-family:monospace;">
                     </div>
                 </div>
@@ -339,4 +388,38 @@
     </details>
     {% endif %}
 </div>
+
+<!-- Quill JS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    if(document.getElementById('editor-container')) {
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
+        });
+        
+        var catSelect = document.querySelector('select[name="category"]');
+        if (catSelect) {
+            catSelect.addEventListener('change', function(e) {
+                var loc = document.getElementById('evt-location');
+                var inst = document.getElementById('instructor-block');
+                if (e.target.value === 'online_training') {
+                    if (!loc.value) loc.value = 'Nextcloud Talk: T2 · Training';
+                    if (inst) inst.style.display = 'block';
+                } else {
+                    if (inst) inst.style.display = 'none';
+                }
+            });
+        }
+
+        quill.on('text-change', function() {
+            document.getElementById('hidden-desc').value = quill.root.innerHTML;
+        });
+        document.getElementById('hidden-desc').value = quill.root.innerHTML;
+    }
+});
+</script>
 {% endblock %}
+
