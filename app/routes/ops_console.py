@@ -58,7 +58,7 @@ templates.env.filters["cdt"] = _to_cdt
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 TACTICAL_CATEGORIES = {"ftx", "mcftx", "training_course"}
-OPS_ROLES = ("s1", "s2", "s3", "command", "admin")
+OPS_ROLES = ("s1", "command", "admin")
 S1_CMD_ROLES = ("s1", "command", "admin")
 S1_S2_CMD_ROLES = ("s1", "s2", "command", "admin")
 S3_CMD_ROLES = ("s3", "command", "admin")
