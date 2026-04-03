@@ -591,11 +591,10 @@ def send_application_received_email(recipient_email, name, is_13th=True):
         <td style="vertical-align: middle; width: 25%; padding-left: 5%;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
-        <td style="vertical-align: middle; text-align: center; width: 50%;">
+        <td style="vertical-align: middle; text-align: left; width: 75%;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">TEXAS STATE MILITIA</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Headquarters</p>
         </td>
-        <td style="width: 25%;"></td>
     </tr></table>'''
         motto_html = ""
         motto_plain = ""
