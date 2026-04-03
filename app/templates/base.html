@@ -61,7 +61,8 @@
                         <a href="/api/s1/recruiters" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruiters</a>
                         <a href="/api/training/claims/review" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Training Claims</a>
                         <a href="/api/awards" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Awards & Sign-offs</a>
-                        <a href="/api/s1/offboard" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Offboarding</a>
+                        <a href="/api/s1/offboard" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Offboarding</a>
+                        <a href="/api/s1/email-blast" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Unit Comms</a>
                     </div>
                     {% elif "s1_base" in shop_roles.shops %}
                     <div style="border-bottom: 1px solid #333;">
@@ -98,7 +99,19 @@
             </div>
             {% endif %}
         </div>
-        <div class="nav-user">
+        <div class="nav-user" style="display: flex; align-items: center; gap: 15px;">
+            <!-- Notifications Bell -->
+            <div class="nav-dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="nav-link notification-bell-toggle" style="position: relative; font-size: 18px; text-decoration: none;">
+                    🔔
+                    <span id="nav-badge"></span>
+                </a>
+                <div id="notification-panel" class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; width: 300px; z-index: 100; top: 100%; right: 0; padding: 0; margin-top: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                    <div style="padding: 15px; color: #888; text-align: center;">Click the bell to load notifications</div>
+                </div>
+            </div>
+
+            <!-- User Dropdown -->
             <div class="nav-dropdown" style="position: relative; display: inline-block;">
                 <a href="#" class="nav-link nav-user-name" onclick="this.nextElementSibling.classList.toggle('show'); return false;" style="display:flex; align-items:center; gap:5px; text-decoration:none;">
                     {{ user.display_name }} ▾
@@ -133,11 +146,82 @@
         m.style.display = '';
         m.classList.add('dropdown-hidden');
     });
+
+    // ── Notification badge (vanilla JS, no HTMX) ──
+    (function() {
+        var badge = document.getElementById('nav-badge');
+        var panel = document.getElementById('notification-panel');
+        var bellLink = document.querySelector('.notification-bell-toggle');
+        if (!badge || !panel || !bellLink) return;
+
+        function refreshBadge() {
+            fetch('/api/notifications/count', {credentials: 'same-origin'})
+                .then(function(r) { return r.text(); })
+                .then(function(html) { badge.innerHTML = html; })
+                .catch(function() {});
+        }
+
+        function openPanel() {
+            panel.classList.toggle('show');
+            if (panel.classList.contains('show')) {
+                fetch('/api/notifications/dropdown', {credentials: 'same-origin'})
+                    .then(function(r) { return r.text(); })
+                    .then(function(html) {
+                        panel.innerHTML = html;
+                        htmx.process(panel); // wire up any hx- attrs inside the dropdown
+                        refreshBadge();
+                    })
+                    .catch(function() {});
+            }
+        }
+
+        bellLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            openPanel();
+        });
+
+        // Listen for HTMX-triggered badge refreshes (from mark-read / mark-all-read)
+        document.body.addEventListener('updateNotificationCount', function() {
+            refreshBadge();
+        });
+
+        // Initial load + poll every 60s
+        refreshBadge();
+        setInterval(refreshBadge, 60000);
+    })();
     </script>
     <style>
     .dropdown-menu { display: none !important; }
     .dropdown-menu.show { display: block !important; }
     .dropdown-menu a:hover { background: #333; color: #d4a537; }
+    
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -8px;
+        background: #ff4444;
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        padding: 2px 5px;
+        border-radius: 10px;
+        line-height: 1;
+    }
+    .notification-item:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    @media (max-width: 768px) {
+        .nav-dropdown .dropdown-menu {
+            right: auto !important;
+            left: 50% !important;
+            transform: translateX(-50%);
+        }
+        #notification-panel {
+            width: 300px !important;
+            max-width: 90vw !important;
+        }
+    }
     </style>
     {% block scripts %}{% endblock %}
 </body>

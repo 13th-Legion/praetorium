@@ -45,7 +45,7 @@
                         </label>
                         {% endfor %}
                     </div>
-                    <button type="submit" class="btn-award">Sign Off Selected</button>
+                    <button hx-disabled-elt="this" type="submit" class="btn-award">Sign Off Selected</button>
                     <div id="tradoc-result" style="margin-top:8px;"></div>
                 </form>
             </div>
@@ -69,7 +69,7 @@
                         </label>
                         {% endfor %}
                     </div>
-                    <button type="submit" class="btn-award">Award Certification</button>
+                    <button hx-disabled-elt="this" type="submit" class="btn-award">Award Certification</button>
                     <div id="cert-result" style="margin-top:8px;"></div>
                 </form>
             </div>
@@ -99,7 +99,7 @@
                         <input type="text" name="reason" class="edit-input" required placeholder="For exceptional performance at FTX...">
                     </div>
                 </div>
-                <button type="submit" class="btn-award" style="background:#d4a537;">Award</button>
+                <button hx-disabled-elt="this" type="submit" class="btn-award" style="background:#d4a537;">Award</button>
                 <div id="gladius-result" style="margin-top:8px;"></div>
             </form>
         </div>

@@ -42,11 +42,11 @@
                 <td style="padding:8px;" id="review-{{ d.claim.id }}">
                     <div style="display:flex;gap:4px;">
                         <form hx-post="/api/training/claims/{{ d.claim.id }}/approve" hx-target="#review-{{ d.claim.id }}" hx-swap="innerHTML">
-                            <button type="submit" style="padding:4px 10px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Approve</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:4px 10px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Approve</button>
                         </form>
                         <form hx-post="/api/training/claims/{{ d.claim.id }}/deny" hx-target="#review-{{ d.claim.id }}" hx-swap="innerHTML">
                             <input type="hidden" name="notes" value="">
-                            <button type="submit" style="padding:4px 10px;background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Deny</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:4px 10px;background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Deny</button>
                         </form>
                     </div>
                 </td>
@@ -89,7 +89,7 @@
                     {% if d.claim.status == 'approved' %}
                     <form hx-post="/api/training/claims/{{ d.claim.id }}/revoke" hx-target="#revoke-{{ d.claim.id }}" hx-swap="innerHTML"
                           hx-confirm="Revoke this approval? This will remove the cert/TRADOC sign-off from the member's record.">
-                        <button type="submit" style="padding:3px 8px;background:transparent;color:#ff8f00;border:1px solid #ff8f00;border-radius:4px;cursor:pointer;font-size:11px;">↩️ Revoke</button>
+                        <button hx-disabled-elt="this" type="submit" style="padding:3px 8px;background:transparent;color:#ff8f00;border:1px solid #ff8f00;border-radius:4px;cursor:pointer;font-size:11px;">↩️ Revoke</button>
                     </form>
                     {% endif %}
                 </td>

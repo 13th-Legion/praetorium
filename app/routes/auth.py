@@ -63,6 +63,20 @@ async def callback(request: Request):
     # Map NC groups to portal roles
     roles = map_groups_to_roles(nc_groups)
 
+    # Persist portal_roles to DB so background queries (notifications, etc.) can use them
+    import json
+    from app.database import async_session
+    from app.models.member import Member
+    from sqlalchemy import select, update
+    async with async_session() as db:
+        result = await db.execute(select(Member.id).where(Member.nc_username == username))
+        row = result.first()
+        if row:
+            await db.execute(
+                update(Member).where(Member.id == row[0]).values(portal_roles=json.dumps(roles))
+            )
+            await db.commit()
+
     # Store user in session
     request.session["user"] = {
         "username": username,

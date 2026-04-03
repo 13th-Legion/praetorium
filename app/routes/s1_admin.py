@@ -4,13 +4,14 @@ import os
 from datetime import datetime
 from urllib.parse import quote
 
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, update, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
+from app.routes.doc_texts import CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT
 from app.database import get_db
 from app.models.member import Member
 from app.models.recruiting import Recruiter, DocumentSignature, SeparationLog
@@ -293,17 +294,28 @@ async def sign_document_page(request: Request, doc_type: str, db: AsyncSession =
     """Page for a member to sign NDA or waiver."""
     user = request.session.get("user", {})
 
-    if doc_type not in ("nda", "general_waiver"):
+    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws"):
         raise HTTPException(status_code=400, detail="Invalid document type")
 
     # Get the document content
-    doc_content = NDA_TEXT if doc_type == "nda" else WAIVER_TEXT
+    if doc_type == "nda":
+        doc_content = NDA_TEXT
+        doc_title = "Non-Disclosure Agreement"
+    elif doc_type == "general_waiver":
+        doc_content = WAIVER_TEXT
+        doc_title = "General Waiver & Release of Liability"
+    elif doc_type == "code_of_conduct":
+        doc_content = CODE_OF_CONDUCT_TEXT
+        doc_title = "Code of Conduct"
+    else:
+        doc_content = BYLAWS_TEXT
+        doc_title = "TSM By-Laws"
 
     return templates.TemplateResponse("pages/sign_document.html", {
         "request": request,
         "user": user,
         "doc_type": doc_type,
-        "doc_title": "Non-Disclosure Agreement" if doc_type == "nda" else "General Waiver & Release of Liability",
+        "doc_title": doc_title,
         "doc_content": doc_content,
     })
 
@@ -314,7 +326,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     """Process a digital signature submission."""
     user = request.session.get("user", {})
 
-    if doc_type not in ("nda", "general_waiver"):
+    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws"):
         raise HTTPException(status_code=400, detail="Invalid document type")
 
     form = await request.form()
@@ -351,20 +363,61 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     if doc_type == "nda":
         member.nda_signed_at = datetime.utcnow()
         member.nda_ip_address = ip_addr
-    else:
+    elif doc_type == "general_waiver":
         member.waiver_signed_at = datetime.utcnow()
         member.waiver_ip_address = ip_addr
+    elif doc_type == "code_of_conduct":
+        member.code_of_conduct_signed_at = datetime.utcnow()
+        member.code_of_conduct_ip_address = ip_addr
+    else:
+        member.bylaws_signed_at = datetime.utcnow()
+        member.bylaws_ip_address = ip_addr
 
     await db.commit()
 
+    doc_labels_pretty = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "By-Laws"}
+    doc_title = doc_labels_pretty.get(doc_type, "Document")
+
+    from app.routes.notifications import create_notification
+    from app.constants import RANK_ABBR
+    # Build display name: "SFC Eastman (Dizz)" style
+    _rank = RANK_ABBR.get(member.rank_grade, "") if member.rank_grade else ""
+    _callsign = f" ({member.callsign})" if member.callsign else ""
+    _signer_display = f"{_rank} {member.last_name}{_callsign}".strip()
+    doc_names = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "TSM By-Laws"}
+    _doc_name = doc_names.get(doc_type, doc_type)
+    # Notify Command + S1 Lead (based on NC group-derived portal_roles)
+    from sqlalchemy import select as notif_select, or_
+    from app.models.member import Member as NotifMember
+    cmd_result = await db.execute(
+        notif_select(NotifMember.id).where(
+            NotifMember.status.in_(["active"]),
+            or_(
+                NotifMember.portal_roles.contains('"command"'),
+                NotifMember.portal_roles.contains('"s1_lead"'),
+            )
+        )
+    )
+    _notified_ids = set()
+    for (mid,) in cmd_result:
+        if mid not in _notified_ids:
+            _notified_ids.add(mid)
+            await create_notification(
+                db, mid, "document",
+                f"📝 {_signer_display} signed {_doc_name}",
+                link="/api/s1/documents/status",
+                icon="📝"
+            )
+
     # Archive signed doc receipt to NC: Personnel/{LastName, FirstName}/Docs/
     try:
-        doc_label = "NDA" if doc_type == "nda" else "General_Waiver"
+        doc_labels = {"nda": "NDA", "general_waiver": "General_Waiver", "code_of_conduct": "Code_of_Conduct", "bylaws": "By_Laws"}
+        doc_label = doc_labels.get(doc_type, "Document")
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         filename = f"{doc_label}_signed_{date_str}.txt"
 
         receipt = (
-            f"{'Non-Disclosure Agreement' if doc_type == 'nda' else 'General Waiver & Release of Liability'}\n"
+            f"{doc_names.get(doc_type, 'Document').replace('_', ' ')}\n"
             f"{'=' * 60}\n\n"
             f"Signed by: {full_name}\n"
             f"Digital signature: {signature}\n"
@@ -403,7 +456,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
         "request": request,
         "user": user,
         "doc_type": doc_type,
-        "doc_title": "Non-Disclosure Agreement" if doc_type == "nda" else "General Waiver & Release of Liability",
+        "doc_title": doc_labels.get(doc_type, "Document").replace("_", " "),
     })
 
 
@@ -1610,7 +1663,7 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
 
 @router.post("/offboard/{member_id}")
 @require_auth
-async def process_offboarding(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
+async def process_offboarding(request: Request, member_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """Process a member separation."""
     user = request.session.get("user", {})
     require_s1(user)
@@ -1686,15 +1739,16 @@ async def process_offboarding(request: Request, member_id: int, db: AsyncSession
     db.add(log_entry)
     await db.commit()
 
-    # Send separation notification email
-    email_sent = _send_offboard_email(member, reason, notes)
+    # Send separation notification email in background (smtplib is synchronous)
+    if member.email:
+        background_tasks.add_task(_send_offboard_email, member, reason, notes)
 
     return HTMLResponse(f"""
         <div style="padding: 16px; background: #fff3e0; border-left: 4px solid #e65100; border-radius: 4px;">
             <strong>Separated:</strong> {member.first_name} {member.last_name} — {reason}
             {'<br>NC account disabled ✅' if log_entry.nc_account_disabled else ''}
             {'<br>Groups removed ✅' if log_entry.groups_removed else ''}
-            {'<br>Separation email sent ✅' if email_sent else '<br>⚠️ No email on file — notification not sent' if not member.email else '<br>⚠️ Email send failed'}
+            {'<br>Separation email queued ✅' if member.email else '<br>⚠️ No email on file — notification not sent'}
         </div>
     """)
 
@@ -1895,3 +1949,230 @@ Texas, without regard to its conflict of law principles.</p>
 contents, and voluntarily agree to its terms. The Participant is aware that by signing this
 document, they are waiving substantial legal rights, including the right to sue the Organizers.</p>
 """
+# CODE_OF_CONDUCT_TEXT and BYLAWS_TEXT imported from app.routes.doc_texts
+
+
+# ─── PP-107: S1 Email Blast ─────────────────────────────────────────────────
+
+EMAIL_BLAST_GROUPS = {
+    "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
+    "leaders": {"label": "Leaders (NCOs + Officers)", "nc_groups": ["Leaders"]},
+    "team_leaders": {"label": "Team Leaders", "nc_groups": ["Leaders"]},  # same NC group, filtered by billet
+    "shop_leaders": {"label": "Shop Leaders (S1-S6)", "nc_groups": ["[S-1]", "[S-2]", "[S-3]", "[S-4]", "[S-5]", "[S-6]"]},
+    "command": {"label": "Command", "nc_groups": ["Command"]},
+}
+
+
+@router.get("/email-blast")
+@require_auth
+async def email_blast_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Email blast compose page."""
+    user = request.session.get("user", {})
+    require_s1(user)
+
+    return templates.TemplateResponse("pages/s1_email_blast.html", {
+        "request": request,
+        "user": user,
+        "groups": EMAIL_BLAST_GROUPS,
+    })
+
+
+@router.post("/email-blast/preview", response_class=HTMLResponse)
+@require_auth
+async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_db)):
+    """Preview recipients for selected groups."""
+    user = request.session.get("user", {})
+    require_s1(user)
+
+    form = await request.form()
+    selected_groups = form.getlist("groups")
+
+    if not selected_groups:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
+
+    # Build recipient list
+    member_ids = set()
+    for grp in selected_groups:
+        config = EMAIL_BLAST_GROUPS.get(grp)
+        if not config:
+            continue
+        if "filter" in config:
+            result = await db.execute(
+                select(Member).where(Member.status.in_(config["filter"]))
+            )
+            for m in result.scalars().all():
+                if m.email:
+                    member_ids.add(m.id)
+
+        elif "nc_groups" in config:
+            # Get members by checking their NC groups via roles
+            result = await db.execute(
+                select(Member).where(Member.status.in_(["active", "recruit"]))
+            )
+            for m in result.scalars().all():
+                member_ids.add(m.id)
+
+    # Fetch actual member info for preview
+    if not member_ids:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients found.</div>')
+
+    result = await db.execute(
+        select(Member).where(Member.id.in_(member_ids)).order_by(Member.last_name)
+    )
+    members = result.scalars().all()
+
+    # Filter to only those with email addresses
+    recipients = [m for m in members if m.email]
+
+    if not recipients:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients have email addresses on file.</div>')
+
+    names_html = ", ".join(
+        f'<span style="color:#ccc;">{m.display_name}</span>' for m in recipients
+    )
+
+    return HTMLResponse(f'''
+        <div style="padding:12px;background:rgba(212,165,55,0.1);border:1px solid rgba(212,165,55,0.3);border-radius:6px;margin-top:8px;">
+            <div style="font-weight:600;color:#d4a537;margin-bottom:6px;">📨 {len(recipients)} recipients:</div>
+            <div style="font-size:12px;line-height:1.6;">{names_html}</div>
+        </div>
+    ''')
+
+
+@router.post("/email-blast/send", response_class=HTMLResponse)
+@require_auth
+async def send_email_blast(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    """Send an email blast to selected groups."""
+    user = request.session.get("user", {})
+    require_s1(user)
+
+    form = await request.form()
+    selected_groups = form.getlist("groups")
+    subject = form.get("subject", "").strip()
+    body = form.get("body", "").strip()
+
+    if not subject:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">Subject is required.</div>')
+    if not body:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">Message body is required.</div>')
+    if not selected_groups:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
+
+    # Build recipient list
+    member_ids = set()
+    for grp in selected_groups:
+        config = EMAIL_BLAST_GROUPS.get(grp)
+        if not config:
+            continue
+        if "filter" in config:
+            result = await db.execute(
+                select(Member).where(Member.status.in_(config["filter"]))
+            )
+            for m in result.scalars().all():
+                if m.email:
+                    member_ids.add(m.id)
+        elif "nc_groups" in config:
+            result = await db.execute(
+                select(Member).where(Member.status.in_(["active", "recruit"]))
+            )
+            for m in result.scalars().all():
+                member_ids.add(m.id)
+
+    result = await db.execute(
+        select(Member).where(Member.id.in_(member_ids))
+    )
+    members = result.scalars().all()
+    recipients = [m for m in members if m.email]
+
+    if not recipients:
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients with email addresses.</div>')
+
+    # Extract email list before session closes (ORM objects detach in background threads)
+    recipient_emails = [(m.email, m.display_name) for m in recipients]
+    recipient_count = len(recipient_emails)
+
+    sender_name = user.get("display_name", user.get("username", "S1"))
+
+    # Send in background to avoid timeout
+    def _send_blast():
+        import smtplib as _smtplib
+        from email.mime.multipart import MIMEMultipart as _MMP
+        from email.mime.text import MIMEText as _MMT
+
+        html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<div style="margin:0;padding:0;">
+<style>p{{margin:0 0 0.5em 0;}} ul,ol{{margin:0 0 0.5em 0;}}</style>
+{body}
+</div>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>{sender_name}</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 15px; text-align: center;">
+    <p style="color: #d4a537; margin: 0; font-style: italic;">Nunquam Non Paratus — Never Not Ready</p>
+    <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
+        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
+    </p>
+</div>
+</body></html>"""
+
+        sent = 0
+        failed = 0
+        try:
+            with _smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                for email_addr, display_name in recipient_emails:
+                    try:
+                        msg = _MMP("alternative")
+                        msg["Subject"] = subject
+                        msg["From"] = SMTP_FROM
+                        msg["To"] = email_addr
+                        import re as _re
+                        _plain = _re.sub(r'<br\s*/?>', '\n', body)
+                        _plain = _re.sub(r'</p>\s*<p[^>]*>', '\n\n', _plain)
+                        _plain = _re.sub(r'<[^>]+>', '', _plain)
+                        msg.attach(_MMT(_plain, "plain"))
+                        msg.attach(_MMT(html_body, "html"))
+                        server.send_message(msg)
+                        sent += 1
+                    except Exception:
+                        failed += 1
+        except Exception as e:
+            logger.error(f"Email blast SMTP connection failed: {e}")
+
+        logger.info(f"Email blast complete: {sent} sent, {failed} failed — subject: {subject}")
+
+    background_tasks.add_task(_send_blast)
+
+    group_labels = ", ".join(EMAIL_BLAST_GROUPS[g]["label"] for g in selected_groups if g in EMAIL_BLAST_GROUPS)
+
+    return HTMLResponse(f'''
+        <div style="padding:16px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);border-radius:6px;">
+            <div style="font-weight:600;color:#27ae60;margin-bottom:4px;">✅ Email blast queued</div>
+            <div style="font-size:13px;color:#ccc;">
+                <strong>To:</strong> {group_labels} ({recipient_count} recipients)<br>
+                <strong>Subject:</strong> {subject}<br>
+                <strong>Sent by:</strong> {sender_name}
+            </div>
+        </div>
+    ''')

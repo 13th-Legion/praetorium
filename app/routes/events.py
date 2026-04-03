@@ -699,6 +699,31 @@ async def event_roster(request: Request, event_id: int):
         evt = await db.execute(select(Event).where(Event.id == event_id))
         event = evt.scalar_one_or_none()
 
+        # Dynamic roster: ensure all current active/recruit members have RSVP records
+        # for unfinalised, RSVP-enabled events (catches members who joined after event creation)
+        if event and not event.finalized_at and event.rsvp_enabled:
+            existing_member_ids_result = await db.execute(
+                select(EventRSVP.member_id).where(EventRSVP.event_id == event_id)
+            )
+            existing_member_ids = {r[0] for r in existing_member_ids_result.all()}
+
+            all_active_result = await db.execute(
+                select(Member.id).where(Member.status.in_(["active", "recruit", "Active", "Recruit"]))
+            )
+            all_active_ids = {r[0] for r in all_active_result.all()}
+
+            missing = all_active_ids - existing_member_ids
+            if missing:
+                for mid in missing:
+                    db.add(EventRSVP(
+                        event_id=event_id,
+                        member_id=mid,
+                        status="pending",
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                    ))
+                await db.commit()
+
         roster_result = await db.execute(
             select(EventRSVP, Member).join(Member, EventRSVP.member_id == Member.id).where(
                 EventRSVP.event_id == event_id
@@ -830,6 +855,15 @@ async def create_event(request: Request):
                 ))
 
         await db.commit()
+
+        from app.routes.notifications import create_notification_for_all
+        await create_notification_for_all(
+            db, "event",
+            f"📅 New Event: {title}",
+            body=f"{date_start_date} {date_start_time}".strip(),
+            link=f"/events/{event.id}",
+            icon="📅"
+        )
 
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'

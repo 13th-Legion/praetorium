@@ -39,7 +39,7 @@
                 ➕ New Event
             </button>
             <form hx-post="/api/events/sync" hx-target="#sync-result" hx-swap="innerHTML" style="display:inline;">
-                <button type="submit" class="btn" style="font-size:13px;padding:6px 14px;background:#2e7d32;color:#fff;">
+                <button hx-disabled-elt="this" type="submit" class="btn" style="font-size:13px;padding:6px 14px;background:#2e7d32;color:#fff;">
                     🔄 Sync Calendar
                 </button>
             </form>

@@ -63,12 +63,12 @@
                    placeholder="2200-0000, 0000-0200"
                    style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;box-sizing:border-box;">
           </div>
-          <button type="submit" class="ops-btn ops-btn-primary">Save</button>
+          <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Save</button>
         </div>
       </form>
       {% if guard_slots %}
       <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign" style="margin-top:8px;">
-        <button type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
           ⚡ Auto-assign checked-in members to slots
         </button>
       </form>

@@ -61,7 +61,7 @@
             <form hx-post="/api/s2/rally-point/{{ event.id }}" hx-target="#rp-result" hx-swap="innerHTML" style="margin-top: 8px; display: flex; gap: 8px;">
                 <input name="rally_point" value="{{ event.rally_point or '' }}" placeholder="Rally point address / description"
                        style="flex: 1; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" required>
-                <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
+                <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
             </form>
             <div id="rp-result" style="margin-top: 4px;"></div>
         </div>
@@ -192,7 +192,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Save</button>
+                        <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Save</button>
                     </div>
                     <div style="margin-top: 8px;">
                         <input name="notes" value="{{ block.notes or '' }}" placeholder="Notes (optional)" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">
@@ -248,7 +248,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Add</button>
+                    <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 13px;">Add</button>
                 </div>
                 <div style="margin-top: 8px;">
                     <input name="notes" placeholder="Notes (optional)" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;">

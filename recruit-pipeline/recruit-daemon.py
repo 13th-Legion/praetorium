@@ -33,7 +33,6 @@ import requests
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
-NC_URL = "https://cloud.13thlegion.org"
 NC_USER = "spooky"
 NC_PASS = os.environ.get("NC_SVC_PASS", "")
 
@@ -44,7 +43,7 @@ NC_SVC_PASS = os.environ.get("NC_PORTAL_SVC_PASS", "")
 # SMTP via Proton Bridge (localhost)
 SMTP_HOST = "127.0.0.1"
 SMTP_PORT = 1025
-SMTP_USER = "admin@13thlegion.org"
+SMTP_USER = os.environ.get("SMTP_USER", "admin@13thlegion.org")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = "13th Legion <admin@13thlegion.org>"
 
@@ -392,7 +391,6 @@ def send_rejection_email(recipient_email, name):
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #888; margin: 0; font-size: 12px;">
-        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
     </p>
 </div>
 
@@ -556,18 +554,17 @@ def attach_submission_files(submission, card_id, stack_id):
         log.error(f"Error attaching files to card #{card_id}: {e}")
 
 
-def send_application_received_email(recipient_email, name):
+def send_application_received_email(recipient_email, name, is_13th=True):
     """Send 'application received' confirmation to applicant with Proton Mail instructions."""
 
     first_name = name.split()[0] if name.split() else name
 
-    html = f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
-
-<div style="background: #1a1a2e; padding: 20px; text-align: center;">
-    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+    if is_13th:
+        unit_name = "13th Legion"
+        unit_sub = "Texas State Militia — Dallas / Fort Worth"
+        sender_sig = "13th Legion, Texas State Militia\n13thlegion.org"
+        subject = "Application Received — 13th Legion, Texas State Militia"
+        html_header = '''<table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
             <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
@@ -578,7 +575,40 @@ def send_application_received_email(recipient_email, name):
         <td style="vertical-align: middle; padding-left: 15px;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
-    </tr></table>
+    </tr></table>'''
+        motto_html = "<em>Nunquam Non Paratus,</em><br>"
+        motto_plain = "Nunquam Non Paratus,"
+        footer_motto_html = '''<p style="color: #d4a537; margin: 0; font-style: italic;">
+        Nunquam Non Paratus — Never Not Ready
+    </p>'''
+        footer_link = '<a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>'
+    else:
+        unit_name = "Texas State Militia"
+        unit_sub = "Headquarters"
+        sender_sig = "Texas State Militia"
+        subject = "Application Received — Texas State Militia"
+        html_header = '''<table style="width: 100%;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; width: 25%; padding-left: 5%;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+        </td>
+        <td style="vertical-align: middle; text-align: center; width: 50%;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">TEXAS STATE MILITIA</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Headquarters</p>
+        </td>
+        <td style="width: 25%;"></td>
+    </tr></table>'''
+        motto_html = ""
+        motto_plain = ""
+        footer_motto_html = ""
+        footer_link = 'Texas State Militia'
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    {html_header}
 </div>
 
 <div style="padding: 20px;">
@@ -629,18 +659,16 @@ def send_application_received_email(recipient_email, name):
     <p>We look forward to having you with us.</p>
 
     <p style="margin-top: 20px;">
-        <em>Nunquam Non Paratus,</em><br>
+        {motto_html}
         <strong>S1 — Personnel &amp; Recruiting</strong><br>
-        13th Legion, Texas State Militia
+        {sender_sig.replace('\n', '<br>')}
     </p>
 </div>
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
-    <p style="color: #d4a537; margin: 0; font-style: italic;">
-        Nunquam Non Paratus — Never Not Ready
-    </p>
+    {footer_motto_html}
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
+        {footer_link}
     </p>
 </div>
 
@@ -680,14 +708,13 @@ Reply to this email and our recruiting team will get back to you.
 
 We look forward to having you with us.
 
-Nunquam Non Paratus,
+{motto_plain}
 S1 — Personnel & Recruiting
-13th Legion, Texas State Militia
-13thlegion.org
+{sender_sig}
 """
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Application Received — 13th Legion, Texas State Militia"
+    msg["Subject"] = subject
     msg["From"] = SMTP_FROM
     msg["To"] = recipient_email
     msg.attach(MIMEText(plain, "plain"))
@@ -698,7 +725,7 @@ S1 — Personnel & Recruiting
             s.starttls()
             s.login(SMTP_USER, SMTP_PASS)
             s.send_message(msg)
-        log.info(f"Sent application received email to {recipient_email}")
+        log.info(f"Sent application received email to {recipient_email} (is_13th={is_13th})")
         return True
     except Exception as e:
         log.error(f"Failed to send application received email to {recipient_email}: {e}")
@@ -871,7 +898,7 @@ def check_new_submissions(state, dry_run=False):
 
             # Send application received confirmation regardless of company
             if email:
-                send_application_received_email(email, name)
+                send_application_received_email(email, name, is_13th=(route == "deck"))
             else:
                 log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
 
@@ -1319,7 +1346,6 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team, te
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         &#x1F539; Praetorium (Unit Portal)
     </h3>
-    <p><a href="https://portal.13thlegion.org" style="color:#d4a537;font-weight:600;">portal.13thlegion.org</a> &mdash; click &ldquo;Login with Nextcloud&rdquo; and use the credentials above. This is your hub for everything in the unit:</p>
     <ul>
         <li><a href="https://portal.13thlegion.org/roster" style="color:#d4a537;">Roster</a> &mdash; unit roster and chain of command</li>
         <li><a href="https://portal.13thlegion.org/calendar" style="color:#d4a537;">Training &amp; Events Calendar</a> &mdash; FTX dates, RSVPs, and event details</li>

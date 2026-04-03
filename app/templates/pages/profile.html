@@ -69,7 +69,7 @@
                         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
                             <button type="button" onclick="document.getElementById('reactivate-modal').style.display='none'"
                                 style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#ccc;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
-                            <button type="submit" style="padding:6px 14px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;">✅ Reactivate</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:6px 14px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;">✅ Reactivate</button>
                         </div>
                     </form>
                     <div id="reactivate-result" style="margin-top:12px;"></div>
@@ -345,7 +345,7 @@
                             <input type="password" name="confirm_password" class="edit-input" required minlength="8" style="width: 100%; padding:6px; border:1px solid #333; background:#111; color:#fff; border-radius:4px;">
                         </div>
                         <div style="display:flex;gap:8px;">
-                            <button type="submit" style="padding:6px 12px;background:#d4a537;color:#111;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:6px 12px;background:#d4a537;color:#111;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
                             <button type="button" onclick="document.getElementById('pwd-form').style.display='none'; document.querySelector('#password-form-container > button').style.display='block'; document.getElementById('pwd-result').innerHTML='';" style="padding:6px 12px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
                         </div>
                         <div id="pwd-result" style="margin-top: 15px; font-weight: 500; font-size: 0.85rem;"></div>

@@ -56,7 +56,7 @@
                               style="display:flex;gap:3px;">
                             <input type="email" name="proton_email" placeholder="Proton email..." 
                                    style="flex:1;padding:3px 5px;font-size:11px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;min-width:0;">
-                            <button type="submit" style="padding:3px 6px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">📧</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:3px 6px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">📧</button>
                         </form>
                     </div>
                     {% endif %}
@@ -79,12 +79,12 @@
                                 <option value="paypal">PayPal</option>
                                 <option value="other">Other</option>
                             </select>
-                            <button type="submit" style="padding:2px 6px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">💰 Paid</button>
+                            <button hx-disabled-elt="this" type="submit" style="padding:2px 6px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">💰 Paid</button>
                         </form>
                         <form hx-post="/api/s1/pipeline/{{ card.id }}/payment" hx-target="#payment-{{ card.id }}" hx-swap="innerHTML"
                               style="margin-top:2px;">
                             <input type="hidden" name="status" value="waived">
-                            <button type="submit" style="width:100%;padding:2px 6px;background:rgba(255,255,255,0.08);color:#aaa;border:none;border-radius:3px;cursor:pointer;font-size:10px;">Waive</button>
+                            <button hx-disabled-elt="this" type="submit" style="width:100%;padding:2px 6px;background:rgba(255,255,255,0.08);color:#aaa;border:none;border-radius:3px;cursor:pointer;font-size:10px;">Waive</button>
                         </form>
                         {% endif %}
                     </div>
@@ -186,7 +186,7 @@
                             <form hx-post="/api/s1/pipeline/{{ card.id }}/comment" hx-target="#note-result-{{ card.id }}" hx-swap="innerHTML"
                                   style="margin-top:6px;display:flex;gap:4px;">
                                 <input type="text" name="message" placeholder="Add note..." style="flex:1;padding:4px 6px;font-size:11px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;">
-                                <button type="submit" style="padding:4px 8px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">+</button>
+                                <button hx-disabled-elt="this" type="submit" style="padding:4px 8px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">+</button>
                             </form>
                             <div id="note-result-{{ card.id }}" style="margin-top:4px;"></div>
                         </div>
@@ -207,7 +207,7 @@
                                     <option value="{{ r.nc_username }}">{{ r.display_name }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="submit" style="padding:3px 8px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">Assign</button>
+                                <button hx-disabled-elt="this" type="submit" style="padding:3px 8px;background:#2e7d32;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">Assign</button>
                             </form>
                         </div>
 
@@ -221,7 +221,7 @@
                                     <option value="ineligible">Ineligible</option>
                                     <option value="other">Other</option>
                                 </select>
-                                <button type="submit" style="width:100%;padding:3px;background:#c62828;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">
+                                <button hx-disabled-elt="this" type="submit" style="width:100%;padding:3px;background:#c62828;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;">
                                     Confirm Decline
                                 </button>
                             </form>

@@ -33,12 +33,12 @@
                             <option value="paypal">PayPal</option>
                         </select>
                         <input type="hidden" name="status" value="paid">
-                        <button type="submit" style="padding: 4px 12px; background: #2e7d32; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Paid</button>
+                        <button hx-disabled-elt="this" type="submit" style="padding: 4px 12px; background: #2e7d32; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Paid</button>
                     </form>
                     <form hx-post="/api/s1/payments/{{ p.member_id }}/record" hx-target="#pay-{{ p.id }}" hx-swap="innerHTML" style="margin-top: 4px;">
                         <input type="hidden" name="status" value="waived">
                         <input type="hidden" name="method" value="waived">
-                        <button type="submit" style="padding: 2px 8px; background: transparent; color: #1565c0; border: 1px solid #1565c0; border-radius: 4px; cursor: pointer; font-size: 11px;">Waive</button>
+                        <button hx-disabled-elt="this" type="submit" style="padding: 2px 8px; background: transparent; color: #1565c0; border: 1px solid #1565c0; border-radius: 4px; cursor: pointer; font-size: 11px;">Waive</button>
                     </form>
                     {% else %}
                     <span style="color: #888; font-size: 12px;">Not yet onboarded</span>

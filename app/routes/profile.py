@@ -192,7 +192,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         try:
             login_ms = await _fetch_single_nc_login(member.nc_username)
             if login_ms and login_ms > 0:
-                nc_last_login = datetime.utcfromtimestamp(login_ms / 1000)
+                from zoneinfo import ZoneInfo; nc_last_login = datetime.fromtimestamp(login_ms / 1000, tz=ZoneInfo("America/Chicago"))
         except Exception:
             pass
 
@@ -241,7 +241,7 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         try:
             login_ms = await _fetch_single_nc_login(member.nc_username)
             if login_ms and login_ms > 0:
-                nc_last_login = datetime.utcfromtimestamp(login_ms / 1000)
+                from zoneinfo import ZoneInfo; nc_last_login = datetime.fromtimestamp(login_ms / 1000, tz=ZoneInfo("America/Chicago"))
         except Exception:
             pass
 

@@ -258,7 +258,7 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-guest').classList.remove('show')">Cancel</button>
-        <button type="submit" class="ops-btn ops-btn-primary">Add Guest</button>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Add Guest</button>
       </div>
     </form>
   </div>
@@ -282,7 +282,7 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-manual-checkin').classList.remove('show')">Cancel</button>
-        <button type="submit" class="ops-btn ops-btn-primary">Check In</button>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Check In</button>
       </div>
     </form>
   </div>
@@ -325,14 +325,14 @@
 
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-guard-config').classList.remove('show')">Cancel</button>
-        <button type="submit" class="ops-btn ops-btn-primary">Save Slots</button>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Save Slots</button>
       </div>
     </form>
     {% if guard_slots %}
     <div style="margin-top:16px;border-top:1px solid #2a2a4a;padding-top:12px;">
       <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:8px;">Auto-Assign</div>
       <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign">
-        <button type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
           ⚡ Auto-distribute checked-in members
         </button>
       </form>
@@ -354,7 +354,7 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-vex-create').classList.remove('show')">Cancel</button>
-        <button type="submit" class="ops-btn ops-btn-primary">Create</button>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Create</button>
       </div>
     </form>
   </div>

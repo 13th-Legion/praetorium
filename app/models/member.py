@@ -84,6 +84,10 @@ class Member(Base):
     nda_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
     waiver_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     waiver_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
+    code_of_conduct_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    code_of_conduct_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
+    bylaws_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    bylaws_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
 
     # Recruiter assignment (PP-022)
     assigned_recruiter: Mapped[Optional[str]] = mapped_column(String(64))  # NC username

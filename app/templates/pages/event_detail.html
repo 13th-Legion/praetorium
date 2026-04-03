@@ -101,13 +101,13 @@ document.addEventListener("DOMContentLoaded", function() {
         <div id="rsvp-controls-{{ event.id }}" class="rsvp-controls">
             <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:inline;">
                 <input type="hidden" name="status" value="attending">
-                <button type="submit" class="rsvp-btn rsvp-btn-attend {% if my_rsvp == 'attending' %}rsvp-btn-active{% endif %}">
+                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-attend {% if my_rsvp == 'attending' %}rsvp-btn-active{% endif %}">
                     ✅ Attending
                 </button>
             </form>
             <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:inline;">
                 <input type="hidden" name="status" value="declined">
-                <button type="submit" class="rsvp-btn rsvp-btn-decline {% if my_rsvp == 'declined' %}rsvp-btn-active-danger{% endif %}">
+                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-decline {% if my_rsvp == 'declined' %}rsvp-btn-active-danger{% endif %}">
                     ❌ Declined
                 </button>
             </form>
@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <div id="unfinalize-result"></div>
             <form hx-post="/api/events/{{ event.id }}/unfinalize" hx-target="#unfinalize-result" hx-swap="innerHTML"
                   hx-confirm="Reopen this event? Attendance roster will be unlocked for editing. You will need to re-finalize when done.">
-                <button type="submit" style="padding:6px 14px;background:rgba(230,81,0,0.15);border:1px solid rgba(230,81,0,0.5);border-radius:4px;color:#e65100;font-size:12px;font-weight:600;cursor:pointer;">
+                <button hx-disabled-elt="this" type="submit" style="padding:6px 14px;background:rgba(230,81,0,0.15);border:1px solid rgba(230,81,0,0.5);border-radius:4px;color:#e65100;font-size:12px;font-weight:600;cursor:pointer;">
                     🔓 Reopen
                 </button>
             </form>
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
         <div id="finalize-result"></div>
         <form hx-post="/api/events/{{ event.id }}/finalize" hx-target="#finalize-result" hx-swap="innerHTML"
               hx-confirm="Finalize this event? This will lock attendance and auto-credit TRADOC items. This action cannot be undone.">
-            <button type="submit" style="padding:8px 20px;background:#c62828;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+            <button hx-disabled-elt="this" type="submit" style="padding:8px 20px;background:#c62828;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
                 🔒 Finalize Event
             </button>
         </form>
@@ -259,20 +259,20 @@ document.addEventListener("DOMContentLoaded", function() {
                                 style="width:100%;padding:4px 8px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;font-family:monospace;">
                         </div>
                     </div>
-                    <button type="submit" style="padding:4px 12px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:12px;">Set Schedule</button>
+                    <button hx-disabled-elt="this" type="submit" style="padding:4px 12px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:12px;">Set Schedule</button>
                 </form>
             </details>
             <!-- Issue Now -->
             <form hx-post="/api/events/{{ event.id }}/issue-warno" hx-target="#warno-pipeline-result" hx-swap="innerHTML" hx-confirm="Issue WARNO now? This will display the banner on all dashboards.">
-                <button type="submit" style="padding:6px 16px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">⚡ Issue WARNO Now</button>
+                <button hx-disabled-elt="this" type="submit" style="padding:6px 16px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">⚡ Issue WARNO Now</button>
             </form>
             {% elif not event.opord_issued_at %}
             <form hx-post="/api/events/{{ event.id }}/issue-opord" hx-target="#warno-pipeline-result" hx-swap="innerHTML" hx-confirm="Publish OPORD? Banner will update to show OPORD status.">
-                <button type="submit" style="padding:6px 16px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">📋 Publish OPORD</button>
+                <button hx-disabled-elt="this" type="submit" style="padding:6px 16px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">📋 Publish OPORD</button>
             </form>
             {% elif not event.fragord_issued_at %}
             <form hx-post="/api/events/{{ event.id }}/issue-fragord" hx-target="#warno-pipeline-result" hx-swap="innerHTML" hx-confirm="Issue FRAGORD?">
-                <button type="submit" style="padding:6px 16px;background:#ef6c00;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">📝 Issue FRAGORD</button>
+                <button hx-disabled-elt="this" type="submit" style="padding:6px 16px;background:#ef6c00;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">📝 Issue FRAGORD</button>
             </form>
             {% else %}
             <div style="font-size:13px;color:#2e7d32;font-weight:600;">✅ Full pipeline complete</div>

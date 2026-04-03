@@ -141,7 +141,7 @@
 
         <div style="display:flex;gap:12px;justify-content:space-between;margin-bottom:32px;">
             <a href="/profile" style="padding:8px 20px;color:#888;text-decoration:none;font-size:14px;">← Back to Profile</a>
-            <button type="submit" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+            <button onclick="this.disabled=true;this.form.submit();" type="submit" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
                 Submit Claim
             </button>
         </div>
@@ -177,8 +177,13 @@ function updateFileName(input) {
         label.style.display = 'none';
         selected.style.display = 'block';
         fname.textContent = f.name;
-        var mb = (f.size / 1024 / 1024).toFixed(1);
-        fsize.textContent = mb + ' MB';
+        if (f.size < 1024 * 1024) {
+            var kb = (f.size / 1024).toFixed(1);
+            fsize.textContent = kb + ' KB';
+        } else {
+            var mb = (f.size / 1024 / 1024).toFixed(1);
+            fsize.textContent = mb + ' MB';
+        }
         // Read file into memory immediately so it can't change before submit
         var reader = new FileReader();
         reader.onload = function(e) {

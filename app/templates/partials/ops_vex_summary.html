@@ -31,14 +31,14 @@
             {% for status_val, status_text in [('in_assembly', 'Assembly'), ('in_field', 'SP → Field'), ('released', 'RP → Released')] %}
             <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/status" style="display:inline;">
               <input type="hidden" name="field_status" value="{{ status_val }}">
-              <button type="submit"
+              <button onclick="this.disabled=true;this.form.submit();" type="submit"
                       class="ops-btn {% if vex.field_status == status_val %}ops-btn-primary{% endif %}"
                       style="font-size:10px;padding:2px 7px;">{{ status_text }}</button>
             </form>
             {% endfor %}
             <form method="POST" action="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/delete"
                   onsubmit="return confirm('Delete {{ vex.name }}? This removes all assignments.')">
-              <button type="submit" class="ops-btn ops-btn-danger"
+              <button hx-disabled-elt="this" type="submit" class="ops-btn ops-btn-danger"
                       style="font-size:10px;padding:2px 7px;"
                       hx-post="/events/{{ event.id }}/ops/vexillation/{{ vex.id }}/delete"
                       hx-target="#vex-summary-panel" hx-swap="outerHTML"
@@ -77,7 +77,7 @@
               {% endif %}
               {% endfor %}
             </select>
-            <button type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;">Set</button>
+            <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;">Set</button>
           </form>
         </details>
         {% endif %}

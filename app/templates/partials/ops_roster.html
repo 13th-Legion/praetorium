@@ -50,7 +50,7 @@
           {% if can_buddy %}
           <form method="POST" action="/events/{{ event.id }}/ops/buddy/{{ row.buddy_pair_id }}/delete"
                 style="display:inline;" onsubmit="return confirm('Remove buddy pairing?')">
-            <button type="submit" class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
+            <button hx-disabled-elt="this" type="submit" class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
                     hx-post="/events/{{ event.id }}/ops/buddy/{{ row.buddy_pair_id }}/delete"
                     hx-target="#ops-roster" hx-swap="innerHTML"
                     hx-confirm="Remove buddy pairing?">✕</button>
@@ -86,7 +86,7 @@
               <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
               {% endfor %}
             </select>
-            <button type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>
+            <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>
           </form>
         {% else %}
           <span style="color:#333;font-size:11px;">—</span>
@@ -131,7 +131,7 @@
         {% if not rsvp.checked_in and can_checkin %}
         <form method="POST" action="/events/{{ event.id }}/ops/manual-checkin" style="display:inline;">
           <input type="hidden" name="member_id" value="{{ member.id }}">
-          <button type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;">Check In</button>
+          <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;">Check In</button>
         </form>
         {% endif %}
       </td>
@@ -192,7 +192,7 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-buddy-pair').classList.remove('show')">Cancel</button>
-        <button type="submit" class="ops-btn ops-btn-primary">Create Pairing</button>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Create Pairing</button>
       </div>
     </form>
   </div>

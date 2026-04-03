@@ -96,6 +96,16 @@ async def set_threat_level(request: Request, db: AsyncSession = Depends(get_db))
     db.add(entry)
     await db.commit()
 
+    from app.routes.notifications import create_notification_for_all
+    config = TLAS_CONFIG[level]
+    await create_notification_for_all(
+        db, "tlas",
+        f"⚠️ Threat Level changed to {config['label'].upper()}",
+        body=note or f"TLAS is now {level.value.upper()} — {config['risk']}",
+        link="/dashboard",
+        icon="⚠️"
+    )
+
     # Return updated banner partial (HTMX swap)
     config = TLAS_CONFIG[level]
     data = {

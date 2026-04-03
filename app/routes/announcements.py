@@ -473,6 +473,16 @@ async def post_announcement(request: Request):
                 },
             )
             resp.raise_for_status()
+
+        from app.routes.notifications import create_notification_for_all
+        from app.database import async_session as notif_session
+        async with notif_session() as ndb:
+            await create_notification_for_all(
+                ndb, "announcement", f"📢 {subject}",
+                body=_strip_html(message)[:200] if message else None,
+                link="/dashboard",
+                icon="📢"
+            )
     except Exception as e:
         return HTMLResponse(f'<p style="color:#c62828;">⚠️ Failed to post: {e}</p>')
 

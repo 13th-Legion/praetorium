@@ -235,6 +235,10 @@ async def training_progress_widget(request: Request, db: AsyncSession = Depends(
         todos.append(('<a href="/api/s1/documents/sign/nda" style="color:#d4a537;">Sign NDA</a>', '📝'))
     if not member.waiver_signed_at:
         todos.append(('<a href="/api/s1/documents/sign/general_waiver" style="color:#d4a537;">Sign Liability Waiver</a>', '📝'))
+    if not member.code_of_conduct_signed_at:
+        todos.append(('<a href="/api/s1/documents/sign/code_of_conduct" style="color:#d4a537;">Sign Code of Conduct</a>', '📝'))
+    if not member.bylaws_signed_at:
+        todos.append(('<a href="/api/s1/documents/sign/bylaws" style="color:#d4a537;">Sign TSM By-Laws</a>', '📝'))
 
     # TRADOC for recruits
     if member.status == "recruit" and done < total:
@@ -621,6 +625,9 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
 
+    if claim.status != "pending":
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">⚠️ This claim has already been processed.</div>')
+
     nc_user = user.get("username", "unknown")
 
     # Look up approver's rank + name from members table
@@ -691,6 +698,15 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
 
     await db.commit()
 
+    from app.routes.notifications import create_notification
+    await create_notification(
+        db, claim.member_id, "training",
+        f"✅ Training claim approved",
+        body=f"Your {claim.claim_type} claim was approved by {reviewer}",
+        link="/api/training/claim",
+        icon="✅"
+    )
+
     # Archive attachment to NC (best-effort, don't block approval on failure)
     if claim.doc_path:
         # Look up member and reference name for archive filename
@@ -733,12 +749,24 @@ async def deny_claim(request: Request, claim_id: int, db: AsyncSession = Depends
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
 
+    if claim.status != "pending":
+        return HTMLResponse('<div style="color:#ef5350;padding:8px;">⚠️ This claim has already been processed.</div>')
+
     claim.status = "denied"
     claim.reviewed_by = reviewer
     claim.reviewed_at = datetime.utcnow()
     claim.review_notes = notes
 
     await db.commit()
+
+    from app.routes.notifications import create_notification
+    await create_notification(
+        db, claim.member_id, "training",
+        f"❌ Training claim denied",
+        body=f"Your {claim.claim_type} claim was denied by {reviewer}",
+        link="/api/training/claim",
+        icon="❌"
+    )
 
     return HTMLResponse(f'<span style="color:#c62828;font-weight:600;">❌ Denied by {reviewer}</span>')
 
