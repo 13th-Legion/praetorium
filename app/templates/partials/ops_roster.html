@@ -35,10 +35,23 @@
       <td>
         {% if rsvp.checked_in %}
           <span class="badge-checkedin">✅ Checked In</span>
-        {% elif rsvp.status == 'attending' %}
-          <span class="badge-pending">⏳ Attending</span>
         {% else %}
-          <span style="color:#555;font-size:11px;">{{ rsvp.status | capitalize }}</span>
+          {% if can_checkin %}
+            <form style="display:inline; margin:0;">
+              <input type="hidden" name="member_id" value="{{ member.id }}">
+              <select name="status" hx-post="/events/{{ event.id }}/ops/override-rsvp" hx-target="#ops-roster" hx-swap="innerHTML" style="font-size:11px;padding:2px 4px;background:#111;color:{% if rsvp.status == 'attending' %}#f39c12{% elif rsvp.status == 'declined' %}#e74c3c{% else %}#aaa{% endif %};border:1px solid #444;border-radius:3px;cursor:pointer;font-weight:600;">
+                <option value="attending" {% if rsvp.status == 'attending' %}selected{% endif %}>⏳ Attending</option>
+                <option value="declined" {% if rsvp.status == 'declined' %}selected{% endif %}>❌ Declined</option>
+                <option value="pending" {% if rsvp.status not in ['attending', 'declined'] %}selected{% endif %}>Pending</option>
+              </select>
+            </form>
+          {% else %}
+            {% if rsvp.status == 'attending' %}
+              <span class="badge-pending">⏳ Attending</span>
+            {% else %}
+              <span style="color:#555;font-size:11px;">{{ rsvp.status | capitalize }}</span>
+            {% endif %}
+          {% endif %}
         {% endif %}
       </td>
 
@@ -127,21 +140,11 @@
       {% endif %}{# end show_tactical #}
 
       {% if not display_mode or display_mode != 'tv' %}
-      <td style="display:flex;gap:4px;align-items:center;">
+      <td>
         {% if not rsvp.checked_in and can_checkin %}
         <form method="POST" action="/events/{{ event.id }}/ops/manual-checkin" style="display:inline;">
           <input type="hidden" name="member_id" value="{{ member.id }}">
-          <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;" title="Mark as arrived">Check In</button>
-        </form>
-        
-        <form style="display:inline;">
-          <input type="hidden" name="member_id" value="{{ member.id }}">
-          <select name="status" hx-post="/events/{{ event.id }}/ops/override-rsvp" hx-target="#ops-roster" hx-swap="innerHTML" title="Override RSVP" style="font-size:10px;padding:1px 2px;background:#111;color:#aaa;border:1px solid #444;border-radius:3px;cursor:pointer;">
-            <option value="" disabled {% if not rsvp.status %}selected{% endif %}>RSVP</option>
-            <option value="attending" {% if rsvp.status == 'attending' %}selected{% endif %}>Attending</option>
-            <option value="declined" {% if rsvp.status == 'declined' %}selected{% endif %}>Declined</option>
-            <option value="pending" {% if rsvp.status == 'pending' %}selected{% endif %}>Pending</option>
-          </select>
+          <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;">Check In</button>
         </form>
         {% endif %}
       </td>
