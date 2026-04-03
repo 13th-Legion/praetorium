@@ -369,6 +369,61 @@ async def ops_roster(request: Request, event_id: int):
 
 # ─── Manual Check-in ─────────────────────────────────────────────────────────
 
+@router.post("/events/{event_id}/ops/override-rsvp", response_class=HTMLResponse)
+@require_role(*OPS_ROLES)
+async def override_rsvp(
+    request: Request,
+    event_id: int,
+    member_id: int = Form(...),
+    status: str = Form(...),
+):
+    """Command/Leader manually overrides a member's RSVP status."""
+    if status not in ("attending", "declined", "pending"):
+        return HTMLResponse("Invalid status", status_code=400)
+
+    async with async_session() as db:
+        event = await _get_event_or_404(db, event_id)
+
+        rsvp_result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+            )
+        )
+        rsvp = rsvp_result.scalar_one_or_none()
+
+        if rsvp:
+            rsvp.status = status
+            rsvp.updated_at = datetime.utcnow()
+        else:
+            rsvp = EventRSVP(
+                event_id=event_id,
+                member_id=member_id,
+                status=status,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            db.add(rsvp)
+
+        await db.commit()
+
+        # Render updated roster
+        user = request.session.get("user", {})
+        roster_rows = await _build_roster(db, event)
+        guard_slots = await _get_guard_slots(db, event_id)
+        vexillations = await _get_vexillations(db, event_id)
+        
+        return templates.TemplateResponse("partials/ops_roster.html", {
+            "request": request,
+            "user": user,
+            "event": event,
+            "roster": roster_rows,
+            "show_tactical": event.category in TACTICAL_CATEGORIES,
+            "can_checkin": _user_has_role(user, *OPS_ROLES),
+            "guard_slots": guard_slots,
+            "vexillations": vexillations,
+        })
+
+
 @router.post("/events/{event_id}/ops/manual-checkin", response_class=HTMLResponse)
 @require_role(*OPS_ROLES)
 async def manual_checkin(
