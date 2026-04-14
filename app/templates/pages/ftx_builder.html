@@ -64,6 +64,51 @@
                 <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
             </form>
             <div id="rp-result" style="margin-top: 4px;"></div>
+
+            <!-- Rally Time -->
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="color: #999; font-size: 13px; font-weight: 500;">⏰ Rally Time</span>
+                {% if event.rally_point_time %}
+                <span style="color: #d4a537; font-size: 13px; font-weight: 600;">{{ event.rally_point_time }}</span>
+                {% endif %}
+            </div>
+            <form hx-post="/api/s3/rally-time/{{ event.id }}" hx-target="#rt-result" hx-swap="innerHTML" style="margin-top: 6px; display: flex; gap: 8px;">
+                <input name="rally_time" value="{{ event.rally_point_time or '' }}" placeholder="e.g. 0600"
+                       style="width: 100px; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" maxlength="4">
+                <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set Time</button>
+            </form>
+            <div id="rt-result" style="margin-top: 4px;"></div>
+        </div>
+
+        <!-- Radio Frequencies -->
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a2a3e;">
+            <span style="color: #999; font-size: 13px; font-weight: 500;">📡 Radio Frequencies</span>
+            <form hx-post="/api/s3/frequencies/{{ event.id }}" hx-target="#freq-result" hx-swap="innerHTML" style="margin-top: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 500px;">
+                    <div>
+                        <label style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Convoy Primary</label>
+                        <input name="freq_convoy_primary" value="{{ event.freq_convoy_primary or '' }}" placeholder="e.g. 146.520"
+                               style="width: 100%; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Convoy Alternate</label>
+                        <input name="freq_convoy_alternate" value="{{ event.freq_convoy_alternate or '' }}" placeholder="e.g. 147.000"
+                               style="width: 100%; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">FOB Primary</label>
+                        <input name="freq_fob_primary" value="{{ event.freq_fob_primary or '' }}" placeholder="e.g. 146.580"
+                               style="width: 100%; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">FOB Alternate</label>
+                        <input name="freq_fob_alternate" value="{{ event.freq_fob_alternate or '' }}" placeholder="e.g. 147.060"
+                               style="width: 100%; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;">
+                    </div>
+                </div>
+                <button hx-disabled-elt="this" type="submit" style="margin-top: 8px; background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Save Frequencies</button>
+            </form>
+            <div id="freq-result" style="margin-top: 4px;"></div>
         </div>
     </div>
 
@@ -258,5 +303,33 @@
         </details>
     </div>
     {% endfor %}
+
+    <!-- SMEAC OPORD (Optional 5-Paragraph Order) -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0; font-size: 18px;">
+                📜 Operations Order (SMEAC)
+            </h2>
+            <span style="font-size: 11px; color: #666;">Optional — fill out as needed</span>
+        </div>
+        <form hx-post="/api/s3/opord/{{ event.id }}" hx-target="#opord-result" hx-swap="innerHTML">
+            {% set paras = [
+                ("opord_situation", "1. SITUATION", "Enemy forces, friendly forces, environment, terrain, weather. What is the current state of affairs?", event.opord_situation),
+                ("opord_mission", "2. MISSION", "Who, what, when, where, and why. The unit's task and purpose in a single sentence.", event.opord_mission),
+                ("opord_execution", "3. EXECUTION", "Commander's intent, concept of operations, tasks to subordinate units, coordinating instructions.", event.opord_execution),
+                ("opord_admin_logistics", "4. ADMINISTRATION & LOGISTICS", "Supply, transportation, medical, gear list, meals, water, ammo.", event.opord_admin_logistics),
+                ("opord_command_signal", "5. COMMAND & SIGNAL", "Chain of command, frequencies, callsigns, signal plan, rally points, contingency comms.", event.opord_command_signal),
+            ] %}
+            {% for field_name, label, placeholder, value in paras %}
+            <div style="margin-bottom: 16px;">
+                <label style="font-family: 'Oswald', sans-serif; font-size: 13px; color: #d4a537; text-transform: uppercase; letter-spacing: 0.08em;">{{ label }}</label>
+                <textarea name="{{ field_name }}" placeholder="{{ placeholder }}"
+                          style="width: 100%; min-height: 100px; background: #12121e; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 4px; font-size: 13px; font-family: 'Inter', sans-serif; resize: vertical; margin-top: 4px;">{{ value or '' }}</textarea>
+            </div>
+            {% endfor %}
+            <button hx-disabled-elt="this" type="submit" style="background: #2e7d32; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px;">Save OPORD</button>
+        </form>
+        <div id="opord-result" style="margin-top: 8px;"></div>
+    </div>
 </div>
 {% endblock %}

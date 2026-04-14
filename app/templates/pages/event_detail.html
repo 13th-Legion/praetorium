@@ -36,7 +36,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 {% block content %}
-<div class="event-detail-page" style="max-width:800px;">
+{% set can_see_opord = my_rsvp == "attending" or "command" in user.get("roles", []) or "s3" in user.get("roles", []) or "admin" in user.get("roles", []) %}
+<div class="event-detail-page">
     <a href="/events" style="font-size:13px;color:#888;text-decoration:none;display:inline-block;margin-bottom:16px;">← Back to Events</a>
 
     <!-- Event Header -->
@@ -54,6 +55,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📅 {{ date_display }}</div>
                 {% if event.location %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📍 {{ event.location }}</div>
+                {% endif %}
+                {% if event.rally_point and can_see_opord %}
+                <div style="font-size:14px;color:#aaa;margin-bottom:4px;">🏁 Rally: <a href="https://www.google.com/maps/search/{{ event.rally_point | urlencode }}" target="_blank" style="color:#d4a537;text-decoration:none;">{{ event.rally_point }} ↗</a>{% if event.rally_point_time %} @ <strong style="color:#d4a537;">{{ event.rally_point_time }}</strong>{% endif %}</div>
+                {% endif %}
+                {% if can_see_opord and (event.freq_convoy_primary or event.freq_fob_primary) %}
+                <div style="font-size:13px;color:#aaa;margin-bottom:4px;display:flex;gap:16px;flex-wrap:wrap;">
+                    📡
+                    {% if event.freq_convoy_primary %}<span>Convoy: <strong style="color:#4fc3f7;">{{ event.freq_convoy_primary }}</strong>{% if event.freq_convoy_alternate %} / {{ event.freq_convoy_alternate }}{% endif %}</span>{% endif %}
+                    {% if event.freq_fob_primary %}<span>FOB: <strong style="color:#4fc3f7;">{{ event.freq_fob_primary }}</strong>{% if event.freq_fob_alternate %} / {{ event.freq_fob_alternate }}{% endif %}</span>{% endif %}
+                </div>
                 {% endif %}
                 {% if event.instructor %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">👨‍🏫 Instructor: <a href="/profile/{{ event.instructor.id }}" style="color:#d4a537; text-decoration:none;">{{ rank_abbr.get(event.instructor.rank_grade, '') }} {{ event.instructor.last_name }}, {{ event.instructor.first_name }}</a></div>
@@ -86,6 +97,28 @@ document.addEventListener("DOMContentLoaded", function() {
                 📺
             </a>
         </div>
+    </div>
+    {% endif %}
+
+    <!-- SMEAC OPORD (visible only to attending members + Command/S3) -->
+    {% if can_see_opord and (event.opord_situation or event.opord_mission or event.opord_execution or event.opord_admin_logistics or event.opord_command_signal) %}
+    <div class="card" style="padding:20px;">
+        <h2 class="card-title" style="font-size:0.9rem;">📜 Operations Order</h2>
+        {% set smeac_paras = [
+            ("1. SITUATION", event.opord_situation),
+            ("2. MISSION", event.opord_mission),
+            ("3. EXECUTION", event.opord_execution),
+            ("4. ADMIN & LOGISTICS", event.opord_admin_logistics),
+            ("5. COMMAND & SIGNAL", event.opord_command_signal),
+        ] %}
+        {% for label, content in smeac_paras %}
+        {% if content %}
+        <div style="margin-bottom:16px;">
+            <div style="font-family:'Oswald',sans-serif;font-size:12px;color:#d4a537;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">{{ label }}</div>
+            <div style="font-size:14px;color:#ccc;line-height:1.6;white-space:pre-wrap;">{{ content }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
     </div>
     {% endif %}
 
@@ -189,6 +222,116 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
     {% endif %}
     {% endif %}
+    {% endif %}
+
+    <!-- After Action Review (PP-125) -->
+    {% if event.finalized_at and event.category in ['ftx', 'mcftx'] %}
+    <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 class="card-title" style="font-size:0.9rem;margin:0;">📋 After Action Review</h2>
+            {% if event.aar_published_at %}
+            <span style="font-size:11px;color:#4caf50;">✅ Published {{ event.aar_published_at.strftime('%d %b %Y') }}</span>
+            {% endif %}
+        </div>
+
+        {% set can_edit_aar = 'command' in user.get('roles', []) or 'leader' in user.get('roles', []) or 's3' in user.get('roles', []) or 'admin' in user.get('roles', []) %}
+        {% if event.aar_published_at %}
+        <!-- Published AAR (visible to all authenticated members) -->
+        <div style="margin-top:12px;">
+            {% if event.aar_commander_intent %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:#d4a537;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Commander's Intent</div>
+                <div style="font-size:14px;color:#ccc;line-height:1.6;white-space:pre-wrap;">{{ event.aar_commander_intent }}</div>
+            </div>
+            {% endif %}
+            {% if event.aar_mission_summary %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:#d4a537;font-weight:600;text-transform:uppercase;margin-bottom:4px;">What Actually Happened</div>
+                <div style="font-size:14px;color:#ccc;line-height:1.6;white-space:pre-wrap;">{{ event.aar_mission_summary }}</div>
+            </div>
+            {% endif %}
+
+            {% set aar_right = aar_items | selectattr('category', 'equalto', 'right') | list %}
+            {% set aar_wrong = aar_items | selectattr('category', 'equalto', 'wrong') | list %}
+            {% set aar_improve = aar_items | selectattr('category', 'equalto', 'improve') | list %}
+
+            {% if aar_right %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:#4caf50;font-weight:600;text-transform:uppercase;margin-bottom:6px;">✅ What Went Right</div>
+                {% for item in aar_right | sort(attribute='ordinal') %}
+                <div style="font-size:14px;color:#ccc;padding:4px 0 4px 12px;border-left:2px solid #4caf50;">{{ item.text }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if aar_wrong %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:#ef5350;font-weight:600;text-transform:uppercase;margin-bottom:6px;">❌ What Went Wrong</div>
+                {% for item in aar_wrong | sort(attribute='ordinal') %}
+                <div style="font-size:14px;color:#ccc;padding:4px 0 4px 12px;border-left:2px solid #ef5350;">{{ item.text }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if aar_improve %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:#42a5f5;font-weight:600;text-transform:uppercase;margin-bottom:6px;">🔧 Areas for Improvement</div>
+                {% for item in aar_improve | sort(attribute='ordinal') %}
+                <div style="font-size:14px;color:#ccc;padding:4px 0 4px 12px;border-left:2px solid #42a5f5;">{{ item.text }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% elif can_edit_aar %}
+        <!-- AAR Form (Command/S3 only, not yet published) -->
+        <div style="margin-top:12px;">
+            <div id="aar-form-result"></div>
+            <form hx-post="/api/events/{{ event.id }}/aar" hx-target="#aar-form-result" hx-swap="innerHTML" style="display:flex;flex-direction:column;gap:12px;">
+                <div>
+                    <label style="font-size:12px;color:#999;display:block;margin-bottom:4px;">Commander's Intent (restated)</label>
+                    <textarea name="commander_intent" rows="3" placeholder="What was the commander's intent for this exercise?" style="width:100%;background:#1a1a2e;border:1px solid #444;color:#fff;padding:8px;border-radius:4px;font-size:13px;resize:vertical;">{{ event.aar_commander_intent or '' }}</textarea>
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#999;display:block;margin-bottom:4px;">What Actually Happened (Mission Summary)</label>
+                    <textarea name="mission_summary" rows="4" placeholder="Summarize what actually happened during the exercise." style="width:100%;background:#1a1a2e;border:1px solid #444;color:#fff;padding:8px;border-radius:4px;font-size:13px;resize:vertical;">{{ event.aar_mission_summary or '' }}</textarea>
+                </div>
+
+                <!-- What went right (5 items) -->
+                <div>
+                    <label style="font-size:12px;color:#4caf50;font-weight:600;display:block;margin-bottom:6px;">✅ What Went Right (up to 5)</label>
+                    {% for i in range(1, 6) %}
+                    {% set existing = aar_items | selectattr('category', 'equalto', 'right') | selectattr('ordinal', 'equalto', i) | first %}
+                    <input name="right_{{ i }}" value="{{ existing.text if existing else '' }}" placeholder="{{ i }}." style="width:100%;background:#1a1a2e;border:1px solid #444;color:#fff;padding:6px 8px;border-radius:4px;font-size:13px;margin-bottom:4px;">
+                    {% endfor %}
+                </div>
+
+                <!-- What went wrong (5 items) -->
+                <div>
+                    <label style="font-size:12px;color:#ef5350;font-weight:600;display:block;margin-bottom:6px;">❌ What Went Wrong (up to 5)</label>
+                    {% for i in range(1, 6) %}
+                    {% set existing = aar_items | selectattr('category', 'equalto', 'wrong') | selectattr('ordinal', 'equalto', i) | first %}
+                    <input name="wrong_{{ i }}" value="{{ existing.text if existing else '' }}" placeholder="{{ i }}." style="width:100%;background:#1a1a2e;border:1px solid #444;color:#fff;padding:6px 8px;border-radius:4px;font-size:13px;margin-bottom:4px;">
+                    {% endfor %}
+                </div>
+
+                <!-- Areas for improvement (5 items) -->
+                <div>
+                    <label style="font-size:12px;color:#42a5f5;font-weight:600;display:block;margin-bottom:6px;">🔧 Areas for Improvement (up to 5)</label>
+                    {% for i in range(1, 6) %}
+                    {% set existing = aar_items | selectattr('category', 'equalto', 'improve') | selectattr('ordinal', 'equalto', i) | first %}
+                    <input name="improve_{{ i }}" value="{{ existing.text if existing else '' }}" placeholder="{{ i }}." style="width:100%;background:#1a1a2e;border:1px solid #444;color:#fff;padding:6px 8px;border-radius:4px;font-size:13px;margin-bottom:4px;">
+                    {% endfor %}
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button hx-disabled-elt="this" type="submit" name="action" value="save" style="padding:8px 20px;background:rgba(212,165,55,0.2);color:#d4a537;border:1px solid #d4a537;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">💾 Save Draft</button>
+                    <button hx-disabled-elt="this" type="submit" name="action" value="publish" style="padding:8px 20px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;" onclick="return confirm('Publish AAR? This will be visible to attending members and emailed out.')">📋 Publish AAR</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
     {% endif %}
 
     <!-- Documents -->

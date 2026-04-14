@@ -1,0 +1,89 @@
+{# Election Banner Partial — PP-077
+   Context vars: active_election (Election object), election_phase, election_winner_name
+   Included by dashboard.html when an active election exists.
+#}
+{% if active_election %}
+
+{% if active_election.phase == "nominations" %}
+{# Gold CTA banner for nomination phase #}
+<a href="/elections/{{ active_election.id }}" style="text-decoration:none;color:inherit;display:block;">
+<div style="background:linear-gradient(135deg,rgba(212,165,55,0.12),rgba(15,25,41,0.95));
+            border:2px solid #d4a537;border-radius:10px;padding:16px 24px;margin-bottom:24px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+            cursor:pointer;transition:border-color 0.2s;"
+     onmouseover="this.style.borderColor='#f0c040'" onmouseout="this.style.borderColor='#d4a537'">
+  <div>
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;font-weight:700;
+                letter-spacing:0.12em;color:#d4a537;text-transform:uppercase;margin-bottom:4px;">
+      🗳️ CO Election — Nominations Open
+    </div>
+    <div style="font-size:15px;font-weight:600;color:#fff;">{{ active_election.title }}</div>
+    {% if active_election.nominations_close %}
+    <div style="font-size:13px;color:#aaa;margin-top:4px;">
+      Submit your nomination by
+      <strong style="color:#d4a537;">{{ active_election.nominations_close|mildate }}</strong>
+    </div>
+    {% endif %}
+  </div>
+  <div style="padding:8px 20px;background:#d4a537;color:#1a1a2e;border-radius:4px;
+              font-weight:700;font-size:13px;white-space:nowrap;">
+    Nominate Now →
+  </div>
+</div>
+</a>
+
+{% elif active_election.phase == "voting" %}
+{# Red CTA banner for voting phase #}
+<a href="/elections/{{ active_election.id }}" style="text-decoration:none;color:inherit;display:block;">
+<div style="background:linear-gradient(135deg,rgba(183,28,28,0.15),rgba(15,25,41,0.95));
+            border:2px solid #c62828;border-radius:10px;padding:16px 24px;margin-bottom:24px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+            cursor:pointer;transition:border-color 0.2s;"
+     onmouseover="this.style.borderColor='#ef5350'" onmouseout="this.style.borderColor='#c62828'">
+  <div>
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;font-weight:700;
+                letter-spacing:0.12em;color:#ef5350;text-transform:uppercase;margin-bottom:4px;">
+      🗳️ CO Election — Voting Open
+    </div>
+    <div style="font-size:15px;font-weight:600;color:#fff;">{{ active_election.title }}</div>
+    {% if active_election.voting_close %}
+    <div style="font-size:13px;color:#aaa;margin-top:4px;">
+      Cast your ballot by
+      <strong style="color:#ef5350;">{{ active_election.voting_close|mildate }}</strong>
+    </div>
+    {% endif %}
+  </div>
+  <div style="padding:8px 20px;background:#c62828;color:#fff;border-radius:4px;
+              font-weight:700;font-size:13px;white-space:nowrap;">
+    Vote Now →
+  </div>
+</div>
+</a>
+
+{% elif active_election.phase == "complete" %}
+{# Results banner #}
+<div style="background:linear-gradient(135deg,rgba(46,125,50,0.12),rgba(15,25,41,0.95));
+            border:2px solid #2e7d32;border-radius:10px;padding:16px 24px;margin-bottom:24px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;font-weight:700;
+                letter-spacing:0.12em;color:#4caf50;text-transform:uppercase;margin-bottom:4px;">
+      ✅ Election Complete
+    </div>
+    <div style="font-size:15px;font-weight:600;color:#fff;">{{ active_election.title }}</div>
+    {% if election_winner_name %}
+    <div style="font-size:13px;color:#aaa;margin-top:4px;">
+      <strong style="color:#4caf50;">{{ election_winner_name }}</strong> elected as Commanding Officer
+    </div>
+    {% endif %}
+  </div>
+  <a href="/elections/{{ active_election.id }}"
+     style="padding:8px 20px;background:rgba(46,125,50,0.3);color:#4caf50;
+            border:1px solid #2e7d32;border-radius:4px;font-weight:700;font-size:13px;
+            text-decoration:none;white-space:nowrap;">
+    View Results →
+  </a>
+</div>
+
+{% endif %}
+{% endif %}

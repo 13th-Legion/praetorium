@@ -474,6 +474,22 @@ async def post_announcement(request: Request):
             )
             resp.raise_for_status()
 
+        # Cross-post to NC Talk Announcements channel
+        try:
+            talk_msg = f"📢 **{subject}**"
+            if plain_message:
+                talk_msg += f"\n\n{plain_message}"
+            talk_msg += f"\n\n— {poster_name}"
+            async with httpx.AsyncClient(timeout=15) as client:
+                await client.post(
+                    f"{nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/atnd3vgf",
+                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                    auth=(NC_POST_USER, NC_POST_PASS),
+                    data={"message": talk_msg},
+                )
+        except Exception:
+            pass  # Don't fail the announcement if cross-post fails
+
         from app.routes.notifications import create_notification_for_all
         from app.database import async_session as notif_session
         async with notif_session() as ndb:

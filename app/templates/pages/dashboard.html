@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
 <div class="dashboard">
@@ -20,6 +20,9 @@
         ">⚙️ Set Threat Level</a>
     </div>
     {% endif %}
+
+    <!-- Election Banner — PP-077 CO Election -->
+    {% include "partials/election_banner.html" %}
 
     <!-- WARNO Banner — auto-loaded for next FTX/MCFTX with issued WARNO -->
     <div id="warno-banner-area" hx-get="/api/events/warno-banner" hx-trigger="load" hx-swap="innerHTML"></div>

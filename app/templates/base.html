@@ -22,7 +22,7 @@
             <img src="/static/img/tsm_seal_sm.png" alt="TSM" class="nav-crest" style="height:32px;width:auto;">
         </div>
         <div class="nav-links">
-            <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+            <a href="/dashboard" class="nav-link">🏠 Home</a>
             <a href="/api/training/claim" class="nav-link">🎯 Training</a>
             <a href="/roster" class="nav-link">📋 Roster</a>
             <a href="/events" class="nav-link">📅 Events</a>
@@ -97,6 +97,10 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
+
+            {% if "command" in user.roles or "admin" in user.roles %}
+            <a href="/elections/admin" class="nav-link">🗳️ Elections</a>
             {% endif %}
         </div>
         <div class="nav-user" style="display: flex; align-items: center; gap: 15px;">

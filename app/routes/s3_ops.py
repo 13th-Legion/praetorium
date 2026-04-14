@@ -524,3 +524,96 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
         ''')
 
     return HTMLResponse("".join(rows))
+
+
+# ─── Rally Time ──────────────────────────────────────────────────────────────
+
+@router.post("/api/s3/rally-time/{event_id}")
+@require_auth
+async def set_rally_time(
+    request: Request,
+    event_id: int,
+    rally_time: str = Form(""),
+):
+    """Set the rally point time for an event (HHMM format)."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    async with async_session() as db:
+        event = await db.get(Event, event_id)
+        if not event:
+            return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+        event.rally_point_time = rally_time.strip() if rally_time.strip() else None
+        event.updated_at = datetime.utcnow()
+        await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Rally time updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+# ─── Radio Frequencies ───────────────────────────────────────────────────────
+
+@router.post("/api/s3/frequencies/{event_id}")
+@require_auth
+async def set_frequencies(
+    request: Request,
+    event_id: int,
+):
+    """Set convoy and FOB radio frequencies for an event."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    form = await request.form()
+
+    async with async_session() as db:
+        event = await db.get(Event, event_id)
+        if not event:
+            return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+        event.freq_convoy_primary = form.get("freq_convoy_primary", "").strip() or None
+        event.freq_convoy_alternate = form.get("freq_convoy_alternate", "").strip() or None
+        event.freq_fob_primary = form.get("freq_fob_primary", "").strip() or None
+        event.freq_fob_alternate = form.get("freq_fob_alternate", "").strip() or None
+        event.updated_at = datetime.utcnow()
+        await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Frequencies updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+# ─── SMEAC OPORD ─────────────────────────────────────────────────────────────
+
+@router.post("/api/s3/opord/{event_id}")
+@require_auth
+async def save_opord(
+    request: Request,
+    event_id: int,
+):
+    """Save the 5-paragraph OPORD (SMEAC) for an event."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    form = await request.form()
+
+    async with async_session() as db:
+        event = await db.get(Event, event_id)
+        if not event:
+            return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+        event.opord_situation = form.get("opord_situation", "").strip() or None
+        event.opord_mission = form.get("opord_mission", "").strip() or None
+        event.opord_execution = form.get("opord_execution", "").strip() or None
+        event.opord_admin_logistics = form.get("opord_admin_logistics", "").strip() or None
+        event.opord_command_signal = form.get("opord_command_signal", "").strip() or None
+        event.updated_at = datetime.utcnow()
+        await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ OPORD saved.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )

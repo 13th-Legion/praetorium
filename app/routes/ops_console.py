@@ -463,7 +463,7 @@ async def manual_checkin(
         await db.commit()
 
     # Return updated roster partial
-    return RedirectResponse(url=f"/events/{event_id}/ops/roster", status_code=303)
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 # ─── Battle Buddy ─────────────────────────────────────────────────────────────
@@ -498,7 +498,7 @@ async def pair_buddy(
         db.add(pair)
         await db.commit()
 
-    return RedirectResponse(url=f"/events/{event_id}/ops/roster", status_code=303)
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 @router.delete("/events/{event_id}/ops/buddy/{pair_id}", response_class=HTMLResponse)
@@ -614,7 +614,7 @@ async def assign_guard(
         db.add(duty)
         await db.commit()
 
-    return RedirectResponse(url=f"/events/{event_id}/ops/roster", status_code=303)
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 @router.delete("/events/{event_id}/ops/guard/{assignment_id}", response_class=HTMLResponse)
@@ -829,7 +829,7 @@ async def assign_vexillation(
         db.add(assignment)
         await db.commit()
 
-    return RedirectResponse(url=f"/events/{event_id}/ops/roster", status_code=303)
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 @router.post("/events/{event_id}/ops/vexillation/{vex_id}/status", response_class=HTMLResponse)
@@ -924,7 +924,7 @@ async def add_walkin_guest(
         db.add(guest)
         await db.commit()
 
-    return RedirectResponse(url=f"/events/{event_id}/ops/roster", status_code=303)
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 # ─── Guard Config Partial ─────────────────────────────────────────────────────

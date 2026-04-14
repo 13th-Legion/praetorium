@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from config import get_settings
 from app.database import engine, Base, async_session
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook
 
 
 @asynccontextmanager
@@ -132,6 +132,8 @@ app.include_router(s3_ops.router)
 app.include_router(ops_console.router)
 app.include_router(team_manage.router)
 app.include_router(notifications.router)
+app.include_router(elections.router)
+app.include_router(paypal_webhook.router)
 app.include_router(debug.router)
 app.include_router(settings_route.router)
 
@@ -210,10 +212,5 @@ async def index(request: Request):
     """Landing page — redirect to dashboard if authed, login if not."""
     user = request.session.get("user")
     if user:
-        groups = set(user.get("groups", []))
-        return templates.TemplateResponse("pages/dashboard.html", {
-            "request": request,
-            "user": user,
-            "is_command": bool(groups & {"Command", "admin"}),
-        })
+        return RedirectResponse(url="/dashboard", status_code=302)
     return templates.TemplateResponse("pages/login.html", {"request": request})

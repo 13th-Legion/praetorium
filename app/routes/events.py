@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
-from app.models.events import Event, EventRSVP, EventDocument
+from app.models.events import Event, EventRSVP, EventDocument, EventAARItem
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc
 from config import get_settings
@@ -46,6 +46,7 @@ templates.env.filters["cdt"] = _to_cdt
 
 CALENDAR_PATH = "/remote.php/dav/calendars/spooky/13th-legion/"
 from app.settings import NC_SVC_USER as CALENDAR_USER, NC_SVC_PASS as CALENDAR_PASS
+from app.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 
 REPORT_BODY = """<?xml version="1.0"?>
 <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -91,12 +92,144 @@ WARNO_LEAD_DAYS = {
 }
 
 
+# Rooms for WARNO cross-post
+WARNO_TALK_ROOM = "atnd3vgf"  # T1 · Announcements
+
+
 def _calc_warno_schedule(category: str, date_start) -> "datetime | None":
     """Calculate WARNO auto-issue date based on category defaults."""
     lead = WARNO_LEAD_DAYS.get(category)
     if lead and date_start:
         from datetime import timedelta
         return date_start - timedelta(days=lead)
+
+
+async def _activate_warno(db, event):
+    """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active members."""
+    import httpx as _httpx
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from datetime import datetime as _dt
+
+    settings = get_settings()
+    now = _dt.utcnow()
+
+    # 1. Enable RSVP and create pending RSVPs for all active/recruit members
+    event.rsvp_enabled = True
+    event.updated_at = now
+
+    existing_rsvps = await db.execute(
+        select(EventRSVP.member_id).where(EventRSVP.event_id == event.id)
+    )
+    existing_ids = {r[0] for r in existing_rsvps.all()}
+
+    members_result = await db.execute(
+        select(Member).where(
+            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+            Member.company == "13th Legion",
+        )
+    )
+    members = members_result.scalars().all()
+    for m in members:
+        if m.id not in existing_ids:
+            db.add(EventRSVP(
+                event_id=event.id,
+                member_id=m.id,
+                status="pending",
+            ))
+
+    await db.flush()
+
+    # Format event date for display
+    local_dt = _to_cdt(event.date_start)
+    date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
+
+    # 2. Cross-post to T1 · Announcements NC Talk channel
+    try:
+        talk_msg = (
+            f"⚡ **WARNO ISSUED — {event.title}**\n\n"
+            f"📅 {date_str}\n"
+            f"📍 {event.location or 'TBD'}\n\n"
+            f"RSVP is now open on the Portal. Log in and respond.\n"
+            f"🔗 https://portal.13thlegion.org/events/{event.id}"
+        )
+        async with _httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(CALENDAR_USER, CALENDAR_PASS),
+                data={"message": talk_msg},
+            )
+    except Exception:
+        pass  # Don't fail WARNO if Talk post fails
+
+    # 3. Email all active members
+    try:
+        active_members = [m for m in members if m.email and m.status in ("active", "Active")]
+        if active_members:
+            html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<h2 style="color: #c62828;">⚡ WARNO ISSUED — {event.title}</h2>
+<p><strong>Date:</strong> {date_str}<br>
+<strong>Location:</strong> {event.location or 'TBD'}</p>
+<p>A Warning Order has been issued for the upcoming exercise. RSVP is now open.</p>
+<p><strong>Log in to the Portal to RSVP:</strong><br>
+<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>S3 — Operations & Training</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion · Texas State Militia · DFW
+</div>
+</body></html>"""
+
+            for member in active_members:
+                try:
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = f"⚡ WARNO — {event.title}"
+                    msg["From"] = SMTP_FROM
+                    msg["To"] = member.email
+                    msg.attach(MIMEText(html_body, "html"))
+                    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+                        s.starttls()
+                        s.login(SMTP_USER, SMTP_PASS)
+                        s.sendmail(SMTP_USER, [member.email], msg.as_string())
+                except Exception:
+                    pass  # Skip individual email failures
+    except Exception:
+        pass  # Don't fail WARNO if email blast fails
+
+    # 4. Create portal notifications for all members
+    try:
+        from app.routes.notifications import create_notification_for_all
+        await create_notification_for_all(
+            db, "event", f"⚡ WARNO — {event.title}",
+            body=f"{date_str} · RSVP now open",
+            link=f"/events/{event.id}",
+            icon="⚡"
+        )
+    except Exception:
+        pass
     return None
 
 CATEGORY_ICONS = {
@@ -363,7 +496,8 @@ async def sync_calendar(request: Request):
                 else:
                     # Create new
                     category = _guess_category(ev["summary"])
-                    rsvp_on = category in RSVP_CATEGORIES
+                    # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
+                    rsvp_on = category in RSVP_CATEGORIES and category not in ("ftx", "mcftx")
                     warno_sched = _calc_warno_schedule(category, date_start)
                     event = Event(
                         title=ev["summary"],
@@ -579,6 +713,12 @@ async def event_detail(request: Request, event_id: int):
         all_members = await db.scalars(select(Member).where(Member.status.in_(["active", "recruit"])).order_by(Member.last_name))
         members = all_members.all()
 
+        # AAR items (PP-125)
+        aar_result = await db.execute(
+            select(EventAARItem).where(EventAARItem.event_id == event_id).order_by(EventAARItem.ordinal)
+        )
+        aar_items = aar_result.scalars().all()
+
     rsvp_locked = bool(event.rsvp_deadline and _now_ct() > event.rsvp_deadline)
 
     return templates.TemplateResponse("pages/event_detail.html", {
@@ -597,6 +737,7 @@ async def event_detail(request: Request, event_id: int):
         "declined": declined,
         "pending": pending,
         "documents": event.documents,
+        "aar_items": aar_items,
         "now": _now_ct(),
     })
 
@@ -815,7 +956,8 @@ async def create_event(request: Request):
     if category not in VALID_CATEGORIES:
         category = "other"
 
-    rsvp_on = category in RSVP_CATEGORIES
+    # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
+    rsvp_on = category in RSVP_CATEGORIES and category not in ("ftx", "mcftx")
     warno_sched = _calc_warno_schedule(category, date_start)
 
     async with async_session() as db:
@@ -967,10 +1109,14 @@ async def upcoming_events(request: Request):
         all_events = result.scalars().all()
 
         # Keep only the first (soonest) occurrence per title
+        # Hide FTX/MCFTX events until WARNO is issued
         seen_titles = set()
         events = []
         for ev in all_events:
             if ev.title not in seen_titles:
+                # FTX/MCFTX only appear after WARNO issued
+                if ev.category in ("ftx", "mcftx") and not ev.warno_issued_at:
+                    continue
                 seen_titles.add(ev.title)
                 events.append(ev)
             if len(events) >= 10:
@@ -1208,7 +1354,7 @@ async def warno_banner(request: Request):
         )
         for event in pending_warnos.scalars().all():
             event.warno_issued_at = now
-            event.updated_at = now
+            await _activate_warno(db, event)
         await db.commit()
 
         # Find next FTX/MCFTX with an issued WARNO
@@ -1381,12 +1527,12 @@ async def issue_warno(request: Request, event_id: int):
         if not event:
             return HTMLResponse("Event not found", status_code=404)
         event.warno_issued_at = now
-        event.updated_at = now
+        await _activate_warno(db, event)
         await db.commit()
 
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        '⚡ WARNO issued. Banner is now live on all dashboards.</div>'
+        '⚡ WARNO issued. RSVP enabled, announcements posted, emails sent.</div>'
         '<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
 
@@ -1432,7 +1578,11 @@ async def schedule_warno(request: Request, event_id: int):
 @require_auth
 @require_role("command", "s3", "admin")
 async def issue_opord(request: Request, event_id: int):
-    """Mark OPORD as published."""
+    """Publish OPORD: set timestamp, email attending members, cross-post to Talk, portal notification."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
     now = datetime.utcnow()
     async with async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
@@ -1441,11 +1591,155 @@ async def issue_opord(request: Request, event_id: int):
             return HTMLResponse("Event not found", status_code=404)
         event.opord_issued_at = now
         event.updated_at = now
+
+        # Get attending members
+        attending_result = await db.execute(
+            select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
+                and_(
+                    EventRSVP.event_id == event_id,
+                    EventRSVP.status == "attending",
+                )
+            )
+        )
+        attending_members = attending_result.scalars().all()
+
+        # Format event date
+        local_dt = _to_cdt(event.date_start)
+        date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
+
+        # Build SMEAC HTML for email
+        smeac_html = ""
+        smeac_paras = [
+            ("1. SITUATION", event.opord_situation),
+            ("2. MISSION", event.opord_mission),
+            ("3. EXECUTION", event.opord_execution),
+            ("4. ADMIN & LOGISTICS", event.opord_admin_logistics),
+            ("5. COMMAND & SIGNAL", event.opord_command_signal),
+        ]
+        for label, content in smeac_paras:
+            if content:
+                escaped = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                smeac_html += f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">{label}</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
+
+        # Frequency info
+        freq_html = ""
+        if event.freq_convoy_primary or event.freq_fob_primary:
+            freq_html = '<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">RADIO FREQUENCIES</h3><p style="font-size:14px;">'
+            if event.freq_convoy_primary:
+                freq_html += f'Convoy: <strong>{event.freq_convoy_primary}</strong>'
+                if event.freq_convoy_alternate:
+                    freq_html += f' / {event.freq_convoy_alternate}'
+                freq_html += '<br>'
+            if event.freq_fob_primary:
+                freq_html += f'FOB: <strong>{event.freq_fob_primary}</strong>'
+                if event.freq_fob_alternate:
+                    freq_html += f' / {event.freq_fob_alternate}'
+            freq_html += '</p>'
+
+        # Rally info
+        rally_html = ""
+        if event.rally_point:
+            rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {event.rally_point}'
+            if event.rally_point_time:
+                rally_html += f' @ {event.rally_point_time}'
+            rally_html += '</p>'
+
+        html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<h2 style="color: #2e7d32;">\ud83d\udccb OPERATIONS ORDER \u2014 {event.title}</h2>
+<p><strong>Date:</strong> {date_str}<br>
+<strong>Location:</strong> {event.location or 'TBD'}</p>
+{rally_html}
+{freq_html}
+{smeac_html}
+<p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
+<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>S3 \u2014 Operations & Training</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion \u00b7 Texas State Militia \u00b7 DFW
+</div>
+</body></html>"""
+
+        # Email attending members
+        for member in attending_members:
+            if not member.email:
+                continue
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = f"\ud83d\udccb OPORD \u2014 {event.title}"
+                msg["From"] = SMTP_FROM
+                msg["To"] = member.email
+                msg.attach(MIMEText(html_body, "html"))
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+                    s.starttls()
+                    s.login(SMTP_USER, SMTP_PASS)
+                    s.sendmail(SMTP_USER, [member.email], msg.as_string())
+            except Exception:
+                pass
+
+        # Cross-post to T1 · Announcements
+        try:
+            settings = get_settings()
+            talk_msg = (
+                f"\ud83d\udccb **OPORD PUBLISHED \u2014 {event.title}**\n\n"
+                f"\ud83d\udcc5 {date_str}\n"
+                f"\ud83d\udccd {event.location or 'TBD'}\n"
+            )
+            if event.rally_point:
+                talk_msg += f"\ud83c\udfc1 Rally: {event.rally_point}"
+                if event.rally_point_time:
+                    talk_msg += f" @ {event.rally_point_time}"
+                talk_msg += "\n"
+            talk_msg += f"\nFull OPORD on the Portal:\n\ud83d\udd17 https://portal.13thlegion.org/events/{event.id}"
+            async with httpx.AsyncClient(timeout=15) as client:
+                await client.post(
+                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                    auth=(CALENDAR_USER, CALENDAR_PASS),
+                    data={"message": talk_msg},
+                )
+        except Exception:
+            pass
+
+        # Portal notification
+        try:
+            from app.routes.notifications import create_notification_for_all
+            await create_notification_for_all(
+                db, "event", f"\ud83d\udccb OPORD \u2014 {event.title}",
+                body=f"{date_str} \u00b7 Operations Order published",
+                link=f"/events/{event_id}",
+                icon="\ud83d\udccb"
+            )
+        except Exception:
+            pass
+
         await db.commit()
 
+    email_count = len([m for m in attending_members if m.email])
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        '📋 OPORD published. Banner updated.</div>'
+        f'\ud83d\udccb OPORD published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}, posted to Announcements.</div>'
         '<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
 
@@ -1834,3 +2128,207 @@ async def _auto_credit_tradoc(db, event: Event) -> str:
         )
 
     return f"Credited {credited} items across {len(members_credited)} members."
+
+
+# ─── After Action Review (PP-125) ────────────────────────────────────────────
+
+@router.post("/api/events/{event_id}/aar", response_class=HTMLResponse)
+@require_role("command", "leader", "s3", "admin")
+async def save_aar(request: Request, event_id: int):
+    """Save or publish the After Action Review for a finalized FTX."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    user = get_current_user(request)
+    username = user.get("username", "unknown")
+    form = await request.form()
+    action = form.get("action", "save")
+
+    commander_intent = (form.get("commander_intent") or "").strip()
+    mission_summary = (form.get("mission_summary") or "").strip()
+
+    async with async_session() as db:
+        event = await db.get(Event, event_id)
+        if not event or not event.finalized_at:
+            return HTMLResponse('<div style="color:#ef5350;font-size:13px;">\u274c Event must be finalized before AAR.</div>')
+
+        # Save narrative fields
+        event.aar_commander_intent = commander_intent or None
+        event.aar_mission_summary = mission_summary or None
+        event.updated_at = datetime.utcnow()
+
+        # Delete existing AAR items and re-create from form
+        await db.execute(
+            EventAARItem.__table__.delete().where(EventAARItem.event_id == event_id)
+        )
+
+        for cat in ("right", "wrong", "improve"):
+            for i in range(1, 6):
+                text = (form.get(f"{cat}_{i}") or "").strip()
+                if text:
+                    db.add(EventAARItem(
+                        event_id=event_id,
+                        category=cat,
+                        ordinal=i,
+                        text=text,
+                        created_by=username,
+                    ))
+
+        if action == "publish":
+            now = datetime.utcnow()
+            event.aar_published_at = now
+            event.aar_published_by = username
+
+            # Get attending members for email
+            attending_result = await db.execute(
+                select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
+                    and_(
+                        EventRSVP.event_id == event_id,
+                        EventRSVP.status == "attending",
+                    )
+                )
+            )
+            attending_members = attending_result.scalars().all()
+
+            # Re-read AAR items for email
+            aar_result = await db.execute(
+                select(EventAARItem).where(EventAARItem.event_id == event_id).order_by(EventAARItem.ordinal)
+            )
+            aar_items = aar_result.scalars().all()
+
+            # Format event date
+            local_dt = _to_cdt(event.date_start)
+            date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
+
+            # Build AAR email HTML
+            items_html = ""
+            for cat, label, color in [("right", "WHAT WENT RIGHT", "#4caf50"), ("wrong", "WHAT WENT WRONG", "#ef5350"), ("improve", "AREAS FOR IMPROVEMENT", "#42a5f5")]:
+                cat_items = [it for it in aar_items if it.category == cat]
+                if cat_items:
+                    items_html += f'<h3 style="color:{color};margin:16px 0 6px;font-size:14px;">{label}</h3><ol style="margin:0;padding-left:20px;">'
+                    for it in sorted(cat_items, key=lambda x: x.ordinal):
+                        escaped = it.text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        items_html += f'<li style="color:#333;font-size:14px;line-height:1.6;margin-bottom:4px;">{escaped}</li>'
+                    items_html += '</ol>'
+
+            intent_html = ""
+            if commander_intent:
+                escaped = commander_intent.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                intent_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">COMMANDER\'S INTENT</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
+
+            summary_html = ""
+            if mission_summary:
+                escaped = mission_summary.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                summary_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">WHAT ACTUALLY HAPPENED</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
+
+            html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<h2 style="color:#1a1a2e;">\ud83d\udccb AFTER ACTION REVIEW \u2014 {event.title}</h2>
+<p><strong>Date:</strong> {date_str}<br>
+<strong>Location:</strong> {event.location or 'TBD'}</p>
+{intent_html}
+{summary_html}
+{items_html}
+<p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
+<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>S3 \u2014 Operations & Training</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion \u00b7 Texas State Militia \u00b7 DFW
+</div>
+</body></html>"""
+
+            # Email attending members
+            email_count = 0
+            for member in attending_members:
+                if not member.email:
+                    continue
+                try:
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = f"\ud83d\udccb AAR \u2014 {event.title}"
+                    msg["From"] = SMTP_FROM
+                    msg["To"] = member.email
+                    msg.attach(MIMEText(html_body, "html"))
+                    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+                        s.starttls()
+                        s.login(SMTP_USER, SMTP_PASS)
+                        s.sendmail(SMTP_USER, [member.email], msg.as_string())
+                    email_count += 1
+                except Exception:
+                    pass
+
+            # Cross-post to T1 Announcements
+            try:
+                settings = get_settings()
+                talk_msg = (
+                    f"\ud83d\udccb **AFTER ACTION REVIEW \u2014 {event.title}**\n\n"
+                    f"\ud83d\udcc5 {date_str}\n"
+                )
+                if commander_intent:
+                    talk_msg += f"\n**Commander's Intent:** {commander_intent[:200]}{'...' if len(commander_intent) > 200 else ''}\n"
+                right_items = [it for it in aar_items if it.category == 'right']
+                wrong_items = [it for it in aar_items if it.category == 'wrong']
+                improve_items = [it for it in aar_items if it.category == 'improve']
+                if right_items:
+                    talk_msg += f"\n\u2705 **What Went Right:** {len(right_items)} items"
+                if wrong_items:
+                    talk_msg += f"\n\u274c **What Went Wrong:** {len(wrong_items)} items"
+                if improve_items:
+                    talk_msg += f"\n\ud83d\udd27 **Improve:** {len(improve_items)} items"
+                talk_msg += f"\n\nFull AAR on the Portal:\n\ud83d\udd17 https://portal.13thlegion.org/events/{event.id}"
+                async with httpx.AsyncClient(timeout=15) as client:
+                    await client.post(
+                        f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                        headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                        auth=(CALENDAR_USER, CALENDAR_PASS),
+                        data={"message": talk_msg},
+                    )
+            except Exception:
+                pass
+
+            # Portal notification
+            try:
+                from app.routes.notifications import create_notification_for_all
+                await create_notification_for_all(
+                    db, "event", f"\ud83d\udccb AAR \u2014 {event.title}",
+                    body=f"{date_str} \u00b7 After Action Review published",
+                    link=f"/events/{event_id}",
+                    icon="\ud83d\udccb"
+                )
+            except Exception:
+                pass
+
+        await db.commit()
+
+    if action == "publish":
+        return HTMLResponse(
+            '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
+            f'\ud83d\udccb AAR published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}.</div>'
+            '<script>setTimeout(()=>window.location.reload(),1500)</script>'
+        )
+    else:
+        return HTMLResponse(
+            '<div style="padding:8px 12px;background:rgba(212,165,55,0.15);color:#d4a537;border-radius:6px;">'
+            '\ud83d\udcbe AAR draft saved.</div>'
+        )

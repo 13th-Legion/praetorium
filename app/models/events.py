@@ -39,8 +39,22 @@ class Event(Base):
     training_block: Mapped[Optional[int]] = mapped_column(Integer)  # TRADOC block 1-4, null if N/A
     training_site: Mapped[Optional[str]] = mapped_column(String(16))  # able, baker, charlie, dog, easy
     rally_point: Mapped[Optional[str]] = mapped_column(Text)  # S2-assigned rally point address/description
+    rally_point_time: Mapped[Optional[str]] = mapped_column(String(8))  # Rally time in HHMM format (e.g. "0600")
     rally_point_set_by: Mapped[Optional[str]] = mapped_column(String(64))  # NC username
     rally_point_set_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    # Radio frequencies (S6 assigns, manual for now)
+    freq_convoy_primary: Mapped[Optional[str]] = mapped_column(String(16))     # Primary convoy HAM freq
+    freq_convoy_alternate: Mapped[Optional[str]] = mapped_column(String(16))   # Alternate convoy HAM freq
+    freq_fob_primary: Mapped[Optional[str]] = mapped_column(String(16))        # Primary FOB check-in freq
+    freq_fob_alternate: Mapped[Optional[str]] = mapped_column(String(16))      # Alternate FOB check-in freq
+
+    # SMEAC OPORD (all optional — full 5-paragraph order)
+    opord_situation: Mapped[Optional[str]] = mapped_column(Text)       # Paragraph 1: Situation
+    opord_mission: Mapped[Optional[str]] = mapped_column(Text)         # Paragraph 2: Mission
+    opord_execution: Mapped[Optional[str]] = mapped_column(Text)       # Paragraph 3: Execution
+    opord_admin_logistics: Mapped[Optional[str]] = mapped_column(Text)  # Paragraph 4: Admin & Logistics
+    opord_command_signal: Mapped[Optional[str]] = mapped_column(Text)   # Paragraph 5: Command & Signal
 
     # RSVP controls
     rsvp_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -68,6 +82,12 @@ class Event(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # AAR (After Action Review) — PP-125
+    aar_commander_intent: Mapped[Optional[str]] = mapped_column(Text)   # Restated commander's intent
+    aar_mission_summary: Mapped[Optional[str]] = mapped_column(Text)    # What actually happened
+    aar_published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    aar_published_by: Mapped[Optional[str]] = mapped_column(String(64))
+
     # Relationships
     rsvps: Mapped[list["EventRSVP"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     documents: Mapped[list["EventDocument"]] = relationship(back_populates="event", cascade="all, delete-orphan")
@@ -76,6 +96,7 @@ class Event(Base):
     guard_slots: Mapped[list["EventGuardSlot"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guard_duties: Mapped[list["EventGuardDuty"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     vexillations: Mapped[list["EventVexillation"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    aar_items: Mapped[list["EventAARItem"]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Event {self.id}: {self.title} ({self.category}, {self.status})>"
@@ -292,3 +313,22 @@ class EventVexillationAssignment(Base):
 
     def __repr__(self):
         return f"<EventVexillationAssignment vex={self.vexillation_id} member={self.member_id}>"
+
+
+class EventAARItem(Base):
+    """Individual AAR observation — right/wrong/improve. PP-125."""
+
+    __tablename__ = "event_aar_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
+    category: Mapped[str] = mapped_column(String(16))  # 'right', 'wrong', 'improve'
+    ordinal: Mapped[int] = mapped_column(Integer, default=0)  # 1-5 (display order)
+    text: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(64))  # NC username
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    event: Mapped["Event"] = relationship(back_populates="aar_items")
+
+    def __repr__(self):
+        return f"<EventAARItem {self.id}: {self.category} #{self.ordinal}>"

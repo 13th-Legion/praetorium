@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}S1 — Unit Comms{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1>Unit Communications</h1>
+    <p style="color: #888; margin-bottom: 24px;">Distribute communications to selected personnel groups via secure email.</p>
+
+    <div class="card" style="padding: 20px;">
+        <form id="blast-form">
+            <!-- Group Selection -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 10px; color: #d4a537;">Recipients</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for key, group in groups.items() %}
+                    <label style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s;"
+                           onchange="this.style.borderColor = this.querySelector('input').checked ? '#d4a537' : '#444'; this.style.background = this.querySelector('input').checked ? 'rgba(212,165,55,0.1)' : 'rgba(255,255,255,0.05)';">
+                        <input type="checkbox" name="groups" value="{{ key }}" style="accent-color: #d4a537;">
+                        {{ group.label }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div style="margin-bottom: 16px;">
+                <button type="button"
+                    hx-post="/api/s1/email-blast/preview"
+                    hx-target="#preview-area"
+                    hx-include="#blast-form"
+                    hx-disabled-elt="this"
+                    style="padding: 6px 14px; background: rgba(212,165,55,0.15); border: 1px solid #d4a537; border-radius: 4px; color: #d4a537; font-size: 12px; font-weight: 600; cursor: pointer;">
+                    Preview Recipients
+                </button>
+                <div id="preview-area" style="margin-top: 8px;"></div>
+            </div>
+
+            <!-- Subject -->
+            <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Subject</label>
+                <input type="text" name="subject" required placeholder="e.g., April FTX Reminder"
+                    style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 4px; font-size: 14px; background: #2a2a3e; color: #eee; box-sizing: border-box;">
+            </div>
+
+            <!-- Body -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Message Body</label>
+                <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+                <style>
+                .ql-toolbar.ql-snow { background: #2a2a3e; border: 1px solid #444 !important; border-radius: 4px 4px 0 0; }
+                .ql-toolbar .ql-stroke { stroke: #ccc !important; }
+                .ql-toolbar .ql-fill { fill: #ccc !important; }
+                .ql-toolbar .ql-picker-label { color: #ccc !important; }
+                .ql-toolbar .ql-picker-options { background: #2a2a3e !important; border-color: #444 !important; }
+                .ql-toolbar .ql-picker-item { color: #ccc !important; }
+                .ql-toolbar button:hover .ql-stroke, .ql-toolbar .ql-picker-label:hover .ql-stroke { stroke: #d4a537 !important; }
+                .ql-toolbar button:hover .ql-fill, .ql-toolbar .ql-picker-label:hover .ql-fill { fill: #d4a537 !important; }
+                .ql-toolbar button.ql-active .ql-stroke { stroke: #d4a537 !important; }
+                .ql-toolbar button.ql-active .ql-fill { fill: #d4a537 !important; }
+                .ql-container.ql-snow { background: #2a2a3e; border: 1px solid #444 !important; border-top: none !important; border-radius: 0 0 4px 4px; color: #eee; font-size: 14px; min-height: 200px; }
+                .ql-editor { min-height: 200px; line-height: 1.6; }
+                .ql-editor.ql-blank::before { color: #888 !important; font-style: normal !important; }
+                .ql-editor a { color: #d4a537; }
+                .ql-snow .ql-tooltip { background: #1a1a2e !important; border-color: #444 !important; color: #eee !important; box-shadow: 0 2px 8px rgba(0,0,0,.4) !important; }
+                .ql-snow .ql-tooltip input[type=text] { background: #2a2a3e !important; color: #eee !important; border-color: #555 !important; }
+                .ql-snow .ql-tooltip a { color: #d4a537 !important; }
+                </style>
+                <div id="comms-toolbar">
+                    <span class="ql-formats">
+                        <select class="ql-header"><option value="">Normal</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option></select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button><button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button><button class="ql-blockquote"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-clean"></button>
+                    </span>
+                </div>
+                <div id="comms-editor" style="min-height: 200px;"></div>
+                <input type="hidden" name="body" id="body-hidden">
+                <p style="font-size: 11px; color: #666; margin-top: 4px;">The message will be wrapped in the standard 13th Legion email template with header, footer, and your name as sender.</p>
+            </div>
+
+            <!-- Send -->
+            <div id="send-result"></div>
+            <button type="button" id="send-btn"
+                onclick="submitComms()"
+                style="padding: 12px 32px; background: #d4a537; color: #1a1a2e; border: none; border-radius: 6px; font-weight: 700; font-size: 16px; cursor: pointer;">
+                Send
+            </button>
+
+            <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+            <script>
+            var commsQuill = new Quill('#comms-editor', {
+                theme: 'snow',
+                modules: { toolbar: '#comms-toolbar' },
+                placeholder: 'Compose your message...'
+            });
+
+            function submitComms() {
+                var html = commsQuill.root.innerHTML;
+                var text = commsQuill.getText().trim();
+                var subject = document.querySelector('input[name="subject"]').value.trim();
+                var groups = document.querySelectorAll('input[name="groups"]:checked');
+
+                if (!groups.length) { alert('Select at least one recipient group.'); return; }
+                if (!subject) { alert('Subject is required.'); return; }
+                if (!text) { alert('Message body is required.'); return; }
+                if (!confirm('Are you sure you want to send this? This cannot be undone.')) return;
+
+                document.getElementById('body-hidden').value = html;
+                var btn = document.getElementById('send-btn');
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+
+                var fd = new FormData(document.getElementById('blast-form'));
+                fetch('/api/s1/email-blast/send', {
+                    method: 'POST',
+                    body: fd
+                }).then(function(r) { return r.text(); }).then(function(result) {
+                    document.getElementById('send-result').innerHTML = result;
+                    btn.disabled = false;
+                    btn.textContent = 'Send';
+                }).catch(function(e) {
+                    alert('Failed: ' + e);
+                    btn.disabled = false;
+                    btn.textContent = 'Send';
+                });
+            }
+            </script>
+        </form>
+    </div>
+</div>
+{% endblock %}

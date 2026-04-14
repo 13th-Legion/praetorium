@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% block title %}{{ election.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:0 16px;">
+
+  {# ── Phase Banner ─────────────────────────────────────────────────────── #}
+  {% if election.phase == "nominations" %}
+  <div style="background:linear-gradient(135deg,rgba(212,165,55,0.15),rgba(26,26,46,0.95));
+              border:2px solid #d4a537;border-radius:10px;padding:20px 28px;margin-bottom:28px;
+              position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#d4a537;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div>
+        <span style="font-family:'Oswald',sans-serif;font-size:0.75rem;font-weight:700;
+                     letter-spacing:0.12em;color:#d4a537;text-transform:uppercase;">
+          🗳️ Nominations Open
+        </span>
+        <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;
+                   color:#fff;margin:6px 0 4px;">{{ election.title }}</h1>
+        <div style="font-size:14px;color:#aaa;">
+          Nominations close:
+          <strong style="color:#d4a537;">{{ election.nominations_close|mildate|default("TBD") }}</strong>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Participation</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;color:#d4a537;">
+          {{ nom_receipt_count }}<span style="font-size:1rem;color:#888;">/{{ eligible_count }}</span>
+        </div>
+        <div style="font-size:12px;color:#888;">members nominated</div>
+      </div>
+    </div>
+  </div>
+
+  {% elif election.phase == "voting" %}
+  <div style="background:linear-gradient(135deg,rgba(183,28,28,0.18),rgba(26,26,46,0.95));
+              border:2px solid #c62828;border-radius:10px;padding:20px 28px;margin-bottom:28px;
+              position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#c62828;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div>
+        <span style="font-family:'Oswald',sans-serif;font-size:0.75rem;font-weight:700;
+                     letter-spacing:0.12em;color:#ef5350;text-transform:uppercase;">
+          🗳️ Voting Open
+        </span>
+        <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;
+                   color:#fff;margin:6px 0 4px;">{{ election.title }}</h1>
+        <div style="font-size:14px;color:#aaa;">
+          Voting closes:
+          <strong style="color:#ef5350;">{{ election.voting_close|mildate|default("TBD") }}</strong>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Ballots Cast</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;color:#ef5350;">
+          {{ voter_count }}<span style="font-size:1rem;color:#888;">/{{ eligible_count }}</span>
+        </div>
+        <div style="font-size:12px;color:#888;">eligible members voted</div>
+      </div>
+    </div>
+  </div>
+
+  {% elif election.phase == "complete" %}
+  <div style="background:linear-gradient(135deg,rgba(46,125,50,0.15),rgba(26,26,46,0.95));
+              border:2px solid #2e7d32;border-radius:10px;padding:20px 28px;margin-bottom:28px;
+              position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#2e7d32;"></div>
+    <span style="font-family:'Oswald',sans-serif;font-size:0.75rem;font-weight:700;
+                 letter-spacing:0.12em;color:#4caf50;text-transform:uppercase;">
+      ✅ Election Complete
+    </span>
+    <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;
+               color:#fff;margin:6px 0 0;">{{ election.title }}</h1>
+  </div>
+
+  {% elif election.phase == "cancelled" %}
+  <div style="background:rgba(97,97,97,0.1);border:2px solid #616161;border-radius:10px;
+              padding:20px 28px;margin-bottom:28px;">
+    <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;color:#888;">
+      🚫 {{ election.title }} — Cancelled
+    </h1>
+  </div>
+
+  {% else %}
+  <div style="margin-bottom:28px;">
+    <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;color:#fff;">{{ election.title }}</h1>
+    <span style="font-size:12px;color:#888;text-transform:uppercase;">Phase: {{ election.phase }}</span>
+  </div>
+  {% endif %}
+
+  {# ── Command Controls ─────────────────────────────────────────────────── #}
+  {% if is_command %}
+  <div style="background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.3);
+              border-radius:8px;padding:16px;margin-bottom:24px;">
+    <div style="font-family:'Oswald',sans-serif;font-size:0.75rem;color:#d4a537;
+                text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
+      ⚙️ Command Controls
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      {% if election.phase not in ("complete","cancelled") %}
+      <form hx-post="/elections/{{ election.id }}/advance"
+            hx-target="#command-result" hx-swap="innerHTML"
+            onsubmit="return confirm('Advance election to next phase?');">
+        <button type="submit"
+                style="padding:8px 20px;background:#d4a537;color:#1a1a2e;border:none;
+                       border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">
+          ▶ Advance Phase
+        </button>
+      </form>
+      {% endif %}
+      <a href="/elections/admin"
+         style="padding:8px 16px;background:transparent;color:#d4a537;border:1px solid #d4a537;
+                border-radius:4px;font-weight:600;font-size:13px;text-decoration:none;">
+        ← All Elections
+      </a>
+      <span style="font-size:13px;color:#888;">Current phase: <strong style="color:#e0e0e0;">{{ election.phase }}</strong></span>
+    </div>
+    <div id="command-result" style="margin-top:10px;"></div>
+  </div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="election-grid">
+
+    {# ══ LEFT COLUMN ════════════════════════════════════════════════════════ #}
+    <div>
+
+      {# ── Nomination Phase UI ──────────────────────────────────────────── #}
+      {% if election.phase == "nominations" %}
+
+      {# My Nomination Status #}
+      {% if my_nomination %}
+      <div style="background:rgba(212,165,55,0.1);border:1px solid rgba(212,165,55,0.4);
+                  border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="font-weight:700;color:#d4a537;margin-bottom:8px;">📋 You Have Been Nominated</div>
+        {% if my_nomination.accepted is none %}
+        <div style="font-size:13px;color:#ccc;margin-bottom:12px;">
+          You have been nominated for Commanding Officer. You must explicitly accept to appear on the ballot.
+        </div>
+        <div style="display:flex;gap:10px;" id="nomination-response">
+          <form hx-post="/elections/{{ election.id }}/accept-nomination"
+                hx-target="#nomination-response" hx-swap="outerHTML">
+            <button type="submit"
+                    style="padding:8px 20px;background:#2e7d32;color:#fff;border:none;
+                           border-radius:4px;font-weight:700;cursor:pointer;">
+              ✓ Accept Nomination
+            </button>
+          </form>
+          <form hx-post="/elections/{{ election.id }}/decline-nomination"
+                hx-target="#nomination-response" hx-swap="outerHTML"
+                onsubmit="return confirm('Decline your nomination? You will not appear on the ballot.');">
+            <button type="submit"
+                    style="padding:8px 20px;background:transparent;color:#ef5350;
+                           border:1px solid #ef5350;border-radius:4px;font-weight:700;cursor:pointer;">
+              ✗ Decline
+            </button>
+          </form>
+        </div>
+        {% elif my_nomination.accepted %}
+        <div style="color:#4caf50;font-weight:700;">✅ You have accepted — you are on the ballot.</div>
+        {% else %}
+        <div style="color:#888;">You declined this nomination.</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Submit Nomination Form #}
+      {% if is_eligible and not has_nominated %}
+      <div class="card" style="margin-bottom:20px;">
+        <h2 class="card-title" style="color:#d4a537;">Submit a Nomination</h2>
+        <div class="card-body">
+          <p style="font-size:13px;color:#aaa;margin-bottom:16px;">
+            Nominations are anonymous. Your selection will not be revealed.
+            You may submit one nomination.
+          </p>
+          <div id="nominate-result"></div>
+          <form hx-post="/elections/{{ election.id }}/nominate"
+                hx-target="#nominate-result" hx-swap="innerHTML"
+                onsubmit="return confirm('Submit this nomination? It cannot be changed.');">
+            <div style="margin-bottom:12px;">
+              <label style="font-size:13px;color:#ccc;display:block;margin-bottom:6px;">
+                Nominate a member:
+              </label>
+              <select name="nominee_id" required
+                      style="width:100%;padding:10px 12px;background:#16213e;border:1px solid #2a2a4a;
+                             border-radius:4px;color:#e0e0e0;font-size:14px;">
+                <option value="">— Select a member —</option>
+                {% for mem in eligible_members %}
+                <option value="{{ mem.id }}">{{ mem.display_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit"
+                    style="width:100%;padding:10px;background:#d4a537;color:#1a1a2e;
+                           border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+              Submit Nomination
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {% elif has_nominated %}
+      <div style="padding:14px;background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.4);
+                  border-radius:8px;margin-bottom:20px;font-size:14px;color:#4caf50;">
+        ✅ Your nomination has been submitted.
+      </div>
+
+      {% elif not is_eligible %}
+      <div style="padding:14px;background:rgba(97,97,97,0.1);border:1px solid #444;
+                  border-radius:8px;margin-bottom:20px;font-size:13px;color:#888;">
+        You are not currently eligible to nominate (active members E-2+ only).
+      </div>
+      {% endif %}
+
+      {# ── Voting Phase UI ──────────────────────────────────────────────── #}
+      {% elif election.phase == "voting" %}
+
+      {% if is_eligible and not has_voted %}
+      <div class="card" style="margin-bottom:20px;border-color:rgba(198,40,40,0.5);">
+        <h2 class="card-title" style="color:#ef5350;">Cast Your Ballot</h2>
+        <div class="card-body">
+          <div style="background:rgba(198,40,40,0.1);border:1px solid rgba(198,40,40,0.3);
+                      border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#ef9a9a;">
+            🔒 Your vote is anonymous and cannot be changed after submission.
+          </div>
+          <div id="vote-result"></div>
+          {% if accepted_nominees %}
+          <form hx-post="/elections/{{ election.id }}/vote"
+                hx-target="#vote-result" hx-swap="innerHTML"
+                onsubmit="return confirm('Cast your vote? This action is final and anonymous.');">
+            {% for nom, mem in accepted_nominees %}
+            <label style="display:flex;align-items:center;gap:12px;padding:14px;
+                          background:#16213e;border:1px solid #2a2a4a;border-radius:6px;
+                          margin-bottom:8px;cursor:pointer;transition:border-color 0.2s;"
+                   onmouseover="this.style.borderColor='#c62828'"
+                   onmouseout="this.style.borderColor='#2a2a4a'">
+              <input type="radio" name="nominee_id" value="{{ mem.id }}" required
+                     style="width:18px;height:18px;accent-color:#c62828;">
+              <div>
+                <div style="font-weight:700;font-size:15px;color:#e0e0e0;">{{ mem.display_name }}</div>
+              </div>
+            </label>
+            {% endfor %}
+            <button type="submit"
+                    style="width:100%;margin-top:12px;padding:12px;background:#c62828;color:#fff;
+                           border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+              🗳️ Submit Ballot
+            </button>
+          </form>
+          {% else %}
+          <div style="color:#888;font-size:14px;">No candidates on the ballot yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% elif has_voted %}
+      <div style="padding:16px;background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.4);
+                  border-radius:8px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">✅</div>
+        <div style="font-weight:700;color:#4caf50;font-size:16px;">Your vote has been recorded.</div>
+        <div style="font-size:13px;color:#888;margin-top:6px;">
+          Ballots are anonymous. Results will be announced after voting closes.
+        </div>
+      </div>
+
+      {% elif not is_eligible %}
+      <div style="padding:14px;background:rgba(97,97,97,0.1);border:1px solid #444;
+                  border-radius:8px;margin-bottom:20px;font-size:13px;color:#888;">
+        You are not eligible to vote (active members E-2+ only).
+      </div>
+      {% endif %}
+
+      {# ── Results Phase ────────────────────────────────────────────────── #}
+      {% elif election.phase == "complete" %}
+
+      {% if results %}
+      <div class="card" style="margin-bottom:20px;">
+        <h2 class="card-title">Election Results</h2>
+        <div class="card-body">
+
+          {# Quorum Status #}
+          {% if quorum_met %}
+          <div style="padding:10px 14px;background:rgba(46,125,50,0.15);border:1px solid rgba(46,125,50,0.4);
+                      border-radius:6px;margin-bottom:16px;font-size:13px;color:#4caf50;">
+            ✅ Quorum met — result is valid ({{ election.quorum_pct }}% required)
+          </div>
+          {% else %}
+          <div style="padding:10px 14px;background:rgba(183,28,28,0.15);border:1px solid rgba(183,28,28,0.4);
+                      border-radius:6px;margin-bottom:16px;font-size:13px;color:#ef9a9a;">
+            ⚠️ Quorum NOT met — {{ election.quorum_pct }}% required.
+            Command will determine next steps.
+          </div>
+          {% endif %}
+
+          {# Winner Banner #}
+          {% if winner and quorum_met %}
+          <div style="text-align:center;padding:20px;background:rgba(212,165,55,0.1);
+                      border:2px solid #d4a537;border-radius:8px;margin-bottom:20px;">
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:#d4a537;margin-bottom:8px;">
+              Elected Commanding Officer
+            </div>
+            <div style="font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;color:#fff;">
+              {{ winner.display_name }}
+            </div>
+          </div>
+          {% endif %}
+
+          {# Bar Chart #}
+          {% set total_votes = results | sum(attribute='votes') %}
+          {% for r in results %}
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-weight:600;color:#e0e0e0;">{{ r.member.display_name if r.member else "Unknown" }}</span>
+              <span style="color:#aaa;font-size:13px;">{{ r.votes }} votes ({{ r.pct }}%)</span>
+            </div>
+            <div style="background:#1a1a2e;border-radius:4px;height:20px;overflow:hidden;">
+              <div style="height:100%;width:{{ r.pct }}%;
+                          background:{% if loop.first %}#d4a537{% else %}#4a4a6a{% endif %};
+                          border-radius:4px;transition:width 0.8s ease;"></div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <div style="font-size:13px;color:#888;margin-top:12px;padding-top:12px;
+                      border-top:1px solid rgba(255,255,255,0.08);">
+            Total ballots cast: <strong style="color:#e0e0e0;">{{ voter_count }}</strong> /
+            {{ eligible_count }} eligible
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Command: Voter Roll #}
+      {% if is_command and voter_roll_members %}
+      <div class="card">
+        <h2 class="card-title" style="font-size:0.9rem;">Who Voted (Command Only)</h2>
+        <div class="card-body">
+          <div style="font-size:12px;color:#888;margin-bottom:10px;">
+            This list shows who participated, not how they voted.
+          </div>
+          {% for vr, mem in voter_roll_members %}
+          <div style="font-size:13px;color:#ccc;padding:4px 0;
+                      border-bottom:1px solid rgba(255,255,255,0.05);">
+            {{ mem.display_name }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% endif %}{# end phase checks #}
+
+    </div>{# end left column #}
+
+    {# ══ RIGHT COLUMN ═══════════════════════════════════════════════════════ #}
+    <div>
+
+      {# ── Nominees / Candidate List ────────────────────────────────────── #}
+      <div class="card">
+        <h2 class="card-title">
+          {% if election.phase == "nominations" %}Nominees{% else %}Candidates{% endif %}
+        </h2>
+        <div class="card-body">
+          {% if not all_nominations %}
+          <div style="color:#888;font-size:14px;">No nominations yet.</div>
+          {% else %}
+          {% for nom, mem in all_nominations %}
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 0;
+                      border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="flex:1;">
+              <div style="font-weight:700;color:#e0e0e0;">{{ mem.display_name }}</div>
+            </div>
+            {# Acceptance Badge #}
+            {% if nom.accepted is none %}
+            <span style="background:rgba(243,156,18,0.2);color:#f39c12;font-size:11px;
+                         padding:3px 10px;border-radius:10px;font-weight:600;">
+              Pending
+            </span>
+            {% elif nom.accepted %}
+            <span style="background:rgba(46,125,50,0.2);color:#4caf50;font-size:11px;
+                         padding:3px 10px;border-radius:10px;font-weight:600;">
+              ✓ Running
+            </span>
+            {% else %}
+            <span style="background:rgba(97,97,97,0.2);color:#888;font-size:11px;
+                         padding:3px 10px;border-radius:10px;font-weight:600;">
+              Declined
+            </span>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── Election Timeline ────────────────────────────────────────────── #}
+      <div class="card" style="margin-top:20px;">
+        <h2 class="card-title">Timeline</h2>
+        <div class="card-body">
+          {% macro timeline_row(label, dt, active=false) %}
+          <div style="display:flex;gap:14px;align-items:flex-start;padding:8px 0;
+                      border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="min-width:8px;height:8px;border-radius:50%;margin-top:5px;
+                        background:{% if active %}#d4a537{% else %}#444{% endif %};flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.05em;
+                          color:{% if active %}#d4a537{% else %}#666{% endif %};">{{ label }}</div>
+              <div style="font-size:14px;color:#ccc;">{{ dt|mildate if dt else "TBD" }}</div>
+            </div>
+          </div>
+          {% endmacro %}
+          {{ timeline_row("Nominations Open", election.nominations_open, election.phase == "nominations") }}
+          {{ timeline_row("Nominations Close", election.nominations_close) }}
+          {{ timeline_row("Voting Opens", election.voting_open, election.phase == "voting") }}
+          {{ timeline_row("Voting Closes", election.voting_close) }}
+        </div>
+      </div>
+
+      {# ── Rules Summary ───────────────────────────────────────────────── #}
+      <div class="card" style="margin-top:20px;">
+        <h2 class="card-title">Election Rules</h2>
+        <div class="card-body" style="font-size:13px;color:#aaa;line-height:1.7;">
+          <ul style="padding-left:18px;margin:0;">
+            <li>Eligible voters: active members rank E-2 and above</li>
+            <li>Each member may submit one nomination</li>
+            <li>Nominations are anonymous — nominees are shown, not who nominated them</li>
+            <li>Nominees must explicitly accept to appear on the ballot</li>
+            <li>Each member may cast one ballot</li>
+            <li>Ballots are 100% anonymous — cannot be linked to voter</li>
+            <li>Simple majority wins</li>
+            <li>Quorum required: {{ election.quorum_pct }}% of eligible voters must participate</li>
+            {% if election.quorum_pct %}
+            <li>Tied candidates trigger an automatic runoff</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+    </div>{# end right column #}
+  </div>{# end grid #}
+
+</div>
+
+<style>
+@media (max-width: 700px) {
+  .election-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}

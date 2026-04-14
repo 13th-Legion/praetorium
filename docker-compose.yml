@@ -25,6 +25,10 @@ services:
       - SMTP_USER=admin@13thlegion.org
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=13th Legion <admin@13thlegion.org>
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_SECRET=${PAYPAL_SECRET}
+      - PAYPAL_API_BASE=${PAYPAL_API_BASE:-https://api-m.paypal.com}
+      - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
     depends_on:
       - db
     networks:
