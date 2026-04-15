@@ -26,3 +26,4 @@ pydantic-settings==2.7.*
 python-dateutil==2.9.*    # RRULE expansion for recurring calendar events
 pytz
 qrcode[pil]==8.*          # QR code generation (PP-070 ops console)
+fpdf2==2.*                # PDF generation (AAR export, PP-133)

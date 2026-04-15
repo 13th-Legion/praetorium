@@ -231,6 +231,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <h2 class="card-title" style="font-size:0.9rem;margin:0;">📋 After Action Review</h2>
             {% if event.aar_published_at %}
             <span style="font-size:11px;color:#4caf50;">✅ Published {{ event.aar_published_at.strftime('%d %b %Y') }}</span>
+            <a href="/api/events/{{ event.id }}/aar/pdf" style="font-size:11px;color:#d4a537;text-decoration:none;margin-left:12px;padding:3px 10px;border:1px solid #d4a537;border-radius:4px;">📄 Export PDF</a>
             {% endif %}
         </div>
 

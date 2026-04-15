@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}FTX Attendance Analytics{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <span style="font-size: 32px;">📊</span>
+        <div>
+            <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">FTX Attendance Analytics</h1>
+            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ total_events }} finalized event{{ 's' if total_events != 1 else '' }} · {{ roster_strength }} active members</p>
+        </div>
+    </div>
+
+    {% if total_events == 0 %}
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 40px; text-align: center; color: #888;">
+        No finalized FTX/MCFTX events yet. Analytics will populate after events are finalized.
+    </div>
+    {% else %}
+
+    <!-- Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 32px; font-weight: 700; color: #d4a537;">{{ total_events }}</div>
+            <div style="font-size: 12px; color: #888; text-transform: uppercase;">FTXs Conducted</div>
+        </div>
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 32px; font-weight: 700; color: #4caf50;">{{ avg_attendance }}</div>
+            <div style="font-size: 12px; color: #888; text-transform: uppercase;">Avg Headcount</div>
+        </div>
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 32px; font-weight: 700; color: {% if avg_rate >= 60 %}#4caf50{% elif avg_rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ avg_rate }}%</div>
+            <div style="font-size: 12px; color: #888; text-transform: uppercase;">Avg Attendance Rate</div>
+        </div>
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 32px; font-weight: 700; color: #42a5f5;">{{ roster_strength }}</div>
+            <div style="font-size: 12px; color: #888; text-transform: uppercase;">Roster Strength</div>
+        </div>
+    </div>
+
+    <!-- Event History Table -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 16px; font-size: 18px;">📅 Event History</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #333;">
+                        <th style="text-align: left; padding: 8px; color: #888;">Event</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Date</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Type</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Attended</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">RSVP'd</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Declined</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">No-Shows</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in event_stats %}
+                    <tr style="border-bottom: 1px solid #2a2a3e;">
+                        <td style="padding: 8px;"><a href="/events/{{ e.id }}" style="color: #d4a537; text-decoration: none;">{{ e.title }}</a></td>
+                        <td style="padding: 8px; text-align: center; color: #ccc;">{{ e.date }}</td>
+                        <td style="padding: 8px; text-align: center;"><span style="font-size: 11px; padding: 2px 8px; border-radius: 3px; background: {% if e.category == 'MCFTX' %}rgba(212,165,55,0.2); color: #d4a537{% else %}rgba(66,165,245,0.2); color: #42a5f5{% endif %};">{{ e.category }}</span></td>
+                        <td style="padding: 8px; text-align: center; color: #4caf50; font-weight: 600;">{{ e.attended }}</td>
+                        <td style="padding: 8px; text-align: center; color: #ccc;">{{ e.rsvp_attending }}</td>
+                        <td style="padding: 8px; text-align: center; color: #888;">{{ e.declined }}</td>
+                        <td style="padding: 8px; text-align: center; color: {% if e.no_show > 0 %}#ef5350{% else %}#4caf50{% endif %};">{{ e.no_show }}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <span style="font-weight: 600; color: {% if e.rate >= 60 %}#4caf50{% elif e.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ e.rate }}%</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Team Comparison -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 16px; font-size: 18px;">🏆 Team Attendance Comparison</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+            {% for t in team_stats %}
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid #2a2a3e; border-radius: 6px; padding: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #ccc; font-weight: 600;">{{ t.team }}</span>
+                    <span style="font-size: 20px; font-weight: 700; color: {% if t.rate >= 60 %}#4caf50{% elif t.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ t.rate }}%</span>
+                </div>
+                <div style="background: #111; border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div style="background: {% if t.rate >= 60 %}#4caf50{% elif t.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %}; height: 100%; width: {{ t.rate }}%; border-radius: 4px;"></div>
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 6px;">{{ t.members }} members · {{ t.total_attended }} total appearances</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Per-Member Breakdown -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 16px; font-size: 18px;">👥 Individual Attendance</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #333;">
+                        <th style="text-align: left; padding: 8px; color: #888;">Member</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Team</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Attended</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Rate</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">No-Shows</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Last FTX</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in member_stats %}
+                    <tr style="border-bottom: 1px solid #2a2a3e;">
+                        <td style="padding: 8px;">
+                            <a href="/profile/{{ m.id }}" style="color: #d4a537; text-decoration: none;">{{ m.name }}</a>
+                            {% if m.callsign %}<span style="color: #666; font-size: 11px;"> ({{ m.callsign }})</span>{% endif %}
+                            {% if m.status == 'recruit' %}<span style="font-size: 10px; padding: 1px 6px; background: rgba(212,165,55,0.2); color: #d4a537; border-radius: 3px; margin-left: 4px;">RCT</span>{% endif %}
+                        </td>
+                        <td style="padding: 8px; text-align: center; color: #ccc; font-size: 12px;">{{ m.team }}</td>
+                        <td style="padding: 8px; text-align: center; color: #ccc;">{{ m.attended }}/{{ m.total }}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <span style="font-weight: 600; color: {% if m.rate >= 60 %}#4caf50{% elif m.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ m.rate }}%</span>
+                        </td>
+                        <td style="padding: 8px; text-align: center; color: {% if m.no_shows > 0 %}#ef5350{% else %}#4caf50{% endif %};">{{ m.no_shows }}</td>
+                        <td style="padding: 8px; text-align: center; color: #888; font-size: 12px;">{{ m.last_attended }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if no_shows %}
+    <!-- No-Show Report -->
+    <div style="background: #1a1a2e; border: 1px solid rgba(239,83,80,0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #ef5350; margin: 0 0 16px; font-size: 18px;">⚠️ No-Show Report</h2>
+        <p style="color: #888; font-size: 12px; margin-bottom: 12px;">Members who RSVP'd attending but were not confirmed present at finalization.</p>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #333;">
+                        <th style="text-align: left; padding: 8px; color: #888;">Member</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Team</th>
+                        <th style="text-align: center; padding: 8px; color: #ef5350;">No-Shows</th>
+                        <th style="text-align: center; padding: 8px; color: #888;">Attendance Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in no_shows %}
+                    <tr style="border-bottom: 1px solid #2a2a3e;">
+                        <td style="padding: 8px;"><a href="/profile/{{ m.id }}" style="color: #d4a537; text-decoration: none;">{{ m.name }}</a>{% if m.callsign %}<span style="color: #666; font-size: 11px;"> ({{ m.callsign }})</span>{% endif %}</td>
+                        <td style="padding: 8px; text-align: center; color: #ccc; font-size: 12px;">{{ m.team }}</td>
+                        <td style="padding: 8px; text-align: center; color: #ef5350; font-weight: 700;">{{ m.no_shows }}</td>
+                        <td style="padding: 8px; text-align: center; color: {% if m.rate >= 60 %}#4caf50{% elif m.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ m.rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}

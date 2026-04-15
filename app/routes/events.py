@@ -1654,7 +1654,7 @@ async def issue_opord(request: Request, event_id: int):
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
-            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
@@ -1662,7 +1662,7 @@ async def issue_opord(request: Request, event_id: int):
     </tr></table>
 </div>
 <div style="padding: 20px;">
-<h2 style="color: #2e7d32;">\ud83d\udccb OPERATIONS ORDER \u2014 {event.title}</h2>
+<h2 style="color: #2e7d32;">📋 OPERATIONS ORDER — {event.title}</h2>
 <p><strong>Date:</strong> {date_str}<br>
 <strong>Location:</strong> {event.location or 'TBD'}</p>
 {rally_html}
@@ -1672,12 +1672,12 @@ async def issue_opord(request: Request, event_id: int):
 <a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
 <p style="margin-top: 20px;">
     <em>Nunquam Non Paratus,</em><br>
-    <strong>S3 \u2014 Operations & Training</strong><br>
+    <strong>S3 — Operations & Training</strong><br>
     13th Legion, Texas State Militia
 </p>
 </div>
 <div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
-    13th Legion \u00b7 Texas State Militia \u00b7 DFW
+    13th Legion · Texas State Militia · DFW
 </div>
 </body></html>"""
 
@@ -1687,7 +1687,7 @@ async def issue_opord(request: Request, event_id: int):
                 continue
             try:
                 msg = MIMEMultipart("alternative")
-                msg["Subject"] = f"\ud83d\udccb OPORD \u2014 {event.title}"
+                msg["Subject"] = f"📋 OPORD — {event.title}"
                 msg["From"] = SMTP_FROM
                 msg["To"] = member.email
                 msg.attach(MIMEText(html_body, "html"))
@@ -1702,8 +1702,8 @@ async def issue_opord(request: Request, event_id: int):
         try:
             settings = get_settings()
             talk_msg = (
-                f"\ud83d\udccb **OPORD PUBLISHED \u2014 {event.title}**\n\n"
-                f"\ud83d\udcc5 {date_str}\n"
+                f"📋 **OPORD PUBLISHED — {event.title}**\n\n"
+                f"📅 {date_str}\n"
                 f"\ud83d\udccd {event.location or 'TBD'}\n"
             )
             if event.rally_point:
@@ -1711,7 +1711,7 @@ async def issue_opord(request: Request, event_id: int):
                 if event.rally_point_time:
                     talk_msg += f" @ {event.rally_point_time}"
                 talk_msg += "\n"
-            talk_msg += f"\nFull OPORD on the Portal:\n\ud83d\udd17 https://portal.13thlegion.org/events/{event.id}"
+            talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event.id}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
                     f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
@@ -1726,10 +1726,10 @@ async def issue_opord(request: Request, event_id: int):
         try:
             from app.routes.notifications import create_notification_for_all
             await create_notification_for_all(
-                db, "event", f"\ud83d\udccb OPORD \u2014 {event.title}",
-                body=f"{date_str} \u00b7 Operations Order published",
+                db, "event", f"📋 OPORD — {event.title}",
+                body=f"{date_str} · Operations Order published",
                 link=f"/events/{event_id}",
-                icon="\ud83d\udccb"
+                icon="📋"
             )
         except Exception:
             pass
@@ -1739,7 +1739,7 @@ async def issue_opord(request: Request, event_id: int):
     email_count = len([m for m in attending_members if m.email])
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'\ud83d\udccb OPORD published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}, posted to Announcements.</div>'
+        f'📋 OPORD published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}, posted to Announcements.</div>'
         '<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
 
@@ -2151,7 +2151,7 @@ async def save_aar(request: Request, event_id: int):
     async with async_session() as db:
         event = await db.get(Event, event_id)
         if not event or not event.finalized_at:
-            return HTMLResponse('<div style="color:#ef5350;font-size:13px;">\u274c Event must be finalized before AAR.</div>')
+            return HTMLResponse('<div style="color:#ef5350;font-size:13px;">❌ Event must be finalized before AAR.</div>')
 
         # Save narrative fields
         event.aar_commander_intent = commander_intent or None
@@ -2180,7 +2180,7 @@ async def save_aar(request: Request, event_id: int):
             event.aar_published_at = now
             event.aar_published_by = username
 
-            # Get attending members for email
+            # Snapshot data for background tasks before commit
             attending_result = await db.execute(
                 select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
                     and_(
@@ -2189,114 +2189,73 @@ async def save_aar(request: Request, event_id: int):
                     )
                 )
             )
-            attending_members = attending_result.scalars().all()
+            _attending_emails = [(m.email, m.first_name, m.last_name) for m in attending_result.scalars().all() if m.email]
 
-            # Re-read AAR items for email
             aar_result = await db.execute(
                 select(EventAARItem).where(EventAARItem.event_id == event_id).order_by(EventAARItem.ordinal)
             )
-            aar_items = aar_result.scalars().all()
-
-            # Format event date
+            _aar_snapshot = [(it.category, it.ordinal, it.text) for it in aar_result.scalars().all()]
+            _evt_title = event.title
+            _evt_location = event.location or 'TBD'
+            _evt_eid = event.id
             local_dt = _to_cdt(event.date_start)
-            date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
+            _date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
 
-            # Build AAR email HTML
-            items_html = ""
+        await db.commit()
+
+    if action == "publish":
+        import asyncio
+        _ci = commander_intent
+        _ms = mission_summary
+
+        async def _aar_bg():
+            """Background: email, Talk cross-post, notification."""
+            _items_html = ""
             for cat, label, color in [("right", "WHAT WENT RIGHT", "#4caf50"), ("wrong", "WHAT WENT WRONG", "#ef5350"), ("improve", "AREAS FOR IMPROVEMENT", "#42a5f5")]:
-                cat_items = [it for it in aar_items if it.category == cat]
-                if cat_items:
-                    items_html += f'<h3 style="color:{color};margin:16px 0 6px;font-size:14px;">{label}</h3><ol style="margin:0;padding-left:20px;">'
-                    for it in sorted(cat_items, key=lambda x: x.ordinal):
-                        escaped = it.text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                        items_html += f'<li style="color:#333;font-size:14px;line-height:1.6;margin-bottom:4px;">{escaped}</li>'
-                    items_html += '</ol>'
-
-            intent_html = ""
-            if commander_intent:
-                escaped = commander_intent.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-                intent_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">COMMANDER\'S INTENT</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
-
-            summary_html = ""
-            if mission_summary:
-                escaped = mission_summary.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-                summary_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">WHAT ACTUALLY HAPPENED</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
-
-            html_body = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
-<div style="background: #1a1a2e; padding: 20px; text-align: center;">
-    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
-        </td>
-        <td style="vertical-align: middle; text-align: center;">
-            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
-            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p>
-        </td>
-        <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
-        </td>
-    </tr></table>
-</div>
-<div style="padding: 20px;">
-<h2 style="color:#1a1a2e;">\ud83d\udccb AFTER ACTION REVIEW \u2014 {event.title}</h2>
-<p><strong>Date:</strong> {date_str}<br>
-<strong>Location:</strong> {event.location or 'TBD'}</p>
-{intent_html}
-{summary_html}
-{items_html}
-<p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
-<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
-<p style="margin-top: 20px;">
-    <em>Nunquam Non Paratus,</em><br>
-    <strong>S3 \u2014 Operations & Training</strong><br>
-    13th Legion, Texas State Militia
-</p>
-</div>
-<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
-    13th Legion \u00b7 Texas State Militia \u00b7 DFW
-</div>
-</body></html>"""
-
-            # Email attending members
-            email_count = 0
-            for member in attending_members:
-                if not member.email:
-                    continue
+                ci = [(o, t) for c, o, t in _aar_snapshot if c == cat]
+                if ci:
+                    _items_html += f'<h3 style="color:{color};margin:16px 0 6px;font-size:14px;">{label}</h3><ol style="margin:0;padding-left:20px;">'
+                    for _, txt in sorted(ci):
+                        esc = txt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        _items_html += f'<li style="color:#333;font-size:14px;line-height:1.6;margin-bottom:4px;">{esc}</li>'
+                    _items_html += '</ol>'
+            _intent_html = ""
+            if _ci:
+                esc = _ci.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                _intent_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">COMMANDER\'S INTENT</h3><p style="color:#333;font-size:14px;line-height:1.6;">{esc}</p>'
+            _summary_html = ""
+            if _ms:
+                esc = _ms.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                _summary_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">WHAT ACTUALLY HAPPENED</h3><p style="color:#333;font-size:14px;line-height:1.6;">{esc}</p>'
+            html_body = f'<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;line-height:1.6;max-width:650px;margin:0 auto;"><div style="background:#1a1a2e;padding:20px;text-align:center;"><table style="margin:0 auto;" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:15px;"><img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70"></td><td style="vertical-align:middle;text-align:center;"><h1 style="color:#d4a537;margin:0;font-size:28px;">13TH LEGION</h1><p style="color:#ccc;margin:5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p></td><td style="vertical-align:middle;padding-left:15px;"><img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70"></td></tr></table></div><div style="padding:20px;"><h2 style="color:#1a1a2e;">\U0001f4cb AFTER ACTION REVIEW \u2014 {_evt_title}</h2><p><strong>Date:</strong> {_date_str}<br><strong>Location:</strong> {_evt_location}</p>{_intent_html}{_summary_html}{_items_html}<p style="margin-top:20px;"><strong>Full details on the Portal:</strong><br><a href="https://portal.13thlegion.org/events/{_evt_eid}" style="color:#6fa8dc;">https://portal.13thlegion.org/events/{_evt_eid}</a></p><p style="margin-top:20px;"><em>Nunquam Non Paratus,</em><br><strong>S3 \u2014 Operations & Training</strong><br>13th Legion, Texas State Militia</p></div><div style="background:#1a1a2e;padding:10px;text-align:center;font-size:11px;color:#888;">13th Legion \u00b7 Texas State Militia \u00b7 DFW</div></body></html>'
+            for email, _, _ in _attending_emails:
                 try:
-                    msg = MIMEMultipart("alternative")
-                    msg["Subject"] = f"\ud83d\udccb AAR \u2014 {event.title}"
+                    from email.mime.multipart import MIMEMultipart as _MMP
+                    from email.mime.text import MIMEText as _MT
+                    msg = _MMP("alternative")
+                    msg["Subject"] = f"\U0001f4cb AAR \u2014 {_evt_title}"
                     msg["From"] = SMTP_FROM
-                    msg["To"] = member.email
-                    msg.attach(MIMEText(html_body, "html"))
-                    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+                    msg["To"] = email
+                    msg.attach(_MT(html_body, "html"))
+                    import smtplib as _smtp
+                    with _smtp.SMTP(SMTP_HOST, SMTP_PORT) as s:
                         s.starttls()
                         s.login(SMTP_USER, SMTP_PASS)
-                        s.sendmail(SMTP_USER, [member.email], msg.as_string())
-                    email_count += 1
+                        s.sendmail(SMTP_USER, [email], msg.as_string())
                 except Exception:
                     pass
-
-            # Cross-post to T1 Announcements
             try:
                 settings = get_settings()
-                talk_msg = (
-                    f"\ud83d\udccb **AFTER ACTION REVIEW \u2014 {event.title}**\n\n"
-                    f"\ud83d\udcc5 {date_str}\n"
-                )
-                if commander_intent:
-                    talk_msg += f"\n**Commander's Intent:** {commander_intent[:200]}{'...' if len(commander_intent) > 200 else ''}\n"
-                right_items = [it for it in aar_items if it.category == 'right']
-                wrong_items = [it for it in aar_items if it.category == 'wrong']
-                improve_items = [it for it in aar_items if it.category == 'improve']
-                if right_items:
-                    talk_msg += f"\n\u2705 **What Went Right:** {len(right_items)} items"
-                if wrong_items:
-                    talk_msg += f"\n\u274c **What Went Wrong:** {len(wrong_items)} items"
-                if improve_items:
-                    talk_msg += f"\n\ud83d\udd27 **Improve:** {len(improve_items)} items"
-                talk_msg += f"\n\nFull AAR on the Portal:\n\ud83d\udd17 https://portal.13thlegion.org/events/{event.id}"
+                talk_msg = f"\U0001f4cb **AFTER ACTION REVIEW \u2014 {_evt_title}**\n\n\U0001f4c5 {_date_str}\n"
+                if _ci:
+                    talk_msg += f"\n**Commander's Intent:** {_ci[:200]}{'...' if len(_ci) > 200 else ''}\n"
+                rc = len([1 for c, _, _ in _aar_snapshot if c == 'right'])
+                wc = len([1 for c, _, _ in _aar_snapshot if c == 'wrong'])
+                ic = len([1 for c, _, _ in _aar_snapshot if c == 'improve'])
+                if rc: talk_msg += f"\n\u2705 **What Went Right:** {rc} items"
+                if wc: talk_msg += f"\n\u274c **What Went Wrong:** {wc} items"
+                if ic: talk_msg += f"\n\U0001f527 **Improve:** {ic} items"
+                talk_msg += f"\n\nFull AAR on the Portal:\n\U0001f517 https://portal.13thlegion.org/events/{_evt_eid}"
                 async with httpx.AsyncClient(timeout=15) as client:
                     await client.post(
                         f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
@@ -2306,29 +2265,166 @@ async def save_aar(request: Request, event_id: int):
                     )
             except Exception:
                 pass
-
-            # Portal notification
             try:
                 from app.routes.notifications import create_notification_for_all
-                await create_notification_for_all(
-                    db, "event", f"\ud83d\udccb AAR \u2014 {event.title}",
-                    body=f"{date_str} \u00b7 After Action Review published",
-                    link=f"/events/{event_id}",
-                    icon="\ud83d\udccb"
-                )
+                async with async_session() as ndb:
+                    await create_notification_for_all(
+                        ndb, "event", f"\U0001f4cb AAR \u2014 {_evt_title}",
+                        body=f"{_date_str} \u00b7 After Action Review published",
+                        link=f"/events/{_evt_eid}",
+                        icon="\U0001f4cb"
+                    )
             except Exception:
                 pass
 
-        await db.commit()
+        asyncio.ensure_future(_aar_bg())
 
-    if action == "publish":
         return HTMLResponse(
             '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-            f'\ud83d\udccb AAR published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}.</div>'
+            '\U0001f4cb AAR published. Emails sending in background.</div>'
             '<script>setTimeout(()=>window.location.reload(),1500)</script>'
         )
     else:
         return HTMLResponse(
             '<div style="padding:8px 12px;background:rgba(212,165,55,0.15);color:#d4a537;border-radius:6px;">'
-            '\ud83d\udcbe AAR draft saved.</div>'
+            '💾 AAR draft saved.</div>'
         )
+
+
+# ─── AAR PDF Export (PP-133) ──────────────────────────────────────────────
+
+@router.get("/api/events/{event_id}/aar/pdf")
+@require_auth
+async def export_aar_pdf(request: Request, event_id: int):
+    """Export the published AAR as a branded PDF."""
+    from fpdf import FPDF
+    from starlette.responses import Response
+    import textwrap, io, os
+
+    async with async_session() as db:
+        event = await db.get(Event, event_id)
+        if not event or not event.aar_published_at:
+            return HTMLResponse('<div style="color:#ef5350;">AAR not published yet.</div>', status_code=404)
+
+        aar_result = await db.execute(
+            select(EventAARItem).where(EventAARItem.event_id == event_id).order_by(EventAARItem.ordinal)
+        )
+        aar_items = aar_result.scalars().all()
+
+        local_dt = _to_cdt(event.date_start)
+        date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
+        pub_dt = _to_cdt(event.aar_published_at)
+        pub_str = pub_dt.strftime("%d %b %Y %H%M") + " CT"
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # Header bar with logos
+    pdf.set_fill_color(26, 26, 46)
+    pdf.rect(0, 0, 210, 34, 'F')
+
+    img_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'img')
+    crest_path = os.path.join(img_dir, 'crest.png')
+    seal_path = os.path.join(img_dir, 'tsm-seal.png')
+
+    if os.path.exists(crest_path):
+        pdf.image(crest_path, x=20, y=3, h=28)
+    if os.path.exists(seal_path):
+        pdf.image(seal_path, x=170, y=3, h=28)
+
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_text_color(212, 165, 55)
+    pdf.set_y(8)
+    pdf.cell(0, 10, '13TH LEGION', align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 9)
+    pdf.set_text_color(180, 180, 180)
+    pdf.cell(0, 5, 'Texas State Militia  |  Dallas / Fort Worth', align='C', new_x='LMARGIN', new_y='NEXT')
+
+    pdf.set_y(38)
+    pdf.set_text_color(0, 0, 0)
+
+    # Title
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, 'AFTER ACTION REVIEW', new_x='LMARGIN', new_y='NEXT')
+
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 7, event.title, new_x='LMARGIN', new_y='NEXT')
+
+    pdf.set_font('Helvetica', '', 10)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(0, 6, f'Date: {date_str}  |  Location: {event.location or "TBD"}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 6, f'Published: {pub_str} by {event.aar_published_by}', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(4)
+
+    # Divider
+    pdf.set_draw_color(212, 165, 55)
+    pdf.set_line_width(0.5)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(6)
+
+    def _section(title, content, r=0, g=0, b=0):
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.set_text_color(r, g, b)
+        pdf.cell(0, 7, title, new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(40, 40, 40)
+        for line in content.split('\n'):
+            wrapped = textwrap.wrap(line, width=90) or ['']
+            for wl in wrapped:
+                pdf.cell(0, 5.5, wl, new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(4)
+
+    def _list_section(title, items, r=0, g=0, b=0):
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.set_text_color(r, g, b)
+        pdf.cell(0, 7, title, new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(40, 40, 40)
+        for i, item in enumerate(sorted(items, key=lambda x: x.ordinal), 1):
+            wrapped = textwrap.wrap(f'{i}. {item.text}', width=85) or [f'{i}.']
+            for j, wl in enumerate(wrapped):
+                pdf.cell(0, 5.5, ('   ' if j > 0 else '') + wl, new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(4)
+
+    if event.aar_commander_intent:
+        _section("COMMANDER'S INTENT", event.aar_commander_intent, 170, 130, 20)
+
+    if event.aar_mission_summary:
+        _section('WHAT ACTUALLY HAPPENED', event.aar_mission_summary, 170, 130, 20)
+
+    right = [it for it in aar_items if it.category == 'right']
+    wrong = [it for it in aar_items if it.category == 'wrong']
+    improve = [it for it in aar_items if it.category == 'improve']
+
+    if right:
+        _list_section('WHAT WENT RIGHT', right, 46, 125, 50)
+    if wrong:
+        _list_section('WHAT WENT WRONG', wrong, 198, 40, 40)
+    if improve:
+        _list_section('AREAS FOR IMPROVEMENT', improve, 66, 165, 245)
+
+    # Footer
+    pdf.ln(6)
+    pdf.set_draw_color(212, 165, 55)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(4)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 5, 'Nunquam Non Paratus', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 8)
+    pdf.cell(0, 5, f'S3 Operations & Training  |  13th Legion, Texas State Militia', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, f'https://portal.13thlegion.org/events/{event_id}', new_x='LMARGIN', new_y='NEXT')
+
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+
+    safe_title = event.title.replace(' ', '_').replace('/', '-')[:40]
+    filename = f'AAR_{safe_title}_{date_str.replace(" ", "_")}.pdf'
+
+    return Response(
+        content=buf.read(),
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )

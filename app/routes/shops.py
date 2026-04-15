@@ -17,7 +17,7 @@ router = APIRouter(prefix="/shops", tags=["shops"])
 SHOP_ACCESS = {
     "s1": {"s1", "command", "admin"},
     "s2": {"s2", "command", "admin"},
-    "s3": {"s3", "command", "admin"},
+    "s3": {"s3", "command", "admin", "leader"},
     "s4": {"s4", "command", "admin"},
     "s5": {"s5", "command", "admin"},
     "s6": {"s6", "command", "admin"},

@@ -78,6 +78,7 @@
                     {% if "s3" in shop_roles.shops %}
                     <div style="border-bottom: 1px solid #333;">
                         <a href="/shops/s3" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">⚔️ S3 — Ops & Training</a>
+                        <a href="/api/s3/attendance-analytics" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">📊 Attendance Analytics</a>
                     </div>
                     {% endif %}
                     {% if "s4" in shop_roles.shops %}
@@ -100,7 +101,15 @@
             {% endif %}
 
             {% if "command" in user.roles or "admin" in user.roles %}
-            <a href="/elections/admin" class="nav-link">🗳️ Elections</a>
+            <div class="nav-dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">🏰 Command ▾</a>
+                <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 200px; z-index: 100; top: 100%; left: 0;">
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/elections/admin" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px;">🗳️ Elections</a>
+                    </div>
+                    <div style="padding: 6px 16px; color: #555; font-size: 11px; font-style: italic;">More coming soon</div>
+                </div>
+            </div>
             {% endif %}
         </div>
         <div class="nav-user" style="display: flex; align-items: center; gap: 15px;">
