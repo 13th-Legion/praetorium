@@ -616,7 +616,7 @@ def send_application_received_email(recipient_email, name):
         <li>The free tier is all you need — no paid plan required.</li>
         <li>Pick a professional-ish address (e.g., <em>firstname.lastname@proton.me</em>).</li>
         <li>Download the <strong>Proton Mail</strong> app on your phone: <a href="https://apps.apple.com/app/proton-mail/id979659905">iOS</a> · <a href="https://play.google.com/store/apps/details?id=ch.protonmail.android">Android</a></li>
-        <li>Once you have it, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file.</li>
+        <li>Once you have it, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file. <strong>Please include your First and Last name in the subject line</strong> so we know who you are.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -671,7 +671,8 @@ Tips:
   - Pick a professional-ish address (e.g., firstname.lastname@proton.me).
   - Download the Proton Mail app on your phone.
   - Once you have it, REPLY TO THIS EMAIL from your new Proton Mail address
-    so we have it on file.
+    so we have it on file. Please include your First and Last name in the
+    subject line so we know who you are.
 
 QUESTIONS?
 Reply to this email and our recruiting team will get back to you.
@@ -760,7 +761,7 @@ def send_generic_application_received_email(recipient_email, name, company):
         <li>The free tier is all you need.</li>
         <li>Pick a professional address (e.g., <em>firstname.lastname@proton.me</em>).</li>
         <li>Download the Proton Mail app: <a href="https://apps.apple.com/app/proton-mail/id979659905">iOS</a> / <a href="https://play.google.com/store/apps/details?id=ch.protonmail.android">Android</a></li>
-        <li>Once created, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file.</li>
+        <li>Once created, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file. <strong>Please include your First and Last name in the subject line</strong> so we know who you are.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -810,6 +811,8 @@ Tips:
   - Pick a professional address (e.g., firstname.lastname@proton.me).
   - Download the Proton Mail app on your phone.
   - Once created, REPLY TO THIS EMAIL from your new Proton Mail address.
+    Please include your First and Last name in the subject line so we know
+    who you are.
 
 QUESTIONS?
 Reply to this email and we will make sure it gets to the right person.
@@ -1737,8 +1740,8 @@ Your application to the 13th Legion has been advanced to the final onboarding ph
 
 To complete your background check and finalize your membership, please submit the ONE TIME, NON-REFUNDABLE $50 membership fee. This covers the cost of your criminal background check.
 
-Payment can be made via PayPal at:
-https://donate.13thlegion.org/
+Payment can be made via credit/debit card or PayPal at:
+https://portal.13thlegion.org/apply/fee?email={recipient_email}/
 
 If you have any questions, please reply directly to this email or reach out to your recruiter.
 
@@ -1752,8 +1755,8 @@ S1 Recruiting
 <p>{name},</p>
 <p>Your application to the 13th Legion has been advanced to the final onboarding phase.</p>
 <p>To complete your background check and finalize your membership, please submit the <strong>ONE TIME, NON-REFUNDABLE $50 membership fee</strong>. This fee covers the cost of your criminal background check.</p>
-<p>Payment can be made securely via PayPal at: <br>
-<a href="https://donate.13thlegion.org/">https://donate.13thlegion.org/</a></p>
+<p>Payment can be made securely via credit/debit card or PayPal at: <br>
+<a href="https://portal.13thlegion.org/apply/fee?email={recipient_email}">https://portal.13thlegion.org/apply/fee?email={recipient_email}</a></p>
 <p>If you have any questions, please reply directly to this email or reach out to your recruiter.</p>
 <p>Respectfully,<br><br>
 <strong>S1 Recruiting</strong><br>
