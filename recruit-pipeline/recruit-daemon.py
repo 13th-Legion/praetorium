@@ -1666,7 +1666,8 @@ def onboard_member(card, state, dry_run=False):
         return True
 
     # 1. Create NC account (use Proton Mail as the account email)
-    if not create_nc_account(nc_username, nc_password, name, proton_email, groups):
+    display_name = f"RCT {name}"
+    if not create_nc_account(nc_username, nc_password, display_name, proton_email, groups):
         log.error(f"Onboarding aborted for {name} — NC account creation failed")
         return False
 
