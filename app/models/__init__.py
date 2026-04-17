@@ -10,6 +10,10 @@ from app.models.events import (  # noqa: F401
     EventGuest, EventBuddyPair, EventGuardSlot, EventGuardDuty,
     EventVexillation, EventVexillationAssignment,
 )
+from app.models.s4_logistics import (  # noqa: F401
+    S4MealPlan, S4Expense, S4PurchaseRequest, 
+    S4EquipmentDonation, S4InventoryItem, S4Checkout
+)
 from app.models.rank_history import RankHistory  # noqa: F401
 from app.models.schedule import EventScheduleBlock  # noqa: F401
 from app.models.elections import (  # noqa: F401
