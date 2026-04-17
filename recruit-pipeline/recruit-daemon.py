@@ -25,7 +25,7 @@ import urllib.request
 import urllib.parse
 
 # Uptime Kuma push heartbeat
-KUMA_PUSH_URL = "https://status.13thlegion.org/api/push/4g-bg1vFOZJ-9j1lXI0gye4z-pqzWe09nlP833J6jJs?status=up&msg=OK&ping="
+KUMA_PUSH_URL = os.environ.get("KUMA_PUSH_URL", "")
 from datetime import datetime
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart

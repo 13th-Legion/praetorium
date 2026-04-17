@@ -41,3 +41,12 @@ projects/47th-roster/sync.log
 TOOLS.md
 projects/47th-roster/fetch-roles.sh
 projects/47th-roster/fetch-roster.sh
+
+# Sensitive files — NEVER track
+TOOLS.md
+MEMORY.md
+HEARTBEAT.md
+USER.md
+memory/
+projects/47th-roster/sync-roster.sh
+projects/47th-roster/fetch-*.sh
