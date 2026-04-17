@@ -21,6 +21,11 @@ import string
 import subprocess
 import sys
 import time
+import urllib.request
+import urllib.parse
+
+# Uptime Kuma push heartbeat
+KUMA_PUSH_URL = "https://status.13thlegion.org/api/push/4g-bg1vFOZJ-9j1lXI0gye4z-pqzWe09nlP833J6jJs?status=up&msg=OK&ping="
 from datetime import datetime
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -33,6 +38,7 @@ import requests
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
+NC_URL = "https://cloud.13thlegion.org"
 NC_USER = "spooky"
 NC_PASS = os.environ.get("NC_SVC_PASS", "")
 
@@ -43,7 +49,7 @@ NC_SVC_PASS = os.environ.get("NC_PORTAL_SVC_PASS", "")
 # SMTP via Proton Bridge (localhost)
 SMTP_HOST = "127.0.0.1"
 SMTP_PORT = 1025
-SMTP_USER = os.environ.get("SMTP_USER", "admin@13thlegion.org")
+SMTP_USER = "admin@13thlegion.org"
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = "13th Legion <admin@13thlegion.org>"
 
@@ -69,7 +75,7 @@ RECRUIT_GROUPS = ["13th Legion", "Rank - Recruit"]
 COMPANY_ROUTING = {
     "13th Legion (DFW)": "deck",
     "Archangels (Corpus Christi)": "jbarnes0526@protonmail.com",
-    "Guardians (Austin)": "guardianadminactual@proton.me",
+    "Guardians (Austin)": "jlacey2@protonmail.com",
     "Vikings (Houston)": "admin@tsmhouston.org",
     "Centurions (Brazoria)": "glassesM@protonmail.com",
 }
@@ -80,7 +86,7 @@ PORTAL_DB_HOST = "172.21.0.2"  # praetorium-db Docker container IP
 PORTAL_DB_PORT = 5432
 PORTAL_DB_NAME = "praetorium"
 PORTAL_DB_USER = "praetorium"
-PORTAL_DB_PASS = os.environ.get("PORTAL_DB_PASS", "")
+PORTAL_DB_PASS = os.environ.get("POSTGRES_PASSWORD", "")
 
 STATE_FILE = Path("/opt/recruit-pipeline/state.json")
 LOG_DIR = Path("/opt/recruit-pipeline")
@@ -130,14 +136,6 @@ def geo_assign_team(lat, lon):
     return GEO_ZONE_TEAMS[idx], b
 
 DEFAULT_TEAM = "Alpha"  # Fallback if geocoding fails
-
-# Rank grade → abbreviation (mirrors app.constants.RANK_ABBR)
-RANK_ABBR = {
-    "E-1": "RCT", "E-2": "PV2", "E-3": "PFC", "E-4": "CPL",
-    "E-5": "SGT", "E-6": "SSG", "E-7": "SFC", "E-8": "1SG",
-    "E-9": "SGM", "W-1": "WO1", "W-2": "CW2",
-    "O-1": "2LT", "O-2": "1LT", "O-3": "CPT", "O-4": "MAJ",
-}
 
 # NC Talk room tokens for notifications
 NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
@@ -391,6 +389,7 @@ def send_rejection_email(recipient_email, name):
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #888; margin: 0; font-size: 12px;">
+        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
     </p>
 </div>
 
@@ -461,6 +460,7 @@ def create_deck_card(submission):
     # Add suggested team based on geographic zone (bearing from center point)
     suggested_team = DEFAULT_TEAM
     geo_note = f"county: {county}"
+    raw_addr = parse_answer(answers, 6)  # Address field id
     addr_for_geo = raw_addr or city or ""
     if addr_for_geo:
         glat, glon = geocode_address(addr_for_geo)
@@ -554,17 +554,18 @@ def attach_submission_files(submission, card_id, stack_id):
         log.error(f"Error attaching files to card #{card_id}: {e}")
 
 
-def send_application_received_email(recipient_email, name, is_13th=True):
+def send_application_received_email(recipient_email, name):
     """Send 'application received' confirmation to applicant with Proton Mail instructions."""
 
     first_name = name.split()[0] if name.split() else name
 
-    if is_13th:
-        unit_name = "13th Legion"
-        unit_sub = "Texas State Militia — Dallas / Fort Worth"
-        sender_sig = "13th Legion, Texas State Militia\n13thlegion.org"
-        subject = "Application Received — 13th Legion, Texas State Militia"
-        html_header = '''<table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
             <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
@@ -575,39 +576,7 @@ def send_application_received_email(recipient_email, name, is_13th=True):
         <td style="vertical-align: middle; padding-left: 15px;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
-    </tr></table>'''
-        motto_html = "<em>Nunquam Non Paratus,</em><br>"
-        motto_plain = "Nunquam Non Paratus,"
-        footer_motto_html = '''<p style="color: #d4a537; margin: 0; font-style: italic;">
-        Nunquam Non Paratus — Never Not Ready
-    </p>'''
-        footer_link = '<a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>'
-    else:
-        unit_name = "Texas State Militia"
-        unit_sub = "Headquarters"
-        sender_sig = "Texas State Militia"
-        subject = "Application Received — Texas State Militia"
-        html_header = '''<table style="width: 100%;" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align: middle; width: 25%; padding-left: 5%;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
-        </td>
-        <td style="vertical-align: middle; text-align: left; width: 75%;">
-            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">TEXAS STATE MILITIA</h1>
-            <p style="color: #ccc; margin: 5px 0 0;">Headquarters</p>
-        </td>
-    </tr></table>'''
-        motto_html = ""
-        motto_plain = ""
-        footer_motto_html = ""
-        footer_link = 'Texas State Militia'
-
-    html = f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
-
-<div style="background: #1a1a2e; padding: 20px; text-align: center;">
-    {html_header}
+    </tr></table>
 </div>
 
 <div style="padding: 20px;">
@@ -658,16 +627,18 @@ def send_application_received_email(recipient_email, name, is_13th=True):
     <p>We look forward to having you with us.</p>
 
     <p style="margin-top: 20px;">
-        {motto_html}
+        <em>Nunquam Non Paratus,</em><br>
         <strong>S1 — Personnel &amp; Recruiting</strong><br>
-        {sender_sig.replace('\n', '<br>')}
+        13th Legion, Texas State Militia
     </p>
 </div>
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
-    {footer_motto_html}
+    <p style="color: #d4a537; margin: 0; font-style: italic;">
+        Nunquam Non Paratus — Never Not Ready
+    </p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        {footer_link}
+        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
     </p>
 </div>
 
@@ -707,13 +678,14 @@ Reply to this email and our recruiting team will get back to you.
 
 We look forward to having you with us.
 
-{motto_plain}
+Nunquam Non Paratus,
 S1 — Personnel & Recruiting
-{sender_sig}
+13th Legion, Texas State Militia
+13thlegion.org
 """
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
+    msg["Subject"] = "Application Received — 13th Legion, Texas State Militia"
     msg["From"] = SMTP_FROM
     msg["To"] = recipient_email
     msg.attach(MIMEText(plain, "plain"))
@@ -724,10 +696,147 @@ S1 — Personnel & Recruiting
             s.starttls()
             s.login(SMTP_USER, SMTP_PASS)
             s.send_message(msg)
-        log.info(f"Sent application received email to {recipient_email} (is_13th={is_13th})")
+        log.info(f"Sent application received email to {recipient_email}")
         return True
     except Exception as e:
         log.error(f"Failed to send application received email to {recipient_email}: {e}")
+        return False
+
+
+def send_generic_application_received_email(recipient_email, name, company):
+    """Send generic TSM-branded application received confirmation for non-13th applicants."""
+
+    first_name = name.split()[0] if name.split() else name
+    company_display = company or "your local unit"
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; text-align: center;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="80" style="display: block; margin: 0 auto;">
+            <h1 style="color: #d4a537; margin: 10px 0 0; font-size: 24px;">TEXAS STATE MILITIA</h1>
+        </td>
+    </tr></table>
+</div>
+
+<div style="padding: 20px;">
+    <p>{first_name},</p>
+
+    <p>Thank you for your interest in the <strong>Texas State Militia</strong>. We have received your application and it has been forwarded to the leadership of the <strong>{company_display}</strong> for review.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        What Happens Next
+    </h3>
+    <ol>
+        <li><strong>Application review</strong> &mdash; Your local unit leadership will review your application.</li>
+        <li><strong>Background check</strong> &mdash; A routine check will be conducted based on the information you provided.</li>
+        <li><strong>Interview</strong> &mdash; A member of your local unit's leadership team will reach out to schedule a brief phone or video call.</li>
+        <li><strong>Approval &amp; onboarding</strong> &mdash; Once approved, your unit will provide you with all the information you need to get started.</li>
+    </ol>
+    <p>This process typically takes <strong>1&ndash;2 weeks</strong>. Your local unit leadership will keep you posted.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        Action Required: Create a Proton Mail Account
+    </h3>
+    <p>All TSM members are required to use a <strong>Proton Mail</strong> email address for unit communications. Proton Mail is a free, end-to-end encrypted email service based in Switzerland that keeps our communications secure and private.</p>
+
+    <p><strong>Please create your Proton Mail account now</strong> so it is ready when you are approved.</p>
+
+    <table style="margin: 15px 0; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 15px; background: #d4a537; border-radius: 4px;">
+                <a href="https://account.proton.me/signup" style="color: #1a1a2e; text-decoration: none; font-weight: bold; font-size: 15px;">
+                    Create Free Proton Mail Account
+                </a>
+            </td>
+        </tr>
+    </table>
+
+    <ul style="font-size: 13px; color: #555;">
+        <li>The free tier is all you need.</li>
+        <li>Pick a professional address (e.g., <em>firstname.lastname@proton.me</em>).</li>
+        <li>Download the Proton Mail app: <a href="https://apps.apple.com/app/proton-mail/id979659905">iOS</a> / <a href="https://play.google.com/store/apps/details?id=ch.protonmail.android">Android</a></li>
+        <li>Once created, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file.</li>
+    </ul>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        Questions?
+    </h3>
+    <p>Reply to this email and we will make sure it gets to the right person.</p>
+
+    <p>We look forward to having you with us.</p>
+
+    <p style="margin-top: 20px;">
+        <strong>Recruiting</strong><br>
+        Texas State Militia
+    </p>
+</div>
+
+<div style="background: #1a1a2e; padding: 15px; text-align: center;">
+    <p style="color: #d4a537; margin: 0; font-style: italic;">
+        Serving the Citizens of Texas
+    </p>
+    <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
+        Texas State Militia &middot; <a href="https://texasstatemilitia.org" style="color: #888;">texasstatemilitia.org</a>
+    </p>
+</div>
+
+</body>
+</html>"""
+
+    plain = f"""{first_name},
+
+Thank you for your interest in the Texas State Militia. We have received your application and it has been forwarded to the leadership of the {company_display} for review.
+
+WHAT HAPPENS NEXT
+  1. Application review by your local unit leadership.
+  2. Background check based on your application info.
+  3. Interview with a member of your local unit's leadership team.
+  4. Approval and onboarding with everything you need to get started.
+
+This process typically takes 1-2 weeks. Your local unit leadership will keep you posted.
+
+ACTION REQUIRED: CREATE A PROTON MAIL ACCOUNT
+All TSM members are required to use a Proton Mail email address for unit
+communications. Please create your account now:
+  https://account.proton.me/signup
+
+Tips:
+  - The free tier is all you need.
+  - Pick a professional address (e.g., firstname.lastname@proton.me).
+  - Download the Proton Mail app on your phone.
+  - Once created, REPLY TO THIS EMAIL from your new Proton Mail address.
+
+QUESTIONS?
+Reply to this email and we will make sure it gets to the right person.
+
+We look forward to having you with us.
+
+Recruiting
+Texas State Militia
+texasstatemilitia.org
+"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Application Received \u2014 Texas State Militia"
+    msg["From"] = SMTP_FROM
+    msg["To"] = recipient_email
+    msg.attach(MIMEText(plain, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.send_message(msg)
+        log.info(f"Sent generic application received email to {recipient_email} ({company_display})")
+        return True
+    except Exception as e:
+        log.error(f"Failed to send generic application received email to {recipient_email}: {e}")
         return False
 
 
@@ -895,9 +1004,12 @@ def check_new_submissions(state, dry_run=False):
                 forward_to = route if route else STATE_S1_FALLBACK
                 forward_application_to_unit(sub, company, forward_to)
 
-            # Send application received confirmation regardless of company
+            # Send application received confirmation — 13th gets branded, others get generic TSM
             if email:
-                send_application_received_email(email, name, is_13th=(route == "deck"))
+                if route == "deck":
+                    send_application_received_email(email, name)
+                else:
+                    send_generic_application_received_email(email, name, company)
             else:
                 log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
 
@@ -928,6 +1040,7 @@ def parse_card_for_onboarding(card):
         if line.startswith("**") and ":**" in line:
             key = line.split(":**")[0].replace("**", "").strip()
             val = line.split(":**", 1)[1].strip()
+            val = val.strip("*_~")  # strip markdown bold/italic
             info[key] = val
 
     return info
@@ -1240,55 +1353,67 @@ def move_card_to_stack(card_id, from_stack, to_stack):
         return False
 
 
-def get_team_leader(team):
-    """Look up the Team Leader for a given team from the portal DB.
-
-    Returns a formatted string like 'SGT Clint "Digger" Bunker' or None.
-    """
-    try:
-        import psycopg2
-        conn = psycopg2.connect(
-            host=PORTAL_DB_HOST, port=PORTAL_DB_PORT,
-            dbname=PORTAL_DB_NAME, user=PORTAL_DB_USER,
-            password=PORTAL_DB_PASS,
-        )
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT first_name, last_name, callsign, rank_grade "
-            "FROM members "
-            "WHERE team = %s AND leadership_title = 'Team Leader' "
-            "LIMIT 1",
-            (team,),
-        )
-        row = cur.fetchone()
-        conn.close()
-        if not row:
-            return None
-        first, last, callsign, grade = row
-        abbr = RANK_ABBR.get(grade, grade or "")
-        if callsign:
-            return f'{abbr} {first} \u201c{callsign}\u201d {last}'
-        return f"{abbr} {first} {last}"
-    except Exception as e:
-        log.warning(f"Failed to look up team leader for {team}: {e}")
-        return None
-
-
-def send_welcome_email(recipient_email, name, nc_username, nc_password, team, team_leader=None):
+def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     """Send welcome email to new recruit via Proton Bridge SMTP (PP-019)."""
 
-    # ── Recruit Packet attachments (from NC Group Folder) ────────────────
-    RECRUIT_PACKET_DIR = Path("/var/lib/docker/volumes/nextcloud_nextcloud_data/_data/data/__groupfolders/1/Recruit Packet")
-    ATTACH_FILES = [
-        "13lg_code_of_conduct.pdf",
-        "13lg_activity_policy.pdf",
-        "13lg_first_ftx.pdf",
-        "13lg_tradoc_checklist.pdf",
-        "13lg_medical_card.pdf",
-        "13lg_chaplain_message.pdf",
-        "tsm_bylaws_2023.pdf",
-        "tsm_uniform_sop.pdf",
-    ]
+    # 2026 training calendar
+    calendar_html = """
+    <ul style="margin: 5px 0; padding-left: 20px;">
+        <li><s>09–11 JAN — BTBLK-04</s></li>
+        <li><s>06–08 FEB — BTBLK-01</s></li>
+        <li><s>21 FEB — Urban Evasion Course</s></li>
+        <li>13–15 MAR — BTBLK-02</li>
+        <li>09–12 APR — MCFTX (Multi-Company)</li>
+        <li>15–17 MAY — BTBLK-03</li>
+        <li>12–14 JUN — BTBLK-04</li>
+        <li>10–12 JUL — BTBLK-01</li>
+        <li>08 AUG — Family Day</li>
+        <li>11–13 SEP — BTBLK-02</li>
+        <li>08–11 OCT — MCFTX (Multi-Company)</li>
+        <li>13–15 NOV — BTBLK-03</li>
+        <li>11–13 DEC — BTBLK-04</li>
+    </ul>"""
+
+    tradoc_html = """
+    <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin: 10px 0;">
+        <tr style="background: #1a1a2e; color: #d4a537;">
+            <td style="padding: 8px; font-weight: bold;">Block 01 — Theory &amp; Medical</td>
+            <td style="padding: 8px; font-weight: bold;">Block 02 — Weapons Qualification</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; vertical-align: top;">
+                • Customs &amp; Courtesies<br>
+                • Drill &amp; Ceremony<br>
+                • Gear Review<br>
+                • History &amp; Philosophy<br>
+                • Medical
+            </td>
+            <td style="padding: 8px; vertical-align: top;">
+                • Weapons Familiarization<br>
+                • Basic Rifle Marksmanship<br>
+                • Rifle Qualification<br>
+                • Shooting Drills<br>
+                • Use of Force
+            </td>
+        </tr>
+        <tr style="background: #1a1a2e; color: #d4a537;">
+            <td style="padding: 8px; font-weight: bold;">Block 03 — Supplemental Skills</td>
+            <td style="padding: 8px; font-weight: bold;">Block 04 — Combat Fundamentals</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; vertical-align: top;">
+                • Comms<br>
+                • Land Navigation<br>
+                • Convoy
+            </td>
+            <td style="padding: 8px; vertical-align: top;">
+                • Individual Movement Techniques<br>
+                • Patrolling<br>
+                • React to Contact<br>
+                • Recon 101
+            </td>
+        </tr>
+    </table>"""
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -1302,7 +1427,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team, te
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
-            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia &mdash; Dallas / Fort Worth</p>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
             <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
@@ -1311,183 +1436,154 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team, te
 </div>
 
 <div style="padding: 20px;">
-    <p>Welcome to the 13th Legion, {name}.</p>
+    <p>Welcome to the 13th Legion, {name}!</p>
 
-    <p>The 13th Legion is a company of the Texas State Militia &mdash; a lawful, all-volunteer citizens&rsquo; militia organized under the U.S. and Texas Constitutions. We exist to serve our local and state communities through disaster response, mutual aid, and community preparedness. We are not a social club or a weekend hobby &mdash; we are an organization of citizens who take the responsibility of community readiness seriously.</p>
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; What to Expect
-    </h3>
-    <p>We run monthly field training exercises (FTXs) &mdash; typically from 1900 CT Friday through noon Sunday &mdash; covering medical, communications, land navigation, weapons qualification, and combat fundamentals. We also host optional fitness events, community service projects, and inter-unit training &mdash; great opportunities to meet your fellow members and build skills that matter.</p>
+    <p>Thank you for joining us. The Texas State Militia offers excellent training and service opportunities, and the 13th is proud to be DFW's unit. Aside from our monthly field training exercises we also offer optional fitness, charity, and training activities — great opportunities to meet your fellow members and build skills that matter.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; What We Expect from You
+        🔹 Assignment
     </h3>
-    <p>Show up, stay in contact with your team leader, and put in the work. You don&rsquo;t need to be prior military or have fancy gear &mdash; just bring a willingness to learn and a commitment to your team. The members who get the most out of this are the ones who engage: ask questions, attend FTXs, and stay connected.</p>
+    <p>You've been assigned to <strong>{team} Team</strong>. Your team leader will reach out to you shortly. By now you should be invited to your team's Signal messaging group.</p>
+    <p>You can view the 13th's overall chain of command <a href="https://coc.13thlegion.org/">here</a>.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Assignment
+        🔹 Your Nextcloud Account
     </h3>
-    <p>You&rsquo;ve been assigned to <strong>{team} Team</strong>.{f' Your team leader is <strong>{team_leader}</strong> &mdash; expect' if team_leader else ' Your team leader will'} to hear from them shortly. By now you should be invited to your team&rsquo;s Signal messaging group.</p>
-
-    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Your Account
-    </h3>
-    <p>Your credentials below are used for both <strong>Praetorium</strong> (our unit portal) and <strong>Nextcloud Talk</strong> (our chat platform).</p>
+    <p>Nextcloud is our secure, self-hosted platform for files, calendar, chat, and more. Everything lives here.</p>
     <table style="margin: 10px 0; font-size: 14px;">
+        <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">URL:</td>
+            <td><a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Username:</td>
             <td><code>{nc_username}</code></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Temporary Password:</td>
             <td><code>{nc_password}</code></td></tr>
     </table>
-    <p><strong>Change your password and enable 2FA before your first FTX</strong> &mdash; this is required. Go to <a href="https://cloud.13thlegion.org/settings/user/security" style="color:#d4a537;">cloud.13thlegion.org/settings/user/security</a>, log in with the credentials above, change your password, and enable TOTP two-factor authentication.</p>
+    <p><strong>Change your password on first login.</strong> Then enable 2FA (TOTP) in your security settings — this is mandatory.</p>
+
+    <p style="margin-top: 12px;"><strong>Download the apps:</strong></p>
+    <ul>
+        <li><strong>Nextcloud</strong> (files, calendar, contacts) — <a href="https://apps.apple.com/app/nextcloud/id1125420102">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.client">Android</a> · <a href="https://nextcloud.com/install/#install-clients">Desktop</a></li>
+        <li><strong>Nextcloud Talk</strong> (chat &amp; calls) — <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2">Android</a></li>
+    </ul>
+    <p>When logging in to the apps, enter <strong>cloud.13thlegion.org</strong> as the server address, then use your username and password above.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Praetorium (Unit Portal)
+        🔹 Unit Portal
+    </h3>
+    <p>Access the unit portal at <a href="https://portal.13thlegion.org">portal.13thlegion.org</a> — log in with the same Nextcloud account above. Your TRADOC checklist, training progress, certifications, and profile are all tracked there.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        🔹 Communications
     </h3>
     <ul>
-        <li><a href="https://portal.13thlegion.org/roster" style="color:#d4a537;">Roster</a> &mdash; unit roster and chain of command</li>
-        <li><a href="https://portal.13thlegion.org/calendar" style="color:#d4a537;">Training &amp; Events Calendar</a> &mdash; FTX dates, RSVPs, and event details</li>
-        <li><a href="https://portal.13thlegion.org/library" style="color:#d4a537;">Resource Library</a> &mdash; field manuals, SOPs, and reference material</li>
-        <li><strong>Your Profile</strong> &mdash; TRADOC progress, certifications, training history, and contact info</li>
+        <li><strong>Signal</strong> — Your team leader will add you to the team chat. Make sure you have Signal installed. <strong>Please stay in contact with your team leader on Signal. Failing to do so, outside of gross negligence or misconduct, is the only way to get removed from the unit.</strong></li>
+        <li><strong>Nextcloud Talk</strong> — Unit-wide chat channels are in your Nextcloud account.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Communications
+        🔹 Training Calendar
     </h3>
-    <ul>
-        <li><strong>Signal</strong> &mdash; Your team leader will add you to the team chat. Make sure you have Signal installed. <strong>Stay in contact with your team leader on Signal. Failing to do so, outside of gross negligence or misconduct, is the only way to get removed from the unit.</strong></li>
-        <li><strong>Nextcloud Talk</strong> &mdash; Unit-wide chat channels. Download the app on your phone:
-            <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574" style="color:#d4a537;">iOS</a> &middot;
-            <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2" style="color:#d4a537;">Android</a>.
-            When logging in, enter <strong>cloud.13thlegion.org</strong> as the server address and use the credentials above.</li>
-    </ul>
+    <p>Below is this year's training calendar. You can always view our <a href="https://cloud.13thlegion.org/apps/calendar">training and events calendar here</a>.</p>
+    {calendar_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Your First FTX
+        🔹 Basic Training (TRADOC)
     </h3>
-    <p><strong>Bring:</strong> Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing. Don&rsquo;t stress about gear &mdash; show up with what you have. Check the <a href="https://portal.13thlegion.org/calendar" style="color:#d4a537;">calendar on Praetorium</a> for upcoming FTX dates and RSVP.</p>
+    <p>Pay special attention to the TRADOC blocks below — these are the subjects you'll be trained and tested on to become a fully patched member. Your progress is tracked on the <a href="https://portal.13thlegion.org">unit portal</a>.</p>
+    {tradoc_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
-        &#x1F539; Attached Documents
+        🔹 Your First FTX
     </h3>
-    <p>Your recruit packet is attached to this email. Please review these documents before your first FTX:</p>
+    <p><strong>Bring:</strong> Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing. Don't stress about gear — show up with what you have.</p>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        🔹 Additional Resources
+    </h3>
+    <p>Your Nextcloud account includes a <strong>Recruit Packet</strong> folder in "13th Legion Shared" with all the documents you need to get started: code of conduct, bylaws, TRADOC checklist, medical card, uniform SOP, and more.</p>
+    <p>The <a href="https://portal.13thlegion.org">unit portal</a> is your one-stop shop for everything else:</p>
     <ul>
-        <li><strong>Code of Conduct</strong> &mdash; standards of behavior and expectations</li>
-        <li><strong>Activity Policy</strong> &mdash; attendance and participation requirements</li>
-        <li><strong>First FTX Guide</strong> &mdash; what to expect and what to bring</li>
-        <li><strong>TRADOC Checklist</strong> &mdash; the training requirements to become a patched member</li>
-        <li><strong>Medical Card</strong> &mdash; fill this out and bring it to your first FTX</li>
-        <li><strong>Chaplain&rsquo;s Message</strong> &mdash; a welcome from our chaplain</li>
-        <li><strong>TSM Bylaws</strong> &mdash; the state organization&rsquo;s governing document</li>
-        <li><strong>Uniform SOP</strong> &mdash; uniform and equipment standards</li>
+        <li><a href="https://portal.13thlegion.org/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
+        <li><a href="https://portal.13thlegion.org/coc">Chain of Command</a></li>
+        <li><a href="https://portal.13thlegion.org/calendar">Training &amp; Events Calendar</a></li>
     </ul>
 </div>
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #d4a537; margin: 0; font-style: italic;">
-        Nunquam Non Paratus &mdash; Never Not Ready
+        Nunquam Non Paratus — Never Not Ready
     </p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion &bull; Texas State Militia &bull; 13thlegion.org
+        13th Legion • Texas State Militia • 13thlegion.org
     </p>
 </div>
 
 </body>
 </html>"""
 
-    tl_plain = f" Your team leader is {team_leader} — expect" if team_leader else " Your team leader will"
-    plain = f"""Welcome to the 13th Legion, {name}.
+    plain = f"""Welcome to the 13th Legion, {name}!
 
-The 13th Legion is a company of the Texas State Militia — a lawful, all-volunteer citizens' militia organized under the U.S. and Texas Constitutions. We exist to serve our local and state communities through disaster response, mutual aid, and community preparedness. We are not a social club or a weekend hobby — we are an organization of citizens who take the responsibility of community readiness seriously.
-
-WHAT TO EXPECT
-  We run monthly field training exercises (FTXs) — typically from 1900 CT
-  Friday through noon Sunday — covering medical, communications, land
-  navigation, weapons qualification, and combat fundamentals. We also host
-  optional fitness events, community service projects, and inter-unit
-  training.
-
-WHAT WE EXPECT FROM YOU
-  Show up, stay in contact with your team leader, and put in the work. You
-  don't need to be prior military or have fancy gear — just bring a
-  willingness to learn and a commitment to your team.
+Thank you for joining us. The Texas State Militia offers excellent training and service opportunities, and the 13th is proud to be DFW's unit. Aside from our monthly field training exercises we also offer optional fitness, charity, and training activities — great opportunities to meet your fellow members and build skills that matter.
 
 ASSIGNMENT
-  You've been assigned to {team} Team.{tl_plain} to hear from them shortly.
+  You've been assigned to {team} Team. Your team leader will reach out shortly.
+  Chain of Command: https://coc.13thlegion.org/
 
-YOUR ACCOUNT
+YOUR NEXTCLOUD ACCOUNT
+  URL: https://cloud.13thlegion.org
   Username: {nc_username}
   Temporary Password: {nc_password}
-  These credentials work for both Praetorium and Nextcloud Talk.
-  Change your password and enable 2FA (required before first FTX):
-  https://cloud.13thlegion.org/settings/user/security
+  Change your password on first login. Enable 2FA (mandatory).
 
-PRAETORIUM (UNIT PORTAL)
-  https://portal.13thlegion.org — click "Login with Nextcloud"
-  - Roster & Chain of Command
-  - Training & Events Calendar (FTX dates, RSVPs)
-  - Resource Library (field manuals, SOPs)
-  - Your Profile (TRADOC progress, certs, training history)
+  Download the apps:
+  - Nextcloud (files/calendar): iOS, Android, or Desktop — https://nextcloud.com/install/#install-clients
+  - Nextcloud Talk (chat/calls): search "Nextcloud Talk" in your app store
+  When logging in, enter cloud.13thlegion.org as the server address.
+
+UNIT PORTAL
+  https://portal.13thlegion.org — log in with your Nextcloud account.
+  Your TRADOC checklist, training progress, and profile are tracked here.
 
 COMMUNICATIONS
-  - Signal: your TL will add you to the team chat. STAY IN CONTACT —
-    failing to communicate (outside of gross negligence/misconduct) is
-    the only way to get removed from the unit.
-  - Nextcloud Talk: unit-wide chat. Download the app (iOS/Android),
-    enter cloud.13thlegion.org as server, log in with your creds above.
+  - Signal: your TL will add you to the team chat. STAY IN CONTACT — failing
+    to communicate (outside of gross negligence/misconduct) is the only way
+    to get removed from the unit.
+  - Nextcloud Talk: unit-wide chat channels in your NC account
+2026 TRAINING CALENDAR
+  13-15 MAR — BTBLK-02          09-12 APR — MCFTX
+  15-17 MAY — BTBLK-03          12-14 JUN — BTBLK-04
+  10-12 JUL — BTBLK-01          08 AUG — Family Day
+  11-13 SEP — BTBLK-02          08-11 OCT — MCFTX
+  13-15 NOV — BTBLK-03          11-13 DEC — BTBLK-04
+  Full calendar: https://cloud.13thlegion.org/apps/calendar
+
+BASIC TRAINING (TRADOC)
+  Block 01 — Theory & Medical: Customs, Drill, Gear Review, History, Medical
+  Block 02 — Weapons Qual: Familiarization, BRM, Qual, Drills, Use of Force
+  Block 03 — Supplemental: Comms, Land Nav, Convoy
+  Block 04 — Combat Fundamentals: IMT, Patrolling, React to Contact, Recon
 
 YOUR FIRST FTX
-  Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate
-  clothing. Don't stress about gear — show up with what you have.
-  Check the calendar on Praetorium for upcoming dates and RSVP.
+  Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing.
+  Don't stress about gear — show up with what you have.
 
-ATTACHED DOCUMENTS
-  Your recruit packet is attached. Please review before your first FTX:
-  - Code of Conduct
-  - Activity Policy
-  - First FTX Guide
-  - TRADOC Checklist
-  - Medical Card (fill out and bring to first FTX)
-  - Chaplain's Message
-  - TSM Bylaws
-  - Uniform SOP
+ADDITIONAL RESOURCES
+  Your NC account has a "Recruit Packet" folder with all key documents.
+  The unit portal (https://portal.13thlegion.org) is your one-stop shop:
+  - Resource Library: https://portal.13thlegion.org/library
+  - Chain of Command: https://portal.13thlegion.org/coc
+  - Training & Events Calendar: https://portal.13thlegion.org/calendar
 
 Nunquam Non Paratus — Never Not Ready.
 — 13th Legion, Texas State Militia
 """
 
-    # ── Build email with attachments ─────────────────────────────────────
-    msg = MIMEMultipart("mixed")
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = "Welcome to the 13th Legion — Texas State Militia"
     msg["From"] = SMTP_FROM
     msg["To"] = recipient_email
-
-    # HTML + plain text alternative part
-    alt = MIMEMultipart("alternative")
-    alt.attach(MIMEText(plain, "plain"))
-    alt.attach(MIMEText(html, "html"))
-    msg.attach(alt)
-
-    # Attach recruit packet PDFs
-    attached_count = 0
-    for filename in ATTACH_FILES:
-        filepath = RECRUIT_PACKET_DIR / filename
-        if filepath.exists():
-            try:
-                with open(filepath, "rb") as f:
-                    part = MIMEBase("application", "pdf")
-                    part.set_payload(f.read())
-                    encoders.encode_base64(part)
-                    part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
-                    msg.attach(part)
-                    attached_count += 1
-            except Exception as e:
-                log.warning(f"Could not attach {filename}: {e}")
-        else:
-            log.warning(f"Recruit packet file not found: {filepath}")
-
-    log.info(f"Attached {attached_count}/{len(ATTACH_FILES)} recruit packet files")
+    msg.attach(MIMEText(plain, "plain"))
+    msg.attach(MIMEText(html, "html"))
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
@@ -1586,9 +1682,8 @@ def onboard_member(card, state, dry_run=False):
     # 4. Move applicant files to S1 recruiting folder
     move_applicant_files(name)
 
-    # 5. Look up team leader and send welcome email (to Proton Mail address)
-    team_leader = get_team_leader(team)
-    send_welcome_email(proton_email, name, nc_username, nc_password, team, team_leader=team_leader)
+    # 5. Send welcome email (to Proton Mail address)
+    send_welcome_email(proton_email, name, nc_username, nc_password, team)
 
     # 6. Move card to Complete
     move_card_to_stack(card_id, STACKS["approved"], STACKS["complete"])
@@ -1631,6 +1726,98 @@ def check_approved_cards(state, dry_run=False):
 
 # ─── Main Loop ───────────────────────────────────────────────────────────────
 
+
+def send_payment_email(recipient_email, name):
+    """Send the Documents & Payment email."""
+    subject = "13th Legion Application — Next Steps: Documents & Payment"
+    body_text = f"""\
+{name},
+
+Your application to the 13th Legion has been advanced to the final onboarding phase.
+
+To complete your background check and finalize your membership, please submit the ONE TIME, NON-REFUNDABLE $50 membership fee. This covers the cost of your criminal background check.
+
+Payment can be made via PayPal at:
+https://donate.13thlegion.org/
+
+If you have any questions, please reply directly to this email or reach out to your recruiter.
+
+Respectfully,
+
+S1 Recruiting
+13th Legion, Texas State Militia
+"""
+    body_html = f"""\
+<html><body>
+<p>{name},</p>
+<p>Your application to the 13th Legion has been advanced to the final onboarding phase.</p>
+<p>To complete your background check and finalize your membership, please submit the <strong>ONE TIME, NON-REFUNDABLE $50 membership fee</strong>. This fee covers the cost of your criminal background check.</p>
+<p>Payment can be made securely via PayPal at: <br>
+<a href="https://donate.13thlegion.org/">https://donate.13thlegion.org/</a></p>
+<p>If you have any questions, please reply directly to this email or reach out to your recruiter.</p>
+<p>Respectfully,<br><br>
+<strong>S1 Recruiting</strong><br>
+13th Legion, Texas State Militia</p>
+</body></html>
+"""
+    
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = recipient_email
+
+    msg.attach(MIMEText(body_text, "plain"))
+    msg.attach(MIMEText(body_html, "html"))
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            if SMTP_PASS:
+                server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+        log.info(f"Payment email sent successfully to {recipient_email}")
+        return True
+    except Exception as e:
+        log.error(f"Failed to send payment email to {recipient_email}: {e}")
+        return False
+
+def check_payment_cards(state, dry_run=False):
+    """Check for cards in Documents & Payment stack and trigger payment email."""
+    cards = get_stack_cards(STACKS["documents_payment"])
+    emailed = 0
+    
+    for card in cards:
+        card_id = card.get("id")
+        if card_id in state.get("payment_emailed_cards", []):
+            continue
+            
+        info = parse_card_for_onboarding(card)
+        name = info.get("Legal Name", info["raw_title"].replace("📋 ", "").replace("✅ ", ""))
+        proton_email = info.get("📧 Proton Mail", "").strip()
+        
+        # Determine the recipient: new protonmail or application email
+        if proton_email and "pending" not in proton_email.lower() and not proton_email.startswith("_"):
+            target_email = proton_email
+        else:
+            target_email = info.get("Email", "")
+            
+        if not target_email:
+            log.warning(f"No email found for card #{card_id} ({name}) — cannot send payment instructions.")
+            continue
+            
+        log.info(f"Sending payment email for {name} to {target_email}")
+        
+        if dry_run:
+            log.info(f"[DRY RUN] Would send payment email to: {target_email}")
+            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed += 1
+            continue
+            
+        if send_payment_email(target_email, name):
+            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed += 1
+            
+    return emailed
+
 def main():
     parser = argparse.ArgumentParser(description="13th Legion S1 Recruit Pipeline Daemon")
     parser.add_argument("--poll-interval", type=int, default=300, help="Seconds between checks (default 5 min)")
@@ -1642,15 +1829,12 @@ def main():
     # Test email mode
     if args.test_email:
         log.info(f"Sending test welcome email to {args.test_email}")
-        test_team = "Bravo"
-        test_tl = get_team_leader(test_team)
         send_welcome_email(
             args.test_email,
             name="Test Recruit",
             nc_username="test.recruit",
             nc_password="TestP@ssw0rd123!",
-            team=test_team,
-            team_leader=test_tl,
+            team="Arrow",
         )
         return
 
@@ -1668,6 +1852,11 @@ def main():
             if new:
                 log.info(f"Processed {new} new submission(s)")
 
+            # Phase 1.5: Check for cards in 'Documents & Payment' → send payment email
+            emailed = check_payment_cards(state, dry_run=args.dry_run)
+            if emailed:
+                log.info(f"Emailed payment instructions to {emailed} applicant(s)")
+
             # Phase 2: Check for approved cards → onboard
             onboarded = check_approved_cards(state, dry_run=args.dry_run)
             if onboarded:
@@ -1675,6 +1864,14 @@ def main():
 
             state["last_check"] = int(time.time())
             save_state(state)
+
+            # Heartbeat to Uptime Kuma
+            try:
+                kuma_msg = urllib.parse.quote(f"OK: {new or 0} new, {onboarded or 0} onboarded")
+                kuma_req = urllib.request.Request(KUMA_PUSH_URL + kuma_msg, headers={"User-Agent": "recruit-daemon/1.0"})
+                urllib.request.urlopen(kuma_req, timeout=10)
+            except Exception:
+                pass  # non-fatal
 
         except Exception as e:
             log.error(f"Error in main loop: {e}", exc_info=True)
@@ -1689,3 +1886,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
