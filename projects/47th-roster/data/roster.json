@@ -1,5 +1,5 @@
 {
-  "generated": "2026-02-06T19:23:45.047Z",
+  "generated": "2026-04-17T09:00:02.288Z",
   "guildId": "179481732217569280",
   "guildName": "47th Legion ComNet",
   "members": [
@@ -11,7 +11,7 @@
       "joinedAt": "2016-05-10T06:36:19.893000+00:00",
       "historicalJoinDate": "2007-12-04T05:56:00.000Z",
       "yearsOfService": 18,
-      "daysInService": 6639,
+      "daysInService": 6709,
       "rank": {
         "code": "O4",
         "name": "Centurion",
@@ -60,7 +60,9 @@
         "torques",
         "wounded"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Cavadus",
+      "forumPosts": 3651
     },
     {
       "id": "242836923394162688",
@@ -70,7 +72,7 @@
       "joinedAt": "2017-02-16T02:57:42.120000+00:00",
       "historicalJoinDate": "2008-01-16T01:18:00.000Z",
       "yearsOfService": 18,
-      "daysInService": 6596,
+      "daysInService": 6666,
       "rank": {
         "code": "O3",
         "name": "Optio",
@@ -90,7 +92,9 @@
         "colonial_marines",
         "recruiter"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Kolya",
+      "forumPosts": 734
     },
     {
       "id": "180332042720903168",
@@ -100,7 +104,7 @@
       "joinedAt": "2016-06-12T22:32:39.851000+00:00",
       "historicalJoinDate": "2013-08-08T15:03:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4565,
+      "daysInService": 4634,
       "rank": {
         "code": "O2",
         "name": "Tesserarian",
@@ -128,9 +132,46 @@
         "recruiter",
         "helldivers",
         "fallout76",
-        "swg"
+        "swg",
+        "war_thunder",
+        "stars_reach"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Odin",
+      "forumPosts": 4
+    },
+    {
+      "id": "173679004883091457",
+      "username": "dralzen",
+      "displayName": "Dralzen[47LG]",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/173679004883091457/b628415ba354a76a91d16515146c97c8.png",
+      "joinedAt": "2016-05-10T22:27:24.757000+00:00",
+      "historicalJoinDate": "2013-05-18T20:58:00.000Z",
+      "yearsOfService": 12,
+      "daysInService": 4716,
+      "rank": {
+        "code": "O1",
+        "name": "Vexillarian",
+        "category": "Officers"
+      },
+      "games": [
+        "Helldivers 2",
+        "Fallout 76"
+      ],
+      "awards": [
+        "service",
+        "good_conduct",
+        "achievement",
+        "commendation",
+        "helldivers",
+        "fallout76",
+        "recruiter",
+        "war_thunder",
+        "stars_reach"
+      ],
+      "isAgent": true,
+      "forumUsername": "Dralzen",
+      "forumPosts": 13
     },
     {
       "id": "917992606892429443",
@@ -140,7 +181,7 @@
       "joinedAt": "2022-08-22T23:23:22.562000+00:00",
       "historicalJoinDate": "2013-06-18T18:31:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4616,
+      "daysInService": 4685,
       "rank": {
         "code": "O1",
         "name": "Vexillarian",
@@ -163,9 +204,12 @@
         "joint_training",
         "helldivers",
         "fallout76",
-        "swg"
+        "swg",
+        "stars_reach"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Dragonsoul",
+      "forumPosts": 46
     },
     {
       "id": "180127552126320640",
@@ -175,7 +219,7 @@
       "joinedAt": "2016-05-12T01:24:20.407000+00:00",
       "historicalJoinDate": "2013-05-07T18:02:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4658,
+      "daysInService": 4727,
       "rank": {
         "code": "E8",
         "name": "Signifier",
@@ -209,9 +253,14 @@
         "swg",
         "swtor",
         "torques",
-        "wounded"
+        "wounded",
+        "dune_awakening",
+        "war_thunder",
+        "stars_reach"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Lightfoot",
+      "forumPosts": 41
     },
     {
       "id": "179849584124624897",
@@ -221,7 +270,7 @@
       "joinedAt": "2017-11-04T23:26:44.753000+00:00",
       "historicalJoinDate": "2008-12-30T05:15:00.000Z",
       "yearsOfService": 17,
-      "daysInService": 6247,
+      "daysInService": 6317,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -242,7 +291,9 @@
         "fallout76",
         "swg"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Payton",
+      "forumPosts": 430
     },
     {
       "id": "169887739406319618",
@@ -252,7 +303,7 @@
       "joinedAt": "2016-05-12T16:49:40.187000+00:00",
       "historicalJoinDate": "2013-05-07T10:42:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4658,
+      "daysInService": 4727,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -266,9 +317,12 @@
         "commendation",
         "nco_development",
         "joint_operations",
-        "recruiter"
+        "recruiter",
+        "dune_awakening"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Maximus",
+      "forumPosts": 35
     },
     {
       "id": "180087410619711488",
@@ -278,7 +332,7 @@
       "joinedAt": "2016-05-11T22:43:04.569000+00:00",
       "historicalJoinDate": "2013-07-18T01:36:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4586,
+      "daysInService": 4656,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -296,7 +350,9 @@
         "recruiter",
         "fallout76"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Bealin",
+      "forumPosts": 34
     },
     {
       "id": "1245124464082026573",
@@ -306,7 +362,7 @@
       "joinedAt": "2024-05-28T21:24:19.055000+00:00",
       "historicalJoinDate": "2017-06-01T00:00:00.000Z",
       "yearsOfService": 8,
-      "daysInService": 3172,
+      "daysInService": 3242,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -327,7 +383,7 @@
       "joinedAt": "2023-06-28T23:50:33.315000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 953,
+      "daysInService": 1023,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -342,7 +398,9 @@
         "nco_development",
         "swtor",
         "joint_operations",
-        "swg"
+        "swg",
+        "dune_awakening",
+        "stars_reach"
       ],
       "isAgent": false
     },
@@ -354,7 +412,7 @@
       "joinedAt": "2025-05-31T01:56:26.018000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 251,
+      "daysInService": 321,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -375,7 +433,7 @@
       "joinedAt": "2025-05-30T23:15:41.819000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 251,
+      "daysInService": 321,
       "rank": {
         "code": "E6",
         "name": "Duplicarian",
@@ -388,7 +446,8 @@
         "service",
         "nco_development",
         "defense",
-        "helldivers"
+        "helldivers",
+        "war_thunder"
       ],
       "isAgent": false
     },
@@ -400,7 +459,7 @@
       "joinedAt": "2016-08-02T00:07:31.571000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3475,
+      "daysInService": 3545,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -419,7 +478,8 @@
         "joint_training",
         "recruiter",
         "helldivers",
-        "swg"
+        "swg",
+        "stars_reach"
       ],
       "isAgent": true
     },
@@ -431,7 +491,7 @@
       "joinedAt": "2016-08-27T05:35:19.524000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3450,
+      "daysInService": 3520,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -445,7 +505,8 @@
         "good_conduct",
         "achievement",
         "recruiter",
-        "fallout76"
+        "fallout76",
+        "war_thunder"
       ],
       "isAgent": true
     },
@@ -457,7 +518,7 @@
       "joinedAt": "2018-04-20T16:06:18.389000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 7,
-      "daysInService": 2849,
+      "daysInService": 2918,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -475,7 +536,9 @@
         "MWO",
         "joint_training",
         "recruiter",
-        "swg"
+        "swg",
+        "war_thunder",
+        "stars_reach"
       ],
       "isAgent": true
     },
@@ -487,7 +550,7 @@
       "joinedAt": "2020-09-25T03:07:20.409000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 1960,
+      "daysInService": 2030,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -510,7 +573,7 @@
       "joinedAt": "2021-05-20T06:15:31.551000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1723,
+      "daysInService": 1793,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -535,7 +598,7 @@
       "joinedAt": "2024-02-05T02:28:42.530000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 732,
+      "daysInService": 802,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -562,7 +625,7 @@
       "joinedAt": "2024-01-16T16:44:13.307000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 752,
+      "daysInService": 821,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -587,7 +650,7 @@
       "joinedAt": "2024-01-11T23:13:49.642000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 756,
+      "daysInService": 826,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -601,6 +664,32 @@
         "good_conduct",
         "swtor",
         "swg"
+      ],
+      "isAgent": false
+    },
+    {
+      "id": "301521266945556480",
+      "username": "xblock.",
+      "displayName": "Dicknuts",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/301521266945556480/6cbaf0778ead2d821b1cc003ef305019.png",
+      "joinedAt": "2024-02-26T20:27:47.903000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 780,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "joint_operations",
+        "helldivers",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -612,7 +701,7 @@
       "joinedAt": "2024-01-29T16:30:01.845000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 739,
+      "daysInService": 808,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -630,6 +719,30 @@
       "isAgent": false
     },
     {
+      "id": "315599784226324480",
+      "username": "rubntugnotongue",
+      "displayName": "RubNtugNoTongue",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/315599784226324480/df90262e8fbc274c03482000ac27e747.png",
+      "joinedAt": "2024-02-22T23:12:32.640000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 2,
+      "daysInService": 784,
+      "rank": {
+        "code": "E4",
+        "name": "Decanus",
+        "category": "Enlisted"
+      },
+      "games": [
+        "Helldivers 2"
+      ],
+      "awards": [
+        "service",
+        "defense",
+        "helldivers"
+      ],
+      "isAgent": false
+    },
+    {
       "id": "363904587306106882",
       "username": "poidisb",
       "displayName": "Poidisb - Belief/Sinar/Haspepim",
@@ -637,7 +750,7 @@
       "joinedAt": "2023-10-13T22:37:12.515000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 846,
+      "daysInService": 916,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -662,7 +775,7 @@
       "joinedAt": "2023-12-25T21:23:50.495000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 773,
+      "daysInService": 843,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -687,7 +800,7 @@
       "joinedAt": "2023-11-15T23:51:46.641000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 813,
+      "daysInService": 883,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -705,55 +818,6 @@
       "isAgent": false
     },
     {
-      "id": "301521266945556480",
-      "username": "xblock.",
-      "displayName": "Dicknuts",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/301521266945556480/6cbaf0778ead2d821b1cc003ef305019.png",
-      "joinedAt": "2024-02-26T20:27:47.903000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 710,
-      "rank": {
-        "code": "E4",
-        "name": "Decanus",
-        "category": "Enlisted"
-      },
-      "games": [
-        "Helldivers 2"
-      ],
-      "awards": [
-        "service",
-        "defense",
-        "joint_operations",
-        "helldivers"
-      ],
-      "isAgent": false
-    },
-    {
-      "id": "315599784226324480",
-      "username": "rubntugnotongue",
-      "displayName": "RubNtugNoTongue",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/315599784226324480/df90262e8fbc274c03482000ac27e747.png",
-      "joinedAt": "2024-02-22T23:12:32.640000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 714,
-      "rank": {
-        "code": "E4",
-        "name": "Decanus",
-        "category": "Enlisted"
-      },
-      "games": [
-        "Helldivers 2"
-      ],
-      "awards": [
-        "service",
-        "defense",
-        "helldivers"
-      ],
-      "isAgent": false
-    },
-    {
       "id": "388166303288000522",
       "username": "tansoner",
       "displayName": "Tansoner",
@@ -761,7 +825,7 @@
       "joinedAt": "2025-01-21T02:22:29.809000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 1,
-      "daysInService": 381,
+      "daysInService": 451,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -770,7 +834,9 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening",
+        "stars_reach"
       ],
       "isAgent": false
     },
@@ -782,7 +848,7 @@
       "joinedAt": "2024-07-23T23:03:20.540000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 1,
-      "daysInService": 562,
+      "daysInService": 632,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -798,47 +864,6 @@
       "isAgent": false
     },
     {
-      "id": "1288487982021607444",
-      "username": "fairchild_f",
-      "displayName": "Fairchild_F",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/1288487982021607444/d8a74c421311ce54389439fb19899913.png",
-      "joinedAt": "2025-01-21T15:21:47.585000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 381,
-      "rank": {
-        "code": "E4",
-        "name": "Decanus",
-        "category": "Enlisted"
-      },
-      "games": [],
-      "awards": [
-        "service"
-      ],
-      "isAgent": false
-    },
-    {
-      "id": "133186449142054912",
-      "username": "tungurahua",
-      "displayName": "Tung",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/133186449142054912/2fa969c9f307c731160cf9ccd3024238.png",
-      "joinedAt": "2025-07-15T23:55:01.307000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 0,
-      "daysInService": 205,
-      "rank": {
-        "code": "E4",
-        "name": "Decanus",
-        "category": "Enlisted"
-      },
-      "games": [],
-      "awards": [
-        "service",
-        "joint_operations"
-      ],
-      "isAgent": false
-    },
-    {
       "id": "142463934052433920",
       "username": "luckylance",
       "displayName": "luckylance",
@@ -846,7 +871,7 @@
       "joinedAt": "2025-05-31T21:41:09.356000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 250,
+      "daysInService": 320,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -869,7 +894,7 @@
       "joinedAt": "2025-07-10T15:34:20.481000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 211,
+      "daysInService": 280,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -878,7 +903,8 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -890,7 +916,7 @@
       "joinedAt": "2025-04-21T15:42:46.720000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 291,
+      "daysInService": 360,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -898,7 +924,8 @@
       },
       "games": [],
       "awards": [
-        "service"
+        "service",
+        "stars_reach"
       ],
       "isAgent": false
     },
@@ -910,7 +937,7 @@
       "joinedAt": "2025-07-06T05:09:26.538000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 215,
+      "daysInService": 285,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -919,7 +946,8 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -931,7 +959,7 @@
       "joinedAt": "2025-07-29T04:08:46.827000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 192,
+      "daysInService": 262,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -955,13 +983,14 @@
       "joinedAt": "2025-08-28T00:22:00.296000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 162,
+      "daysInService": 232,
       "rank": {
         "code": "E4",
         "name": "Decanus",
         "category": "Enlisted"
       },
       "games": [
+        "Helldivers 2",
         "Elder Scrolls Online"
       ],
       "awards": [
@@ -969,7 +998,10 @@
         "elder_scrolls",
         "joint_operations",
         "joint_training",
-        "recruiter"
+        "recruiter",
+        "dune_awakening",
+        "war_thunder",
+        "helldivers"
       ],
       "isAgent": true
     },
@@ -981,7 +1013,7 @@
       "joinedAt": "2025-07-19T04:34:21.480000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 202,
+      "daysInService": 272,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -990,7 +1022,8 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -1002,7 +1035,7 @@
       "joinedAt": "2025-07-22T05:04:31.256000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 199,
+      "daysInService": 269,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -1011,7 +1044,8 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -1023,7 +1057,7 @@
       "joinedAt": "2025-09-03T19:24:15.698000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 155,
+      "daysInService": 225,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -1032,7 +1066,8 @@
       "games": [],
       "awards": [
         "service",
-        "joint_operations"
+        "joint_operations",
+        "dune_awakening"
       ],
       "isAgent": false
     },
@@ -1044,15 +1079,18 @@
       "joinedAt": "2025-08-30T01:43:30.704000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 160,
+      "daysInService": 230,
       "rank": {
         "code": "E4",
         "name": "Decanus",
         "category": "Enlisted"
       },
-      "games": [],
+      "games": [
+        "Helldivers 2"
+      ],
       "awards": [
-        "service"
+        "service",
+        "helldivers"
       ],
       "isAgent": false
     },
@@ -1064,7 +1102,7 @@
       "joinedAt": "2025-05-13T23:59:56.335000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 268,
+      "daysInService": 338,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -1072,7 +1110,8 @@
       },
       "games": [],
       "awards": [
-        "service"
+        "service",
+        "stars_reach"
       ],
       "isAgent": false
     },
@@ -1084,7 +1123,7 @@
       "joinedAt": "2025-07-07T02:27:32.811000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 214,
+      "daysInService": 284,
       "rank": {
         "code": "E4",
         "name": "Decanus",
@@ -1107,10 +1146,10 @@
       "joinedAt": "2026-01-28T01:05:03.599000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 9,
+      "daysInService": 79,
       "rank": {
-        "code": "E1",
-        "name": "Tiron",
+        "code": "E3",
+        "name": "Miles Gregarius",
         "category": "Enlisted"
       },
       "games": [
@@ -1118,8 +1157,63 @@
       ],
       "awards": [
         "service",
-        "colonial_marines"
+        "colonial_marines",
+        "war_thunder"
       ],
+      "isAgent": false
+    },
+    {
+      "id": "145413356621135873",
+      "username": "bromigo_",
+      "displayName": "bromigo",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/145413356621135873/215024a9ea8f67b8b35896808ff3ec31.png",
+      "joinedAt": "2026-04-14T05:24:53.745000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 3,
+      "rank": {
+        "code": "E1",
+        "name": "Tiron",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [],
+      "isAgent": false
+    },
+    {
+      "id": "1017075809757970483",
+      "username": "glassesm.",
+      "displayName": "GlassesM",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1017075809757970483/f78823e128932616df549b88f08522d2.png",
+      "joinedAt": "2026-04-15T12:24:55.207000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 1,
+      "rank": {
+        "code": "E1",
+        "name": "Tiron",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [],
+      "isAgent": false
+    },
+    {
+      "id": "1209237014097166441",
+      "username": "kanobe0104",
+      "displayName": "Kenobi",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1209237014097166441/ea590a4513f012780784cd4e0f1dee16.png",
+      "joinedAt": "2026-04-14T15:09:30.569000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 2,
+      "rank": {
+        "code": "E1",
+        "name": "Tiron",
+        "category": "Enlisted"
+      },
+      "games": [],
+      "awards": [],
       "isAgent": false
     },
     {
@@ -1129,8 +1223,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/116001859822419977/aa25b5fc06f1071a21f87b3f8e177a13.png",
       "joinedAt": "2020-03-11T20:37:40.731000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 5,
-      "daysInService": 2157,
+      "yearsOfService": 6,
+      "daysInService": 2227,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1153,7 +1247,7 @@
       "joinedAt": "2021-06-28T02:51:49.641000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1684,
+      "daysInService": 1754,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1173,12 +1267,12 @@
     {
       "id": "126731780106616832",
       "username": "flowvector",
-      "displayName": "Flux-Vector",
+      "displayName": "Flux-Tree",
       "avatarUrl": "https://cdn.discordapp.com/avatars/126731780106616832/e71fd06141bb5a56ffb4a80a2f8caad1.png",
       "joinedAt": "2023-03-15T02:27:59.761000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 2,
-      "daysInService": 1059,
+      "yearsOfService": 3,
+      "daysInService": 1129,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1203,7 +1297,7 @@
       "joinedAt": "2020-04-27T16:27:56.189000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 2111,
+      "daysInService": 2180,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1227,8 +1321,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/141289033245392896/b1750705a512554a4a50243cc6fa7f66.png",
       "joinedAt": "2016-05-19T22:16:28.704000+00:00",
       "historicalJoinDate": "2013-02-07T02:49:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4747,
+      "yearsOfService": 13,
+      "daysInService": 4817,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1242,7 +1336,9 @@
         "commendation",
         "recruiter"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Jungels",
+      "forumPosts": 255
     },
     {
       "id": "143984311534616576",
@@ -1252,7 +1348,7 @@
       "joinedAt": "2016-05-31T01:55:31.013000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3538,
+      "daysInService": 3608,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1274,7 +1370,7 @@
       "joinedAt": "2023-12-01T23:36:22.291000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 797,
+      "daysInService": 867,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1302,7 +1398,7 @@
       "joinedAt": "2017-06-08T02:17:50.129000+00:00",
       "historicalJoinDate": "2013-07-05T16:48:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4599,
+      "daysInService": 4668,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1315,7 +1411,9 @@
         "achievement",
         "commendation"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Lodowar",
+      "forumPosts": 1
     },
     {
       "id": "154670147850731522",
@@ -1325,7 +1423,7 @@
       "joinedAt": "2016-05-12T07:06:00.738000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3557,
+      "daysInService": 3627,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1346,8 +1444,8 @@
       "avatarUrl": null,
       "joinedAt": "2016-05-12T02:34:20.864000+00:00",
       "historicalJoinDate": "2013-03-12T05:12:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4714,
+      "yearsOfService": 13,
+      "daysInService": 4784,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1360,7 +1458,9 @@
         "achievement",
         "commendation"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Bonetti",
+      "forumPosts": 30
     },
     {
       "id": "164427970482667520",
@@ -1370,13 +1470,14 @@
       "joinedAt": "2016-05-12T07:06:20.167000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3557,
+      "daysInService": 3627,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
         "category": "Reserves"
       },
       "games": [
+        "Helldivers 2",
         "Elder Scrolls Online",
         "Star Wars: Galaxies"
       ],
@@ -1386,7 +1487,8 @@
         "achievement",
         "elder_scrolls",
         "swtor",
-        "swg"
+        "swg",
+        "helldivers"
       ],
       "isAgent": false
     },
@@ -1398,7 +1500,7 @@
       "joinedAt": "2016-08-19T05:31:19.539000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3458,
+      "daysInService": 3528,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1413,29 +1515,6 @@
       "isAgent": false
     },
     {
-      "id": "173679004883091457",
-      "username": "dralzen",
-      "displayName": "Dralzen",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/173679004883091457/b628415ba354a76a91d16515146c97c8.png",
-      "joinedAt": "2016-05-10T22:27:24.757000+00:00",
-      "historicalJoinDate": "2013-05-18T20:58:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4646,
-      "rank": {
-        "code": "RES",
-        "name": "Veteranus",
-        "category": "Reserves"
-      },
-      "games": [],
-      "awards": [
-        "service",
-        "good_conduct",
-        "achievement",
-        "commendation"
-      ],
-      "isAgent": false
-    },
-    {
       "id": "174947029150203904",
       "username": "ubersaints",
       "displayName": "Longfellow",
@@ -1443,7 +1522,7 @@
       "joinedAt": "2016-05-11T21:20:01.695000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3557,
+      "daysInService": 3627,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1472,7 +1551,7 @@
       "joinedAt": "2021-05-14T15:10:17.184000+00:00",
       "historicalJoinDate": "2011-02-05T00:04:00.000Z",
       "yearsOfService": 15,
-      "daysInService": 5480,
+      "daysInService": 5550,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1492,9 +1571,12 @@
         "joint_operations",
         "joint_training",
         "recruiter",
-        "swg"
+        "swg",
+        "dune_awakening"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Destroy",
+      "forumPosts": 165
     },
     {
       "id": "180125977429540865",
@@ -1504,7 +1586,7 @@
       "joinedAt": "2016-05-12T01:16:19.718000+00:00",
       "historicalJoinDate": "2008-01-27T17:13:00.000Z",
       "yearsOfService": 18,
-      "daysInService": 6585,
+      "daysInService": 6654,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1518,7 +1600,9 @@
         "commendation",
         "corona_aurea"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Campbell",
+      "forumPosts": 886
     },
     {
       "id": "180675714855600129",
@@ -1528,7 +1612,7 @@
       "joinedAt": "2020-07-04T17:17:20.400000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 2043,
+      "daysInService": 2112,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1550,7 +1634,7 @@
       "joinedAt": "2016-05-14T16:41:14.192000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3555,
+      "daysInService": 3624,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1572,7 +1656,7 @@
       "joinedAt": "2016-12-28T04:43:20.610000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3327,
+      "daysInService": 3397,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1594,7 +1678,7 @@
       "joinedAt": "2020-07-26T03:32:44.507000+00:00",
       "historicalJoinDate": "2013-06-30T01:00:00.000Z",
       "yearsOfService": 12,
-      "daysInService": 4604,
+      "daysInService": 4674,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1607,7 +1691,9 @@
         "achievement",
         "commendation"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Bikerb12",
+      "forumPosts": 10
     },
     {
       "id": "187695869171204097",
@@ -1616,8 +1702,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/187695869171204097/0396591501ab8b158f85a91e324cae16.png",
       "joinedAt": "2020-04-16T06:35:16.609000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 5,
-      "daysInService": 2122,
+      "yearsOfService": 6,
+      "daysInService": 2192,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1639,7 +1725,7 @@
       "joinedAt": "2016-06-11T03:45:37.499000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3527,
+      "daysInService": 3597,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1661,7 +1747,7 @@
       "joinedAt": "2016-08-23T01:34:23.880000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3454,
+      "daysInService": 3524,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1683,7 +1769,7 @@
       "joinedAt": "2017-07-06T11:34:21.973000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 8,
-      "daysInService": 3137,
+      "daysInService": 3206,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1694,7 +1780,8 @@
         "service",
         "good_conduct",
         "achievement",
-        "recruiter"
+        "recruiter",
+        "dune_awakening"
       ],
       "isAgent": true
     },
@@ -1706,7 +1793,7 @@
       "joinedAt": "2019-05-22T18:18:21.818000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 6,
-      "daysInService": 2452,
+      "daysInService": 2521,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1724,12 +1811,12 @@
     {
       "id": "223201985749450762",
       "username": "3ndwalker",
-      "displayName": "3ndwalker",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/223201985749450762/c74684961f76dfaedbaf93c55db3fb3b.png",
+      "displayName": "udntknweman",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/223201985749450762/b0c3d587616af90094d2645e328cb34b.png",
       "joinedAt": "2024-03-29T06:05:28.165000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 679,
+      "yearsOfService": 2,
+      "daysInService": 749,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1754,7 +1841,7 @@
       "joinedAt": "2016-09-18T00:06:03.406000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3428,
+      "daysInService": 3498,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1776,7 +1863,7 @@
       "joinedAt": "2016-09-12T03:51:27.601000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3434,
+      "daysInService": 3504,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1797,8 +1884,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/226187681560920074/a35fa14d2ad365fd4529e067c87f7b83.png",
       "joinedAt": "2024-02-25T16:24:42.364000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 712,
+      "yearsOfService": 2,
+      "daysInService": 781,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1810,7 +1897,8 @@
       "awards": [
         "service",
         "defense",
-        "helldivers"
+        "helldivers",
+        "war_thunder"
       ],
       "isAgent": false
     },
@@ -1822,7 +1910,7 @@
       "joinedAt": "2023-12-28T23:14:51.421000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 770,
+      "daysInService": 840,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1847,7 +1935,7 @@
       "joinedAt": "2023-07-27T19:52:11.242000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 924,
+      "daysInService": 994,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1871,8 +1959,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/231905245372874763/b8a1ac92b23cf32f726c3bcdb95f2711.png",
       "joinedAt": "2017-04-23T01:53:25.618000+00:00",
       "historicalJoinDate": "2013-03-11T19:14:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4715,
+      "yearsOfService": 13,
+      "daysInService": 4784,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1885,7 +1973,9 @@
         "achievement",
         "commendation"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Rojnaar",
+      "forumPosts": 3
     },
     {
       "id": "231948327237844992",
@@ -1895,7 +1985,7 @@
       "joinedAt": "2020-05-01T00:05:16.033000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 2107,
+      "daysInService": 2177,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1923,7 +2013,7 @@
       "joinedAt": "2020-04-22T12:11:23.110000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 2116,
+      "daysInService": 2185,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1947,8 +2037,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/241798585103024128/d9fefbe28e558be683663fe33a8ff0de.png",
       "joinedAt": "2020-02-26T19:30:54.814000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 5,
-      "daysInService": 2171,
+      "yearsOfService": 6,
+      "daysInService": 2241,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1969,8 +2059,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/251537367603740673/9d653dc96fe83916bc836b3e58cedcc0.png",
       "joinedAt": "2019-03-23T05:31:34.640000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 6,
-      "daysInService": 2512,
+      "yearsOfService": 7,
+      "daysInService": 2582,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -1997,7 +2087,7 @@
       "joinedAt": "2024-04-19T17:02:28.837000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 1,
-      "daysInService": 658,
+      "daysInService": 727,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2021,7 +2111,7 @@
       "joinedAt": "2017-01-10T04:41:34.237000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3314,
+      "daysInService": 3384,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2043,7 +2133,7 @@
       "joinedAt": "2017-01-11T07:30:36.229000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3313,
+      "daysInService": 3383,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2064,8 +2154,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/269643017583853569/33b18a0b76d5c08babda317512e2112d.png",
       "joinedAt": "2017-01-14T01:45:13.300000+00:00",
       "historicalJoinDate": "2013-03-24T16:47:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4702,
+      "yearsOfService": 13,
+      "daysInService": 4771,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2083,9 +2173,12 @@
         "defense",
         "recruiter",
         "helldivers",
-        "fallout76"
+        "fallout76",
+        "war_thunder"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Munster",
+      "forumPosts": 4
     },
     {
       "id": "276621332492451850",
@@ -2095,7 +2188,7 @@
       "joinedAt": "2022-11-18T22:15:41.883000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 3,
-      "daysInService": 1175,
+      "daysInService": 1245,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2116,7 +2209,7 @@
       "joinedAt": "2017-02-02T15:33:38.604000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 9,
-      "daysInService": 3291,
+      "daysInService": 3360,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2134,26 +2227,6 @@
       "isAgent": false
     },
     {
-      "id": "277740239194423297",
-      "username": "private_goodbloke",
-      "displayName": "Ghafl",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/277740239194423297/2ba50e3ff5f2547c38d357bf53011924.png",
-      "joinedAt": "2024-08-20T07:10:03.685000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 535,
-      "rank": {
-        "code": "RES",
-        "name": "Veteranus",
-        "category": "Reserves"
-      },
-      "games": [],
-      "awards": [
-        "service"
-      ],
-      "isAgent": false
-    },
-    {
       "id": "294262756167647242",
       "username": "kyzara_of_corbantis",
       "displayName": "Demiurge <MASC>",
@@ -2161,7 +2234,7 @@
       "joinedAt": "2023-09-09T23:28:37.157000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 880,
+      "daysInService": 950,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2186,7 +2259,7 @@
       "joinedAt": "2017-06-22T02:40:22.743000+00:00",
       "historicalJoinDate": "2008-02-06T10:05:00.000Z",
       "yearsOfService": 18,
-      "daysInService": 6575,
+      "daysInService": 6644,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2200,7 +2273,9 @@
         "commendation",
         "corona_aurea"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Revoco",
+      "forumPosts": 146
     },
     {
       "id": "301936029550510080",
@@ -2210,7 +2285,7 @@
       "joinedAt": "2023-07-30T10:55:16.686000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 922,
+      "daysInService": 991,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2235,7 +2310,7 @@
       "joinedAt": "2019-05-15T18:52:47.244000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 6,
-      "daysInService": 2459,
+      "daysInService": 2528,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2258,7 +2333,7 @@
       "joinedAt": "2017-04-23T01:37:02.248000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 8,
-      "daysInService": 3211,
+      "daysInService": 3281,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2279,8 +2354,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/310179692433113088/45a03dea82dff1ef38dbccfd4bc541b7.png",
       "joinedAt": "2023-04-13T03:55:13.245000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 2,
-      "daysInService": 1030,
+      "yearsOfService": 3,
+      "daysInService": 1100,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2305,32 +2380,7 @@
       "joinedAt": "2021-10-20T08:34:58.655000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1570,
-      "rank": {
-        "code": "RES",
-        "name": "Veteranus",
-        "category": "Reserves"
-      },
-      "games": [
-        "Star Wars: Galaxies"
-      ],
-      "awards": [
-        "service",
-        "good_conduct",
-        "swtor",
-        "swg"
-      ],
-      "isAgent": false
-    },
-    {
-      "id": "322095043294920705",
-      "username": "aalnasateen",
-      "displayName": "Aalna Sateen | Flame of Eternity",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/322095043294920705/c9918edac3573c3ce8d089663d79b961.png",
-      "joinedAt": "2023-08-23T11:25:57.162000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 2,
-      "daysInService": 898,
+      "daysInService": 1640,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2355,7 +2405,7 @@
       "joinedAt": "2017-07-11T02:17:47.954000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 8,
-      "daysInService": 3132,
+      "daysInService": 3202,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2377,7 +2427,7 @@
       "joinedAt": "2018-07-28T21:30:31.009000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 7,
-      "daysInService": 2749,
+      "daysInService": 2819,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2399,7 +2449,7 @@
       "joinedAt": "2017-07-30T13:21:23.403000+00:00",
       "historicalJoinDate": "2011-01-06T13:56:00.000Z",
       "yearsOfService": 15,
-      "daysInService": 5510,
+      "daysInService": 5579,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2414,7 +2464,9 @@
         "corona_aurea",
         "recruiter"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Striker",
+      "forumPosts": 353
     },
     {
       "id": "367819237252923393",
@@ -2424,7 +2476,7 @@
       "joinedAt": "2018-03-06T00:26:02.952000+00:00",
       "historicalJoinDate": "2013-01-11T02:01:00.000Z",
       "yearsOfService": 13,
-      "daysInService": 4774,
+      "daysInService": 4844,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2437,7 +2489,9 @@
         "achievement",
         "commendation"
       ],
-      "isAgent": false
+      "isAgent": false,
+      "forumUsername": "Toomey",
+      "forumPosts": 21
     },
     {
       "id": "371092240329736193",
@@ -2447,7 +2501,7 @@
       "joinedAt": "2023-11-30T18:48:18.742000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 799,
+      "daysInService": 868,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2471,8 +2525,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/388164489650110475/7eb3eb0843a10977dbf7a7f3137e7c88.png",
       "joinedAt": "2023-02-16T06:30:37.050000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 2,
-      "daysInService": 1086,
+      "yearsOfService": 3,
+      "daysInService": 1156,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2492,8 +2546,8 @@
       "avatarUrl": null,
       "joinedAt": "2024-04-13T04:43:32.574000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 664,
+      "yearsOfService": 2,
+      "daysInService": 734,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2513,7 +2567,7 @@
       "joinedAt": "2026-01-07T17:33:37.331000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 30,
+      "daysInService": 99,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2536,8 +2590,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/409726615237558272/4b9ab219a910f5e9f4dcad16fa99cfba.png",
       "joinedAt": "2018-03-06T03:44:14.262000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 7,
-      "daysInService": 2894,
+      "yearsOfService": 8,
+      "daysInService": 2964,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2559,7 +2613,7 @@
       "joinedAt": "2023-08-24T04:03:29.501000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 897,
+      "daysInService": 967,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2584,7 +2638,7 @@
       "joinedAt": "2021-05-08T02:02:40.896000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1735,
+      "daysInService": 1805,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2604,8 +2658,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/484601527198285825/c9e7048f498ea2f0b879872cf2d292c3.png",
       "joinedAt": "2024-04-02T10:39:54.459000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 1,
-      "daysInService": 675,
+      "yearsOfService": 2,
+      "daysInService": 744,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2625,7 +2679,7 @@
       "joinedAt": "2022-01-04T00:50:04.742000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1494,
+      "daysInService": 1564,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2645,8 +2699,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/537332237507756043/ca8e7be2cf7453c9e9f7e2a0cea015ee.png",
       "joinedAt": "2019-02-08T23:55:20.949000+00:00",
       "historicalJoinDate": "2013-03-13T15:34:00.000Z",
-      "yearsOfService": 12,
-      "daysInService": 4713,
+      "yearsOfService": 13,
+      "daysInService": 4782,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2660,7 +2714,9 @@
         "commendation",
         "recruiter"
       ],
-      "isAgent": true
+      "isAgent": true,
+      "forumUsername": "Jenkins",
+      "forumPosts": 11
     },
     {
       "id": "543853965155106816",
@@ -2670,7 +2726,7 @@
       "joinedAt": "2023-11-16T00:18:47.247000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 813,
+      "daysInService": 883,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2695,7 +2751,7 @@
       "joinedAt": "2021-08-24T00:14:22.351000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 4,
-      "daysInService": 1627,
+      "daysInService": 1697,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2720,7 +2776,7 @@
       "joinedAt": "2023-05-20T22:45:37.358000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 992,
+      "daysInService": 1062,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2745,7 +2801,7 @@
       "joinedAt": "2024-08-20T19:38:59.072000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 1,
-      "daysInService": 534,
+      "daysInService": 604,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2765,7 +2821,7 @@
       "joinedAt": "2023-08-01T03:17:24.598000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 920,
+      "daysInService": 990,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2790,7 +2846,7 @@
       "joinedAt": "2020-07-26T02:59:09.552000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 5,
-      "daysInService": 2021,
+      "daysInService": 2091,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2812,7 +2868,7 @@
       "joinedAt": "2023-11-17T04:18:55.798000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 812,
+      "daysInService": 882,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2837,7 +2893,7 @@
       "joinedAt": "2022-07-15T14:58:08.718000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 3,
-      "daysInService": 1302,
+      "daysInService": 1371,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2862,7 +2918,7 @@
       "joinedAt": "2023-11-15T02:59:55.683000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 814,
+      "daysInService": 884,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2887,7 +2943,7 @@
       "joinedAt": "2024-01-20T21:18:24.257000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 747,
+      "daysInService": 817,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2908,7 +2964,7 @@
       "joinedAt": "2023-06-20T13:35:24.660000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 962,
+      "daysInService": 1031,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2932,8 +2988,8 @@
       "avatarUrl": "https://cdn.discordapp.com/avatars/924385713351450675/c7df2e711412d7a22af2ecac1de4f14c.png",
       "joinedAt": "2023-04-05T23:48:23.982000+00:00",
       "historicalJoinDate": null,
-      "yearsOfService": 2,
-      "daysInService": 1037,
+      "yearsOfService": 3,
+      "daysInService": 1107,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2960,7 +3016,7 @@
       "joinedAt": "2025-06-21T05:05:54.899000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 230,
+      "daysInService": 300,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -2977,6 +3033,24 @@
       "isAgent": false
     },
     {
+      "id": "1035686804348735579",
+      "username": "tree0807",
+      "displayName": "tree0807",
+      "avatarUrl": "https://cdn.discordapp.com/avatars/1035686804348735579/34f85bcbbcc1dcaebd23e472375e1d2b.png",
+      "joinedAt": "2026-04-15T02:20:09.634000+00:00",
+      "historicalJoinDate": null,
+      "yearsOfService": 0,
+      "daysInService": 2,
+      "rank": {
+        "code": "RES",
+        "name": "Veteranus",
+        "category": "Reserves"
+      },
+      "games": [],
+      "awards": [],
+      "isAgent": false
+    },
+    {
       "id": "1117026342945427486",
       "username": "dacenn",
       "displayName": "Dacenn",
@@ -2984,7 +3058,7 @@
       "joinedAt": "2023-06-10T12:26:53.117000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 972,
+      "daysInService": 1041,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3009,7 +3083,7 @@
       "joinedAt": "2023-09-25T03:49:51.893000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 2,
-      "daysInService": 865,
+      "daysInService": 935,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3034,7 +3108,7 @@
       "joinedAt": "2024-08-08T14:53:34.660000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 1,
-      "daysInService": 547,
+      "daysInService": 616,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3054,27 +3128,7 @@
       "joinedAt": "2025-07-26T22:50:57.939000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 194,
-      "rank": {
-        "code": "RES",
-        "name": "Veteranus",
-        "category": "Reserves"
-      },
-      "games": [],
-      "awards": [
-        "service"
-      ],
-      "isAgent": false
-    },
-    {
-      "id": "1311816797858566237",
-      "username": "harucats0640",
-      "displayName": "🌙",
-      "avatarUrl": "https://cdn.discordapp.com/avatars/1311816797858566237/f29296ebd5d15e83fb1375e14d62ad73.png",
-      "joinedAt": "2025-07-03T05:10:35.119000+00:00",
-      "historicalJoinDate": null,
-      "yearsOfService": 0,
-      "daysInService": 218,
+      "daysInService": 264,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3094,7 +3148,7 @@
       "joinedAt": "2026-02-02T10:35:28.854000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 4,
+      "daysInService": 73,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3112,7 +3166,7 @@
       "joinedAt": "2026-02-03T21:35:17.156000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 2,
+      "daysInService": 72,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3130,7 +3184,7 @@
       "joinedAt": "2025-11-12T00:53:32.579000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 86,
+      "daysInService": 156,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3150,7 +3204,7 @@
       "joinedAt": "2026-02-04T23:18:05.858000+00:00",
       "historicalJoinDate": null,
       "yearsOfService": 0,
-      "daysInService": 1,
+      "daysInService": 71,
       "rank": {
         "code": "RES",
         "name": "Veteranus",
@@ -3160,5 +3214,6 @@
       "awards": [],
       "isAgent": false
     }
-  ]
+  ],
+  "historicalDataMerged": true
 }

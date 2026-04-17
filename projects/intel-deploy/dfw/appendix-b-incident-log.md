@@ -1,6 +1,16 @@
-# Appendix B: Incident Log (2020–Present)
+# Appendix B: Incident Log
 
 ## Chronological Incident Summary
+
+### Pre-2020: Islamist Terrorism Cases (DFW Nexus)
+
+*Added 2026-03-01 for historical context*
+
+| Date | Incident | Location | Groups/Actors | Outcome |
+|------|----------|----------|---------------|---------|
+| 2004-2008 | Holy Land Foundation trial | Richardson, TX (HQ) / Dallas federal court | HLF, Hamas | Largest terrorism financing case in US history. 5 leaders convicted of funneling $12M+ to Hamas. 300+ unindicted co-conspirators (CAIR, ISNA, NAIT). |
+| May 3, 2015 | Curtis Culwell Center attack | Garland, TX | ISIS (Elton Simpson, Nadir Soofi) | First ISIS-claimed attack on US soil. Two attackers from Phoenix pledged ISIS allegiance, attacked "Draw Muhammad" event. Both killed by security officer. FBI had prior knowledge of at least one attacker. |
+| Mar 5, 2017 | Said Azzam Mohamad Rahim arrested | DFW International Airport | ISIS | Dallas resident arrested boarding flight to Jordan. ISIS recruiter via Zello app, moderated "State of the Islamic Caliphate" channel. Sentenced to 30 years. |
 
 ### 2020
 

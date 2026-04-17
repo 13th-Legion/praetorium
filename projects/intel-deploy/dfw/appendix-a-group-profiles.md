@@ -297,6 +297,151 @@
 
 ---
 
+## A.3 Islamist Organizations
+
+*Added 2026-03-01. Full detailed assessment with network map: `DFW_ISLAMIC_ORGANIZATIONS_ASSESSMENT.md`*
+
+### CAIR-DFW (Council on American-Islamic Relations — Dallas-Fort Worth)
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Islamic advocacy / civil rights organization |
+| **Structure** | Regional chapter of national CAIR |
+| **Ideology** | Muslim Brotherhood legacy; Hamas network connections |
+| **DFW Presence** | Active; DFW area |
+| **Founded by** | Ghassan Elashi (convicted HLF terrorist financier) |
+| **Key Personnel** | Mustafaa Carroll (head), Khalil Meek (former VP) |
+| **Federal Status** | Unindicted co-conspirator in HLF trial; designated terrorist org by TX (Nov 2025) |
+| **Armed Capability** | NO (legal/advocacy organization) |
+| **Threat Level** | **ELEVATED** |
+
+---
+
+### Baitulmaal
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Islamic charity |
+| **Location** | Irving, TX |
+| **Head** | Mazen Mokhtar (former Taliban/jihadist fundraiser; prosecution dropped) |
+| **Ideology** | Hamas-aligned |
+| **Key Connections** | Works with Hamas proxies in Gaza (Unlimited Friends Assn, Yazour Charitable Assn, Generosity Without Limit Assn) |
+| **Key Personnel** | Yousef Abdallah (documented praise for killing of Jews) |
+| **Armed Capability** | NO |
+| **Threat Level** | **ELEVATED** |
+
+---
+
+### Muslim American Society — Dallas (MAS Dallas)
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Islamic community organization |
+| **Location** | 1515 Blake Dr, Richardson, TX 75081 |
+| **Ideology** | Muslim Brotherhood legacy |
+| **Key Activity** | Hosted 2024 event with convicted HLF official Abdulrahman Odeh; supported pro-Hamas student encampments |
+| **Armed Capability** | NO |
+| **Threat Level** | **ELEVATED** |
+
+---
+
+### Muslim Legal Fund of America (MLFA)
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Legal advocacy / nonprofit |
+| **Location** | Richardson/DFW area |
+| **Key Personnel** | Khalil Meek (former exec dir; also former CAIR-DFW VP) |
+| **Key Activity** | Supported pro-Hamas student encampments; co-sued TX over CAIR designation |
+| **Armed Capability** | NO |
+| **Threat Level** | **MODERATE-HIGH** |
+
+---
+
+### Qalam Institute
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Deobandi Islamic seminary |
+| **Location** | Carrollton, TX |
+| **Ideology** | Deobandi (same sect as Taliban) |
+| **Founders** | Hussain Kamani, Abdul Nasir Jangda |
+| **Key Activity** | Training hundreds of imams placed at mosques nationally |
+| **Documented Extremism** | Slavery permissible, stoning for adultery, wife-beating, Western society "filth," sex slavery defended, killing apostates advocated |
+| **Armed Capability** | NO (ideological/educational institution) |
+| **Threat Level** | **HIGH** |
+
+---
+
+### East Plano Islamic Center (EPIC) — Yasir Qadhi
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Salafi mosque / community center |
+| **Location** | 1360 Star Court, Plano, TX 75074 |
+| **Leader** | Yasir Qadhi |
+| **Ideology** | Salafi |
+| **Documented Extremism** | Refused to condemn Oct 7; Holocaust denial; advocated killing homosexuals; antisemitic rhetoric |
+| **Special Project** | "The Meadow" (formerly EPIC City) — 402-acre mosque-centered residential community |
+| **Armed Capability** | NO |
+| **Threat Level** | **HIGH** |
+
+---
+
+### Valley Ranch Islamic Center (VRIC) — Omar Suleiman
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Salafi mosque / community center |
+| **Location** | 9940 Valley Ranch Pkwy W, Irving, TX 75063 |
+| **Resident Scholar** | Omar Suleiman (founder, Yaqeen Institute) |
+| **Ideology** | Salafi (via AlMaghrib Institute) |
+| **Influence** | Major national reach via social media and speaking circuit |
+| **Armed Capability** | NO |
+| **Threat Level** | **ELEVATED** |
+
+---
+
+### Masjid Yaseen (Tablighi Jamaat Hub)
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Mosque / Tablighi Jamaat operational base |
+| **Location** | 1601 W. Campbell Road, Garland, TX 75044 |
+| **Ideology** | Tablighi Jamaat (Deobandi offshoot) |
+| **Significance** | One of Tablighi Jamaat's main North American bases of operations |
+| **Note** | Same city as 2015 Curtis Culwell Center ISIS attack |
+| **Armed Capability** | NO |
+| **Threat Level** | **MODERATE** |
+
+---
+
+### Islamic Association of Collin County / Plano Masjid
+
+| Attribute | Details |
+|-----------|---------|
+| **Type** | Mosque / community center |
+| **Location** | 6401 Independence Pkwy, Plano, TX 75023 |
+| **Imam** | Arsalan Haque (advocates wife-beating, praises Islamic slavery) |
+| **Former Imam** | Azhar Subedar (Tablighi Jamaat trained, UK) |
+| **Public Funding** | ~$1M from City of Plano (2017, 2020) |
+| **Armed Capability** | NO |
+| **Threat Level** | **MODERATE** |
+
+---
+
+### Islamist Organizations Overall
+
+| Category | General Pattern |
+|----------|-----------------|
+| Gender | Almost exclusively male leadership; mixed congregations |
+| Race/Ethnicity | Diverse: Arab, South Asian, African, African-American, convert communities |
+| Age | Wide range; leadership 35-65; congregations all ages |
+| Primary Locations | Richardson, Irving, Plano/Carrollton, Garland |
+| Funding | Mix of private donations, zakat, and notably state/local government grants |
+
+---
+
 ## A.4 Monitoring Priority Matrix
 
 ### Left-Wing (Client Priority)
@@ -320,3 +465,16 @@
 | **MEDIUM** | Three Percenters | J6 connections |
 | **MEDIUM** | Patriot Front | HQ in DFW |
 | **LOW** | Others | Lower threat profile |
+
+### Islamist (Added 2026-03-01)
+
+| Priority | Group | Reason |
+|----------|-------|--------|
+| **HIGH** | CAIR-DFW / HLF Network | Direct lineage to convicted Hamas financing; designated terrorist org by TX |
+| **HIGH** | Qalam Institute | Deobandi seminary pipeline producing extremist clergy nationally |
+| **HIGH** | EPIC / Yasir Qadhi | Salafi hub; refused to condemn Oct 7; Holocaust denial; building residential enclave |
+| **HIGH** | Baitulmaal | Active Hamas proxy connections from Irving, TX |
+| **MEDIUM** | Valley Ranch / Suleiman | National Salafi influence; AlMaghrib Institute product |
+| **MEDIUM** | MAS Dallas / MLFA | HLF network overlap; pro-Hamas activism |
+| **MEDIUM** | Masjid Yaseen (Garland) | Tablighi Jamaat North American hub |
+| **LOW** | IACC / Plano Masjid | Extremist preaching; public funding despite TJ connections |

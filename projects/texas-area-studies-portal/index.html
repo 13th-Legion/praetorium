@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Area Studies Portal - S2 Intelligence</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
             --bg-dark: #1a1a2e;
             --bg-card: #16213e;
-            --accent: #e94560;
-            --accent-hover: #ff6b6b;
+            --accent: #c9a227;
+            --accent-hover: #e6b830;
             --text: #eaeaea;
             --text-muted: #a0a0a0;
             --border: #2a2a4a;
@@ -38,20 +34,9 @@
             gap: 20px;
         }
         
-        .header img {
-            height: 80px;
-            width: auto;
-        }
-        
-        .header-text h1 {
-            font-size: 1.5rem;
-            color: var(--accent);
-        }
-        
-        .header-text p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
+        .header img { height: 80px; width: auto; }
+        .header-text h1 { font-size: 1.5rem; color: var(--accent); }
+        .header-text p { color: var(--text-muted); font-size: 0.9rem; }
         
         .classification {
             background: #8b0000;
@@ -63,37 +48,15 @@
             letter-spacing: 1px;
         }
         
-        .main-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px;
-        }
-        
-        .map-section {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .map-section h2 {
-            margin-bottom: 20px;
-            color: var(--text-muted);
-            font-weight: normal;
-        }
-        
-        .texas-map {
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        .map-container {
-            position: relative;
-            display: inline-block;
-        }
-        
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 40px; }
+        .map-section { text-align: center; margin-bottom: 40px; }
+        .map-section h2 { margin-bottom: 20px; color: var(--text-muted); font-weight: normal; }
+        .texas-map { max-width: 500px; margin: 0 auto; }
+        .map-container { position: relative; display: inline-block; }
         .texas-img {
             width: 100%;
             height: auto;
-            filter: invert(1) brightness(0.5) sepia(1) hue-rotate(300deg) saturate(3);
+            filter: invert(1) brightness(0.5) sepia(1) hue-rotate(10deg) saturate(3);
         }
         
         .city-marker {
@@ -107,9 +70,7 @@
             transition: transform 0.2s;
         }
         
-        .city-marker:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-        }
+        .city-marker:hover { transform: translate(-50%, -50%) scale(1.1); }
         
         .marker-dot {
             width: 16px;
@@ -117,12 +78,12 @@
             background: var(--accent);
             border: 3px solid var(--text);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+            box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
         }
         
         .city-marker:hover .marker-dot {
             background: var(--accent-hover);
-            box-shadow: 0 0 20px rgba(233, 69, 96, 0.8);
+            box-shadow: 0 0 20px rgba(201, 162, 39, 0.8);
         }
         
         .marker-label {
@@ -157,34 +118,32 @@
             transform: translateY(-2px);
         }
         
-        .card h3 {
-            color: var(--accent);
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-        }
-        
-        .card p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
+        .card h3 { color: var(--accent); margin-bottom: 10px; font-size: 1.2rem; }
+        .card p { color: var(--text-muted); font-size: 0.9rem; }
+        .card .meta { margin-top: 15px; font-size: 0.75rem; color: #666; }
         
         .card .status {
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 0.8rem;
             padding: 5px 10px;
             border-radius: 4px;
             display: inline-block;
-        }
-        
-        .status.ready {
-            background: #1a4d1a;
+            background: #1a4a1a;
             color: #4ade80;
         }
         
-        .status.pending {
-            background: #4d4d1a;
-            color: #fcd34d;
+        .threat-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 10px;
         }
+        
+        .threat-elevated { background: #ff8800; color: #000; }
+        .threat-moderate { background: #ffaa00; color: #000; }
+        .threat-low { background: #44ff44; color: #000; }
         
         .footer {
             text-align: center;
@@ -194,16 +153,27 @@
             border-top: 1px solid var(--border);
             margin-top: 40px;
         }
+        
+        .methodology {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 40px;
+        }
+        
+        .methodology h3 { color: var(--accent); margin-bottom: 15px; }
+        .methodology ul { margin-left: 20px; color: var(--text-muted); }
     </style>
 </head>
 <body>
     <div class="classification">UNCLASSIFIED // FOR OFFICIAL USE ONLY</div>
     
     <header class="header">
-        <img src="logo.png" alt="TSM Logo">
+        <img src="logo.png" alt="13th Legion">
         <div class="header-text">
             <h1>Texas Area Studies Portal</h1>
-            <p>S2: Intelligence & Security State Shop</p>
+            <p>S2: Intelligence & Security</p>
         </div>
     </header>
     
@@ -212,32 +182,33 @@
             <h2>Select a Region</h2>
             <div class="texas-map">
                 <div class="map-container">
-                    <img src="texas-outline.png" alt="Texas" usemap="#texas-regions" class="texas-img">
-                    <map name="texas-regions">
-                        <area shape="circle" coords="434,351,30" href="../austin/index.html" alt="Austin" title="Austin">
-                        <area shape="circle" coords="452,508,30" href="../corpus-christi/index.html" alt="Corpus Christi" title="Corpus Christi">
-                        <area shape="circle" coords="481,217,35" href="../dfw/index.html" alt="DFW" title="Dallas-Fort Worth">
-                        <area shape="circle" coords="551,394,35" href="../houston/index.html" alt="Houston" title="Houston">
-                        <area shape="circle" coords="399,414,30" href="../san-antonio/index.html" alt="San Antonio" title="San Antonio">
-                    </map>
-                    <!-- City markers overlay (positions calculated from lat/long against Texas bounding box) -->
-                    <a href="../austin/index.html" class="city-marker" style="left: 67.6%; top: 56.4%;">
+                    <img src="texas-outline.png" alt="Texas" class="texas-img">
+                    
+                    <a href="/intel/austin/" class="city-marker" style="left: 67.6%; top: 56.4%;">
                         <span class="marker-dot"></span>
                         <span class="marker-label">Austin</span>
                     </a>
-                    <a href="../corpus-christi/index.html" class="city-marker" style="left: 70.4%; top: 81.6%;">
+                    <a href="/intel/corpus-christi/" class="city-marker" style="left: 70.4%; top: 81.6%;">
                         <span class="marker-dot"></span>
                         <span class="marker-label">Corpus Christi</span>
                     </a>
-                    <a href="../dfw/index.html" class="city-marker" style="left: 74.9%; top: 34.9%;">
+                    <a href="/intel/dfw/" class="city-marker" style="left: 74.9%; top: 34.9%;">
                         <span class="marker-dot"></span>
                         <span class="marker-label">DFW</span>
                     </a>
-                    <a href="../houston/index.html" class="city-marker" style="left: 85.9%; top: 63.2%;">
+                    <a href="/intel/el-paso/" class="city-marker" style="left: 12%; top: 47%;">
+                        <span class="marker-dot"></span>
+                        <span class="marker-label">El Paso</span>
+                    </a>
+                    <a href="/intel/houston/" class="city-marker" style="left: 85.9%; top: 63.2%;">
                         <span class="marker-dot"></span>
                         <span class="marker-label">Houston</span>
                     </a>
-                    <a href="../san-antonio/index.html" class="city-marker" style="left: 62.1%; top: 66.4%;">
+                    <a href="/intel/lubbock/" class="city-marker" style="left: 38%; top: 26%;">
+                        <span class="marker-dot"></span>
+                        <span class="marker-label">Lubbock</span>
+                    </a>
+                    <a href="/intel/san-antonio/" class="city-marker" style="left: 62.1%; top: 66.4%;">
                         <span class="marker-dot"></span>
                         <span class="marker-label">San Antonio</span>
                     </a>
@@ -246,41 +217,72 @@
         </section>
         
         <section class="cards-grid">
-            <a href="../austin/index.html" class="card">
-                <h3>Austin</h3>
-                <p>State capital analysis covering UT activism, Capitol protest activity, and legislative session dynamics.</p>
-                <span class="status ready">✓ Complete</span>
+            <a href="/intel/austin/" class="card">
+                <h3>Austin <span class="threat-badge threat-elevated">ELEVATED</span></h3>
+                <p>State capital analysis covering UT activism, Capitol protest activity, legislative session dynamics.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
             </a>
             
-            <a href="../corpus-christi/index.html" class="card">
-                <h3>Corpus Christi</h3>
-                <p>Coastal region covering NAS proximity, port/refinery infrastructure, and South Texas corridor.</p>
-                <span class="status ready">✓ Complete</span>
+            <a href="/intel/corpus-christi/" class="card">
+                <h3>Corpus Christi <span class="threat-badge threat-low">LOW</span></h3>
+                <p>Coastal region covering NAS proximity, port/refinery infrastructure, environmental activism.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
             </a>
             
-            <a href="../dfw/index.html" class="card">
-                <h3>Dallas-Fort Worth</h3>
-                <p>Metroplex threat analysis covering Antifa networks, Elm Fork JBGC, and 2020-present civil unrest activity.</p>
-                <span class="status ready">✓ Complete</span>
+            <a href="/intel/dfw/" class="card">
+                <h3>Dallas-Fort Worth <span class="threat-badge threat-elevated">ELEVATED</span></h3>
+                <p>Metroplex threat analysis covering North Texas Antifa networks, Elm Fork JBGC, Prairieland incident intelligence.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
             </a>
             
-            <a href="../houston/index.html" class="card">
-                <h3>Houston</h3>
-                <p>Greater Houston area including PSL presence, port infrastructure considerations, and George Floyd sensitivity.</p>
-                <span class="status ready">✓ Complete</span>
+            <a href="/intel/el-paso/" class="card">
+                <h3>El Paso <span class="threat-badge threat-moderate">MODERATE</span></h3>
+                <p>Binational border region covering immigration activist networks, Walmart memorial sensitivity, Fort Bliss proximity.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
             </a>
             
-            <a href="../san-antonio/index.html" class="card">
-                <h3>San Antonio</h3>
-                <p>Military city assessment including JBSA proximity, border considerations, and Alamo-area activity.</p>
-                <span class="status ready">✓ Complete</span>
+            <a href="/intel/houston/" class="card">
+                <h3>Houston <span class="threat-badge threat-elevated">ELEVATED</span></h3>
+                <p>Greater Houston area including PSL stronghold, port infrastructure, George Floyd sensitivity.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
             </a>
+            
+            <a href="/intel/lubbock/" class="card">
+                <h3>Lubbock <span class="threat-badge threat-low">LOW</span></h3>
+                <p>West Texas hub covering Texas Tech activism, conservative political climate, DSA/student group activity.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
+            </a>
+            
+            <a href="/intel/san-antonio/" class="card">
+                <h3>San Antonio <span class="threat-badge threat-moderate">MODERATE</span></h3>
+                <p>Military city assessment including JBSA proximity, border considerations, Alamo-area activity.</p>
+                <span class="status">✓ IPB v2.0</span>
+                <div class="meta">February 2026 • Full IPB Methodology</div>
+            </a>
+        </section>
+        
+        <section class="methodology">
+            <h3>Methodology</h3>
+            <p style="margin-bottom: 15px; color: var(--text-muted);">All studies follow Army Intelligence Preparation of the Battlefield (IPB) doctrine:</p>
+            <ul>
+                <li><strong>FM 2-01.3</strong> — Intelligence Preparation of the Battlefield</li>
+                <li><strong>FM 2-0</strong> — Intelligence Operations</li>
+                <li><strong>TC 2-33.4</strong> — Intelligence Analysis</li>
+                <li><strong>FM 3-24</strong> — Counterinsurgency (ASCOPE Framework)</li>
+                <li><strong>FM 3-12</strong> — Cyberspace Operations (Info Warfare)</li>
+            </ul>
         </section>
     </main>
     
     <footer class="footer">
-        <p>Texas State Militia — S2: Intelligence & Security State Shop</p>
-        <p>January 2026</p>
+        <p>13th Legion • S2: Intelligence & Security</p>
+        <p>February 2026</p>
     </footer>
 </body>
 </html>

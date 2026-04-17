@@ -11,10 +11,30 @@ If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it, figure out w
 Before doing anything else:
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+3. Read `UNIT_CONTEXT.md` (if it exists) — unit-wide identity and naming
+4. Read `memory/YYYY-MM-DD.md` (today + yesterday + day before) for recent context
+5. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
 
 Don't ask permission. Just do it.
+
+## End of Session / End of Conversation
+
+When a conversation winds down or you sense the session is ending:
+1. **Write today's daily note** (`memory/YYYY-MM-DD.md`) — what happened, decisions made, problems solved, things to follow up on
+2. **Update MEMORY.md** if anything significant happened — new projects, preferences learned, infrastructure changes, lessons worth keeping
+3. **Don't rely on future-you to remember.** If it mattered, write it down NOW.
+
+What counts as "significant" for MEMORY.md:
+- Infrastructure changes (new services, config fixes, credentials)
+- Project milestones or decisions
+- Personal preferences or context learned about the user
+- Lessons learned from mistakes
+- Recurring issues and their fixes (so you don't solve them a third time)
+
+What stays in daily notes only:
+- Routine tasks that went smoothly
+- One-off questions with no lasting impact
+- Transient status checks
 
 ## Memory
 

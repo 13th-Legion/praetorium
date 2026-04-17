@@ -135,7 +135,7 @@
       "flags": 0,
       "banner": null,
       "accent_color": null,
-      "global_name": "Flux-Vector",
+      "global_name": "Flux-Tree",
       "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,
@@ -245,44 +245,6 @@
     "banner": null,
     "communication_disabled_until": null,
     "flags": 0,
-    "joined_at": "2025-07-15T23:55:01.307000+00:00",
-    "nick": "Tung",
-    "pending": false,
-    "premium_since": null,
-    "roles": [
-      "179985023607373824",
-      "326821477720522752",
-      "1138255198888931459",
-      "471727189025488896"
-    ],
-    "unusual_dm_activity_until": null,
-    "collectibles": null,
-    "display_name_styles": null,
-    "user": {
-      "id": "133186449142054912",
-      "username": "tungurahua",
-      "avatar": "2fa969c9f307c731160cf9ccd3024238",
-      "discriminator": "0",
-      "public_flags": 0,
-      "flags": 0,
-      "banner": null,
-      "accent_color": null,
-      "global_name": "Tungurahua",
-      "avatar_decoration_data": null,
-      "collectibles": null,
-      "display_name_styles": null,
-      "banner_color": null,
-      "clan": null,
-      "primary_guild": null
-    },
-    "mute": false,
-    "deaf": false
-  },
-  {
-    "avatar": null,
-    "banner": null,
-    "communication_disabled_until": null,
-    "flags": 0,
     "joined_at": "2016-05-19T22:16:28.704000+00:00",
     "nick": "Jungels",
     "pending": false,
@@ -320,8 +282,18 @@
       },
       "display_name_styles": null,
       "banner_color": null,
-      "clan": null,
-      "primary_guild": null
+      "clan": {
+        "identity_guild_id": "1467482863581659210",
+        "identity_enabled": true,
+        "tag": "PYXS",
+        "badge": "4ef966b9bdd3ca7155e184e893314cd6"
+      },
+      "primary_guild": {
+        "identity_guild_id": "1467482863581659210",
+        "identity_enabled": true,
+        "tag": "PYXS",
+        "badge": "4ef966b9bdd3ca7155e184e893314cd6"
+      }
     },
     "mute": false,
     "deaf": false
@@ -389,6 +361,42 @@
       "banner": null,
       "accent_color": null,
       "global_name": "Goddeloos / Bjos",
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-04-14T05:24:53.745000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [
+      "179985023607373824",
+      "326821477720522752"
+    ],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "145413356621135873",
+      "username": "bromigo_",
+      "avatar": "215024a9ea8f67b8b35896808ff3ec31",
+      "discriminator": "0",
+      "public_flags": 128,
+      "flags": 128,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "bromigo",
       "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,
@@ -591,13 +599,13 @@
         "identity_guild_id": "1285586035023020042",
         "identity_enabled": true,
         "tag": "SCA",
-        "badge": "cbe9bcde8c4bacb1a807fc338ad88e8d"
+        "badge": "6082c2553b03b47ccaea5203567df3cf"
       },
       "primary_guild": {
         "identity_guild_id": "1285586035023020042",
         "identity_enabled": true,
         "tag": "SCA",
-        "badge": "cbe9bcde8c4bacb1a807fc338ad88e8d"
+        "badge": "6082c2553b03b47ccaea5203567df3cf"
       }
     },
     "mute": false,
@@ -652,6 +660,7 @@
       "179985023607373824",
       "424278722192080897",
       "830084560724820000",
+      "446695304343846913",
       "812939607485841458",
       "1131980166122438686"
     ],
@@ -808,12 +817,18 @@
     "communication_disabled_until": null,
     "flags": 0,
     "joined_at": "2016-05-10T22:27:24.757000+00:00",
-    "nick": "Dralzen",
+    "nick": "Dralzen[47LG]",
     "pending": false,
     "premium_since": null,
     "roles": [
+      "179482607589785600",
       "179985023607373824",
-      "1131980166122438686"
+      "424278722192080897",
+      "446695304343846913",
+      "406136095395545088",
+      "765595242736386048",
+      "455749225515319308",
+      "765592732710076437"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -899,7 +914,7 @@
     "joined_at": "2016-05-10T06:36:19.893000+00:00",
     "nick": null,
     "pending": false,
-    "premium_since": "2025-06-06T22:13:56.461000+00:00",
+    "premium_since": null,
     "roles": [
       "179482607589785600",
       "179985023607373824",
@@ -908,12 +923,11 @@
       "406136095395545088",
       "471727189025488896",
       "471776406339190784",
-      "700232992198492160",
       "765595242736386048",
       "1058087377383477349",
       "1138255449939001344",
-      "455749225515319308",
       "1146595907211632833",
+      "455749225515319308",
       "812939607485841458",
       "461401559452876820"
     ],
@@ -934,18 +948,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      },
-      "primary_guild": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -1166,18 +1170,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      },
-      "primary_guild": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -1210,8 +1204,8 @@
       "accent_color": null,
       "global_name": "JPLewis316",
       "avatar_decoration_data": {
-        "asset": "a_2b4b5a191f89c65d042f15e854129822",
-        "sku_id": "1432550258147328050",
+        "asset": "a_8aba2a2cd94462352e6b0030e7fe3b76",
+        "sku_id": "1466991494467555390",
         "expires_at": null
       },
       "collectibles": {
@@ -1258,7 +1252,6 @@
       "765595242736386048",
       "830084560724820000",
       "1058087377383477349",
-      "1137168010562519112",
       "1138255198888931459",
       "1146595907211632833",
       "1249842357919285248",
@@ -1541,11 +1534,7 @@
       "banner": null,
       "accent_color": null,
       "global_name": "GambiOP",
-      "avatar_decoration_data": {
-        "asset": "a_e018d593f1b7da324878339a50e23f36",
-        "sku_id": "1428438924619022436",
-        "expires_at": null
-      },
+      "avatar_decoration_data": null,
       "collectibles": {
         "nameplate": {
           "sku_id": "1428438925046714408",
@@ -1770,19 +1759,29 @@
     "user": {
       "id": "223201985749450762",
       "username": "3ndwalker",
-      "avatar": "c74684961f76dfaedbaf93c55db3fb3b",
+      "avatar": "b0c3d587616af90094d2645e328cb34b",
       "discriminator": "0",
       "public_flags": 0,
       "flags": 0,
       "banner": null,
       "accent_color": null,
-      "global_name": "3ndwalker",
+      "global_name": "udntknweman",
       "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": null,
-      "primary_guild": null
+      "clan": {
+        "identity_guild_id": "1180089406921642024",
+        "identity_enabled": true,
+        "tag": "SYY",
+        "badge": "7f968d34689b032120d7a0f2a3d69b83"
+      },
+      "primary_guild": {
+        "identity_guild_id": "1180089406921642024",
+        "identity_enabled": true,
+        "tag": "SYY",
+        "badge": "7f968d34689b032120d7a0f2a3d69b83"
+      }
     },
     "mute": false,
     "deaf": false
@@ -2014,18 +2013,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "1358296765593423914",
-        "identity_enabled": true,
-        "tag": "HSTM",
-        "badge": "996e80daf66b0390f07eb02df26285a0"
-      },
-      "primary_guild": {
-        "identity_guild_id": "1358296765593423914",
-        "identity_enabled": true,
-        "tag": "HSTM",
-        "badge": "996e80daf66b0390f07eb02df26285a0"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -2228,18 +2217,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "256164085366915072",
-        "identity_enabled": true,
-        "tag": "AoC",
-        "badge": "7f968d34689b032120d7a0f2a3d69b83"
-      },
-      "primary_guild": {
-        "identity_guild_id": "256164085366915072",
-        "identity_enabled": true,
-        "tag": "AoC",
-        "badge": "7f968d34689b032120d7a0f2a3d69b83"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -2697,49 +2676,6 @@
     "banner": null,
     "communication_disabled_until": null,
     "flags": 0,
-    "joined_at": "2024-08-20T07:10:03.685000+00:00",
-    "nick": null,
-    "pending": false,
-    "premium_since": null,
-    "roles": [],
-    "unusual_dm_activity_until": null,
-    "collectibles": null,
-    "display_name_styles": null,
-    "user": {
-      "id": "277740239194423297",
-      "username": "private_goodbloke",
-      "avatar": "2ba50e3ff5f2547c38d357bf53011924",
-      "discriminator": "0",
-      "public_flags": 0,
-      "flags": 0,
-      "banner": null,
-      "accent_color": null,
-      "global_name": "Ghafl",
-      "avatar_decoration_data": null,
-      "collectibles": null,
-      "display_name_styles": null,
-      "banner_color": null,
-      "clan": {
-        "identity_guild_id": "974519864045756446",
-        "identity_enabled": true,
-        "tag": "OAI",
-        "badge": "ea76d37bcd6f1b0543efcce6c32fe999"
-      },
-      "primary_guild": {
-        "identity_guild_id": "974519864045756446",
-        "identity_enabled": true,
-        "tag": "OAI",
-        "badge": "ea76d37bcd6f1b0543efcce6c32fe999"
-      }
-    },
-    "mute": false,
-    "deaf": false
-  },
-  {
-    "avatar": null,
-    "banner": null,
-    "communication_disabled_until": null,
-    "flags": 0,
     "joined_at": "2025-05-31T01:56:26.018000+00:00",
     "nick": "Archer",
     "pending": false,
@@ -2819,9 +2755,10 @@
     "roles": [
       "179985023607373824",
       "326821477720522752",
-      "471727189025488896",
-      "406136095395545088",
       "424278722192080897",
+      "446695304343846913",
+      "406136095395545088",
+      "471727189025488896",
       "765595242736386048",
       "1138255449939001344",
       "812939607485841458",
@@ -3272,54 +3209,6 @@
     "banner": null,
     "communication_disabled_until": null,
     "flags": 0,
-    "joined_at": "2023-08-23T11:25:57.162000+00:00",
-    "nick": null,
-    "pending": false,
-    "premium_since": null,
-    "roles": [
-      "179985023607373824",
-      "1146595907211632833",
-      "830084560724820000",
-      "1131980166122438686"
-    ],
-    "unusual_dm_activity_until": null,
-    "collectibles": null,
-    "display_name_styles": null,
-    "user": {
-      "id": "322095043294920705",
-      "username": "aalnasateen",
-      "avatar": "c9918edac3573c3ce8d089663d79b961",
-      "discriminator": "0",
-      "public_flags": 0,
-      "flags": 0,
-      "banner": null,
-      "accent_color": null,
-      "global_name": "Aalna Sateen | Flame of Eternity",
-      "avatar_decoration_data": null,
-      "collectibles": null,
-      "display_name_styles": null,
-      "banner_color": null,
-      "clan": {
-        "identity_guild_id": "1261556132640456764",
-        "identity_enabled": true,
-        "tag": "KAIS",
-        "badge": "47f7e926d67ea522d780f5aaff4c94b4"
-      },
-      "primary_guild": {
-        "identity_guild_id": "1261556132640456764",
-        "identity_enabled": true,
-        "tag": "KAIS",
-        "badge": "47f7e926d67ea522d780f5aaff4c94b4"
-      }
-    },
-    "mute": false,
-    "deaf": false
-  },
-  {
-    "avatar": null,
-    "banner": null,
-    "communication_disabled_until": null,
-    "flags": 0,
     "joined_at": "2025-05-30T23:15:41.819000+00:00",
     "nick": "Buckshotz93",
     "pending": false,
@@ -3350,18 +3239,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      },
-      "primary_guild": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -3474,16 +3353,16 @@
       "display_name_styles": null,
       "banner_color": null,
       "clan": {
-        "identity_guild_id": "890308039440220221",
+        "identity_guild_id": "1180042348755963924",
         "identity_enabled": true,
-        "tag": "GPNR",
-        "badge": "4b70e09b6b8ddf55b5f9dc6816636760"
+        "tag": "WWM",
+        "badge": "e51a60e0d45a26bcf4e00d2ef1bcbcb1"
       },
       "primary_guild": {
-        "identity_guild_id": "890308039440220221",
+        "identity_guild_id": "1180042348755963924",
         "identity_enabled": true,
-        "tag": "GPNR",
-        "badge": "4b70e09b6b8ddf55b5f9dc6816636760"
+        "tag": "WWM",
+        "badge": "e51a60e0d45a26bcf4e00d2ef1bcbcb1"
       }
     },
     "mute": false,
@@ -3595,8 +3474,18 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": null,
-      "primary_guild": null
+      "clan": {
+        "identity_guild_id": "1043854763189600337",
+        "identity_enabled": true,
+        "tag": "HALF",
+        "badge": "82d6f713feb36e24aa6a0f381a03f192"
+      },
+      "primary_guild": {
+        "identity_guild_id": "1043854763189600337",
+        "identity_enabled": true,
+        "tag": "HALF",
+        "badge": "82d6f713feb36e24aa6a0f381a03f192"
+      }
     },
     "mute": false,
     "deaf": false
@@ -3656,7 +3545,7 @@
     "user": {
       "id": "368105370532577280",
       "username": "Zapier",
-      "avatar": "ce8a534e2935997eebf29d2262676036",
+      "avatar": "d04373b9957dc91456397356426f75f5",
       "discriminator": "0625",
       "public_flags": 65536,
       "flags": 65536,
@@ -3684,8 +3573,7 @@
     "pending": false,
     "premium_since": null,
     "roles": [
-      "830084560724820000",
-      "1137168010562519112"
+      "830084560724820000"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -3903,8 +3791,7 @@
       "326821477720522752",
       "830084560724820000",
       "1146595907211632833",
-      "1138255449939001344",
-      "1137168010562519112"
+      "1138255449939001344"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -3962,11 +3849,7 @@
       "banner": null,
       "accent_color": null,
       "global_name": "Tsarg",
-      "avatar_decoration_data": {
-        "asset": "a_635e4ddde3b2f9dc0ae874e17194679c",
-        "sku_id": "1448114830778171637",
-        "expires_at": 1771459200
-      },
+      "avatar_decoration_data": null,
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
@@ -4738,7 +4621,9 @@
     "premium_since": null,
     "roles": [
       "179985023607373824",
-      "326821477720522752"
+      "326821477720522752",
+      "461401559452876820",
+      "446695304343846913"
     ],
     "unusual_dm_activity_until": null,
     "collectibles": null,
@@ -4992,18 +4877,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      },
-      "primary_guild": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -5041,8 +4916,18 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": null,
-      "primary_guild": null
+      "clan": {
+        "identity_guild_id": "100463940835762176",
+        "identity_enabled": true,
+        "tag": "X|V",
+        "badge": "0ca961679e2acd4e61fa838cd1ae4612"
+      },
+      "primary_guild": {
+        "identity_guild_id": "100463940835762176",
+        "identity_enabled": true,
+        "tag": "X|V",
+        "badge": "0ca961679e2acd4e61fa838cd1ae4612"
+      }
     },
     "mute": false,
     "deaf": false
@@ -5073,8 +4958,8 @@
       "accent_color": null,
       "global_name": "Mangomonius",
       "avatar_decoration_data": {
-        "asset": "a_94febf08c37b21ee5ed92c49ef98bf00",
-        "sku_id": "1366494385583165630",
+        "asset": "a_f997880d666be69b7782bb377617b4fd",
+        "sku_id": "1462116613632426014",
         "expires_at": null
       },
       "collectibles": {
@@ -5099,6 +4984,75 @@
         "tag": "BIAS",
         "badge": "2d9908aeb26b0c8d246dbd97f8258a72"
       }
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-04-15T12:24:55.207000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [
+      "179985023607373824",
+      "326821477720522752"
+    ],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1017075809757970483",
+      "username": "glassesm.",
+      "avatar": "f78823e128932616df549b88f08522d2",
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "GlassesM",
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
+    "joined_at": "2026-04-15T02:20:09.634000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1035686804348735579",
+      "username": "tree0807",
+      "avatar": "34f85bcbbcc1dcaebd23e472375e1d2b",
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": null,
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false
@@ -5271,6 +5225,42 @@
     "banner": null,
     "communication_disabled_until": null,
     "flags": 0,
+    "joined_at": "2026-04-14T15:09:30.569000+00:00",
+    "nick": null,
+    "pending": false,
+    "premium_since": null,
+    "roles": [
+      "179985023607373824",
+      "326821477720522752"
+    ],
+    "unusual_dm_activity_until": null,
+    "collectibles": null,
+    "display_name_styles": null,
+    "user": {
+      "id": "1209237014097166441",
+      "username": "kanobe0104",
+      "avatar": "ea590a4513f012780784cd4e0f1dee16",
+      "discriminator": "0",
+      "public_flags": 0,
+      "flags": 0,
+      "banner": null,
+      "accent_color": null,
+      "global_name": "Kenobi",
+      "avatar_decoration_data": null,
+      "collectibles": null,
+      "display_name_styles": null,
+      "banner_color": null,
+      "clan": null,
+      "primary_guild": null
+    },
+    "mute": false,
+    "deaf": false
+  },
+  {
+    "avatar": null,
+    "banner": null,
+    "communication_disabled_until": null,
+    "flags": 0,
     "joined_at": "2025-07-07T02:27:32.811000+00:00",
     "nick": null,
     "pending": false,
@@ -5414,96 +5404,6 @@
     "banner": null,
     "communication_disabled_until": null,
     "flags": 0,
-    "joined_at": "2025-01-21T15:21:47.585000+00:00",
-    "nick": null,
-    "pending": false,
-    "premium_since": null,
-    "roles": [
-      "179985023607373824",
-      "326821477720522752"
-    ],
-    "unusual_dm_activity_until": null,
-    "collectibles": null,
-    "display_name_styles": null,
-    "user": {
-      "id": "1288487982021607444",
-      "username": "fairchild_f",
-      "avatar": "d8a74c421311ce54389439fb19899913",
-      "discriminator": "0",
-      "public_flags": 0,
-      "flags": 0,
-      "banner": null,
-      "accent_color": null,
-      "global_name": "Fairchild_F",
-      "avatar_decoration_data": null,
-      "collectibles": null,
-      "display_name_styles": null,
-      "banner_color": null,
-      "clan": null,
-      "primary_guild": null
-    },
-    "mute": false,
-    "deaf": false
-  },
-  {
-    "avatar": null,
-    "banner": null,
-    "communication_disabled_until": null,
-    "flags": 0,
-    "joined_at": "2025-07-03T05:10:35.119000+00:00",
-    "nick": null,
-    "pending": false,
-    "premium_since": null,
-    "roles": [],
-    "unusual_dm_activity_until": null,
-    "collectibles": null,
-    "display_name_styles": null,
-    "user": {
-      "id": "1311816797858566237",
-      "username": "harucats0640",
-      "avatar": "f29296ebd5d15e83fb1375e14d62ad73",
-      "discriminator": "0",
-      "public_flags": 128,
-      "flags": 128,
-      "banner": null,
-      "accent_color": null,
-      "global_name": "🌙",
-      "avatar_decoration_data": {
-        "asset": "a_9532e6bc08133eb1401c654a4f1a800e",
-        "sku_id": "1332505467980873728",
-        "expires_at": null
-      },
-      "collectibles": {
-        "nameplate": {
-          "sku_id": "1382845914225442886",
-          "asset": "nameplates/nameplates_v3/bonsai/",
-          "label": "COLLECTIBLES_NAMEPLATES_VOL_3_BONSAI_A11Y",
-          "palette": "bubble_gum"
-        }
-      },
-      "display_name_styles": null,
-      "banner_color": null,
-      "clan": {
-        "identity_guild_id": "645588682081828884",
-        "identity_enabled": true,
-        "tag": "ᯓ𖥔",
-        "badge": "b9abbda52da128ee174f3f2fb68b3d71"
-      },
-      "primary_guild": {
-        "identity_guild_id": "645588682081828884",
-        "identity_enabled": true,
-        "tag": "ᯓ𖥔",
-        "badge": "b9abbda52da128ee174f3f2fb68b3d71"
-      }
-    },
-    "mute": false,
-    "deaf": false
-  },
-  {
-    "avatar": null,
-    "banner": null,
-    "communication_disabled_until": null,
-    "flags": 0,
     "joined_at": "2026-02-02T10:35:28.854000+00:00",
     "nick": null,
     "pending": false,
@@ -5526,18 +5426,8 @@
       "collectibles": null,
       "display_name_styles": null,
       "banner_color": null,
-      "clan": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      },
-      "primary_guild": {
-        "identity_guild_id": "179481732217569280",
-        "identity_enabled": true,
-        "tag": "47LG",
-        "badge": "60822eb8c504c45cee27680dbccf599b"
-      }
+      "clan": null,
+      "primary_guild": null
     },
     "mute": false,
     "deaf": false

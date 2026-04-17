@@ -256,15 +256,164 @@ Large gatherings (protests or events) attract criminal activity:
 
 ---
 
-## 3.4 Threat Summary Matrix
+## 3.4 Islamist Organizations
+
+*Added 2026-03-01 following Austin 6th Street mass shooting and Operation Epic Fury against Iran. Full detailed assessment in companion document: `DFW_ISLAMIC_ORGANIZATIONS_ASSESSMENT.md`*
+
+### Overview
+
+DFW hosts one of the densest concentrations of Islamist organizational infrastructure in the United States. Dallas has been called the **"Medina of America"** by Muslim community leaders. Richardson, TX alone hosts headquarters or regional offices of multiple organizations with documented ties to Hamas financing networks, Muslim Brotherhood legacy operations, and extremist ideological movements.
+
+The threat is not a single organization — it is a **network of interconnected groups** spanning three distinct ideological streams: Brotherhood/Hamas legacy organizations, Deobandi institutions, and Salafi movements.
+
+**Key concentration areas:** Richardson, Irving, Plano/Carrollton, Garland
+
+---
+
+### Brotherhood / Hamas Legacy Network
+
+The 2008 Holy Land Foundation trial — the largest terrorism financing case in US history — convicted a Richardson, TX-based charity of funneling $12M+ to Hamas. The trial produced 300+ unindicted co-conspirators including CAIR, ISNA, and NAIT. The people and successor organizations from that network **continue to operate in DFW**.
+
+#### CAIR-DFW (Council on American-Islamic Relations — Dallas-Fort Worth)
+- **Founded by** convicted HLF terrorist financier Ghassan Elashi
+- **Current head:** Mustafaa Carroll
+- **Key personnel:** Khalil Meek (former VP, also former exec dir of Muslim Legal Fund of America)
+- **State status:** Designated terrorist organization by Gov. Abbott (Nov 2025); currently suing the state
+- Named as unindicted co-conspirator in HLF trial
+
+| Factor | Assessment |
+|--------|------------|
+| Capability | MEDIUM (legal/organizational, not paramilitary) |
+| Intent | HIGH (documented Hamas network connections) |
+| Current Activity | ACTIVE (litigation, advocacy, events) |
+| Overall Threat | **ELEVATED** |
+
+#### Baitulmaal (Irving, TX)
+- **Head:** Mazen Mokhtar — former Taliban/jihadist fundraiser (federal prosecution dropped)
+- Works with Hamas proxies in Gaza (Unlimited Friends Assn, Yazour Charitable Assn)
+- Official Yousef Abdallah documented praising killing of Jews
+
+| Factor | Assessment |
+|--------|------------|
+| Capability | MEDIUM (financial/logistical network) |
+| Intent | HIGH (active Hamas proxy connections) |
+| Current Activity | ACTIVE |
+| Overall Threat | **ELEVATED** |
+
+#### Muslim American Society — Dallas (Richardson)
+- Hosted 2024 event with convicted HLF official Abdulrahman Odeh (who celebrated Oct 7 on social media)
+- Supported pro-Hamas student encampments at DFW universities (2024)
+
+#### Muslim Legal Fund of America (Richardson)
+- Leadership overlap with CAIR-DFW (Khalil Meek)
+- Supported pro-Hamas student encampments
+- Co-sued Texas over CAIR designation
+
+---
+
+### Deobandi Institutions
+
+The Deobandi movement — the South Asian Islamist sect that produced the Taliban — has a significant institutional presence in DFW through seminaries training clergy that then staff mosques across America.
+
+#### Qalam Institute (Carrollton, TX)
+- **Leading Deobandi seminary in America** — trained hundreds of imams
+- **Founders:** Hussain Kamani, Abdul Nasir Jangda
+- Both preach: permissibility of slavery, stoning for adultery, wife-beating, Western society as "filth"
+- Jangda: defended sex slavery, advocated killing apostates, sanctioned marital rape
+
+| Factor | Assessment |
+|--------|------------|
+| Capability | HIGH (seminary pipeline producing extremist clergy nationally) |
+| Intent | HIGH (documented extremist ideology) |
+| Current Activity | ACTIVE |
+| Overall Threat | **HIGH** |
+
+#### Masjid Yaseen (Garland, TX)
+- One of **Tablighi Jamaat's main North American operational bases**
+- Tablighi Jamaat described by analysts as "driving force of Islamic extremism and major recruiting agency for terrorist causes worldwide"
+- Garland is also the site of the 2015 Curtis Culwell Center ISIS attack
+
+#### Islamic Association of Collin County / Plano Masjid
+- Imam Arsalan Haque: advocates wife-beating "in context," praises Islamic slavery, permits "disciplining" wives and slaves
+- Former imam trained with Tablighi Jamaat in UK
+- Received ~$1M in City of Plano grants (2017, 2020)
+
+---
+
+### Salafi Movement
+
+DFW is a key node for the modernist Salafi movement, hosting nationally influential clerics and institutions.
+
+#### East Plano Islamic Center / EPIC (Plano, TX) — Yasir Qadhi
+- Refused to condemn Oct 7 attacks: "I have the luxury of bluntly saying I am not going to condemn the fight of an oppressed people"
+- Documented antisemitic rhetoric and Holocaust denial
+- Advocated killing of homosexuals
+- Building **"The Meadow"** — 402-acre mosque-centered residential community (formerly "EPIC City," rebranded after Gov. Abbott backlash)
+
+| Factor | Assessment |
+|--------|------------|
+| Capability | HIGH (large following, institutional base, real estate development) |
+| Intent | HIGH (documented extremist rhetoric, refusal to condemn terrorism) |
+| Current Activity | ACTIVE |
+| Overall Threat | **HIGH** |
+
+#### Valley Ranch Islamic Center (Irving, TX) — Omar Suleiman
+- Founder of Yaqeen Institute (Irving, TX)
+- Came to prominence through AlMaghrib Institute (TX-based Salafi incubator)
+- Identified as "radical" by Middle East Forum's Islamist Watch
+- Major national influence via social media and speaking circuit
+
+| Factor | Assessment |
+|--------|------------|
+| Capability | HIGH (national influence, institutional base) |
+| Intent | MODERATE-HIGH |
+| Current Activity | ACTIVE |
+| Overall Threat | **ELEVATED** |
+
+---
+
+### Islamist Threat Assessment Summary
+
+**Immediate concern (post-Austin shooting / Iran strikes):**
+- Lone wolf / inspired attacks are the primary near-term threat
+- DFW's dense Islamic infrastructure means a larger pool of potentially radicalized individuals
+- Social media monitoring of DFW-based Islamic leaders' responses to Iran strikes is warranted
+
+**Structural concern (ongoing):**
+- HLF network convicted but successor orgs remain operational
+- Seminary pipeline (Qalam, AlMaghrib) producing extremist clergy nationally
+- Tablighi Jamaat hub in Garland provides separatist/radicalization infrastructure
+- "The Meadow" project represents new model of purpose-built Islamist residential community
+- Multiple organizations receiving public funding despite documented extremist ties
+
+**Intelligence gaps:**
+- Shia organizations in DFW (5 mosques identified, not yet assessed)
+- West African Muslim community (relevant given Austin shooter's Senegalese background)
+- Online radicalization networks operating from DFW
+- Post-HLF financial flows between DFW orgs and overseas entities
+
+---
+
+## 3.5 Threat Summary Matrix
 
 | Group | Capability | Intent | Activity | Overall |
 |-------|-----------|--------|----------|---------|
+| **LEFT-WING** | | | | |
 | Antifa Networks | MED-HIGH | HIGH | REDUCED | **ELEVATED** |
 | Elm Fork JBGC | HIGH | MEDIUM | ACTIVE | **ELEVATED** |
 | BLM Affiliates | MEDIUM | LOW-MED | LOW | **LOW-MOD** |
 | DSA-NTX | LOW | LOW | MODERATE | **LOW** |
 | Socialist Rifle Assn | MEDIUM | LOW | LOW-MOD | **LOW** |
 | Single-Issue Groups | LOW-MED | VARIES | VARIES | **LOW-MOD** |
+| **RIGHT-WING** | | | | |
 | Patriot Front | — | — | — | *Assoc. Risk* |
+| **ISLAMIST** | | | | |
+| CAIR-DFW / HLF Network | MEDIUM | HIGH | ACTIVE | **ELEVATED** |
+| Baitulmaal (Irving) | MEDIUM | HIGH | ACTIVE | **ELEVATED** |
+| Qalam Institute (Carrollton) | HIGH | HIGH | ACTIVE | **HIGH** |
+| EPIC / Yasir Qadhi (Plano) | HIGH | HIGH | ACTIVE | **HIGH** |
+| Valley Ranch / Suleiman | HIGH | MOD-HIGH | ACTIVE | **ELEVATED** |
+| Tablighi Jamaat (Garland) | MEDIUM | MODERATE | ACTIVE | **MODERATE** |
+| MAS Dallas / MLFA | MEDIUM | MOD-HIGH | ACTIVE | **ELEVATED** |
+| **OTHER** | | | | |
 | Lone Actors | HIGH | UNKNOWN | — | **MODERATE** |

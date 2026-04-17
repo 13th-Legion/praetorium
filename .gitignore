@@ -7,3 +7,34 @@ __pycache__/
 dist/
 build/
 AUDIT_2026-03-13.md
+
+# Embedded repos
+nextcloud-tsm-guide/
+projects/praetorium/portal/
+
+# OpenClaw internal
+.openclaw/
+
+# Temp/scratch scripts
+fix_*.py
+patch_*.py
+update_*.py
+send_email.py
+test_*.py
+test_*.html
+get_cost*.py
+validate_html.py
+format_docs.py
+security_patch.py
+new_doc_texts.py
+backfill_geo.py
+update_geo.sql
+
+# Temp files
+tmp/
+tmp_*
+
+# Generated/transient
+*.log
+projects/47th-roster/cron.log
+projects/47th-roster/sync.log
