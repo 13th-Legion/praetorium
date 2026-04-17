@@ -38,3 +38,6 @@ tmp_*
 *.log
 projects/47th-roster/cron.log
 projects/47th-roster/sync.log
+TOOLS.md
+projects/47th-roster/fetch-roles.sh
+projects/47th-roster/fetch-roster.sh
