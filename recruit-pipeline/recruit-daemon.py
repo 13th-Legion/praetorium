@@ -1099,8 +1099,22 @@ def add_to_nc_groups(username, groups):
             log.warning(f"Failed to add {username} to group {group}: {e}")
 
 
-def create_portal_member(info, nc_username, team):
-    """Insert a member record into the Praetorium portal database."""
+def _card_has_payment_annotation(description):
+    """Check if a Deck card description contains a payment verified annotation.
+
+    Returns (True, method) if found, (False, None) otherwise.
+    """
+    if "💰 Payment Verified" in description:
+        return True, "paypal"
+    return False, None
+
+
+def create_portal_member(info, nc_username, team, card_description=""):
+    """Insert a member record into the Praetorium portal database.
+
+    If card_description contains a payment annotation (from the PayPal webhook),
+    the member record will be created with app_fee_status='paid'.
+    """
     try:
         import psycopg2
 
@@ -1140,6 +1154,11 @@ def create_portal_member(info, nc_username, team):
         proton_email = info.get("📧 Proton Mail", "").strip()
         application_email = info.get("Email", "")
 
+        # Check if PayPal payment was already verified on the Deck card
+        fee_paid, fee_method = _card_has_payment_annotation(card_description)
+        fee_status = "paid" if fee_paid else "pending"
+        fee_paid_at = datetime.now() if fee_paid else None
+
         cur.execute("""
             INSERT INTO members (
                 first_name, last_name, email, personal_email, phone,
@@ -1147,12 +1166,14 @@ def create_portal_member(info, nc_username, team):
                 rank_grade, status, team, company,
                 nc_username, join_date, is_veteran, mos,
                 has_ltc, serial_seq, serial_number,
+                app_fee_status, app_fee_method, app_fee_paid_at,
                 created_at, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s, %s,
+                %s, %s, %s,
                 %s, %s, %s,
                 NOW(), NOW()
             )
@@ -1175,6 +1196,9 @@ def create_portal_member(info, nc_username, team):
             has_ltc,
             next_seq,
             serial_number,
+            fee_status,
+            fee_method,
+            fee_paid_at,
         ))
 
         result = cur.fetchone()
@@ -1676,8 +1700,8 @@ def onboard_member(card, state, dry_run=False):
         log.error(f"Onboarding aborted for {name} — NC account creation failed")
         return False
 
-    # 2. Create portal DB record
-    create_portal_member(info, nc_username, team)
+    # 2. Create portal DB record (pass card description so payment annotations carry over)
+    create_portal_member(info, nc_username, team, card_description=card.get("description", ""))
 
     # 3. Add to NC Maps
     raw_addr = info.get("Address", "")
