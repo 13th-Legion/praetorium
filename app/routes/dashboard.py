@@ -46,7 +46,7 @@ async def dashboard(request: Request):
     async with async_session() as db:
         result = await db.execute(
             select(Election)
-            .where(Election.phase.in_(["nominations", "voting", "complete"]))
+            .where(Election.phase.in_(["scheduled", "nominations", "voting", "complete"]))
             .order_by(Election.created_at.desc())
             .limit(1)
         )

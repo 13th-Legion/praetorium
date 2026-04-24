@@ -4,7 +4,35 @@
 #}
 {% if active_election %}
 
-{% if active_election.phase == "nominations" %}
+{% if active_election.phase == "scheduled" %}
+{# Blue info banner for scheduled phase #}
+<a href="/elections/{{ active_election.id }}" style="text-decoration:none;color:inherit;display:block;">
+<div style="background:linear-gradient(135deg,rgba(100,120,180,0.12),rgba(15,25,41,0.95));
+            border:2px solid #5c7cbf;border-radius:10px;padding:16px 24px;margin-bottom:24px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+            cursor:pointer;transition:border-color 0.2s;"
+     onmouseover="this.style.borderColor='#7da0e0'" onmouseout="this.style.borderColor='#5c7cbf'">
+  <div>
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;font-weight:700;
+                letter-spacing:0.12em;color:#7da0e0;text-transform:uppercase;margin-bottom:4px;">
+      🗳️ CO Election — Scheduled
+    </div>
+    <div style="font-size:15px;font-weight:600;color:#fff;">{{ active_election.title }}</div>
+    {% if active_election.nominations_open %}
+    <div style="font-size:13px;color:#aaa;margin-top:4px;">
+      Nominations open
+      <strong style="color:#7da0e0;">{{ active_election.nominations_open|mildate }}</strong>
+    </div>
+    {% endif %}
+  </div>
+  <div style="padding:8px 20px;background:rgba(92,124,191,0.3);color:#7da0e0;
+              border:1px solid #5c7cbf;border-radius:4px;font-weight:700;font-size:13px;white-space:nowrap;">
+    View Details →
+  </div>
+</div>
+</a>
+
+{% elif active_election.phase == "nominations" %}
 {# Gold CTA banner for nomination phase #}
 <a href="/elections/{{ active_election.id }}" style="text-decoration:none;color:inherit;display:block;">
 <div style="background:linear-gradient(135deg,rgba(212,165,55,0.12),rgba(15,25,41,0.95));
