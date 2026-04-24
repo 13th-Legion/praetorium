@@ -118,15 +118,18 @@
                 text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
       ⚙️ Command Controls
     </div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px;">
+      Phase transitions are automatic based on the scheduled dates.
+    </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-      {% if election.phase not in ("complete","cancelled") %}
+      {% if is_admin and election.phase not in ("complete","cancelled") %}
       <form hx-post="/elections/{{ election.id }}/advance"
             hx-target="#command-result" hx-swap="innerHTML"
-            onsubmit="return confirm('Advance election to next phase?');">
+            onsubmit="return confirm('⚠️ EMERGENCY OVERRIDE\n\nThis bypasses the scheduled timeline and forces the election to the next phase immediately.\n\nAre you sure?');">
         <button type="submit"
-                style="padding:8px 20px;background:#d4a537;color:#1a1a2e;border:none;
+                style="padding:8px 20px;background:#b71c1c;color:#fff;border:none;
                        border-radius:4px;font-weight:700;cursor:pointer;font-size:13px;">
-          ▶ Advance Phase
+          ⚠️ Emergency Advance
         </button>
       </form>
       {% endif %}

@@ -80,6 +80,51 @@ def _is_window_open(
     return open_dt <= now <= close_dt
 
 
+PHASE_ORDER = ["scheduled", "nominations", "voting", "complete"]
+
+
+async def _auto_advance(db, election) -> bool:
+    """Advance election phase based on current time. Returns True if phase changed.
+
+    Transitions:
+      scheduled   → nominations  when now >= nominations_open
+      nominations → voting        when now >= voting_open
+      voting      → complete      when now >= voting_close
+    """
+    if election.phase in ("complete", "cancelled"):
+        return False
+
+    now = _now_utc()
+    changed = False
+
+    while True:
+        if election.phase == "scheduled" and election.nominations_open and now >= election.nominations_open:
+            election.phase = "nominations"
+            changed = True
+        elif election.phase == "nominations" and election.voting_open and now >= election.voting_open:
+            election.phase = "voting"
+            # Snapshot eligible count when entering voting
+            eligible_result = await db.execute(
+                select(func.count(Member.id)).where(
+                    and_(
+                        Member.status == "active",
+                        Member.rank_grade.in_(ELIGIBLE_RANK_GRADES),
+                    )
+                )
+            )
+            election.eligible_count = eligible_result.scalar() or 0
+            changed = True
+        elif election.phase == "voting" and election.voting_close and now >= election.voting_close:
+            election.phase = "complete"
+            changed = True
+        else:
+            break
+
+    if changed:
+        await db.commit()
+    return changed
+
+
 def _round_to_hour(dt: datetime) -> datetime:
     """Round a datetime to the nearest hour — reduces timing correlation on ballots."""
     if dt.minute >= 30:
@@ -203,10 +248,9 @@ async def create_election(
 # ─── Advance Phase ────────────────────────────────────────────────────────────
 
 @router.post("/elections/{election_id}/advance", response_class=HTMLResponse)
-@require_role("command", "admin")
+@require_role("admin")
 async def advance_phase(request: Request, election_id: int):
-    """Advance election to next phase. Command only."""
-    PHASE_ORDER = ["scheduled", "nominations", "voting", "complete"]
+    """Emergency override — advance election to next phase. Admin only."""
 
     async with async_session() as db:
         election = await _get_election(db, election_id)
@@ -231,6 +275,14 @@ async def advance_phase(request: Request, election_id: int):
             next_phase = PHASE_ORDER[idx + 1]
         except (ValueError, IndexError):
             next_phase = "complete"
+
+        # Log the override
+        import logging
+        user = request.session.get("user", {})
+        logging.warning(
+            "ELECTION OVERRIDE: %s manually advanced election %d from %s to %s",
+            user.get("username", "unknown"), election_id, current, next_phase,
+        )
 
         # When moving to voting: snapshot eligible count
         if next_phase == "voting":
@@ -268,10 +320,14 @@ async def election_page(request: Request, election_id: int):
         if not election:
             return HTMLResponse("<h1>Election not found</h1>", status_code=404)
 
+        # Auto-advance phase based on schedule
+        await _auto_advance(db, election)
+
         member = await _get_member(db, user.get("username", ""))
         member_id = member.id if member else None
         is_eligible = _is_eligible(member) if member else False
         is_command = bool(roles & {"command", "admin"})
+        is_admin = "admin" in roles
 
         # Has this member already nominated?
         has_nominated = False
@@ -405,6 +461,7 @@ async def election_page(request: Request, election_id: int):
         "member_id": member_id,
         "is_eligible": is_eligible,
         "is_command": is_command,
+        "is_admin": is_admin,
         "has_nominated": has_nominated,
         "has_voted": has_voted,
         "my_nomination": my_nomination,

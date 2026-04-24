@@ -8,6 +8,7 @@ from app.auth import require_auth
 from app.database import async_session
 from app.models.elections import Election, ElectionBallot
 from app.models.member import Member
+from app.routes.elections import _auto_advance
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory="app/templates")
@@ -51,6 +52,10 @@ async def dashboard(request: Request):
             .limit(1)
         )
         active_election = result.scalar_one_or_none()
+
+        # Auto-advance phase based on schedule
+        if active_election:
+            await _auto_advance(db, active_election)
 
         # If complete, fetch winner name from ballot counts
         if active_election and active_election.phase == "complete":
