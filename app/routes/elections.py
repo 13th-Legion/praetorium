@@ -56,6 +56,30 @@ def _now_utc() -> datetime:
     return datetime.utcnow()
 
 
+def _parse_central_to_utc(dt_str: str) -> datetime:
+    """Parse a naive datetime-local string as America/Chicago, return naive UTC."""
+    naive = datetime.fromisoformat(dt_str)
+    central = naive.replace(tzinfo=_CDT)
+    utc_aware = central.astimezone(_UTC)
+    return utc_aware.replace(tzinfo=None)  # store as naive UTC (consistent with _now_utc)
+
+
+def _determine_phase(nominations_open_utc: datetime) -> str:
+    """Return 'scheduled' if nominations haven't opened yet, else 'nominations'."""
+    return "scheduled" if nominations_open_utc > _now_utc() else "nominations"
+
+
+def _is_window_open(
+    now: datetime,
+    open_dt: Optional[datetime],
+    close_dt: Optional[datetime],
+) -> bool:
+    """True if now (naive UTC) is within [open_dt, close_dt] (both naive UTC)."""
+    if open_dt is None or close_dt is None:
+        return False
+    return open_dt <= now <= close_dt
+
+
 def _round_to_hour(dt: datetime) -> datetime:
     """Round a datetime to the nearest hour — reduces timing correlation on ballots."""
     if dt.minute >= 30:
@@ -139,20 +163,22 @@ async def create_election(
     user = request.session.get("user", {})
 
     try:
-        nom_open = datetime.fromisoformat(nominations_open)
-        nom_close = datetime.fromisoformat(nominations_close)
-        vote_open = datetime.fromisoformat(voting_open)
-        vote_close = datetime.fromisoformat(voting_close)
+        nom_open = _parse_central_to_utc(nominations_open)
+        nom_close = _parse_central_to_utc(nominations_close)
+        vote_open = _parse_central_to_utc(voting_open)
+        vote_close = _parse_central_to_utc(voting_close)
     except ValueError:
         return HTMLResponse(
             '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
             "❌ Invalid date format.</div>"
         )
 
+    initial_phase = _determine_phase(nom_open)
+
     async with async_session() as db:
         election = Election(
             title=title.strip(),
-            phase="nominations",
+            phase=initial_phase,
             nominations_open=nom_open,
             nominations_close=nom_close,
             voting_open=vote_open,
@@ -180,7 +206,7 @@ async def create_election(
 @require_role("command", "admin")
 async def advance_phase(request: Request, election_id: int):
     """Advance election to next phase. Command only."""
-    PHASE_ORDER = ["nominations", "voting", "complete"]
+    PHASE_ORDER = ["scheduled", "nominations", "voting", "complete"]
 
     async with async_session() as db:
         election = await _get_election(db, election_id)
@@ -361,9 +387,16 @@ async def election_page(request: Request, election_id: int):
             )
             voter_roll_members = [(vr, m) for vr, m in vr_result.all()]
 
-    # Determine nomination window open/closed based on phase
-    nom_window_open = election.phase == "nominations"
-    voting_window_open = election.phase == "voting"
+    # Determine nomination/voting window open/closed based on phase AND date
+    _now = _now_utc()
+    nom_window_open = (
+        election.phase == "nominations"
+        and _is_window_open(_now, election.nominations_open, election.nominations_close)
+    )
+    voting_window_open = (
+        election.phase == "voting"
+        and _is_window_open(_now, election.voting_open, election.voting_close)
+    )
 
     return templates.TemplateResponse("pages/election.html", {
         "request": request,
@@ -418,6 +451,13 @@ async def submit_nomination(
             return HTMLResponse("Election not found", status_code=404)
 
         if election.phase != "nominations":
+            return HTMLResponse(
+                '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
+                "❌ Nominations are not currently open.</div>"
+            )
+
+        now = _now_utc()
+        if not _is_window_open(now, election.nominations_open, election.nominations_close):
             return HTMLResponse(
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
                 "❌ Nominations are not currently open.</div>"
@@ -611,6 +651,13 @@ async def cast_vote(
             return HTMLResponse("Election not found", status_code=404)
 
         if election.phase != "voting":
+            return HTMLResponse(
+                '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
+                "❌ Voting is not currently open.</div>"
+            )
+
+        now = _now_utc()
+        if not _is_window_open(now, election.voting_open, election.voting_close):
             return HTMLResponse(
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
                 "❌ Voting is not currently open.</div>"

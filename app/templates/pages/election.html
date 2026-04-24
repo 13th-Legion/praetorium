@@ -5,7 +5,28 @@
 <div style="max-width:900px;margin:0 auto;padding:0 16px;">
 
   {# ── Phase Banner ─────────────────────────────────────────────────────── #}
-  {% if election.phase == "nominations" %}
+  {% if election.phase == "scheduled" %}
+  <div style="background:linear-gradient(135deg,rgba(100,120,180,0.15),rgba(26,26,46,0.95));
+              border:2px solid #5c7cbf;border-radius:10px;padding:20px 28px;margin-bottom:28px;
+              position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#5c7cbf;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div>
+        <span style="font-family:'Oswald',sans-serif;font-size:0.75rem;font-weight:700;
+                     letter-spacing:0.12em;color:#7da0e0;text-transform:uppercase;">
+          📅 Election Scheduled
+        </span>
+        <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;
+                   color:#fff;margin:6px 0 4px;">{{ election.title }}</h1>
+        <div style="font-size:14px;color:#aaa;">
+          Nominations open:
+          <strong style="color:#7da0e0;">{{ election.nominations_open|mildate|default("TBD") }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% elif election.phase == "nominations" %}
   <div style="background:linear-gradient(135deg,rgba(212,165,55,0.15),rgba(26,26,46,0.95));
               border:2px solid #d4a537;border-radius:10px;padding:20px 28px;margin-bottom:28px;
               position:relative;overflow:hidden;">
@@ -125,8 +146,17 @@
     {# ══ LEFT COLUMN ════════════════════════════════════════════════════════ #}
     <div>
 
+      {# ── Scheduled Phase UI ───────────────────────────────────────────── #}
+      {% if election.phase == "scheduled" %}
+      <div style="padding:16px;background:rgba(92,124,191,0.1);border:1px solid rgba(92,124,191,0.4);
+                  border-radius:8px;margin-bottom:20px;font-size:14px;color:#aaa;">
+        <div style="font-weight:700;color:#7da0e0;margin-bottom:8px;">📅 Nominations Not Yet Open</div>
+        This election is scheduled. Nominations will open on
+        <strong style="color:#7da0e0;">{{ election.nominations_open|mildate|default("TBD") }}</strong>.
+      </div>
+
       {# ── Nomination Phase UI ──────────────────────────────────────────── #}
-      {% if election.phase == "nominations" %}
+      {% elif election.phase == "nominations" %}
 
       {# My Nomination Status #}
       {% if my_nomination %}
