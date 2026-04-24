@@ -1956,6 +1956,7 @@ document, they are waiving substantial legal rights, including the right to sue 
 
 EMAIL_BLAST_GROUPS = {
     "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
+    "patched": {"label": "All Patched Members", "filter": ["active"]},
     "leaders": {"label": "Leaders (NCOs + Officers)", "nc_groups": ["Leaders"]},
     "team_leaders": {"label": "Team Leaders", "nc_groups": ["Leaders"]},  # same NC group, filtered by billet
     "shop_leaders": {"label": "Shop Leaders (S1-S6)", "nc_groups": ["[S-1]", "[S-2]", "[S-3]", "[S-4]", "[S-5]", "[S-6]"]},
