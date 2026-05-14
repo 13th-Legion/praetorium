@@ -478,6 +478,8 @@ async def election_page(request: Request, election_id: int):
         "quorum_met": quorum_met,
         "voter_roll_members": voter_roll_members,
         "rank_abbr": RANK_ABBR,
+        "now_utc": _now,
+        "noms_closed": election.nominations_close and _now >= election.nominations_close,
     })
 
 
@@ -603,7 +605,7 @@ async def accept_nomination(request: Request, election_id: int):
         if not election:
             return HTMLResponse("Election not found", status_code=404)
 
-        if election.phase not in ("nominations", "voting"):
+        if election.phase != "nominations":
             return HTMLResponse(
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
                 "❌ Nomination window is closed.</div>"
@@ -652,6 +654,12 @@ async def decline_nomination(request: Request, election_id: int):
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)
+
+        if election.phase != "nominations":
+            return HTMLResponse(
+                '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;">'
+                "❌ Nomination window is closed. You cannot change your nomination status.</div>"
+            )
 
         member = await _get_member(db, user.get("username", ""))
         if not member:

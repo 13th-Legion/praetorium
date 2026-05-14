@@ -60,7 +60,12 @@
                 </div>
                 <div>
                     <label class="edit-label">Leadership Title</label>
-                    <input type="text" name="leadership_title" value="{{ member.leadership_title or '' }}" class="edit-input" placeholder="CO, XO, TL, ATL...">
+                    <select name="leadership_title" class="edit-input">
+                        <option value="">— None —</option>
+                        {% for t in leadership_titles %}
+                        <option value="{{ t }}" {% if member.leadership_title == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div style="grid-column:1/-1;">
                     <label class="edit-label">Primary Billet(s)</label>

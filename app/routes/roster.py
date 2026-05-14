@@ -184,9 +184,9 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(query)
     members = result.scalars().all()
 
-    # View mode: "team" (geo teams, default) or "element" (HQ + fireteams org chart)
+    # View mode: "team" (geo teams, default), "element" (HQ + fireteams org chart), or "shops" (S-shops)
     view_mode = request.query_params.get("view", "element")
-    if view_mode not in ("team", "element"):
+    if view_mode not in ("team", "element", "shops"):
         view_mode = "element"
 
     # Leadership sort priority within each team
@@ -233,6 +233,52 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
 
     for team_name, team_members in sorted_teams:
         team_members.sort(key=lambda m, tn=team_name: _sort_key(m, tn))
+
+    # Build shop grouping for "shops" view
+    shops_data = []
+    if view_mode == "shops":
+        # Shop definitions: (prefix, full name, emoji, reports_to)
+        SHOP_DEFS = [
+            ("S1", "S1 — Administration", "📋", "SFC Eastman (Dizz)"),
+            ("S2", "S2 — Intelligence & Security", "🔍", "1LT Kavadas (Cav)"),
+            ("S3", "S3 — Training & Ops", "🎯", "N/A (XO is S3)"),
+            ("S4", "S4 — Logistics", "📦", "1SG Camp (Kenobi)"),
+            ("S5", "S5 — Medical", "🏥", "SFC Eastman (Dizz)"),
+            ("S6", "S6 — Communications", "📡", "SFC Eastman (Dizz)"),
+        ]
+
+        for prefix, shop_name, emoji, reports_to in SHOP_DEFS:
+            shop_lead = None
+            shop_members = []
+            for m in members:
+                billet = m.primary_billet or ""
+                # Check each comma-separated billet individually
+                individual_billets = [b.strip() for b in billet.split(",")]
+                is_in_shop = any(b.startswith(prefix + ":") for b in individual_billets)
+                if not is_in_shop:
+                    continue
+                is_lead = any(b.startswith(prefix + ":") and "(Lead)" in b for b in individual_billets)
+                if is_lead:
+                    shop_lead = m
+                else:
+                    shop_members.append(m)
+
+            # If lead was also found as a member, remove duplicate
+            if shop_lead and shop_lead in shop_members:
+                shop_members.remove(shop_lead)
+
+            # Sort members by rank descending
+            shop_members.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
+
+            shops_data.append({
+                "prefix": prefix,
+                "name": shop_name,
+                "emoji": emoji,
+                "reports_to": reports_to,
+                "lead": shop_lead,
+                "members": shop_members,
+                "total": (1 if shop_lead else 0) + len(shop_members),
+            })
 
     # NC last-login data removed from roster template — skip the expensive API calls
     nc_users = {}
@@ -286,6 +332,7 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
         "tis": tis,
         "show_tab": show_tab,
         "renameable_teams": renameable_teams,
+        "shops_data": shops_data,
     })
 
 

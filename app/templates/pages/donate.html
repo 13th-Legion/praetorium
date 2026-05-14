@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donate &mdash; 13th Legion, Texas State Militia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f1a;
+            color: #ccc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 40px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            color: #d4a537;
+            font-size: 28px;
+            margin: 20px 0 10px;
+            text-transform: uppercase;
+        }
+        .desc {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        .amount-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .amount-btn {
+            background: rgba(212,165,55,0.1);
+            border: 2px solid #333;
+            color: #d4a537;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 14px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .amount-btn:hover, .amount-btn.selected {
+            border-color: #d4a537;
+            background: rgba(212,165,55,0.2);
+        }
+        .custom-amount {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .custom-amount label {
+            color: #888;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .custom-amount input {
+            flex: 1;
+            background: #0f0f1a;
+            border: 2px solid #333;
+            color: #e0e0e0;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+        }
+        .custom-amount input:focus {
+            border-color: #d4a537;
+        }
+        #paypal-button-container {
+            margin-top: 20px;
+            min-height: 150px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 11px;
+            color: #555;
+            line-height: 1.5;
+        }
+        .success-msg {
+            display: none;
+            color: #4caf50;
+            padding: 20px;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            background: rgba(76, 175, 80, 0.1);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion Crest" height="80">
+    <h1>Support the 13th Legion</h1>
+    <div class="desc">
+        Your donation helps fund training equipment, communications gear, medical supplies, and operational expenses for the 13th Legion, Texas State Militia &mdash; DFW.
+    </div>
+
+    <div class="amount-grid">
+        <button class="amount-btn" onclick="selectAmount(25)">$25</button>
+        <button class="amount-btn selected" onclick="selectAmount(50)">$50</button>
+        <button class="amount-btn" onclick="selectAmount(100)">$100</button>
+        <button class="amount-btn" onclick="selectAmount(250)">$250</button>
+        <button class="amount-btn" onclick="selectAmount(500)">$500</button>
+        <button class="amount-btn" onclick="selectAmount(0)">Other</button>
+    </div>
+
+    <div class="custom-amount">
+        <label>$</label>
+        <input type="number" id="custom-amount" min="1" step="1" value="50" onchange="onCustomChange()" onclick="this.select()">
+        <label>USD</label>
+    </div>
+
+    <div id="paypal-button-container"></div>
+
+    <div id="success-msg" class="success-msg">
+        <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
+        <div style="font-weight: 600; margin-bottom: 5px;">Thank You!</div>
+        <div>Your donation has been received. The 13th Legion appreciates your support.<br><em>Nunquam Non Paratus.</em></div>
+    </div>
+
+    <div class="footer">
+        Payments processed securely via PayPal.<br>
+        The Texas State Militia is a 501(c)(3) private foundation. Donations may be tax-deductible to the extent permitted by law. Consult your tax advisor.
+    </div>
+</div>
+
+<script>
+    let selectedAmount = 50;
+
+    function selectAmount(val) {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+        if (val === 0) {
+            // "Other" selected — focus custom input
+            document.getElementById('custom-amount').focus();
+            document.getElementById('custom-amount').select();
+            event.target.classList.add('selected');
+            selectedAmount = parseFloat(document.getElementById('custom-amount').value) || 50;
+        } else {
+            event.target.classList.add('selected');
+            selectedAmount = val;
+            document.getElementById('custom-amount').value = val;
+        }
+    }
+
+    function onCustomChange() {
+        const val = parseFloat(document.getElementById('custom-amount').value);
+        if (val > 0) {
+            selectedAmount = val;
+            // Deselect preset buttons
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+        }
+    }
+</script>
+
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>
+
+<script>
+    paypal.Buttons({
+        style: {
+            color: 'gold',
+            shape: 'rect',
+            label: 'donate',
+            height: 45
+        },
+        createOrder: function(data, actions) {
+            const amount = parseFloat(document.getElementById('custom-amount').value);
+            if (!amount || amount < 1) {
+                alert("Please enter a valid donation amount.");
+                return;
+            }
+            return actions.order.create({
+                purchase_units: [{
+                    description: "Donation to 13th Legion, Texas State Militia",
+                    amount: {
+                        value: amount.toFixed(2)
+                    },
+                    custom_id: "donation"
+                }]
+            });
+        },
+        onApprove: function(data, actions) {
+            return actions.order.capture().then(function(details) {
+                document.getElementById('paypal-button-container').style.display = 'none';
+                document.querySelector('.amount-grid').style.display = 'none';
+                document.querySelector('.custom-amount').style.display = 'none';
+                document.getElementById('success-msg').style.display = 'block';
+            });
+        },
+        onError: function(err) {
+            console.error('PayPal Error:', err);
+            alert("There was an issue processing your donation. Please try again.");
+        }
+    }).render('#paypal-button-container');
+</script>
+
+</body>
+</html>

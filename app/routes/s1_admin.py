@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse
@@ -492,8 +492,9 @@ DECK_STACKS = {
     14: "Documents & Payment",
     15: "Approved — Onboarding",
     16: "Complete",
+    81: "On Hold",
 }
-# Stacks that represent active applicants (exclude Complete)
+# Stacks that represent active applicants (exclude Complete and On Hold)
 DECK_ACTIVE_STACKS = {11, 12, 13, 14, 15}
 
 # Stage flow: current_stack_id → next_stack_id
@@ -720,7 +721,7 @@ async def pipeline_dashboard(request: Request, db: AsyncSession = Depends(get_db
         "request": request,
         "user": user,
         "columns": columns,
-        "stack_order": [11, 12, 13, 14, 15, 16],
+        "stack_order": [11, 12, 13, 14, 15, 16, 81],
         "recruiters": recruiters,
     })
 
@@ -741,7 +742,7 @@ async def pipeline_board_partial(request: Request, db: AsyncSession = Depends(ge
         "request": request,
         "user": user,
         "columns": columns,
-        "stack_order": [11, 12, 13, 14, 15, 16],
+        "stack_order": [11, 12, 13, 14, 15, 16, 81],
         "recruiters": recruiters,
     })
 
@@ -1046,6 +1047,147 @@ async def advance_pipeline_stage(request: Request, card_id: int):
                 )
             else:
                 return HTMLResponse(f'<span style="color:#c62828;">❌ Move failed ({move_resp.status_code})</span>')
+
+    except Exception as e:
+        return HTMLResponse(f'<span style="color:#c62828;">❌ Error: {e}</span>')
+
+
+ON_HOLD_STACK = 81
+
+
+@router.post("/pipeline/{card_id}/hold")
+@require_auth
+async def hold_applicant(request: Request, card_id: int):
+    """Move a card to On Hold. Stores the original stack in a comment for resume."""
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            current_stack_id = None
+            card_title = "Unknown"
+            card_desc = ""
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+            for stack in resp.json():
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        current_stack_id = stack["id"]
+                        card_title = card.get("title", "Unknown")
+                        card_desc = card.get("description", "")
+                        break
+                if current_stack_id:
+                    break
+
+            if not current_stack_id:
+                return HTMLResponse('<span style="color:#c62828;">❌ Card not found</span>')
+
+            if current_stack_id == ON_HOLD_STACK:
+                return HTMLResponse('<span style="color:#888;">Already on hold</span>')
+
+            # Move to On Hold
+            move_resp = await client.put(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/{ON_HOLD_STACK}/cards/{card_id}",
+                headers={"OCS-APIRequest": "true", "Content-Type": "application/json", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+                json={"title": card_title, "description": card_desc, "type": "plain", "order": 999, "owner": NC_SVC_USER},
+            )
+
+            if move_resp.status_code in (200, 201):
+                by = user.get("display_name", user.get("uid", "unknown"))
+                from_stage = DECK_STACKS.get(current_stack_id, "unknown")
+                await client.post(
+                    f"{NC_URL}/ocs/v2.php/apps/deck/api/v1.0/cards/{card_id}/comments",
+                    headers={"OCS-APIRequest": "true", "Content-Type": "application/json", "Accept": "application/json"},
+                    auth=(NC_SVC_USER, NC_SVC_PASS),
+                    json={"message": f"⏸️ Placed **On Hold** by {by} via Portal (was in {from_stage}) [return_stack:{current_stack_id}]"},
+                )
+                return HTMLResponse(
+                    f'<span style="color:#f39c12;font-weight:600;">⏸️ On Hold</span>',
+                    headers={"HX-Trigger": "pipelineChanged"},
+                )
+            else:
+                return HTMLResponse(f'<span style="color:#c62828;">❌ Move failed ({move_resp.status_code})</span>')
+
+    except Exception as e:
+        return HTMLResponse(f'<span style="color:#c62828;">❌ Error: {e}</span>')
+
+
+@router.post("/pipeline/{card_id}/resume")
+@require_auth
+async def resume_applicant(request: Request, card_id: int):
+    """Move a card from On Hold back to its previous stage."""
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Verify card is in On Hold
+            current_stack_id = None
+            card_title = "Unknown"
+            card_desc = ""
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+            for stack in resp.json():
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        current_stack_id = stack["id"]
+                        card_title = card.get("title", "Unknown")
+                        card_desc = card.get("description", "")
+                        break
+                if current_stack_id:
+                    break
+
+            if current_stack_id != ON_HOLD_STACK:
+                return HTMLResponse('<span style="color:#c62828;">❌ Card is not on hold</span>')
+
+            # Find the return stack from comments
+            import re as _re
+            comments_resp = await client.get(
+                f"{NC_URL}/ocs/v2.php/apps/deck/api/v1.0/cards/{card_id}/comments",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            return_stack = 11  # Default to New Application if we can't find it
+            if comments_resp.status_code == 200:
+                for comment in comments_resp.json().get("ocs", {}).get("data", []):
+                    msg = comment.get("message", "")
+                    m = _re.search(r'\[return_stack:(\d+)\]', msg)
+                    if m:
+                        return_stack = int(m.group(1))
+                        break
+
+            # Move back
+            move_resp = await client.put(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/{return_stack}/cards/{card_id}",
+                headers={"OCS-APIRequest": "true", "Content-Type": "application/json", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+                json={"title": card_title, "description": card_desc, "type": "plain", "order": 999, "owner": NC_SVC_USER},
+            )
+
+            if move_resp.status_code in (200, 201):
+                by = user.get("display_name", user.get("uid", "unknown"))
+                to_stage = DECK_STACKS.get(return_stack, "previous stage")
+                await client.post(
+                    f"{NC_URL}/ocs/v2.php/apps/deck/api/v1.0/cards/{card_id}/comments",
+                    headers={"OCS-APIRequest": "true", "Content-Type": "application/json", "Accept": "application/json"},
+                    auth=(NC_SVC_USER, NC_SVC_PASS),
+                    json={"message": f"▶️ Resumed from On Hold by {by} via Portal → {to_stage}"},
+                )
+                return HTMLResponse(
+                    f'<span style="color:#2e7d32;font-weight:600;">▶️ → {to_stage}</span>',
+                    headers={"HX-Trigger": "pipelineChanged"},
+                )
+            else:
+                return HTMLResponse(f'<span style="color:#c62828;">❌ Resume failed ({move_resp.status_code})</span>')
 
     except Exception as e:
         return HTMLResponse(f'<span style="color:#c62828;">❌ Error: {e}</span>')
@@ -1492,30 +1634,64 @@ async def get_card_attachments(request: Request, card_id: int):
             attachments = resp.json()
 
         if not attachments:
-            return HTMLResponse('<p style="color:#888;font-size:12px;">No attachments.</p>')
+            deck_html = '<p style="color:#888;font-size:12px;">No Deck attachments.</p>'
+        else:
+            html_parts = []
+            for att in attachments:
+                name = att.get("data", att.get("id", "file"))
+                att_id = att.get("id")
+                ext = name.rsplit(".", 1)[-1].lower() if "." in str(name) else ""
+                icon = "📄"
+                if ext in ("pdf",):
+                    icon = "📕"
+                elif ext in ("jpg", "jpeg", "png", "gif", "webp"):
+                    icon = "🖼️"
+                elif ext in ("doc", "docx"):
+                    icon = "📝"
 
-        html_parts = []
-        for att in attachments:
-            name = att.get("data", att.get("id", "file"))
-            att_id = att.get("id")
-            ext = name.rsplit(".", 1)[-1].lower() if "." in str(name) else ""
-            icon = "📄"
-            if ext in ("pdf",):
-                icon = "📕"
-            elif ext in ("jpg", "jpeg", "png", "gif", "webp"):
-                icon = "🖼️"
-            elif ext in ("doc", "docx"):
-                icon = "📝"
+                preview_url = f"/api/s1/pipeline/{card_id}/attachments/{att_id}/preview"
+                dl_url = f"/api/s1/pipeline/{card_id}/attachments/{att_id}/download"
 
-            dl_url = f"/api/s1/pipeline/{card_id}/attachments/{att_id}/download"
+                # Images get inline preview; PDFs open in-browser; others download
+                from html import escape as h
+                safe_name = h(name, quote=True)
+                if ext in ("jpg", "jpeg", "png", "gif", "webp", "pdf"):
+                    html_parts.append(f'''
+                    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;">
+                        <span>{icon}</span>
+                        <a href="#" onclick="openFilePreview('{preview_url}','{dl_url}','{safe_name}');return false;" style="color:#d4a537;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;cursor:pointer;" title="{safe_name}">{safe_name}</a>
+                        <a href="{dl_url}" style="color:#888;font-size:10px;text-decoration:none;flex-shrink:0;" title="Download">⬇</a>
+                    </div>''')
+                else:
+                    html_parts.append(f'''
+                    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;">
+                        <span>{icon}</span>
+                        <a href="{dl_url}" target="_blank" style="color:#d4a537;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;" title="{safe_name}">{safe_name}</a>
+                    </div>''')
 
-            html_parts.append(f"""
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;">
-                <span>{icon}</span>
-                <a href="{dl_url}" target="_blank" style="color:#d4a537;text-decoration:none;">{name}</a>
-            </div>""")
+            deck_html = "".join(html_parts)
 
-        return HTMLResponse("".join(html_parts))
+        # Also fetch portal-uploaded files (background checks, etc.)
+        portal_html = await _get_portal_uploads_html(card_id)
+
+        # Upload form
+        upload_html = f'''
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);overflow:hidden;">
+            <form hx-post="/api/s1/pipeline/{card_id}/upload" hx-target="#attach-{card_id}" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+                <div style="margin-bottom:4px;">
+                    <input type="file" name="file" required style="width:100%;font-size:10px;color:#ccc;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:4px;">
+                    <select name="doc_type" style="flex:1;padding:2px 4px;font-size:10px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:3px;min-width:0;">
+                        <option value="Background Check">BG Check</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <button hx-disabled-elt="this" type="submit" style="padding:3px 8px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;flex-shrink:0;">📤 Upload</button>
+                </div>
+            </form>
+        </div>'''
+
+        return HTMLResponse(deck_html + portal_html + upload_html)
 
     except Exception as e:
         return HTMLResponse(f'<p style="color:#c62828;font-size:12px;">Error: {e}</p>')
@@ -1568,6 +1744,230 @@ async def download_attachment(request: Request, card_id: int, attachment_id: int
 
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/pipeline/{card_id}/attachments/{attachment_id}/preview")
+@require_auth
+async def preview_attachment(request: Request, card_id: int, attachment_id: int):
+    """Proxy attachment for inline preview (Content-Disposition: inline)."""
+    from fastapi.responses import StreamingResponse
+
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            stacks_resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            stack_id = None
+            for stack in stacks_resp.json():
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        stack_id = stack["id"]
+                        break
+                if stack_id:
+                    break
+
+            if not stack_id:
+                raise HTTPException(status_code=404, detail="Card not found")
+
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/{stack_id}/cards/{card_id}/attachments/{attachment_id}",
+                headers={"OCS-APIRequest": "true"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+
+            content_type = resp.headers.get("content-type", "application/octet-stream")
+            # Force inline display
+            return StreamingResponse(
+                iter([resp.content]),
+                media_type=content_type,
+                headers={"Content-Disposition": "inline"},
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Portal-side file uploads (background checks, etc.) ─────────────────
+
+async def _get_card_title(card_id: int) -> str:
+    """Get the card title from Deck to derive the member folder name."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            stacks_resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            stacks_resp.raise_for_status()
+            for stack in stacks_resp.json():
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        return card.get("title", "")
+    except Exception:
+        pass
+    return ""
+
+
+async def _get_portal_uploads_html(card_id: int) -> str:
+    """List portal-uploaded files for a card from NC WebDAV."""
+    card_title = await _get_card_title(card_id)
+    if not card_title:
+        return ""
+
+    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+    folder_path = f"{NC_URL}{nc_base}/{quote(card_title)}/Pipeline"
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.request(
+                "PROPFIND",
+                folder_path,
+                headers={"Depth": "1"},
+                auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS),
+            )
+            if resp.status_code == 404:
+                return ""  # No uploads yet
+            resp.raise_for_status()
+
+            import re
+            hrefs = re.findall(r'<d:href>([^<]+)</d:href>', resp.text)
+            files = []
+            for href in hrefs[1:]:  # Skip the folder itself
+                filename = unquote(href.rsplit("/", 1)[-1])
+                if not filename:
+                    continue
+                ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+                icon = "📕" if ext == "pdf" else "🖼️" if ext in ("jpg", "jpeg", "png", "gif", "webp") else "📄"
+                view_url = f"/api/s1/pipeline/{card_id}/portal-file/{quote(filename)}"
+                dl_url = f"/api/s1/pipeline/{card_id}/portal-file/{quote(filename)}?download=1"
+
+                from html import escape as h
+                safe_fn = h(filename, quote=True)
+                if ext in ("jpg", "jpeg", "png", "gif", "webp", "pdf"):
+                    files.append(f'''
+                    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;">
+                        <span>{icon}</span>
+                        <a href="#" onclick="openFilePreview('{view_url}','{dl_url}','{safe_fn}');return false;" style="color:#81c784;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;cursor:pointer;" title="{safe_fn}">{safe_fn}</a>
+                        <a href="{dl_url}" style="color:#888;font-size:10px;text-decoration:none;flex-shrink:0;" title="Download">⬇</a>
+                    </div>''')
+                else:
+                    files.append(f'''
+                    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;">
+                        <span>{icon}</span>
+                        <a href="{dl_url}" style="color:#81c784;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;" title="{safe_fn}">{safe_fn}</a>
+                    </div>''')
+
+            if not files:
+                return ""
+            return '<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">' + "".join(files) + "</div>"
+
+    except Exception:
+        return ""
+
+
+@router.post("/pipeline/{card_id}/upload")
+@require_auth
+async def upload_pipeline_file(request: Request, card_id: int):
+    """Upload a file (background check, etc.) to the member's NC Personnel folder."""
+    from fastapi import UploadFile, File, Form
+
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    form = await request.form()
+    file = form.get("file")
+    doc_type = form.get("doc_type", "Other")
+
+    if not file or not hasattr(file, "read"):
+        return HTMLResponse('<p style="color:#c62828;font-size:12px;">No file selected.</p>')
+
+    card_title = await _get_card_title(card_id)
+    if not card_title:
+        return HTMLResponse('<p style="color:#c62828;font-size:12px;">Could not find card.</p>')
+
+    # Read file content
+    content = await file.read()
+    original_name = file.filename or "upload"
+    ext = original_name.rsplit(".", 1)[-1] if "." in original_name else "bin"
+
+    # Name the file: "BG Check - LastName FirstName.pdf" or similar
+    from datetime import date
+    safe_type = doc_type.replace("/", "-").replace("\\", "-")
+    filename = f"{safe_type} - {card_title} - {date.today().isoformat()}.{ext}"
+
+    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Ensure Pipeline subfolder exists
+            folder_path = f"{NC_URL}{nc_base}/{quote(card_title)}/Pipeline"
+
+            # Create parent folder if needed
+            await client.request("MKCOL", f"{NC_URL}{nc_base}/{quote(card_title)}",
+                                 auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS))
+            await client.request("MKCOL", folder_path,
+                                 auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS))
+
+            # Upload
+            upload_path = f"{folder_path}/{quote(filename)}"
+            resp = await client.put(
+                upload_path,
+                content=content,
+                auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS),
+                headers={"Content-Type": "application/octet-stream"},
+            )
+            resp.raise_for_status()
+
+    except Exception as e:
+        log.error(f"Pipeline upload failed for card {card_id}: {e}")
+        return HTMLResponse(f'<p style="color:#c62828;font-size:12px;">Upload failed: {e}</p>')
+
+    # Re-render the full attachments panel
+    return await get_card_attachments(request, card_id)
+
+
+@router.get("/pipeline/{card_id}/portal-file/{filename}")
+@require_auth
+async def serve_portal_file(request: Request, card_id: int, filename: str):
+    """Proxy a portal-uploaded file from NC WebDAV."""
+    from fastapi.responses import StreamingResponse
+
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    card_title = await _get_card_title(card_id)
+    if not card_title:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+    file_path = f"{NC_URL}{nc_base}/{quote(card_title)}/Pipeline/{quote(filename)}"
+
+    download = request.query_params.get("download") == "1"
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(file_path, auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS))
+            resp.raise_for_status()
+
+            content_type = resp.headers.get("content-type", "application/octet-stream")
+            disposition = "attachment" if download else "inline"
+
+            return StreamingResponse(
+                iter([resp.content]),
+                media_type=content_type,
+                headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+            )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

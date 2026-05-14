@@ -17,6 +17,57 @@
     </div>
 </div>
 
+<!-- File Preview Modal -->
+<div id="file-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;justify-content:center;align-items:center;padding:16px;"
+     onclick="if(event.target===this) closeFilePreview();">
+    <div style="position:relative;max-width:90vw;max-height:90vh;width:100%;display:flex;flex-direction:column;align-items:center;">
+        <div style="position:absolute;top:-36px;right:0;display:flex;gap:12px;align-items:center;z-index:1;">
+            <a id="file-preview-dl" href="#" style="color:#d4a537;font-size:13px;text-decoration:none;font-weight:600;">⬇ Download</a>
+            <button onclick="closeFilePreview()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:24px;line-height:1;">&times;</button>
+        </div>
+        <div id="file-preview-content" style="max-width:100%;max-height:85vh;overflow:auto;display:flex;justify-content:center;align-items:center;"></div>
+    </div>
+</div>
+
+<script>
+function openFilePreview(previewUrl, downloadUrl, filename) {
+    var modal = document.getElementById('file-preview-modal');
+    var content = document.getElementById('file-preview-content');
+    var dlLink = document.getElementById('file-preview-dl');
+    dlLink.href = downloadUrl;
+    content.innerHTML = '<p style="color:#888;">Loading...</p>';
+
+    var ext = filename.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','webp'].indexOf(ext) >= 0) {
+        var img = new Image();
+        img.onload = function() { content.innerHTML = ''; content.appendChild(img); };
+        img.onerror = function() { content.innerHTML = '<p style="color:#c62828;">Failed to load image.</p>'; };
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '85vh';
+        img.style.borderRadius = '4px';
+        img.src = previewUrl;
+    } else if (ext === 'pdf') {
+        content.innerHTML = '<iframe src="' + previewUrl + '" style="width:80vw;height:85vh;max-width:100%;border:none;border-radius:4px;background:#fff;"></iframe>';
+    } else {
+        // Unsupported preview — just offer download
+        content.innerHTML = '<p style="color:#ccc;">Preview not available. <a href="' + downloadUrl + '" style="color:#d4a537;">Download file</a></p>';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeFilePreview() {
+    var modal = document.getElementById('file-preview-modal');
+    modal.style.display = 'none';
+    document.getElementById('file-preview-content').innerHTML = '';
+}
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeFilePreview();
+});
+</script>
+
 <style>
 .pipeline-scroll {
     scrollbar-width: auto;

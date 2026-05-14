@@ -201,7 +201,7 @@
                             <select name="title_select" onchange="const inp = this.nextElementSibling; if(this.value === 'custom') { inp.style.display='block'; inp.value=''; inp.focus(); } else { inp.style.display='none'; inp.value=this.value; }" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px; margin-bottom: 4px;">
                                 <option value="custom">— Custom Title —</option>
                                 {% for t in tradoc_items %}
-                                <option value="CLASS: {{ t.name }}" {% if block.title == "CLASS: " ~ t.name %}selected{% endif %}>CLASS: {{ t.name }}</option>
+                                <option value="{{ t.name }}" {% if block.title == t.name %}selected{% endif %}>{{ t.name }}</option>
                                 {% endfor %}
                             </select>
                             <input name="title" value="{{ block.title }}" style="display: none; width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" required>
@@ -279,10 +279,10 @@
                         <select name="title_select" onchange="const inp = this.nextElementSibling; if(this.value === 'custom') { inp.style.display='block'; inp.value=''; inp.focus(); } else { inp.style.display='none'; inp.value=this.value; }" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px; margin-bottom: 4px;">
                             <option value="custom">— Custom Title —</option>
                             {% for t in tradoc_items %}
-                            <option value="CLASS: {{ t.name }}">CLASS: {{ t.name }} (Block {{ t.block }})</option>
+                            <option value="{{ t.name }}">{{ t.name }} (Block {{ t.block }})</option>
                             {% endfor %}
                         </select>
-                        <input name="title" placeholder="e.g., CLASS: React to Contact" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" required>
+                        <input name="title" placeholder="e.g., React to Contact" style="width: 100%; background: #1a1a2e; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; font-size: 13px;" required>
                     </div>
                     <div>
                         <label style="color: #999; font-size: 11px; display: block;">Instructor</label>

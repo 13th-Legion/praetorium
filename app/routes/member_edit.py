@@ -15,6 +15,7 @@ from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
 from app.models.rank_history import RankHistory
+from app.models.conduct import ConductViolation
 from config import get_settings
 
 log = logging.getLogger(__name__)
@@ -276,8 +277,27 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     user = get_current_user(request)
     editor_roles = set(user.get("roles", []))
     if editor_roles & {"command", "admin", "s1"}:
-        member.non_promotable_until = _parse_date(form.get("non_promotable_until"))
-        member.non_promotable_reason = form.get("non_promotable_reason", "").strip() or None
+        old_np_until = member.non_promotable_until
+        old_np_reason = member.non_promotable_reason
+        new_np_until = _parse_date(form.get("non_promotable_until"))
+        new_np_reason = form.get("non_promotable_reason", "").strip() or None
+        member.non_promotable_until = new_np_until
+        member.non_promotable_reason = new_np_reason
+
+        # Auto-log CoC violation when non-promotable is SET (not when cleared)
+        if new_np_until and new_np_reason and (new_np_until != old_np_until or new_np_reason != old_np_reason):
+            db.add(ConductViolation(
+                member_id=member_id,
+                violation_date=date.today(),
+                reason=new_np_reason,
+                action_taken="Non-Promotable",
+                start_date=date.today(),
+                end_date=new_np_until,
+                duration_days=(new_np_until - date.today()).days if new_np_until else None,
+                issued_by=user.get("username", "unknown"),
+                notes="Auto-recorded from profile edit",
+            ))
+            log.info(f"CoC violation auto-logged for member {member_id}: Non-Promotable until {new_np_until}")
     member.is_founder = form.get("is_founder") == "on"
     member.is_veteran = form.get("is_veteran") == "on"
     member.mos = form.get("mos", "").strip() or None

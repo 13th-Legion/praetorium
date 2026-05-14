@@ -15,6 +15,7 @@ from app.models.s4_logistics import (  # noqa: F401
     S4EquipmentDonation, S4InventoryItem, S4Checkout
 )
 from app.models.rank_history import RankHistory  # noqa: F401
+from app.models.conduct import ConductViolation  # noqa: F401
 from app.models.schedule import EventScheduleBlock  # noqa: F401
 from app.models.elections import (  # noqa: F401
     Election, ElectionNomination, ElectionNominationReceipt,

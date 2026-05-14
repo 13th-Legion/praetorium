@@ -20,6 +20,7 @@
     <div class="roster-tabs">
         <a href="/roster?show={{ show_tab }}&view=team" class="roster-tab {% if view_mode == 'team' %}roster-tab-active{% endif %}" title="Geographic fireteams">🗺️ By Team</a>
         <a href="/roster?show={{ show_tab }}&view=element" class="roster-tab {% if view_mode == 'element' %}roster-tab-active{% endif %}" title="HQ element + fireteams">🏛️ By Element</a>
+        <a href="/roster?show={{ show_tab }}&view=shops" class="roster-tab {% if view_mode == 'shops' %}roster-tab-active{% endif %}" title="S-shop organization">⚙️ By Shops</a>
         <span style="border-left: 1px solid #444; margin: 0 8px;"></span>
         <a href="/roster?view={{ view_mode }}" class="roster-tab {% if show_tab == 'active' %}roster-tab-active{% endif %}">Active</a>
         <a href="/roster?show=inactive&view={{ view_mode }}" class="roster-tab {% if show_tab == 'inactive' %}roster-tab-active{% endif %}">Inactive</a>
@@ -33,6 +34,61 @@
     </p>
     {% endif %}
 
+    {% if view_mode == 'shops' %}
+    <!-- Shops View -->
+    <div class="roster-table-wrap">
+        {% for shop in shops_data %}
+        <div class="card" style="margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:1.2rem;">{{ shop.emoji }}</span>
+                    <span style="font-weight:700;font-size:15px;margin-left:6px;">{{ shop.name }}</span>
+                    <span class="team-count" style="margin-left:8px;">({{ shop.total }})</span>
+                </div>
+                <div style="font-size:12px;color:#888;">Reports to: <span style="color:#d4a537;">{{ shop.reports_to }}</span></div>
+            </div>
+            <table class="roster-table roster-table-wide" style="margin:0;">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Callsign</th>
+                        <th>Role</th>
+                        <th>Team</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if shop.lead %}
+                    <tr class="roster-row row-tl">
+                        <td class="name-cell">
+                            <span class="rank-badge rank-{{ shop.lead.rank_grade[:1] if shop.lead.rank_grade else 'E' }}">{{ rank_abbr.get(shop.lead.rank_grade, '—') }}</span>
+                            <a href="/profile/{{ shop.lead.id }}" class="member-link">{{ shop.lead.last_name }}, {{ shop.lead.first_name }}</a>
+                            <span style="background:#d4a537;color:#1a1a2e;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;">Lead</span>
+                        </td>
+                        <td>{{ shop.lead.callsign or '—' }}</td>
+                        <td class="text-muted">{{ shop.lead.primary_billet or '—' }}</td>
+                        <td class="text-muted">{{ shop.lead.team or '—' }}</td>
+                    </tr>
+                    {% endif %}
+                    {% for m in shop.members %}
+                    <tr class="roster-row">
+                        <td class="name-cell">
+                            <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
+                            <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>
+                        </td>
+                        <td>{{ m.callsign or '—' }}</td>
+                        <td class="text-muted">{{ m.primary_billet or '—' }}</td>
+                        <td class="text-muted">{{ m.team or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not shop.lead and not shop.members %}
+                    <tr><td colspan="4" class="text-muted" style="text-align:center;padding:12px;">No members assigned</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
     <div class="roster-table-wrap">
         <table class="roster-table roster-table-wide">
             <thead>
@@ -112,5 +168,6 @@
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

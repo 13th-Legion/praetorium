@@ -101,9 +101,16 @@ document.addEventListener("DOMContentLoaded", function() {
     {% endif %}
 
     <!-- SMEAC OPORD (visible only to attending members + Command/S3) -->
-    {% if can_see_opord and (event.opord_situation or event.opord_mission or event.opord_execution or event.opord_admin_logistics or event.opord_command_signal) %}
+    {% if can_see_opord and (event.opord_issued_at or event.opord_situation or event.opord_mission or event.opord_execution or event.opord_admin_logistics or event.opord_command_signal) %}
     <div class="card" style="padding:20px;">
-        <h2 class="card-title" style="font-size:0.9rem;">📜 Operations Order</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 class="card-title" style="font-size:0.9rem;margin:0;">📜 Operations Order</h2>
+            {% if event.opord_issued_at %}
+            <a href="/api/events/{{ event.id }}/opord/pdf" style="padding:5px 12px;background:rgba(212,165,55,0.15);border:1px solid rgba(212,165,55,0.3);border-radius:4px;color:#d4a537;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;" title="Download OPORD as PDF">
+                📄 Export PDF
+            </a>
+            {% endif %}
+        </div>
         {% set smeac_paras = [
             ("1. SITUATION", event.opord_situation),
             ("2. MISSION", event.opord_mission),
@@ -118,6 +125,34 @@ document.addEventListener("DOMContentLoaded", function() {
             <div style="font-size:14px;color:#ccc;line-height:1.6;white-space:pre-wrap;">{{ content }}</div>
         </div>
         {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+    <!-- Training Schedule (visible to attending + Command/S3) -->
+    {% if can_see_opord and schedule_blocks %}
+    <div class="card" style="padding:20px;">
+        <h2 class="card-title" style="font-size:0.9rem;">📅 Training Schedule</h2>
+        {% for day_num in schedule_by_day.keys()|sort %}
+        {% if schedule_by_day.keys()|length > 1 %}
+        <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#d4a537;text-transform:uppercase;letter-spacing:0.08em;margin:{% if not loop.first %}20px{% else %}0{% endif %} 0 8px;">Day {{ day_num }}</div>
+        {% endif %}
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            {% for block in schedule_by_day[day_num] %}
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 12px;background:rgba(255,255,255,0.03);border-left:3px solid {% if block.activity_type == 'formation' %}#d4a537{% elif block.activity_type == 'class' %}#4fc3f7{% elif block.activity_type == 'mission' %}#e57373{% elif block.activity_type == 'meal' %}#81c784{% elif block.activity_type == 'admin' %}#b0bec5{% else %}#666{% endif %};border-radius:0 4px 4px 0;">
+                <div style="font-family:'Oswald',sans-serif;font-size:14px;color:#e0e0e0;min-width:90px;white-space:nowrap;">
+                    {{ block.start_time[:2] }}{{ block.start_time[2:] }}{% if block.end_time %}-{{ block.end_time[:2] }}{{ block.end_time[2:] }}{% endif %}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;color:#e0e0e0;font-weight:500;">{{ block.title }}{% if block.instructor_id and schedule_instructors.get(block.instructor_id) %} <span style="font-weight:400;color:#999;font-size:12px;">— {{ schedule_instructors[block.instructor_id] }}</span>{% endif %}</div>
+                    {% if block.notes %}
+                    <div style="font-size:12px;color:#999;margin-top:2px;">{{ block.notes }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         {% endfor %}
     </div>
     {% endif %}

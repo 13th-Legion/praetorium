@@ -13,6 +13,7 @@ from app.models.training import TradocItem, MemberTradoc, Certification, MemberC
 from app.models.awards import MemberAward
 from app.models.rank_history import RankHistory
 from app.models.events import Event, EventRSVP
+from app.routes.conduct import get_violations_for_profile
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 templates = Jinja2Templates(directory="app/templates")
@@ -185,6 +186,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
     training = await _get_training_data(member.id, db)
     rank_history = await _get_rank_history(member.id, db)
     ftx_history = await _get_ftx_history(member.id, db)
+    conduct_violations = await get_violations_for_profile(member.id, db)
 
     # Fetch NC last login for this member
     nc_last_login = None
@@ -207,6 +209,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         "training": training,
         "rank_history": rank_history,
         "ftx_history": ftx_history,
+        "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
         "now": datetime.utcnow(),
     })
@@ -234,6 +237,7 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
     training = await _get_training_data(member.id, db)
     rank_history = await _get_rank_history(member.id, db)
     ftx_history = await _get_ftx_history(member.id, db)
+    conduct_violations = await get_violations_for_profile(member.id, db)
 
     # Fetch NC last login for this member
     nc_last_login = None
@@ -256,6 +260,7 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         "training": training,
         "rank_history": rank_history,
         "ftx_history": ftx_history,
+        "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
         "now": datetime.utcnow(),
     })

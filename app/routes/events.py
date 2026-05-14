@@ -10,7 +10,7 @@ from typing import Optional
 
 import httpx
 from dateutil.rrule import rrulestr
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, or_, case, update
@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
 from app.models.events import Event, EventRSVP, EventDocument, EventAARItem
+from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc
 from config import get_settings
@@ -660,6 +661,56 @@ async def events_page(request: Request):
 
 # ─── Event Detail Page ───────────────────────────────────────────────────────
 
+
+async def _maintain_event_roster(db, event_id, event):
+    """Maintain event roster: add new members, prune separated ones.
+    
+    Called on event detail and roster partial loads for unfinalised, RSVP-enabled events.
+    - Adds pending RSVPs for active/recruit members who joined after event creation
+    - Removes pending RSVPs for members who have been separated/inactivated
+    - Preserves non-pending RSVPs (attending/declined) for historical accuracy
+    """
+    if not event or event.finalized_at or not event.rsvp_enabled:
+        return
+
+    # Get existing RSVPs for this event
+    existing_result = await db.execute(
+        select(EventRSVP).where(EventRSVP.event_id == event_id)
+    )
+    existing_rsvps = existing_result.scalars().all()
+    existing_by_member = {r.member_id: r for r in existing_rsvps}
+
+    # Get all current active/recruit member IDs
+    active_result = await db.execute(
+        select(Member.id).where(
+            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+        )
+    )
+    active_ids = {r[0] for r in active_result.all()}
+
+    changed = False
+
+    # 1. Add missing members (new since event creation)
+    missing = active_ids - set(existing_by_member.keys())
+    for mid in missing:
+        db.add(EventRSVP(
+            event_id=event_id,
+            member_id=mid,
+            status="pending",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        ))
+        changed = True
+
+    # 2. Prune separated members (only if their RSVP is still pending)
+    for member_id, rsvp in existing_by_member.items():
+        if member_id not in active_ids and rsvp.status == "pending":
+            await db.delete(rsvp)
+            changed = True
+
+    if changed:
+        await db.commit()
+
 @router.get("/events/{event_id}", response_class=HTMLResponse)
 @require_auth
 async def event_detail(request: Request, event_id: int):
@@ -695,6 +746,9 @@ async def event_detail(request: Request, event_id: int):
             row = rsvp_result.first()
             my_rsvp = row[0] if row else None
 
+        # Maintain roster: add new members, prune separated
+        await _maintain_event_roster(db, event_id, event)
+
         # Roster with member info
         roster_result = await db.execute(
             select(EventRSVP, Member).join(Member, EventRSVP.member_id == Member.id).where(
@@ -719,6 +773,32 @@ async def event_detail(request: Request, event_id: int):
         )
         aar_items = aar_result.scalars().all()
 
+        # Training schedule blocks
+        schedule_result = await db.execute(
+            select(EventScheduleBlock)
+            .where(EventScheduleBlock.event_id == event_id)
+            .order_by(EventScheduleBlock.day_number, EventScheduleBlock.sort_order, EventScheduleBlock.start_time)
+        )
+        schedule_blocks = schedule_result.scalars().all()
+
+        # Group schedule blocks by day
+        schedule_by_day = {}
+        for b in schedule_blocks:
+            if b.day_number not in schedule_by_day:
+                schedule_by_day[b.day_number] = []
+            schedule_by_day[b.day_number].append(b)
+
+        # Build instructor lookup for schedule blocks
+        sched_instructor_ids = {b.instructor_id for b in schedule_blocks if b.instructor_id}
+        schedule_instructors = {}
+        if sched_instructor_ids:
+            instr_result = await db.execute(
+                select(Member).where(Member.id.in_(sched_instructor_ids))
+            )
+            for m in instr_result.scalars().all():
+                abbr = RANK_ABBR.get(m.rank_grade, "")
+                schedule_instructors[m.id] = f"{abbr} {m.last_name}".strip()
+
     rsvp_locked = bool(event.rsvp_deadline and _now_ct() > event.rsvp_deadline)
 
     return templates.TemplateResponse("pages/event_detail.html", {
@@ -738,6 +818,9 @@ async def event_detail(request: Request, event_id: int):
         "pending": pending,
         "documents": event.documents,
         "aar_items": aar_items,
+        "schedule_blocks": schedule_blocks,
+        "schedule_by_day": schedule_by_day,
+        "schedule_instructors": schedule_instructors,
         "now": _now_ct(),
     })
 
@@ -746,7 +829,7 @@ async def event_detail(request: Request, event_id: int):
 
 @router.post("/api/events/{event_id}/rsvp", response_class=HTMLResponse)
 @require_auth
-async def submit_rsvp(request: Request, event_id: int):
+async def submit_rsvp(request: Request, event_id: int, background_tasks: BackgroundTasks):
     """Submit or update RSVP for an event."""
     user = request.session.get("user", {})
     form = await request.form()
@@ -770,14 +853,14 @@ async def submit_rsvp(request: Request, event_id: int):
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">RSVP deadline has passed.</div>'
             )
 
-        # Get member_id
+        # Get member
         member_result = await db.execute(
-            select(Member.id).where(Member.nc_username == user.get("username", ""))
+            select(Member).where(Member.nc_username == user.get("username", ""))
         )
-        member_row = member_result.first()
-        if not member_row:
+        member = member_result.scalar_one_or_none()
+        if not member:
             return HTMLResponse("Member not found", status_code=404)
-        member_id = member_row[0]
+        member_id = member.id
 
         # Find or create RSVP
         rsvp_result = await db.execute(
@@ -786,6 +869,7 @@ async def submit_rsvp(request: Request, event_id: int):
             )
         )
         rsvp = rsvp_result.scalar_one_or_none()
+        old_status = rsvp.status if rsvp else None
 
         if rsvp:
             rsvp.status = new_status
@@ -802,7 +886,213 @@ async def submit_rsvp(request: Request, event_id: int):
             )
             db.add(rsvp)
 
+        # Catch-up: if newly attending and OPORD/WARNO already issued, send emails + notification
+        send_opord_catchup = (
+            new_status == "attending"
+            and old_status != "attending"
+            and event.opord_issued_at
+            and member.email
+        )
+        send_warno_catchup = (
+            new_status == "attending"
+            and old_status != "attending"
+            and event.warno_issued_at
+            and not event.opord_issued_at  # Don't send WARNO if OPORD already sent (OPORD supersedes)
+            and member.email
+        )
+
+        # Capture data for background email before session closes
+        catchup_email = None
+        if send_opord_catchup or send_warno_catchup:
+            local_dt = _to_cdt(event.date_start)
+            date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
+            catchup_email = member.email
+            evt_title = event.title
+            evt_id = event.id
+            evt_location = event.location or "TBD"
+
+        if send_opord_catchup:
+            # Build SMEAC for email
+            smeac_html = ""
+            smeac_paras = [
+                ("1. SITUATION", event.opord_situation),
+                ("2. MISSION", event.opord_mission),
+                ("3. EXECUTION", event.opord_execution),
+                ("4. ADMIN & LOGISTICS", event.opord_admin_logistics),
+                ("5. COMMAND & SIGNAL", event.opord_command_signal),
+            ]
+            for label, para_content in smeac_paras:
+                if para_content:
+                    escaped = para_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                    smeac_html += f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">{label}</h3><p style="color:#333;font-size:14px;line-height:1.6;">{escaped}</p>'
+
+            freq_html = ""
+            if event.freq_convoy_primary or event.freq_fob_primary:
+                freq_html = '<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">RADIO FREQUENCIES</h3><p style="font-size:14px;">'
+                if event.freq_convoy_primary:
+                    freq_html += f'Convoy: <strong>{event.freq_convoy_primary}</strong>'
+                    if event.freq_convoy_alternate:
+                        freq_html += f' / {event.freq_convoy_alternate}'
+                    freq_html += '<br>'
+                if event.freq_fob_primary:
+                    freq_html += f'FOB: <strong>{event.freq_fob_primary}</strong>'
+                    if event.freq_fob_alternate:
+                        freq_html += f' / {event.freq_fob_alternate}'
+                freq_html += '</p>'
+
+            rally_html = ""
+            if event.rally_point:
+                rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {event.rally_point}'
+                if event.rally_point_time:
+                    rally_html += f' @ {event.rally_point_time}'
+                rally_html += '</p>'
+
+            opord_html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia - Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<h2 style="color: #2e7d32;">OPERATIONS ORDER - {evt_title}</h2>
+<p><strong>Date:</strong> {date_str}<br>
+<strong>Location:</strong> {evt_location}</p>
+{rally_html}
+{freq_html}
+{smeac_html}
+<p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
+<a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>S3 - Operations & Training</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion - Texas State Militia - DFW
+</div>
+</body></html>"""
+
+            opord_subject = f"OPORD - {evt_title}"
+
+        # Notification for the member
+        if send_opord_catchup:
+            try:
+                from app.routes.notifications import create_notification
+                await create_notification(
+                    db, member_id, "event", f"OPORD - {evt_title}",
+                    body=f"{date_str} - Operations Order published",
+                    link=f"/events/{evt_id}",
+                    icon="clipboard"
+                )
+            except Exception:
+                pass
+        elif send_warno_catchup:
+            try:
+                from app.routes.notifications import create_notification
+                await create_notification(
+                    db, member_id, "event", f"WARNO - {evt_title}",
+                    body=f"{date_str} - RSVP now open",
+                    link=f"/events/{evt_id}",
+                    icon="zap"
+                )
+            except Exception:
+                pass
+
         await db.commit()
+
+    # Background: send catch-up email
+    if send_opord_catchup and catchup_email:
+        def _send_opord_catchup_email():
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            import logging
+            logger = logging.getLogger(__name__)
+            try:
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(SMTP_USER, SMTP_PASS)
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = opord_subject
+                    msg["From"] = SMTP_FROM
+                    msg["To"] = catchup_email
+                    msg.attach(MIMEText(opord_html_body, "html"))
+                    server.send_message(msg)
+                logger.info(f"OPORD catch-up email sent to {catchup_email} for {evt_title}")
+            except Exception as e:
+                logger.error(f"OPORD catch-up email failed for {catchup_email}: {e}")
+
+        background_tasks.add_task(_send_opord_catchup_email)
+
+    elif send_warno_catchup and catchup_email:
+        warno_html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia - Dallas / Fort Worth</p>
+        </td>
+        <td style="vertical-align: middle; padding-left: 15px;">
+            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+<h2 style="color: #c62828;">WARNO - {evt_title}</h2>
+<p><strong>Date:</strong> {date_str}<br>
+<strong>Location:</strong> {evt_location}</p>
+<p>A Warning Order has been issued for the upcoming exercise. You have RSVP'd as attending.</p>
+<p><strong>Full details on the Portal:</strong><br>
+<a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
+<p style="margin-top: 20px;">
+    <em>Nunquam Non Paratus,</em><br>
+    <strong>S3 - Operations & Training</strong><br>
+    13th Legion, Texas State Militia
+</p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion - Texas State Militia - DFW
+</div>
+</body></html>"""
+
+        def _send_warno_catchup_email():
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            import logging
+            logger = logging.getLogger(__name__)
+            try:
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(SMTP_USER, SMTP_PASS)
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = f"WARNO - {evt_title}"
+                    msg["From"] = SMTP_FROM
+                    msg["To"] = catchup_email
+                    msg.attach(MIMEText(warno_html_body, "html"))
+                    server.send_message(msg)
+                logger.info(f"WARNO catch-up email sent to {catchup_email} for {evt_title}")
+            except Exception as e:
+                logger.error(f"WARNO catch-up email failed for {catchup_email}: {e}")
+
+        background_tasks.add_task(_send_warno_catchup_email)
 
     # Return updated RSVP controls
     return _render_rsvp_controls(event_id, new_status)
@@ -840,30 +1130,8 @@ async def event_roster(request: Request, event_id: int):
         evt = await db.execute(select(Event).where(Event.id == event_id))
         event = evt.scalar_one_or_none()
 
-        # Dynamic roster: ensure all current active/recruit members have RSVP records
-        # for unfinalised, RSVP-enabled events (catches members who joined after event creation)
-        if event and not event.finalized_at and event.rsvp_enabled:
-            existing_member_ids_result = await db.execute(
-                select(EventRSVP.member_id).where(EventRSVP.event_id == event_id)
-            )
-            existing_member_ids = {r[0] for r in existing_member_ids_result.all()}
-
-            all_active_result = await db.execute(
-                select(Member.id).where(Member.status.in_(["active", "recruit", "Active", "Recruit"]))
-            )
-            all_active_ids = {r[0] for r in all_active_result.all()}
-
-            missing = all_active_ids - existing_member_ids
-            if missing:
-                for mid in missing:
-                    db.add(EventRSVP(
-                        event_id=event_id,
-                        member_id=mid,
-                        status="pending",
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow(),
-                    ))
-                await db.commit()
+        # Dynamic roster: add new members, prune separated
+        await _maintain_event_roster(db, event_id, event)
 
         roster_result = await db.execute(
             select(EventRSVP, Member).join(Member, EventRSVP.member_id == Member.id).where(
@@ -1577,12 +1845,8 @@ async def schedule_warno(request: Request, event_id: int):
 @router.post("/api/events/{event_id}/issue-opord", response_class=HTMLResponse)
 @require_auth
 @require_role("command", "s3", "admin")
-async def issue_opord(request: Request, event_id: int):
+async def issue_opord(request: Request, event_id: int, background_tasks: BackgroundTasks):
     """Publish OPORD: set timestamp, email attending members, cross-post to Talk, portal notification."""
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
     now = datetime.utcnow()
     async with async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
@@ -1681,37 +1945,27 @@ async def issue_opord(request: Request, event_id: int):
 </div>
 </body></html>"""
 
-        # Email attending members
-        for member in attending_members:
-            if not member.email:
-                continue
-            try:
-                msg = MIMEMultipart("alternative")
-                msg["Subject"] = f"📋 OPORD — {event.title}"
-                msg["From"] = SMTP_FROM
-                msg["To"] = member.email
-                msg.attach(MIMEText(html_body, "html"))
-                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-                    s.starttls()
-                    s.login(SMTP_USER, SMTP_PASS)
-                    s.sendmail(SMTP_USER, [member.email], msg.as_string())
-            except Exception:
-                pass
+        # Extract recipient emails before session closes (ORM objects detach in background)
+        recipient_emails = [m.email for m in attending_members if m.email]
+        email_count = len(recipient_emails)
+        event_title = event.title
+        event_id_val = event.id
+        event_location = event.location or "TBD"
 
         # Cross-post to T1 · Announcements
         try:
             settings = get_settings()
             talk_msg = (
-                f"📋 **OPORD PUBLISHED — {event.title}**\n\n"
+                f"📋 **OPORD PUBLISHED — {event_title}**\n\n"
                 f"📅 {date_str}\n"
-                f"\ud83d\udccd {event.location or 'TBD'}\n"
+                f"\ud83d\udccd {event_location}\n"
             )
             if event.rally_point:
                 talk_msg += f"\ud83c\udfc1 Rally: {event.rally_point}"
                 if event.rally_point_time:
                     talk_msg += f" @ {event.rally_point_time}"
                 talk_msg += "\n"
-            talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event.id}"
+            talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event_id_val}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
                     f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
@@ -1726,7 +1980,7 @@ async def issue_opord(request: Request, event_id: int):
         try:
             from app.routes.notifications import create_notification_for_all
             await create_notification_for_all(
-                db, "event", f"📋 OPORD — {event.title}",
+                db, "event", f"📋 OPORD — {event_title}",
                 body=f"{date_str} · Operations Order published",
                 link=f"/events/{event_id}",
                 icon="📋"
@@ -1736,10 +1990,39 @@ async def issue_opord(request: Request, event_id: int):
 
         await db.commit()
 
-    email_count = len([m for m in attending_members if m.email])
+    # Background task: send emails with single SMTP connection
+    def _send_opord_emails():
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        import logging
+        logger = logging.getLogger(__name__)
+        sent = 0
+        failed = 0
+        try:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                for addr in recipient_emails:
+                    try:
+                        msg = MIMEMultipart("alternative")
+                        msg["Subject"] = f"\U0001f4cb OPORD \u2014 {event_title}"
+                        msg["From"] = SMTP_FROM
+                        msg["To"] = addr
+                        msg.attach(MIMEText(html_body, "html"))
+                        server.send_message(msg)
+                        sent += 1
+                    except Exception:
+                        failed += 1
+        except Exception as e:
+            logger.error(f"OPORD email blast SMTP failed: {e}")
+        logger.info(f"OPORD email blast complete: {sent} sent, {failed} failed \u2014 {event_title}")
+
+    background_tasks.add_task(_send_opord_emails)
+
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'📋 OPORD published. Emailed to {email_count} attending member{"s" if email_count != 1 else ""}, posted to Announcements.</div>'
+        f'\U0001f4cb OPORD published. Emailing {email_count} attending member{"s" if email_count != 1 else ""} in background, posted to Announcements.</div>'
         '<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
 
@@ -2289,6 +2572,308 @@ async def save_aar(request: Request, event_id: int):
             '<div style="padding:8px 12px;background:rgba(212,165,55,0.15);color:#d4a537;border-radius:6px;">'
             '💾 AAR draft saved.</div>'
         )
+
+
+# ─── OPORD PDF Export ────────────────────────────────────────────────────────
+
+@router.get("/api/events/{event_id}/opord/pdf")
+@require_auth
+async def export_opord_pdf(request: Request, event_id: int):
+    """Export the OPORD as a branded PDF for offline/print use."""
+    from fpdf import FPDF
+    from starlette.responses import Response
+    from app.models.schedule import EventScheduleBlock
+    import textwrap, io, os
+
+    def _safe(text):
+        """Sanitize text for latin-1 Helvetica: replace unsupported chars."""
+        if not text:
+            return text or ""
+        return text.encode("latin-1", "replace").decode("latin-1")
+
+    user = request.session.get("user", {})
+
+    async with async_session() as db:
+        result = await db.execute(select(Event).where(Event.id == event_id))
+        event = result.scalar_one_or_none()
+        if not event:
+            return HTMLResponse("Event not found", status_code=404)
+
+        # Access check: attending members + command/s3/admin
+        roles = user.get("roles", [])
+        is_leadership = any(r in roles for r in ("command", "s3", "admin"))
+        if not is_leadership:
+            member_result = await db.execute(
+                select(Member.id).where(Member.nc_username == user.get("username", ""))
+            )
+            member_row = member_result.first()
+            if not member_row:
+                return HTMLResponse("Access denied", status_code=403)
+            rsvp_result = await db.execute(
+                select(EventRSVP.status).where(
+                    and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_row[0])
+                )
+            )
+            rsvp_row = rsvp_result.first()
+            if not rsvp_row or rsvp_row[0] != "attending":
+                return HTMLResponse("Access denied", status_code=403)
+
+        # Get schedule blocks
+        schedule_result = await db.execute(
+            select(EventScheduleBlock)
+            .where(EventScheduleBlock.event_id == event_id)
+            .order_by(EventScheduleBlock.day_number, EventScheduleBlock.sort_order, EventScheduleBlock.start_time)
+        )
+        schedule_blocks = schedule_result.scalars().all()
+
+        # Get attending roster
+        roster_result = await db.execute(
+            select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.status == "attending")
+            ).order_by(Member.last_name)
+        )
+        attending_members = roster_result.scalars().all()
+
+        # Format dates
+        local_dt = _to_cdt(event.date_start)
+        date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
+        time_str = local_dt.strftime("%H%M %Z")
+
+        # Capture all data before session closes
+        title = event.title
+        location = event.location or "TBD"
+        rally = event.rally_point
+        rally_time = event.rally_point_time
+        freq_convoy_pri = event.freq_convoy_primary
+        freq_convoy_alt = event.freq_convoy_alternate
+        freq_fob_pri = event.freq_fob_primary
+        freq_fob_alt = event.freq_fob_alternate
+        smeac = [
+            ("1. SITUATION", event.opord_situation),
+            ("2. MISSION", event.opord_mission),
+            ("3. EXECUTION", event.opord_execution),
+            ("4. ADMIN & LOGISTICS", event.opord_admin_logistics),
+            ("5. COMMAND & SIGNAL", event.opord_command_signal),
+        ]
+        opord_issued = _to_cdt(event.opord_issued_at).strftime("%d %b %Y %H%M") + " CT" if event.opord_issued_at else None
+
+        # Build instructor lookup for schedule blocks
+        sched_instr_ids = {b.instructor_id for b in schedule_blocks if b.instructor_id}
+        sched_instr_map = {}
+        if sched_instr_ids:
+            instr_r = await db.execute(
+                select(Member).where(Member.id.in_(sched_instr_ids))
+            )
+            for m in instr_r.scalars().all():
+                abbr = RANK_ABBR.get(m.rank_grade, "")
+                sched_instr_map[m.id] = f"{abbr} {m.last_name}".strip()
+
+        # Copy schedule data
+        sched_data = []
+        for b in schedule_blocks:
+            sched_data.append({
+                "day": b.day_number,
+                "start": b.start_time,
+                "end": b.end_time,
+                "title": b.title,
+                "type": b.activity_type,
+                "notes": b.notes,
+                "instructor": sched_instr_map.get(b.instructor_id, ""),
+            })
+
+        # Copy roster data
+        roster_data = []
+        for m in attending_members:
+            rank = RANK_ABBR.get(m.rank_grade, "")
+            roster_data.append(f"{rank} {m.last_name}, {m.first_name}".strip())
+
+    # ── Build PDF ──────────────────────────────────────────────────────────
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # Header bar
+    pdf.set_fill_color(26, 26, 46)
+    pdf.rect(0, 0, 210, 34, 'F')
+
+    img_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'img')
+    crest_path = os.path.join(img_dir, 'crest.png')
+    seal_path = os.path.join(img_dir, 'tsm-seal.png')
+
+    if os.path.exists(crest_path):
+        pdf.image(crest_path, x=20, y=3, h=28)
+    if os.path.exists(seal_path):
+        pdf.image(seal_path, x=170, y=3, h=28)
+
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_text_color(212, 165, 55)
+    pdf.set_y(8)
+    pdf.cell(0, 10, _safe('13TH LEGION'), align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 9)
+    pdf.set_text_color(180, 180, 180)
+    pdf.cell(0, 5, _safe('Texas State Militia  |  Dallas / Fort Worth'), align='C', new_x='LMARGIN', new_y='NEXT')
+
+    pdf.set_y(38)
+    pdf.set_text_color(0, 0, 0)
+
+    # Document title
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, _safe('OPERATIONS ORDER'), new_x='LMARGIN', new_y='NEXT')
+
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 7, _safe(title), new_x='LMARGIN', new_y='NEXT')
+
+    # Meta line
+    pdf.set_font('Helvetica', '', 10)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(0, 6, _safe(f'Date: {date_str} @ {time_str}  |  Location: {location}'), new_x='LMARGIN', new_y='NEXT')
+    if opord_issued:
+        pdf.cell(0, 6, _safe(f'Published: {opord_issued}'), new_x='LMARGIN', new_y='NEXT')
+
+    # Rally point
+    if rally:
+        rally_str = f'Rally Point: {rally}'
+        if rally_time:
+            rally_str += f' @ {rally_time}'
+        pdf.cell(0, 6, _safe(rally_str), new_x='LMARGIN', new_y='NEXT')
+
+    # Frequencies
+    freq_parts = []
+    if freq_convoy_pri:
+        s = f'Convoy: {freq_convoy_pri}'
+        if freq_convoy_alt:
+            s += f' / {freq_convoy_alt}'
+        freq_parts.append(s)
+    if freq_fob_pri:
+        s = f'FOB: {freq_fob_pri}'
+        if freq_fob_alt:
+            s += f' / {freq_fob_alt}'
+        freq_parts.append(s)
+    if freq_parts:
+        pdf.cell(0, 6, _safe('Frequencies: ' + '  |  '.join(freq_parts)), new_x='LMARGIN', new_y='NEXT')
+
+    pdf.ln(4)
+
+    # Divider
+    pdf.set_draw_color(212, 165, 55)
+    pdf.set_line_width(0.5)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(6)
+
+    # Helper for text sections
+    def _section(heading, content):
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.set_text_color(170, 130, 20)
+        pdf.cell(0, 7, _safe(heading), new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(40, 40, 40)
+        for line in content.split('\n'):
+            wrapped = textwrap.wrap(line, width=90) or ['']
+            for wl in wrapped:
+                pdf.cell(0, 5.5, _safe(wl), new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(4)
+
+    # SMEAC paragraphs
+    for label, content in smeac:
+        if content:
+            _section(label, content)
+
+    # Training Schedule
+    if sched_data:
+        pdf.set_draw_color(212, 165, 55)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(6)
+
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(0, 8, _safe('TRAINING SCHEDULE'), new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(2)
+
+        # Group by day
+        days = {}
+        for b in sched_data:
+            days.setdefault(b["day"], []).append(b)
+
+        multi_day = len(days) > 1
+        for day_num in sorted(days.keys()):
+            if multi_day:
+                pdf.set_font('Helvetica', 'B', 11)
+                pdf.set_text_color(170, 130, 20)
+                pdf.cell(0, 7, _safe(f'Day {day_num}'), new_x='LMARGIN', new_y='NEXT')
+
+            for b in days[day_num]:
+                start_t = b["start"] or ""
+                end_t = b["end"] or ""
+                if len(start_t) >= 4:
+                    time_label = f'{start_t[:2]}:{start_t[2:4]}'
+                else:
+                    time_label = start_t
+                if end_t and len(end_t) >= 4:
+                    time_label += f'-{end_t[:2]}:{end_t[2:4]}'
+
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.set_text_color(80, 80, 80)
+                pdf.cell(28, 5.5, _safe(time_label))
+                pdf.set_font('Helvetica', '', 10)
+                pdf.set_text_color(40, 40, 40)
+                title_line = b["title"]
+                if b.get("instructor"):
+                    title_line += f'  ({b["instructor"]})'
+                pdf.cell(0, 5.5, _safe(title_line or ""), new_x='LMARGIN', new_y='NEXT')
+                if b["notes"]:
+                    pdf.set_font('Helvetica', 'I', 9)
+                    pdf.set_text_color(120, 120, 120)
+                    for line in b["notes"].split('\n'):
+                        wrapped = textwrap.wrap(line, width=80) or ['']
+                        for wl in wrapped:
+                            pdf.cell(28, 5)
+                            pdf.cell(0, 5, _safe(wl), new_x='LMARGIN', new_y='NEXT')
+            pdf.ln(2)
+
+    # Attending Roster
+    if roster_data:
+        pdf.set_draw_color(212, 165, 55)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(6)
+
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(0, 8, _safe(f'ATTENDING ROSTER ({len(roster_data)})'), new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(2)
+
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(40, 40, 40)
+
+        for name in roster_data:
+            pdf.cell(0, 5.5, _safe(f'  -  {name}'), new_x='LMARGIN', new_y='NEXT')
+
+        pdf.ln(6)
+
+    # Footer
+    pdf.set_draw_color(212, 165, 55)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(4)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 5, _safe('Nunquam Non Paratus'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 8)
+    pdf.cell(0, 5, _safe('S3 Operations & Training  |  13th Legion, Texas State Militia'), new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, _safe(f'https://portal.13thlegion.org/events/{event_id}'), new_x='LMARGIN', new_y='NEXT')
+
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+
+    safe_title = title.replace(' ', '_').replace('/', '-')[:40]
+    filename = f'OPORD_{safe_title}_{date_str.replace(" ", "_")}.pdf'
+
+    return Response(
+        content=buf.read(),
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
 
 
 # ─── AAR PDF Export (PP-133) ──────────────────────────────────────────────

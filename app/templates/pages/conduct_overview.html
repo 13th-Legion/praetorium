@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}CoC Violations{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h1 style="color:#d4a537;margin:0;">⚖️ Code of Conduct Violations</h1>
+        {% if active_count > 0 %}
+        <span style="background:rgba(220,53,69,0.2);color:#dc3545;border:1px solid rgba(220,53,69,0.3);padding:4px 12px;border-radius:12px;font-size:13px;font-weight:600;">
+            {{ active_count }} Active
+        </span>
+        {% endif %}
+    </div>
+
+    {% if not violations %}
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted" style="text-align:center;padding:24px;">No violations on record. 🎉</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body" style="padding:0;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid #333;">
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">DATE</th>
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">MEMBER</th>
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">ACTION</th>
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">REASON</th>
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">PERIOD</th>
+                        <th style="padding:10px 16px;text-align:left;color:#888;font-size:12px;font-weight:600;">ISSUED BY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in violations %}
+                    {% set v = item.violation %}
+                    {% set m = item.member %}
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px 16px;font-size:13px;white-space:nowrap;">{{ v.violation_date.strftime('%b %d, %Y') }}</td>
+                        <td style="padding:10px 16px;font-size:13px;">
+                            <a href="/profile/{{ m.id }}" style="color:#d4a537;text-decoration:none;">{{ m.display_name }}</a>
+                        </td>
+                        <td style="padding:10px 16px;font-size:13px;">
+                            <span style="color:#dc3545;font-weight:600;">{{ v.action_taken }}</span>
+                            {% if v.end_date and v.end_date >= today %}
+                            <span style="background:rgba(220,53,69,0.2);color:#dc3545;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:600;">ACTIVE</span>
+                            {% elif v.start_date and not v.end_date %}
+                            <span style="background:rgba(220,53,69,0.2);color:#dc3545;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:600;">ACTIVE</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 16px;font-size:12px;color:#ccc;max-width:300px;">
+                            {{ v.reason }}
+                            {% if v.notes %}
+                            <div style="font-size:11px;color:#888;font-style:italic;margin-top:2px;">{{ v.notes }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 16px;font-size:12px;color:#888;white-space:nowrap;">
+                            {% if v.start_date and v.end_date %}
+                                {{ v.start_date.strftime('%b %d') }} — {{ v.end_date.strftime('%b %d, %Y') }}
+                                <span style="color:#666;">({{ v.duration_days }}d)</span>
+                            {% elif v.start_date %}
+                                {{ v.start_date.strftime('%b %d, %Y') }} — ongoing
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 16px;font-size:12px;color:#888;">{{ v.issued_by }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

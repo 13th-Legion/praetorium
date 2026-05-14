@@ -328,13 +328,22 @@ async def add_schedule_block(
     end_time: str = Form(None),
     title: str = Form(...),
     activity_type: str = Form("class"),
-    instructor_id: Optional[int] = Form(None),
+    instructor_id: Optional[str] = Form(None),
     notes: str = Form(None),
 ):
     """Add a schedule block to an event."""
     user = get_current_user(request)
     if not _has_s3_access(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    # Parse instructor_id: HTML forms send empty string for "None" option
+    _instructor_id: Optional[int] = None
+    if instructor_id and instructor_id.strip():
+        try:
+            _instructor_id = int(instructor_id)
+        except ValueError:
+            _instructor_id = None
+    instructor_id = _instructor_id
 
     # Validate time format
     start_time = start_time.strip().zfill(4)
@@ -344,13 +353,6 @@ async def add_schedule_block(
         end_time = None
 
     async with async_session() as db:
-        # Get max sort_order for this day
-        max_order = await db.execute(
-            select(func.max(EventScheduleBlock.sort_order))
-            .where(EventScheduleBlock.event_id == event_id, EventScheduleBlock.day_number == day_number)
-        )
-        current_max = max_order.scalar() or 0
-
         block = EventScheduleBlock(
             event_id=event_id,
             day_number=day_number,
@@ -360,12 +362,23 @@ async def add_schedule_block(
             activity_type=activity_type,
             instructor_id=instructor_id if instructor_id and instructor_id > 0 else None,
             notes=notes.strip() if notes else None,
-            sort_order=current_max + 1,
+            sort_order=0,
             created_by=user.get("username", "unknown"),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
         db.add(block)
+        await db.flush()
+
+        # Re-sort all blocks for this day by start_time
+        day_blocks = await db.execute(
+            select(EventScheduleBlock)
+            .where(EventScheduleBlock.event_id == event_id, EventScheduleBlock.day_number == day_number)
+            .order_by(EventScheduleBlock.start_time, EventScheduleBlock.end_time)
+        )
+        for idx, b in enumerate(day_blocks.scalars().all(), 1):
+            b.sort_order = idx
+
         await db.commit()
 
     # Redirect back to builder (HTMX will swap)
@@ -406,13 +419,22 @@ async def update_schedule_block(
     end_time: str = Form(None),
     title: str = Form(...),
     activity_type: str = Form("class"),
-    instructor_id: Optional[int] = Form(None),
+    instructor_id: Optional[str] = Form(None),
     notes: str = Form(None),
 ):
     """Update an existing schedule block."""
     user = get_current_user(request)
     if not _has_s3_access(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    # Parse instructor_id: HTML forms send empty string for "None" option
+    _instructor_id: Optional[int] = None
+    if instructor_id and instructor_id.strip():
+        try:
+            _instructor_id = int(instructor_id)
+        except ValueError:
+            _instructor_id = None
+    instructor_id = _instructor_id
 
     async with async_session() as db:
         block = await db.get(EventScheduleBlock, block_id)

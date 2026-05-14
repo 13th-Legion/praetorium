@@ -27,21 +27,27 @@
   </div>
 
   {% elif election.phase == "nominations" %}
-  <div style="background:linear-gradient(135deg,rgba(212,165,55,0.15),rgba(26,26,46,0.95));
-              border:2px solid #d4a537;border-radius:10px;padding:20px 28px;margin-bottom:28px;
+  {% set noms_closed = now_utc is defined and election.nominations_close and now_utc >= election.nominations_close %}
+  <div style="background:linear-gradient(135deg,{% if noms_closed %}rgba(136,136,136,0.15){% else %}rgba(212,165,55,0.15){% endif %},rgba(26,26,46,0.95));
+              border:2px solid {% if noms_closed %}#888{% else %}#d4a537{% endif %};border-radius:10px;padding:20px 28px;margin-bottom:28px;
               position:relative;overflow:hidden;">
-    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#d4a537;"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:{% if noms_closed %}#888{% else %}#d4a537{% endif %};"></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
       <div>
         <span style="font-family:'Oswald',sans-serif;font-size:0.75rem;font-weight:700;
-                     letter-spacing:0.12em;color:#d4a537;text-transform:uppercase;">
-          🗳️ Nominations Open
+                     letter-spacing:0.12em;color:{% if noms_closed %}#888{% else %}#d4a537{% endif %};text-transform:uppercase;">
+          {% if noms_closed %}⏳ Nominations Closed{% else %}🗳️ Nominations Open{% endif %}
         </span>
         <h1 style="font-family:'Oswald',sans-serif;font-size:1.8rem;font-weight:700;
                    color:#fff;margin:6px 0 4px;">{{ election.title }}</h1>
         <div style="font-size:14px;color:#aaa;">
+          {% if noms_closed %}
+          Voting opens:
+          <strong style="color:#d4a537;">{{ election.voting_open|mildate|default("TBD") }}</strong>
+          {% else %}
           Nominations close:
           <strong style="color:#d4a537;">{{ election.nominations_close|mildate|default("TBD") }}</strong>
+          {% endif %}
         </div>
       </div>
       <div style="text-align:right;">
@@ -190,9 +196,34 @@
           </form>
         </div>
         {% elif my_nomination.accepted %}
-        <div style="color:#4caf50;font-weight:700;">✅ You have accepted — you are on the ballot.</div>
+        <div id="nomination-status">
+          <div style="color:#4caf50;font-weight:700;">✅ You have accepted — you are on the ballot.</div>
+          {% if election.phase == "nominations" %}
+          <form hx-post="/elections/{{ election.id }}/decline-nomination"
+                hx-target="#nomination-status" hx-swap="outerHTML"
+                onsubmit="return confirm('Withdraw your nomination? You will be removed from the ballot.');" style="margin-top:8px;">
+            <button type="submit"
+                    style="padding:6px 14px;background:transparent;color:#ef5350;
+                           border:1px solid #ef5350;border-radius:4px;font-size:12px;cursor:pointer;">
+              ↩ Withdraw Nomination
+            </button>
+          </form>
+          {% endif %}
+        </div>
         {% else %}
-        <div style="color:#888;">You declined this nomination.</div>
+        <div id="nomination-status">
+          <div style="color:#888;">You declined this nomination.</div>
+          {% if election.phase == "nominations" %}
+          <form hx-post="/elections/{{ election.id }}/accept-nomination"
+                hx-target="#nomination-status" hx-swap="outerHTML" style="margin-top:8px;">
+            <button type="submit"
+                    style="padding:6px 14px;background:transparent;color:#4caf50;
+                           border:1px solid #4caf50;border-radius:4px;font-size:12px;cursor:pointer;">
+              ✓ Change Mind — Accept
+            </button>
+          </form>
+          {% endif %}
+        </div>
         {% endif %}
       </div>
       {% endif %}
@@ -442,10 +473,10 @@
             </div>
           </div>
           {% endmacro %}
-          {{ timeline_row("Nominations Open", election.nominations_open, election.phase == "nominations") }}
-          {{ timeline_row("Nominations Close", election.nominations_close) }}
+          {{ timeline_row("Nominations Open", election.nominations_open, election.phase == "nominations" and not noms_closed) }}
+          {{ timeline_row("Nominations Close", election.nominations_close, election.phase == "nominations" and noms_closed) }}
           {{ timeline_row("Voting Opens", election.voting_open, election.phase == "voting") }}
-          {{ timeline_row("Voting Closes", election.voting_close) }}
+          {{ timeline_row("Voting Closes", election.voting_close, election.phase == "complete") }}
         </div>
       </div>
 

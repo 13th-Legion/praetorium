@@ -12,6 +12,7 @@
                     {% elif stack_id == 14 %}📝
                     {% elif stack_id == 15 %}✅
                     {% elif stack_id == 16 %}🏁
+                    {% elif stack_id == 81 %}⏸️
                     {% endif %}
                     {{ col.name }}
                 </span>
@@ -107,6 +108,19 @@
                         {% endif %}
                         {% endif %}
 
+                        <!-- On Hold / Resume buttons -->
+                        {% if stack_id == 81 %}
+                        <button onclick="if(confirm('Resume {{ card.name }} back to their previous stage?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/resume', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                            style="padding:4px 8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
+                            ▶️ Resume
+                        </button>
+                        {% elif stack_id != 16 %}
+                        <button onclick="if(confirm('Place {{ card.name }} on hold?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/hold', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                            style="padding:4px 8px;background:rgba(243,156,18,0.15);color:#f39c12;border:1px solid rgba(243,156,18,0.3);border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
+                            ⏸️ On Hold
+                        </button>
+                        {% endif %}
+
                         <!-- View Application button -->
                         <button onclick="
                             var el = document.getElementById('details-{{ card.id }}');
@@ -192,7 +206,7 @@
                         </div>
 
                         <!-- Files panel (hidden) -->
-                        <div id="files-{{ card.id }}" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:4px;padding:8px;">
+                        <div id="files-{{ card.id }}" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:4px;padding:8px;overflow:hidden;">
                             <div id="attach-{{ card.id }}">
                                 <p style="color:#888;font-size:11px;">Loading...</p>
                             </div>
