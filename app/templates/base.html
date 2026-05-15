@@ -55,13 +55,13 @@
                     {% if "s1" in shop_roles.shops %}
                     <div style="border-bottom: 1px solid #333;">
                         <a href="/shops/s1" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📋 S1 — Personnel</a>
-                        <a href="/api/s1/pipeline" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruit Pipeline</a>
-                        <a href="/api/s1/payments" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Payments</a>
+                        <a href="/api/awards" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Awards & Sign-offs</a>
                         <a href="/api/s1/documents/status" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Documents</a>
+                        <a href="/api/s1/offboard" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Offboarding</a>
+                        <a href="/api/s1/payments" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Payments</a>
+                        <a href="/api/s1/pipeline" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruit Pipeline</a>
                         <a href="/api/s1/recruiters" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Recruiters</a>
                         <a href="/api/training/claims/review" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Training Claims</a>
-                        <a href="/api/awards" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Awards & Sign-offs</a>
-                        <a href="/api/s1/offboard" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Offboarding</a>
                         <a href="/api/s1/email-blast" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">Unit Comms</a>
                     </div>
                     {% elif "s1_base" in shop_roles.shops %}
@@ -77,8 +77,9 @@
                     {% endif %}
                     {% if "s3" in shop_roles.shops %}
                     <div style="border-bottom: 1px solid #333;">
-                        <a href="/shops/s3" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">⚔️ S3 — Ops & Training</a>
-                        <a href="/api/s3/attendance-analytics" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">📊 Attendance Analytics</a>
+                        <span style="display: block; padding: 8px 16px; color: #d4a537; font-size: 13px; font-weight: 600;">⚔️ S3 — Ops & Training</span>
+                        <a href="/api/s3/attendance-analytics" style="display: block; padding: 4px 16px 4px 28px; color: #ccc; text-decoration: none; font-size: 12px;">📊 Attendance Analytics</a>
+                        <a href="/shops/s3" style="display: block; padding: 4px 16px 8px 28px; color: #ccc; text-decoration: none; font-size: 12px;">📅 Event Builder</a>
                     </div>
                     {% endif %}
                     {% if "s4" in shop_roles.shops %}
@@ -105,10 +106,16 @@
                 <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">🏰 Command ▾</a>
                 <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 200px; z-index: 100; top: 100%; left: 0;">
                     <div style="border-bottom: 1px solid #333;">
+                        <a href="/api/conduct" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px;">⚖️ CoC Violations</a>
+                    </div>
+                    <div style="border-bottom: 1px solid #333;">
                         <a href="/elections/admin" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px;">🗳️ Elections</a>
                     </div>
-                    <div>
+                    <div style="border-bottom: 1px solid #333;">
                         <a href="/api/conduct" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px;">⚖️ CoC Violations</a>
+                    </div>
+                    <div>
+                        <a href="/api/s1/promotions" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px;">⭐ Promotions</a>
                     </div>
                 </div>
             </div>
