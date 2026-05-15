@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Promotions — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .promo-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .promo-table th { background: #1a1a2e; color: #d4a537; padding: 10px 12px; text-align: left; border-bottom: 2px solid #d4a537; cursor: pointer; user-select: none; white-space: nowrap; }
+    .promo-table th:hover { color: #fff; }
+    .promo-table th .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+    .promo-table th.sorted .sort-arrow { opacity: 1; }
+    .promo-table td { padding: 8px 12px; border-bottom: 1px solid #333; vertical-align: middle; }
+    .promo-table tr:hover { background: rgba(212, 165, 55, 0.08); }
+    .promo-table tr.non-promotable { opacity: 0.5; }
+    .promo-table tr.non-promotable td { font-style: italic; }
+
+    .tig-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; }
+    .tig-red { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+    .tig-orange { background: rgba(255, 140, 0, 0.2); color: #ff8c00; }
+    .tig-yellow { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+    .tig-green { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+    .tig-unknown { background: rgba(108, 117, 125, 0.2); color: #6c757d; }
+
+    .np-badge { display: inline-block; background: rgba(220, 53, 69, 0.15); color: #dc3545; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: help; }
+
+    .promo-select { background: #1a1a2e; color: #ccc; border: 1px solid #444; border-radius: 4px; padding: 4px 8px; font-size: 13px; width: 200px; }
+    .promo-btn { background: #d4a537; color: #1a1a2e; border: none; border-radius: 4px; padding: 5px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+    .promo-btn:hover { background: #e6b84a; }
+    .promo-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .promo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .promo-header h2 { margin: 0; color: #d4a537; }
+    .promo-stats { display: flex; gap: 16px; font-size: 13px; color: #888; }
+    .promo-stats span { background: #1a1a2e; padding: 4px 12px; border-radius: 4px; border: 1px solid #333; }
+    .promo-stats .stat-val { color: #d4a537; font-weight: 700; }
+
+    .filter-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+    .filter-row label { font-size: 12px; color: #888; }
+    .filter-row select, .filter-row input { background: #1a1a2e; color: #ccc; border: 1px solid #444; border-radius: 4px; padding: 4px 8px; font-size: 13px; }
+
+    .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 6px; font-size: 14px; z-index: 9999; animation: fadeout 3s ease-in-out forwards; }
+    .toast.success { background: #155724; color: #d4edda; border: 1px solid #28a745; }
+    @keyframes fadeout { 0%, 70% { opacity: 1; } 100% { opacity: 0; display: none; } }
+
+    /* Confirm modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #1a1a2e; border: 1px solid #d4a537; border-radius: 8px; padding: 24px; max-width: 420px; width: 90%; text-align: center; }
+    .modal-box h3 { color: #d4a537; margin: 0 0 12px; }
+    .modal-box p { color: #ccc; margin: 0 0 20px; font-size: 14px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: center; }
+    .modal-cancel { background: #333; color: #ccc; border: none; border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; }
+    .modal-confirm { background: #d4a537; color: #1a1a2e; border: none; border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; font-weight: 700; }
+</style>
+
+<div class="promo-header">
+    <h2>⭐ Promotions Board</h2>
+    <div class="promo-stats">
+        <span>Active Members: <span class="stat-val">{{ rows|length }}</span></span>
+        <span>Non-Promotable: <span class="stat-val">{{ rows|selectattr('non_promotable')|list|length }}</span></span>
+    </div>
+</div>
+
+<div class="filter-row">
+    <label>Filter Rank:</label>
+    <select id="rankFilter" onchange="filterTable()">
+        <option value="">All Ranks</option>
+        <option value="E-2">PV2 (E-2)</option>
+        <option value="E-3">PFC (E-3)</option>
+        <option value="E-4">CPL (E-4)</option>
+        <option value="E-5">SGT (E-5)</option>
+        <option value="E-6">SSG (E-6)</option>
+        <option value="E-7">SFC (E-7)</option>
+        <option value="E-8">1SG (E-8)</option>
+        <option value="W-1">WO1 (W-1)</option>
+        <option value="O-2">1LT (O-2)</option>
+        <option value="O-3">CPT (O-3)</option>
+    </select>
+    <label>Search:</label>
+    <input type="text" id="nameSearch" placeholder="Name or callsign…" oninput="filterTable()" style="width: 180px;">
+    <label style="margin-left: auto;">
+        <input type="checkbox" id="hideNP" onchange="filterTable()"> Hide non-promotable
+    </label>
+</div>
+
+<table class="promo-table" id="promoTable">
+    <thead>
+        <tr>
+            <th data-col="rank" onclick="sortTable('rank')">RNK <span class="sort-arrow">▲▼</span></th>
+            <th data-col="last" onclick="sortTable('last')">Last Name <span class="sort-arrow">▲▼</span></th>
+            <th data-col="first" onclick="sortTable('first')">First Name <span class="sort-arrow">▲▼</span></th>
+            <th data-col="callsign" onclick="sortTable('callsign')">Callsign <span class="sort-arrow">▲▼</span></th>
+            <th data-col="promo_date" onclick="sortTable('promo_date')">Last Promotion <span class="sort-arrow">▲▼</span></th>
+            <th data-col="tig" class="sorted" onclick="sortTable('tig')">Time in Grade <span class="sort-arrow">▼</span></th>
+            <th>Promote To</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr class="promo-row {% if row.non_promotable %}non-promotable{% endif %}"
+            data-rank="{{ row.rank_grade }}"
+            data-last="{{ row.last_name|lower }}"
+            data-first="{{ row.first_name|lower }}"
+            data-callsign="{{ row.callsign|lower }}"
+            data-tig="{{ row.tig_days }}"
+            data-promo-date="{{ row.promo_date_str }}"
+            data-rank-idx="{{ row.rank_index }}"
+            data-np="{{ '1' if row.non_promotable else '0' }}">
+            <td><strong>{{ row.rank_abbr }}</strong></td>
+            <td><a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a></td>
+            <td>{{ row.first_name }}</td>
+            <td>{{ row.callsign }}</td>
+            <td>{{ row.promo_date_str }}</td>
+            <td>
+                {% if row.tig_days < 0 %}
+                    <span class="tig-badge tig-unknown">{{ row.tig_display }}</span>
+                {% elif row.tig_days >= 365 %}
+                    <span class="tig-badge tig-red">{{ row.tig_display }}</span>
+                {% elif row.tig_days >= 270 %}
+                    <span class="tig-badge tig-orange">{{ row.tig_display }}</span>
+                {% elif row.tig_days >= 180 %}
+                    <span class="tig-badge tig-yellow">{{ row.tig_display }}</span>
+                {% else %}
+                    <span class="tig-badge tig-green">{{ row.tig_display }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if row.non_promotable %}
+                    <span class="np-badge" title="{{ row.np_reason }}">🚫 NON-PROMOTABLE</span>
+                {% elif row.allowed_promotions %}
+                    <select class="promo-select" id="rank-{{ row.id }}">
+                        <option value="">— select —</option>
+                        {% for grade, label in row.allowed_promotions %}
+                        <option value="{{ grade }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                {% else %}
+                    <span style="color: #555; font-size: 12px;">Max rank</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not row.non_promotable and row.allowed_promotions %}
+                <button class="promo-btn" onclick="confirmPromotion({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')" {% if row.non_promotable %}disabled{% endif %}>
+                    Promote
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not rows %}
+<div style="text-align: center; padding: 40px; color: #888;">
+    <p>No active patched members found.</p>
+</div>
+{% endif %}
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="promoModal">
+    <div class="modal-box">
+        <h3>Confirm Promotion</h3>
+        <p id="promoModalText"></p>
+        <form id="promoForm" method="POST" action="/api/s1/promotions/promote">
+            <input type="hidden" name="member_id" id="promoMemberId">
+            <input type="hidden" name="new_rank" id="promoNewRank">
+            <div class="modal-actions">
+                <button type="button" class="modal-cancel" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="modal-confirm">Confirm Promotion</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmPromotion(memberId, currentRank, lastName) {
+    var sel = document.getElementById('rank-' + memberId);
+    if (!sel || !sel.value) {
+        alert('Select a rank to promote to.');
+        return;
+    }
+    var newRank = sel.value;
+    var newLabel = sel.options[sel.selectedIndex].text;
+
+    document.getElementById('promoMemberId').value = memberId;
+    document.getElementById('promoNewRank').value = newRank;
+    document.getElementById('promoModalText').textContent =
+        'Promote ' + currentRank + ' ' + lastName + ' to ' + newLabel + '?';
+    document.getElementById('promoModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('promoModal').classList.remove('active');
+}
+
+// Close modal on overlay click
+document.getElementById('promoModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// ─── Filtering ───────────────────────────────────────────────────────────
+function filterTable() {
+    var rankVal = document.getElementById('rankFilter').value;
+    var search = document.getElementById('nameSearch').value.toLowerCase();
+    var hideNP = document.getElementById('hideNP').checked;
+    var rows = document.querySelectorAll('.promo-row');
+
+    rows.forEach(function(row) {
+        var show = true;
+        if (rankVal && row.dataset.rank !== rankVal) show = false;
+        if (search) {
+            var text = row.dataset.last + ' ' + row.dataset.first + ' ' + row.dataset.callsign;
+            if (text.indexOf(search) === -1) show = false;
+        }
+        if (hideNP && row.dataset.np === '1') show = false;
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// ─── Sorting ─────────────────────────────────────────────────────────────
+var currentSort = 'tig';
+var sortDir = -1; // -1 = desc
+
+function sortTable(col) {
+    if (currentSort === col) {
+        sortDir *= -1;
+    } else {
+        currentSort = col;
+        sortDir = col === 'tig' ? -1 : 1; // TIG defaults desc, others asc
+    }
+
+    var tbody = document.querySelector('#promoTable tbody');
+    var rows = Array.from(tbody.querySelectorAll('.promo-row'));
+
+    rows.sort(function(a, b) {
+        var av, bv;
+        switch (col) {
+            case 'rank':
+                av = parseInt(a.dataset.rankIdx); bv = parseInt(b.dataset.rankIdx); break;
+            case 'last':
+                av = a.dataset.last; bv = b.dataset.last; break;
+            case 'first':
+                av = a.dataset.first; bv = b.dataset.first; break;
+            case 'callsign':
+                av = a.dataset.callsign; bv = b.dataset.callsign; break;
+            case 'promo_date':
+                av = a.dataset.promoDate; bv = b.dataset.promoDate; break;
+            case 'tig':
+                av = parseInt(a.dataset.tig); bv = parseInt(b.dataset.tig); break;
+            default:
+                av = ''; bv = '';
+        }
+        if (typeof av === 'string') {
+            return sortDir * av.localeCompare(bv);
+        }
+        return sortDir * (av - bv);
+    });
+
+    rows.forEach(function(r) { tbody.appendChild(r); });
+
+    // Update header indicators
+    document.querySelectorAll('.promo-table th').forEach(function(th) {
+        th.classList.remove('sorted');
+        var arrow = th.querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = '▲▼';
+    });
+    var activeTh = document.querySelector('th[data-col="' + col + '"]');
+    if (activeTh) {
+        activeTh.classList.add('sorted');
+        var arrow = activeTh.querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = sortDir > 0 ? '▲' : '▼';
+    }
+}
+</script>
+{% endblock %}
