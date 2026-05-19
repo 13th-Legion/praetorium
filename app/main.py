@@ -71,6 +71,59 @@ class ContactVerifyMiddleware(BaseHTTPMiddleware):
         return RedirectResponse(url="/verify-contact", status_code=302)
 
 
+# ─── Display Name & Role Refresh Middleware ───────────────────────────────────
+
+DISPLAY_REFRESH_INTERVAL = 15 * 60  # 15 minutes in seconds
+DISPLAY_REFRESH_BYPASS = {"/auth/", "/static/", "/health", "/favicon.ico"}
+
+
+class DisplayRefreshMiddleware(BaseHTTPMiddleware):
+    """Periodically refresh display_name and roles from DB/NC every 15 minutes."""
+
+    async def dispatch(self, request: Request, call_next):
+        import time
+        path = request.url.path
+
+        # Skip for non-session paths
+        if any(path.startswith(p) for p in DISPLAY_REFRESH_BYPASS):
+            return await call_next(request)
+
+        user = request.session.get("user")
+        if user:
+            now = int(time.time())
+            last_refresh = request.session.get("_display_refreshed_at", 0)
+
+            if (now - last_refresh) >= DISPLAY_REFRESH_INTERVAL:
+                username = user.get("username", "")
+                if username:
+                    # Refresh display_name from Member DB
+                    from app.models.member import Member
+                    try:
+                        async with async_session() as db:
+                            result = await db.execute(
+                                select(Member).where(Member.nc_username == username)
+                            )
+                            member = result.scalar_one_or_none()
+                            if member:
+                                request.session["user"]["display_name"] = member.display_name
+                    except Exception:
+                        pass  # Don't break requests on refresh failure
+
+                    # Refresh roles from NC groups
+                    try:
+                        from app.auth import fetch_nc_groups, map_groups_to_roles
+                        nc_groups = await fetch_nc_groups(username)
+                        roles = map_groups_to_roles(nc_groups)
+                        request.session["user"]["groups"] = nc_groups
+                        request.session["user"]["roles"] = roles
+                    except Exception:
+                        pass  # Don't break requests on NC fetch failure
+
+                    request.session["_display_refreshed_at"] = now
+
+        return await call_next(request)
+
+
 # ─── App Setup ───────────────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -84,6 +137,7 @@ app = FastAPI(
 # ContactVerifyMiddleware added first → inner (has session access)
 # SessionMiddleware added last → outermost (provides session to everything inside)
 app.add_middleware(ContactVerifyMiddleware)
+app.add_middleware(DisplayRefreshMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,
@@ -136,7 +190,6 @@ app.include_router(elections.router)
 app.include_router(paypal_webhook.router)
 app.include_router(attendance_analytics.router)
 app.include_router(checkout.router)
-app.include_router(donate.router)
 app.include_router(debug.router)
 app.include_router(settings_route.router)
 app.include_router(conduct.router)
