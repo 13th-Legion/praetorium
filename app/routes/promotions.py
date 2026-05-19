@@ -24,7 +24,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 RANK_ORDER = [
     "E-1", "E-2", "E-3", "E-4", "E-5", "E-6", "E-7", "E-8", "E-9",
-    "W-1", "W-2",
+    "W-1", "W-2", "W-3", "W-4", "W-5",
     "O-1", "O-2", "O-3", "O-4",
 ]
 
@@ -80,12 +80,11 @@ async def promotions_dashboard(request: Request):
     today = date.today()
 
     async with async_session() as db:
-        # Get all patched (active) members — E-2 and above
+        # Get all active + recruit members
         result = await db.execute(
             select(Member).where(
-                Member.status == "active",
+                Member.status.in_(("active", "recruit")),
                 Member.rank_grade.isnot(None),
-                Member.rank_grade != "E-1",
             )
         )
         members = result.scalars().all()
@@ -190,6 +189,13 @@ async def promote_member(request: Request):
         # Execute promotion
         member.rank_grade = new_rank
 
+        # Auto-patch: E-1 → E-2+ sets patch_date and status
+        if old_rank == "E-1" and new_rank != "E-1":
+            if not member.patch_date:
+                member.patch_date = today
+            if member.status == "recruit":
+                member.status = "active"
+
         # Log to rank_history
         db.add(RankHistory(
             member_id=member_id,
@@ -200,17 +206,112 @@ async def promote_member(request: Request):
             effective_date=datetime.utcnow(),
         ))
 
-        # Sync NC rank group
+        # Sync NC rank group and display name
         if member.nc_username:
-            from app.routes.member_edit import _sync_rank_group
+            from app.routes.member_edit import _sync_rank_group, _sync_nc_displayname
             await _sync_rank_group(member.nc_username, new_rank)
+            await _sync_nc_displayname(member.nc_username, member.display_name)
 
         await db.commit()
 
         log.info(f"Promoted {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {user.get('username')}")
 
-    # Return a success toast + redirect header for HTMX
+    new_abbr = RANK_ABBR.get(new_rank, new_rank)
+    old_abbr = RANK_ABBR.get(old_rank, old_rank)
+
     return HTMLResponse(
-        content=f'<div class="toast success">✅ {RANK_ABBR.get(old_rank, old_rank)} {member.last_name} promoted to {RANK_ABBR.get(new_rank, new_rank)}</div>',
-        headers={"HX-Redirect": "/api/s1/promotions"},
+        content=f'<div id="promo-toast" class="toast success">✅ {old_abbr} {member.last_name} promoted to {new_abbr}</div>',
+        headers={"HX-Trigger": "promotionDone"},
+    )
+
+
+@router.post("/api/s1/promotions/batch-promote", response_class=HTMLResponse)
+@require_auth
+async def batch_promote(request: Request):
+    """Execute multiple promotions at once."""
+    user = get_current_user(request)
+    if not _has_access(user):
+        return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
+
+    form = await request.form()
+    # Expect pairs: member_ids[] and new_ranks[] (parallel arrays)
+    raw_pairs = form.get("promotions", "").strip()
+    if not raw_pairs:
+        return HTMLResponse(
+            '<div class="toast error">❌ No promotions selected.</div>'
+        )
+
+    import json
+    try:
+        pairs = json.loads(raw_pairs)
+    except Exception:
+        return HTMLResponse('<div class="toast error">❌ Invalid data.</div>')
+
+    results = []
+    errors = []
+    today = date.today()
+    username = user.get("username", "unknown")
+
+    async with async_session() as db:
+        for p in pairs:
+            mid = int(p.get("member_id", 0))
+            new_rank = p.get("new_rank", "").strip()
+            if not mid or not new_rank or new_rank not in RANK_INDEX:
+                errors.append(f"Invalid entry: member {mid}")
+                continue
+
+            result = await db.execute(select(Member).where(Member.id == mid))
+            member = result.scalar_one_or_none()
+            if not member:
+                errors.append(f"Member {mid} not found")
+                continue
+
+            old_rank = member.rank_grade
+            old_idx = RANK_INDEX.get(old_rank, -1)
+            new_idx = RANK_INDEX.get(new_rank, -1)
+            if new_idx <= old_idx:
+                errors.append(f"{member.last_name}: {old_rank} → {new_rank} not valid")
+                continue
+
+            if member.non_promotable_until and member.non_promotable_until >= today:
+                errors.append(f"{member.last_name}: non-promotable hold")
+                continue
+
+            member.rank_grade = new_rank
+
+            # Auto-patch: E-1 → E-2+ sets patch_date and status
+            if old_rank == "E-1" and new_rank != "E-1":
+                if not member.patch_date:
+                    member.patch_date = today
+                if member.status == "recruit":
+                    member.status = "active"
+
+            db.add(RankHistory(
+                member_id=mid,
+                old_rank=old_rank,
+                new_rank=new_rank,
+                changed_by=username,
+                notes="Promoted via Batch Promotions",
+                effective_date=datetime.utcnow(),
+            ))
+
+            if member.nc_username:
+                from app.routes.member_edit import _sync_rank_group, _sync_nc_displayname
+                await _sync_rank_group(member.nc_username, new_rank)
+                await _sync_nc_displayname(member.nc_username, member.display_name)
+
+            results.append(f"{RANK_ABBR.get(old_rank, old_rank)} {member.last_name} → {RANK_ABBR.get(new_rank, new_rank)}")
+            log.info(f"Batch promoted {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {username}")
+
+        await db.commit()
+
+    parts = []
+    if results:
+        parts.append(f"✅ {len(results)} promotion(s): " + ", ".join(results))
+    if errors:
+        parts.append(f"⚠️ {len(errors)} error(s): " + ", ".join(errors))
+
+    return HTMLResponse(
+        content=f'<div id="promo-toast" class="toast success">{"<br>".join(parts)}</div>',
+        headers={"HX-Trigger": "promotionDone"},
     )

@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📍 {{ event.location }}</div>
                 {% endif %}
                 {% if event.rally_point and can_see_opord %}
-                <div style="font-size:14px;color:#aaa;margin-bottom:4px;">🏁 Rally: <a href="https://www.google.com/maps/search/{{ event.rally_point | urlencode }}" target="_blank" style="color:#d4a537;text-decoration:none;">{{ event.rally_point }} ↗</a>{% if event.rally_point_time %} @ <strong style="color:#d4a537;">{{ event.rally_point_time }}</strong>{% endif %}</div>
+                <div style="font-size:14px;color:#aaa;margin-bottom:4px;">🏁 Rally: <a href="{% if event.rally_point_url %}{{ event.rally_point_url }}{% else %}https://www.google.com/maps?q={{ event.rally_point | urlencode }}{% endif %}" target="_blank" style="color:#d4a537;text-decoration:none;">{{ event.rally_point }} ↗</a>{% if event.rally_point_time %} @ <strong style="color:#d4a537;">{{ event.rally_point_time }}</strong>{% endif %}</div>
                 {% endif %}
                 {% if can_see_opord and (event.freq_convoy_primary or event.freq_fob_primary) %}
                 <div style="font-size:13px;color:#aaa;margin-bottom:4px;display:flex;gap:16px;flex-wrap:wrap;">

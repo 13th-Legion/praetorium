@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # Session
     session_max_age: int = 86400  # 24 hours
 
+    # Google Maps Geocoding
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 

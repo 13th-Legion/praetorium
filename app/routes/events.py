@@ -2256,6 +2256,21 @@ async def finalize_event(request: Request, event_id: int):
         event.finalized_by = username
         event.updated_at = now
 
+        # PP-074d: Auto-mark checked-in members as attended
+        checkin_result = await db.execute(
+            select(EventRSVP).where(
+                and_(
+                    EventRSVP.event_id == event_id,
+                    EventRSVP.checked_in == True,
+                    EventRSVP.attended == False,
+                )
+            )
+        )
+        checked_in_rsvps = checkin_result.scalars().all()
+        for rsvp in checked_in_rsvps:
+            rsvp.attended = True
+            rsvp.updated_at = now
+
         # PP-074c: Auto-credit TRADOC
         credit_summary = ""
         if event.category in ("ftx", "mcftx"):

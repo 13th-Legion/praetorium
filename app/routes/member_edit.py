@@ -209,6 +209,31 @@ def _parse_date(s: Optional[str]) -> Optional[date]:
         return None
 
 
+
+
+async def _sync_nc_displayname(nc_username: str, display_name: str):
+    """Update the Nextcloud display name to match Praetorium rank/name/callsign."""
+    if not nc_username or not display_name:
+        return
+    try:
+        nc_url = settings.nc_url
+        auth = (settings.nc_api_user, settings.nc_api_password)
+        headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
+
+        async with httpx.AsyncClient() as client:
+            r = await client.put(
+                f"{nc_url}/ocs/v2.php/cloud/users/{nc_username}",
+                auth=auth, headers=headers, timeout=10,
+                data={"key": "displayname", "value": display_name},
+            )
+            code = r.json().get("ocs", {}).get("meta", {}).get("statuscode")
+            if code == 200:
+                log.info(f"NC display name synced: {nc_username} → {display_name}")
+            else:
+                log.warning(f"NC display name sync failed for {nc_username}: {code}")
+    except Exception as e:
+        log.error(f"NC display name sync error for {nc_username}: {e}")
+
 @router.get("/{member_id}/edit")
 @require_auth
 async def edit_member_page(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
@@ -359,9 +384,10 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
         if member.status == "recruit":
             member.status = "active"
 
-    # Sync NC rank group if rank changed
+    # Sync NC rank group and display name if rank changed
     if new_rank != old_rank and member.nc_username:
         await _sync_rank_group(member.nc_username, new_rank)
+        await _sync_nc_displayname(member.nc_username, member.display_name)
 
     # Log rank change to history
     if new_rank != old_rank:

@@ -43,6 +43,8 @@ class Event(Base):
     rally_point_set_by: Mapped[Optional[str]] = mapped_column(String(64))  # NC username
     rally_point_set_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
+    rally_point_url: Mapped[Optional[str]] = mapped_column(Text)  # Optional Google Maps link
+
     # Radio frequencies (S6 assigns, manual for now)
     freq_convoy_primary: Mapped[Optional[str]] = mapped_column(String(16))     # Primary convoy HAM freq
     freq_convoy_alternate: Mapped[Optional[str]] = mapped_column(String(16))   # Alternate convoy HAM freq

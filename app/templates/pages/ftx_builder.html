@@ -54,14 +54,18 @@
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <span style="color: #999; font-size: 13px; font-weight: 500;">🏁 Rally Point</span>
                 {% if event.rally_point %}
-                <a href="https://www.google.com/maps/search/{{ event.rally_point | urlencode }}" target="_blank" style="color: #d4a537; font-size: 13px; text-decoration: none;">{{ event.rally_point }} ↗</a>
+                <a href="{% if event.rally_point_url %}{{ event.rally_point_url }}{% else %}https://www.google.com/maps?q={{ event.rally_point | urlencode }}{% endif %}" target="_blank" style="color: #d4a537; font-size: 13px; text-decoration: none;">{{ event.rally_point }} ↗</a>
                 <span style="color: #666; font-size: 11px;">{% if event.rally_point_set_by %}(set by {{ event.rally_point_set_by }}){% endif %}</span>
                 {% endif %}
             </div>
-            <form hx-post="/api/s2/rally-point/{{ event.id }}" hx-target="#rp-result" hx-swap="innerHTML" style="margin-top: 8px; display: flex; gap: 8px;">
-                <input name="rally_point" value="{{ event.rally_point or '' }}" placeholder="Rally point address / description"
-                       style="flex: 1; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" required>
-                <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
+            <form hx-post="/api/s2/rally-point/{{ event.id }}" hx-target="#rp-result" hx-swap="innerHTML" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; gap: 8px;">
+                    <input name="rally_point" value="{{ event.rally_point or '' }}" placeholder="Rally point address / description"
+                           style="flex: 1; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" required>
+                    <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set RP</button>
+                </div>
+                <input name="rally_point_url" value="{{ event.rally_point_url or '' }}" placeholder="Google Maps link (optional — paste share link for direct pin)"
+                       style="background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;">
             </form>
             <div id="rp-result" style="margin-top: 4px;"></div>
 

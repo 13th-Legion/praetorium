@@ -28,12 +28,48 @@ oauth.register(
 
 @router.get("/login")
 async def login(request: Request):
-    """Redirect to Nextcloud OAuth2 login."""
+    """Redirect to Nextcloud OAuth2 login.
+
+    Nextcloud's OAuth2 authorize endpoint uses Login Flow v2 when the user
+    isn't logged in.  That flow drops the redirect URI, stranding users on
+    the NC dashboard after they authenticate (the "double login" bug).
+
+    Fix: route users through NC's standard login page first, with
+    redirect_url pointing back to the OAuth2 authorize endpoint.  Once
+    they're authenticated, the authorize endpoint sees the active session
+    and completes the OAuth2 grant correctly in one shot.
+    """
     # Clear stale session so the OAuth2 state token is written to a fresh
     # cookie — prevents "State token does not match" after session expiry.
     request.session.clear()
+
+    # Build the OAuth2 authorize URL manually so we can wrap it in NC's
+    # login redirect instead of sending users there directly.
+    import secrets
+    import time
+    from urllib.parse import urlencode, quote
+
+    state = secrets.token_urlsafe(32)
     redirect_uri = f"{settings.app_url}/auth/callback"
-    return await oauth.nextcloud.authorize_redirect(request, redirect_uri)
+    # Store state in the same format authlib expects on callback:
+    # key = _state_{name}_{state}, value = {data: {state, redirect_uri}, exp}
+    request.session[f"_state_nextcloud_{state}"] = {
+        "data": {"state": state, "redirect_uri": redirect_uri},
+        "exp": time.time() + 900,
+    }
+
+    authorize_params = urlencode({
+        "response_type": "code",
+        "client_id": settings.nc_client_id,
+        "redirect_uri": redirect_uri,
+        "state": state,
+    })
+    authorize_path = f"/index.php/apps/oauth2/authorize?{authorize_params}"
+
+    # Send to NC login page with redirect_url back to the authorize endpoint.
+    # NC honours redirect_url after successful authentication.
+    nc_login_url = f"{settings.nc_url}/login?redirect_url={quote(authorize_path, safe='')}"
+    return RedirectResponse(url=nc_login_url, status_code=302)
 
 
 @router.get("/callback")

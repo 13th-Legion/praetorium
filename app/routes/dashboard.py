@@ -1,4 +1,5 @@
 """Dashboard route — authenticated landing page."""
+from datetime import datetime
 
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
@@ -56,6 +57,15 @@ async def dashboard(request: Request):
         # Auto-advance phase based on schedule
         if active_election:
             await _auto_advance(db, active_election)
+
+        # Auto-archive: hide "complete" elections after 14 days
+        if active_election and active_election.phase == "complete":
+            if active_election.voting_close:
+                days_since = (datetime.utcnow() - active_election.voting_close).days
+                if days_since > 14:
+                    active_election.phase = "archived"
+                    await db.commit()
+                    active_election = None  # hide the banner
 
         # If complete, fetch winner name from ballot counts
         if active_election and active_election.phase == "complete":

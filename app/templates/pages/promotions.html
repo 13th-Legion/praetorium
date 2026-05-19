@@ -40,6 +40,7 @@
 
     .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 6px; font-size: 14px; z-index: 9999; animation: fadeout 3s ease-in-out forwards; }
     .toast.success { background: #155724; color: #d4edda; border: 1px solid #28a745; }
+    .toast.error { background: #721c24; color: #f8d7da; border: 1px solid #dc3545; }
     @keyframes fadeout { 0%, 70% { opacity: 1; } 100% { opacity: 0; display: none; } }
 
     /* Confirm modal */
@@ -83,9 +84,20 @@
     </label>
 </div>
 
+<div id="promo-toast-area" style="margin-bottom: 12px;"></div>
+
+<div id="batch-bar" style="display:none; margin-bottom: 12px; padding: 10px 16px; background: #1a1a2e; border: 1px solid #d4a537; border-radius: 6px; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <span style="color: #d4a537; font-weight: 700; font-size: 13px;">
+        <span id="batch-count">0</span> selected
+    </span>
+    <button class="promo-btn" onclick="batchPromote()" style="margin-left: 12px;">Promote Selected</button>
+    <button class="modal-cancel" onclick="clearBatch()" style="margin-left: 8px;">Clear</button>
+</div>
+
 <table class="promo-table" id="promoTable">
     <thead>
         <tr>
+            <th style="width: 36px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" title="Select all"></th>
             <th data-col="rank" onclick="sortTable('rank')">RNK <span class="sort-arrow">▲▼</span></th>
             <th data-col="last" onclick="sortTable('last')">Last Name <span class="sort-arrow">▲▼</span></th>
             <th data-col="first" onclick="sortTable('first')">First Name <span class="sort-arrow">▲▼</span></th>
@@ -107,13 +119,20 @@
             data-promo-date="{{ row.promo_date_str }}"
             data-rank-idx="{{ row.rank_index }}"
             data-np="{{ '1' if row.non_promotable else '0' }}">
+            <td>
+                {% if not row.non_promotable and row.allowed_promotions %}
+                <input type="checkbox" class="batch-check" data-member-id="{{ row.id }}" data-rank-select="rank-{{ row.id }}" onchange="updateBatchBar()">
+                {% endif %}
+            </td>
             <td><strong>{{ row.rank_abbr }}</strong></td>
             <td><a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a></td>
             <td>{{ row.first_name }}</td>
             <td>{{ row.callsign }}</td>
             <td>{{ row.promo_date_str }}</td>
             <td>
-                {% if row.tig_days < 0 %}
+                {% if row.rank_grade in ("E-8", "O-1", "O-2", "O-3") %}
+                    <span class="tig-badge tig-unknown">{{ row.tig_display }}</span>
+                {% elif row.tig_days < 0 %}
                     <span class="tig-badge tig-unknown">{{ row.tig_display }}</span>
                 {% elif row.tig_days >= 365 %}
                     <span class="tig-badge tig-red">{{ row.tig_display }}</span>
@@ -162,7 +181,7 @@
     <div class="modal-box">
         <h3>Confirm Promotion</h3>
         <p id="promoModalText"></p>
-        <form id="promoForm" method="POST" action="/api/s1/promotions/promote">
+        <form id="promoForm" hx-post="/api/s1/promotions/promote" hx-target="#promo-toast-area" hx-swap="innerHTML">
             <input type="hidden" name="member_id" id="promoMemberId">
             <input type="hidden" name="new_rank" id="promoNewRank">
             <div class="modal-actions">
@@ -198,6 +217,73 @@ function closeModal() {
 document.getElementById('promoModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
 });
+
+// After HTMX promotion completes, close modal and reload the table
+document.body.addEventListener('promotionDone', function() {
+    closeModal();
+    setTimeout(function() { window.location.reload(); }, 1500);
+});
+
+// ─── Batch Promotions ────────────────────────────────────────────────────
+function toggleSelectAll(master) {
+    document.querySelectorAll('.batch-check').forEach(function(c) {
+        var row = c.closest('tr');
+        if (row.style.display !== 'none') c.checked = master.checked;
+    });
+    updateBatchBar();
+}
+
+function updateBatchBar() {
+    var n = document.querySelectorAll('.batch-check:checked').length;
+    document.getElementById('batch-count').textContent = n;
+    document.getElementById('batch-bar').style.display = n > 0 ? 'flex' : 'none';
+}
+
+function clearBatch() {
+    document.querySelectorAll('.batch-check').forEach(function(c) { c.checked = false; });
+    document.getElementById('selectAll').checked = false;
+    updateBatchBar();
+}
+
+function batchPromote() {
+    var checked = document.querySelectorAll('.batch-check:checked');
+    var promotions = [];
+    var errors = [];
+
+    checked.forEach(function(c) {
+        var mid = c.dataset.memberId;
+        var sel = document.getElementById(c.dataset.rankSelect);
+        if (!sel || !sel.value) {
+            var row = c.closest('tr');
+            var name = row.querySelector('td:nth-child(3) a');
+            errors.push(name ? name.textContent : 'Member ' + mid);
+            return;
+        }
+        promotions.push({ member_id: parseInt(mid), new_rank: sel.value });
+    });
+
+    if (errors.length > 0) {
+        alert('Select a rank for: ' + errors.join(', '));
+        return;
+    }
+    if (promotions.length === 0) return;
+    if (!confirm('Promote ' + promotions.length + ' member(s)?')) return;
+
+    var formData = new FormData();
+    formData.append('promotions', JSON.stringify(promotions));
+
+    fetch('/api/s1/promotions/batch-promote', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+    })
+    .then(function(r) { return r.text(); })
+    .then(function(html) {
+        document.getElementById('promo-toast-area').innerHTML = html;
+        setTimeout(function() { window.location.reload(); }, 2000);
+    })
+    .catch(function(err) { alert('Error: ' + err.message); });
+}
 
 // ─── Filtering ───────────────────────────────────────────────────────────
 function filterTable() {

@@ -469,6 +469,7 @@ async def set_rally_point(
     request: Request,
     event_id: int,
     rally_point: str = Form(...),
+    rally_point_url: str = Form(""),
 ):
     """S2 sets the rally point for an event."""
     user = get_current_user(request)
@@ -483,6 +484,9 @@ async def set_rally_point(
         event.rally_point_set_by = user.get("username", "unknown")
         event.rally_point_set_at = datetime.utcnow()
         event.updated_at = datetime.utcnow()
+
+        event.rally_point_url = rally_point_url.strip() or None
+
         await db.commit()
 
     if event.rally_point:
@@ -537,9 +541,12 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
                     </div>
                     <span style="background:#b71c1c;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Needs RP</span>
                 </div>
-                <form hx-post="/api/s2/rally-point/{ev.id}" hx-target="#rp-result-{ev.id}" hx-swap="innerHTML" style="margin-top:8px;display:flex;gap:8px;">
-                    <input name="rally_point" placeholder="Rally point address / description" style="flex:1;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;" required>
-                    <button type="submit" style="background:#d4a537;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;font-size:13px;">Set RP</button>
+                <form hx-post="/api/s2/rally-point/{ev.id}" hx-target="#rp-result-{ev.id}" hx-swap="innerHTML" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:8px;">
+                        <input name="rally_point" placeholder="Rally point address / description" style="flex:1;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;" required>
+                        <button type="submit" style="background:#d4a537;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;font-size:13px;">Set RP</button>
+                    </div>
+                    <input name="rally_point_url" placeholder="Google Maps link (optional)" style="background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
                 </form>
                 <div id="rp-result-{ev.id}" style="margin-top:4px;"></div>
             </div>

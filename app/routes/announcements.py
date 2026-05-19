@@ -228,6 +228,10 @@ async def get_announcements(request: Request):
         data = resp.json()
         items = data.get("ocs", {}).get("data", [])
 
+        # Filter out announcements older than 30 days
+        cutoff = datetime.utcnow().timestamp() - (30 * 86400)
+        items = [a for a in items if int(a.get("time", 0)) >= cutoff]
+
         if not items:
             return HTMLResponse('<p class="text-muted">No announcements.</p>')
 

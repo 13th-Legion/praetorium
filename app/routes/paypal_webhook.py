@@ -310,13 +310,18 @@ async def paypal_webhook(request: Request):
         f"({payer_first} {payer_last}) custom_id={custom_id} txn={transaction_id}"
     )
 
-    # Validate amount
-    if currency != "USD" or amount_value < APP_FEE_MIN or amount_value > APP_FEE_MAX:
-        logger.info(f"Payment ${amount_value:.2f} {currency} doesn't match fee amount — ignoring")
-        return JSONResponse({"status": "ignored", "reason": "amount_mismatch"})
+    # Non-USD payments are ignored
+    if currency != "USD":
+        logger.info(f"Payment ${amount_value:.2f} {currency} — non-USD, ignoring")
+        return JSONResponse({"status": "ignored", "reason": "currency_mismatch"})
 
-    # ── Strategy 1: Match against Deck pipeline cards ────────────────────
-    deck_match = await _find_deck_card(payer_email, payer_first, payer_last, custom_id_email)
+    # Determine if this looks like an application fee
+    is_app_fee = APP_FEE_MIN <= amount_value <= APP_FEE_MAX
+
+    # ── Strategy 1: Match against Deck pipeline cards (app fees only) ────
+    deck_match = None
+    if is_app_fee:
+        deck_match = await _find_deck_card(payer_email, payer_first, payer_last, custom_id_email)
 
     if deck_match:
         logger.info(
@@ -373,9 +378,10 @@ async def paypal_webhook(request: Request):
             "match_type": deck_match["match_type"],
         })
 
-    # ── Strategy 2: Fallback to members table (re-applicants, etc.) ──────
+    # ── Strategy 2: Match against members table ─────────────────────────
     matched_member = None
     async with async_session() as db:
+        # Try email match first (personal_email or proton email)
         if payer_email:
             result = await db.execute(
                 select(Member).where(
@@ -383,31 +389,40 @@ async def paypal_webhook(request: Request):
                         func.lower(Member.personal_email) == payer_email.lower(),
                         func.lower(Member.email) == payer_email.lower(),
                     ),
-                    Member.app_fee_status.in_(["pending", None]),
                 )
             )
-            matched_member = result.scalar_one_or_none()
+            matched_member = result.scalars().first()
 
+        # Fall back to name match
         if not matched_member and payer_first and payer_last:
             result = await db.execute(
                 select(Member).where(
                     func.lower(Member.first_name) == payer_first.lower(),
                     func.lower(Member.last_name) == payer_last.lower(),
-                    Member.app_fee_status.in_(["pending", None]),
                 )
             )
-            matched_member = result.scalar_one_or_none()
+            matched_member = result.scalars().first()
 
         if matched_member:
-            matched_member.app_fee_status = "paid"
-            matched_member.app_fee_method = "paypal"
-            matched_member.app_fee_paid_at = datetime.utcnow()
-            await db.commit()
+            # If this is an app fee and they haven't paid yet, mark it
+            if is_app_fee and matched_member.app_fee_status in ("pending", None):
+                matched_member.app_fee_status = "paid"
+                matched_member.app_fee_method = "paypal"
+                matched_member.app_fee_paid_at = datetime.utcnow()
+                await db.commit()
+                notif_body = "$50 application fee received via PayPal (matched from member record)."
+                notif_title = f"💰 App fee verified — {matched_member.first_name} {matched_member.last_name}"
+            else:
+                notif_body = (
+                    f"${amount_value:.2f} donation received via PayPal from "
+                    f"{matched_member.first_name} {matched_member.last_name}."
+                )
+                notif_title = f"💰 Donation received — {matched_member.first_name} {matched_member.last_name}"
 
             logger.info(
-                f"✅ DB fallback match: {matched_member.first_name} "
+                f"✅ Member match: {matched_member.first_name} "
                 f"{matched_member.last_name} (member_id={matched_member.id}) "
-                f"txn={transaction_id}"
+                f"${amount_value:.2f} txn={transaction_id}"
             )
 
             try:
@@ -415,8 +430,8 @@ async def paypal_webhook(request: Request):
                 await create_notification_for_roles(
                     db, ["s1", "command", "admin"],
                     "payment",
-                    f"💰 Payment verified — {matched_member.first_name} {matched_member.last_name}",
-                    body="$50 application fee received via PayPal (matched from member record).",
+                    notif_title,
+                    body=notif_body,
                     link="/api/s1/payments",
                     icon="💰",
                 )
@@ -428,6 +443,7 @@ async def paypal_webhook(request: Request):
                 "source": "members",
                 "member_id": matched_member.id,
                 "name": f"{matched_member.first_name} {matched_member.last_name}",
+                "type": "app_fee" if is_app_fee and matched_member.app_fee_status == "paid" else "donation",
             })
 
     # ── Strategy 3: No match — alert S1 for manual resolution ────────────
@@ -442,10 +458,11 @@ async def paypal_webhook(request: Request):
             await create_notification_for_roles(
                 db2, ["s1", "command", "admin"],
                 "payment",
-                f"💰 Unmatched PayPal payment — ${amount_value:.2f}",
+                f"⚠️ Unmatched PayPal payment — ${amount_value:.2f}",
                 body=(
                     f"From: {payer_first} {payer_last} ({payer_email}). "
-                    f"Could not auto-match to a pipeline card or member record."
+                    f"Could not auto-match to a pipeline card or member record. "
+                    f"Transaction: {transaction_id}"
                 ),
                 link="/api/s1/payments",
                 icon="⚠️",
