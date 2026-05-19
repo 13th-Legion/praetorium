@@ -7,7 +7,7 @@ Single source of truth. Import from here, not from route files.
 
 RANK_ABBR: dict[str, str] = {
     "E-1": "RCT", "E-2": "PV2", "E-3": "PFC", "E-4": "CPL",
-    "E-5": "SGT", "E-6": "SSG", "E-7": "SFC", "E-8": "1SG",
+    "E-5": "SGT", "E-6": "SSG", "E-7": "SFC", "E-8M": "MSG", "E-8": "1SG",
     "E-9": "SGM", "W-1": "WO1", "W-2": "CW2", "W-3": "CW3", "W-4": "CW4", "W-5": "CW5",
     "O-1": "2LT", "O-2": "1LT", "O-3": "CPT", "O-4": "MAJ",
 }
@@ -15,7 +15,7 @@ RANK_ABBR: dict[str, str] = {
 RANK_TITLE: dict[str, str] = {
     "E-1": "Recruit", "E-2": "Private", "E-3": "Private First Class",
     "E-4": "Corporal", "E-5": "Sergeant", "E-6": "Staff Sergeant",
-    "E-7": "Sergeant First Class", "E-8": "First Sergeant",
+    "E-7": "Sergeant First Class", "E-8M": "Master Sergeant", "E-8": "First Sergeant",
     "E-9": "Sergeant Major", "W-1": "Warrant Officer 1",
     "W-2": "Chief Warrant Officer 2",
     "W-3": "Chief Warrant Officer 3", "W-4": "Chief Warrant Officer 4",

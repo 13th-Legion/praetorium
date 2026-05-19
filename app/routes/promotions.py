@@ -23,7 +23,7 @@ templates = Jinja2Templates(directory="app/templates")
 # ─── Rank ordering (low → high) ──────────────────────────────────────────────
 
 RANK_ORDER = [
-    "E-1", "E-2", "E-3", "E-4", "E-5", "E-6", "E-7", "E-8", "E-9",
+    "E-1", "E-2", "E-3", "E-4", "E-5", "E-6", "E-7", "E-8M", "E-8", "E-9",
     "W-1", "W-2", "W-3", "W-4", "W-5",
     "O-1", "O-2", "O-3", "O-4",
 ]
