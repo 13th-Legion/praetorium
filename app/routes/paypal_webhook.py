@@ -257,6 +257,33 @@ async def _annotate_deck_card(card_id: int, stack_id: int, transaction_id: str,
         return False
 
 
+
+async def _fetch_paypal_order(order_id: str) -> dict | None:
+    """Fetch full order details from PayPal API to get payer info."""
+    if not PAYPAL_CLIENT_ID or not PAYPAL_SECRET or not order_id:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            token_resp = await client.post(
+                f"{PAYPAL_API_BASE}/v1/oauth2/token",
+                auth=(PAYPAL_CLIENT_ID, PAYPAL_SECRET),
+                data={"grant_type": "client_credentials"},
+                headers={"Accept": "application/json"},
+            )
+            if token_resp.status_code != 200:
+                return None
+            access_token = token_resp.json().get("access_token", "")
+            order_resp = await client.get(
+                f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}",
+                headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+            )
+            if order_resp.status_code == 200:
+                return order_resp.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch PayPal order {order_id}: {e}")
+    return None
+
+
 # ─── Webhook endpoint ────────────────────────────────────────────────────────
 
 @router.post("/api/webhooks/paypal")
@@ -290,16 +317,45 @@ async def paypal_webhook(request: Request):
     currency = resource.get("amount", {}).get("currency_code", "USD")
     transaction_id = resource.get("id", "")
 
-    # Payer info
+    # Payer info — capture webhooks often have empty resource.payer;
+    # fall back to supplementary_data or fetch the linked order from PayPal API.
     payer = resource.get("payer", {})
     payer_email = payer.get("email_address", "")
     payer_name_obj = payer.get("name", {})
     payer_first = payer_name_obj.get("given_name", "")
     payer_last = payer_name_obj.get("surname", "")
 
-    # custom_id carries the applicant's email from the checkout page
+    # custom_id — check resource level and purchase_units level
     custom_id = resource.get("custom_id", "")
-    custom_id_email = custom_id if "@" in custom_id else ""
+    if not custom_id:
+        pus = resource.get("purchase_units", [])
+        if pus:
+            custom_id = pus[0].get("custom_id", "")
+    custom_id_email = custom_id if custom_id and "@" in custom_id else ""
+
+    # If payer info is missing, try fetching from the linked order via PayPal API
+    if not payer_email and not payer_first:
+        order_id = (
+            resource.get("supplementary_data", {}).get("related_ids", {}).get("order_id", "")
+            or resource.get("order_id", "")
+        )
+        if order_id:
+            order_data = await _fetch_paypal_order(order_id)
+            if order_data:
+                order_payer = order_data.get("payer", {})
+                payer_email = payer_email or order_payer.get("email_address", "")
+                if not payer_first:
+                    payer_name_obj = order_payer.get("name", {})
+                    payer_first = payer_name_obj.get("given_name", "")
+                    payer_last = payer_name_obj.get("surname", "")
+                # Also grab custom_id from order purchase_units if still missing
+                if not custom_id_email:
+                    order_pus = order_data.get("purchase_units", [])
+                    if order_pus:
+                        oci = order_pus[0].get("custom_id", "")
+                        if oci and "@" in oci:
+                            custom_id_email = oci
+                logger.info(f"Order lookup enriched payer: {payer_email} ({payer_first} {payer_last})")
 
     # If payer_email still empty, use custom_id
     if not payer_email and custom_id_email:

@@ -196,7 +196,7 @@
                     amount: {
                         value: amount.toFixed(2)
                     },
-                    custom_id: "donation"
+                    custom_id: "{{ user_email }}" || "donation"
                 }]
             });
         },
