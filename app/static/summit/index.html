@@ -2,56 +2,71 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>13th Legion — 2026 Leadership Summit (Live Notes)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{ --green:#4a5d36; --green2:#2e3b22; --gold:#b08d2e; --paper:#fbfaf6; --ink:#1a1a1a; }
+:root{
+  --bg-primary:#1a1a2e; --bg-secondary:#16213e; --bg-card:#0f3460; --bg-input:#1a1a2e;
+  --text-primary:#e0e0e0; --text-secondary:#a0a0b0; --text-muted:#707080;
+  --accent:#c9a227; --accent-hover:#dbb63a; --border:#2a2a4a;
+  --danger:#e74c3c; --success:#27ae60; --info:#3498db;
+  --font-heading:'Oswald',sans-serif; --font-body:'Inter',sans-serif;
+}
 *{box-sizing:border-box;}
-body{margin:0;font-family:"Helvetica Neue",Arial,sans-serif;background:#23281c;color:var(--ink);}
-#bar{position:sticky;top:0;z-index:50;background:var(--green2);color:#fff;display:flex;align-items:center;gap:14px;padding:8px 14px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
-#bar h1{font-size:15px;margin:0;flex:0 0 auto;}
+body{margin:0;font-family:var(--font-body);background:var(--bg-primary);color:var(--text-primary);}
+#bar{position:sticky;top:0;z-index:50;background:var(--bg-secondary);border-bottom:2px solid var(--accent);color:var(--text-primary);display:flex;align-items:center;gap:14px;padding:9px 16px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+#bar h1{font-family:var(--font-heading);font-weight:600;letter-spacing:.5px;font-size:16px;margin:0;flex:0 0 auto;color:#fff;}
+#bar h1 .gold{color:var(--accent);}
 #bar .spacer{flex:1;}
-#bar button{font-size:13px;padding:6px 12px;border:none;border-radius:4px;background:var(--gold);color:#1a1a1a;font-weight:700;cursor:pointer;}
-#bar button.secondary{background:#6b7a55;color:#fff;}
-#bar button:hover{filter:brightness(1.1);}
-#bar .saved{font-size:12px;color:#cfe0b8;min-width:120px;}
-#wrap{display:flex;max-width:1600px;margin:0 auto;}
-#toc{flex:0 0 230px;position:sticky;top:46px;align-self:flex-start;height:calc(100vh - 46px);overflow:auto;background:#2b3322;padding:12px 8px;}
-#toc .navlink{display:block;color:#cfe0b8;text-decoration:none;font-size:12.5px;padding:5px 8px;border-radius:4px;line-height:1.25;margin-bottom:2px;}
-#toc .navlink:hover{background:#3a4530;color:#fff;}
-#main{flex:1;padding:18px 26px;background:var(--paper);min-height:calc(100vh - 46px);}
-.sec{margin-bottom:26px;border-bottom:1px solid #e3e0d4;padding-bottom:14px;}
-.content{font-size:15px;line-height:1.5;}
-.content h1{font-size:24px;color:var(--green2);border-bottom:3px solid var(--green);padding-bottom:5px;}
-.content h2{font-size:18px;color:#fff;background:var(--green);padding:7px 11px;border-radius:3px;margin:18px 0 10px;}
-.content h3{font-size:15px;color:var(--green2);}
-.content table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0;}
-.content th{background:var(--green);color:#fff;text-align:left;padding:6px 8px;}
-.content td{border:1px solid #ccc;padding:5px 8px;vertical-align:top;}
-.content tr:nth-child(even) td{background:#f1f3ea;}
-.content blockquote{border-left:4px solid var(--gold);background:#f6f1e2;margin:8px 0;padding:7px 13px;font-style:italic;color:#3a3a3a;}
+#bar button{font-family:var(--font-heading);font-weight:500;letter-spacing:.4px;font-size:13px;padding:7px 14px;border:none;border-radius:4px;background:var(--accent);color:var(--bg-primary);cursor:pointer;text-transform:uppercase;}
+#bar button.secondary{background:transparent;color:var(--text-secondary);border:1px solid var(--border);}
+#bar button:hover{background:var(--accent-hover);}
+#bar button.secondary:hover{border-color:var(--accent);color:var(--text-primary);}
+#bar .saved{font-family:var(--font-body);font-size:12px;color:var(--accent);min-width:130px;}
+#wrap{display:flex;max-width:1680px;margin:0 auto;}
+#toc{flex:0 0 240px;position:sticky;top:48px;align-self:flex-start;height:calc(100vh - 48px);overflow:auto;background:var(--bg-secondary);border-right:1px solid var(--border);padding:14px 9px;}
+#toc .navlink{display:block;font-family:var(--font-body);color:var(--text-secondary);text-decoration:none;font-size:12.5px;padding:6px 9px;border-radius:4px;line-height:1.3;margin-bottom:2px;border-left:2px solid transparent;}
+#toc .navlink:hover{background:var(--bg-card);color:#fff;border-left:2px solid var(--accent);}
+#main{flex:1;padding:20px 30px;background:var(--bg-primary);min-height:calc(100vh - 48px);}
+.sec{margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:16px;}
+.content{font-size:15px;line-height:1.55;color:var(--text-primary);}
+.content h1{font-family:var(--font-heading);font-weight:700;font-size:26px;color:#fff;border-bottom:3px solid var(--accent);padding-bottom:6px;letter-spacing:.5px;}
+.content h2{font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--bg-primary);background:var(--accent);padding:8px 12px;border-radius:3px;margin:20px 0 11px;letter-spacing:.4px;}
+.content h3{font-family:var(--font-heading);font-weight:500;font-size:16px;color:var(--accent);letter-spacing:.3px;}
+.content table{border-collapse:collapse;width:100%;font-size:13px;margin:11px 0;background:var(--bg-card);}
+.content th{font-family:var(--font-heading);font-weight:600;background:var(--bg-secondary);color:var(--accent);text-align:left;padding:7px 9px;border:1px solid var(--border);letter-spacing:.3px;}
+.content td{border:1px solid var(--border);padding:6px 9px;vertical-align:top;color:var(--text-primary);}
+.content tr:nth-child(even) td{background:rgba(15,52,96,.45);}
+.content blockquote{border-left:4px solid var(--accent);background:rgba(201,162,39,.08);margin:9px 0;padding:8px 14px;font-style:italic;color:var(--text-secondary);}
 .content ol,.content ul{padding-left:24px;}
 .content li{margin-bottom:4px;}
-.content strong{color:var(--green2);}
-.noteblock{margin-top:12px;background:#fff8e6;border:1px solid var(--gold);border-radius:5px;padding:9px 11px;}
-.notelabel{display:block;font-size:12.5px;font-weight:700;color:#7a5e12;margin-bottom:5px;}
-textarea.note{width:100%;border:1px solid #d9c98f;border-radius:4px;padding:8px;font-family:inherit;font-size:14px;line-height:1.4;resize:vertical;background:#fffdf5;}
-textarea.note:focus{outline:2px solid var(--gold);background:#fff;}
-@media print{ #bar,#toc{display:none;} #wrap{display:block;} .noteblock{break-inside:avoid;} body{background:#fff;} }
+.content strong{color:#fff;}
+.content em{color:var(--text-secondary);}
+.content a{color:var(--accent);}
+.content code{background:var(--bg-secondary);color:var(--accent-hover);padding:1px 5px;border-radius:3px;font-size:13px;}
+.content hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.noteblock{margin-top:14px;background:var(--bg-card);border:1px solid var(--accent);border-radius:5px;padding:10px 12px;}
+.notelabel{font-family:var(--font-heading);display:block;font-size:12.5px;font-weight:500;color:var(--accent);margin-bottom:6px;letter-spacing:.3px;}
+textarea.note{width:100%;border:1px solid var(--border);border-radius:4px;padding:9px;font-family:var(--font-body);font-size:14px;line-height:1.45;resize:vertical;background:var(--bg-input);color:var(--text-primary);}
+textarea.note::placeholder{color:var(--text-muted);}
+textarea.note:focus{outline:2px solid var(--accent);background:#15152a;}
 .bignote{margin:0 0 18px;}
-.bignote textarea{min-height:90px;}
+.bignote .tlabel{font-family:var(--font-heading);color:var(--accent);font-size:12px;font-weight:600;margin-bottom:5px;padding:0 4px;letter-spacing:.4px;}
+@media print{ #bar,#toc{display:none;} #wrap{display:block;} .noteblock{break-inside:avoid;} body{background:#fff;color:#000;} .content,.content td,.content li{color:#000;} .content h1,.content strong{color:#000;} .content h2{color:#000;background:#e8d18a;} body{font-family:Georgia,serif;} }
 </style></head>
 <body>
 <div id="bar">
-  <h1>👻 13th Legion — 2026 Leadership Summit</h1>
+  <h1>👻 13th Legion — <span class="gold">2026 Leadership Summit</span></h1>
   <span class="saved" id="savedmsg">notes auto-save locally</span>
   <span class="spacer"></span>
-  <button onclick="exportNotes()">⬇ Export Notes (.md)</button>
+  <button onclick="exportNotes()">⬇ Export Notes</button>
   <button class="secondary" onclick="window.print()">🖨 Print</button>
-  <button class="secondary" onclick="clearAll()">Clear Notes</button>
+  <button class="secondary" onclick="clearAll()">Clear</button>
 </div>
 <div id="wrap">
   <nav id="toc">
     <div class="bignote">
-      <div style="color:#cfe0b8;font-size:12px;font-weight:700;margin-bottom:4px;padding:0 4px;">⭐ TOP DECISIONS / ACTION ITEMS</div>
+      <div class="tlabel">⭐ TOP DECISIONS / ACTION ITEMS</div>
       <textarea class="note" data-key="note::__master__" rows="6" placeholder="Running list: item — owner — deadline — done-when…" style="font-size:13px;"></textarea>
     </div>
     <a href="#sec-discussion-guide-year-over-year-assessme" class="navlink">Discussion Guide &amp; Year-Over-Year Assessment</a>
@@ -434,7 +449,7 @@ S4 echoes the time discipline problem: <em>"We get sidetracked... a 30-minute tr
 const notes=document.querySelectorAll("textarea.note");
 function load(){notes.forEach(t=>{const v=localStorage.getItem(t.dataset.key);if(v!==null)t.value=v;});}
 let t0;
-function flash(msg){const s=document.getElementById("savedmsg");s.textContent=msg;clearTimeout(t0);t0=setTimeout(()=>s.textContent="notes auto-save locally",1500);}
+function flash(m){const s=document.getElementById("savedmsg");s.textContent=m;clearTimeout(t0);t0=setTimeout(()=>s.textContent="notes auto-save locally",1500);}
 notes.forEach(t=>t.addEventListener("input",()=>{localStorage.setItem(t.dataset.key,t.value);flash("✓ saved");}));
 function exportNotes(){
   let out="# 13th Legion 2026 Leadership Summit — Notes\n_Exported: "+new Date().toLocaleString()+"_\n\n";
