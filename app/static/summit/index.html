@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13th Legion — 2026 Leadership Summit (Live Notes)</title>
+<style>
+:root{ --green:#4a5d36; --green2:#2e3b22; --gold:#b08d2e; --paper:#fbfaf6; --ink:#1a1a1a; }
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Helvetica Neue",Arial,sans-serif;background:#23281c;color:var(--ink);}
+#bar{position:sticky;top:0;z-index:50;background:var(--green2);color:#fff;display:flex;align-items:center;gap:14px;padding:8px 14px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+#bar h1{font-size:15px;margin:0;flex:0 0 auto;}
+#bar .spacer{flex:1;}
+#bar button{font-size:13px;padding:6px 12px;border:none;border-radius:4px;background:var(--gold);color:#1a1a1a;font-weight:700;cursor:pointer;}
+#bar button.secondary{background:#6b7a55;color:#fff;}
+#bar button:hover{filter:brightness(1.1);}
+#bar .saved{font-size:12px;color:#cfe0b8;min-width:120px;}
+#wrap{display:flex;max-width:1600px;margin:0 auto;}
+#toc{flex:0 0 230px;position:sticky;top:46px;align-self:flex-start;height:calc(100vh - 46px);overflow:auto;background:#2b3322;padding:12px 8px;}
+#toc .navlink{display:block;color:#cfe0b8;text-decoration:none;font-size:12.5px;padding:5px 8px;border-radius:4px;line-height:1.25;margin-bottom:2px;}
+#toc .navlink:hover{background:#3a4530;color:#fff;}
+#main{flex:1;padding:18px 26px;background:var(--paper);min-height:calc(100vh - 46px);}
+.sec{margin-bottom:26px;border-bottom:1px solid #e3e0d4;padding-bottom:14px;}
+.content{font-size:15px;line-height:1.5;}
+.content h1{font-size:24px;color:var(--green2);border-bottom:3px solid var(--green);padding-bottom:5px;}
+.content h2{font-size:18px;color:#fff;background:var(--green);padding:7px 11px;border-radius:3px;margin:18px 0 10px;}
+.content h3{font-size:15px;color:var(--green2);}
+.content table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0;}
+.content th{background:var(--green);color:#fff;text-align:left;padding:6px 8px;}
+.content td{border:1px solid #ccc;padding:5px 8px;vertical-align:top;}
+.content tr:nth-child(even) td{background:#f1f3ea;}
+.content blockquote{border-left:4px solid var(--gold);background:#f6f1e2;margin:8px 0;padding:7px 13px;font-style:italic;color:#3a3a3a;}
+.content ol,.content ul{padding-left:24px;}
+.content li{margin-bottom:4px;}
+.content strong{color:var(--green2);}
+.noteblock{margin-top:12px;background:#fff8e6;border:1px solid var(--gold);border-radius:5px;padding:9px 11px;}
+.notelabel{display:block;font-size:12.5px;font-weight:700;color:#7a5e12;margin-bottom:5px;}
+textarea.note{width:100%;border:1px solid #d9c98f;border-radius:4px;padding:8px;font-family:inherit;font-size:14px;line-height:1.4;resize:vertical;background:#fffdf5;}
+textarea.note:focus{outline:2px solid var(--gold);background:#fff;}
+@media print{ #bar,#toc{display:none;} #wrap{display:block;} .noteblock{break-inside:avoid;} body{background:#fff;} }
+.bignote{margin:0 0 18px;}
+.bignote textarea{min-height:90px;}
+</style></head>
+<body>
+<div id="bar">
+  <h1>👻 13th Legion — 2026 Leadership Summit</h1>
+  <span class="saved" id="savedmsg">notes auto-save locally</span>
+  <span class="spacer"></span>
+  <button onclick="exportNotes()">⬇ Export Notes (.md)</button>
+  <button class="secondary" onclick="window.print()">🖨 Print</button>
+  <button class="secondary" onclick="clearAll()">Clear Notes</button>
+</div>
+<div id="wrap">
+  <nav id="toc">
+    <div class="bignote">
+      <div style="color:#cfe0b8;font-size:12px;font-weight:700;margin-bottom:4px;padding:0 4px;">⭐ TOP DECISIONS / ACTION ITEMS</div>
+      <textarea class="note" data-key="note::__master__" rows="6" placeholder="Running list: item — owner — deadline — done-when…" style="font-size:13px;"></textarea>
+    </div>
+    <a href="#sec-discussion-guide-year-over-year-assessme" class="navlink">Discussion Guide &amp; Year-Over-Year Assessment</a>
+<a href="#sec-0-the-one-page-scoreboard-2025-promises-" class="navlink">0. The One-Page Scoreboard (2025 promises → 2026 reality)</a>
+<a href="#sec-1-attendance-engagement-the-fight-we-kee" class="navlink">1. ATTENDANCE &amp; ENGAGEMENT — The fight we keep losing</a>
+<a href="#sec-2-the-trailer-and-physical-assets-a-year" class="navlink">2. THE TRAILER (and physical assets) — A year of asking, zero delivering</a>
+<a href="#sec-3-comms-hardware-up-competence-and-inter" class="navlink">3. COMMS — Hardware up, competence and INTERNAL comms down</a>
+<a href="#sec-4-training-content-strong-appetite-recur" class="navlink">4. TRAINING CONTENT — Strong appetite, recurring asks, one big tension</a>
+<a href="#sec-5-mission-design-rp-narrative-build-on-a" class="navlink">5. MISSION DESIGN &amp; RP / NARRATIVE — Build on a strength</a>
+<a href="#sec-6-people-leadership-recognition-the-quie" class="navlink">6. PEOPLE, LEADERSHIP &amp; RECOGNITION — The quiet morale issues</a>
+<a href="#sec-7-documents-admin-from-we-need-everythin" class="navlink">7. DOCUMENTS &amp; ADMIN — From &quot;we need everything&quot; to &quot;maybe less, please&quot;</a>
+<a href="#sec-8-logistics-money-the-business-side-the-" class="navlink">8. LOGISTICS, MONEY &amp; THE BUSINESS SIDE — The part nobody wants to own</a>
+<a href="#sec-9-safety-security-quietly-excellent-keep" class="navlink">9. SAFETY &amp; SECURITY — Quietly excellent, keep it that way</a>
+<a href="#sec-10-closing-what-we-commit-to-before-we-w" class="navlink">10. CLOSING — What we commit to before we walk out</a>
+  </nav>
+  <main id="main">
+    <section id="sec-__intro__" class="sec"><div class="content"><h1>13th Legion — 2nd Annual Leadership Summit</h1></div></section>
+<section id="sec-discussion-guide-year-over-year-assessme" class="sec">
+  <div class="content"><h2>Discussion Guide &amp; Year-Over-Year Assessment</h2>
+<p><strong>Date:</strong> 31 May 2026 (1000–1800) · <strong>Prepared for:</strong> Command, Shop Heads, Team Leads
+<strong>Comparison basis:</strong> MAR 2025 survey (10 responses) vs. APR 2026 survey (12 responses)</p>
+<blockquote>
+<p><strong>Ground rules for this session.</strong> This is not a victory lap and it is not a gripe session. Every topic below pairs what we <em>said</em> last year with what <em>actually happened</em>. Where we delivered, we say so plainly. Where we didn't, we name it and ask why. No "we hear you." No deflection. If a thing failed, the question on the table is <strong>"why, and what changes this year so we're not reading the same complaint at the 2027 summit?"</strong> Leaders own their lanes.</p>
+</blockquote>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — Discussion Guide &amp; Year-Over-Year Assessment</label>
+    <textarea class="note" data-key="note::discussion-guide-year-over-year-assessme" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-0-the-one-page-scoreboard-2025-promises-" class="sec">
+  <div class="content"><h2>0. The One-Page Scoreboard (2025 promises → 2026 reality)</h2>
+<table>
+<thead>
+<tr>
+<th>2025 Commitment / Goal</th>
+<th>Status</th>
+<th>Brutal Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Acquire a unit trailer</strong></td>
+<td>❌ Still not done</td>
+<td>Requested by ~every team in 2025 AND 2026. A full year, zero trailer. Command itself flagged "members have noticed." This is the single most-repeated ask in unit history and it's still open.</td>
+</tr>
+<tr>
+<td><strong>Stand up the PX / swag shop</strong></td>
+<td>❌ Not done</td>
+<td>Big 2025 talking point (web store, tax tracking). No revenue stream stood up. Command lists it again in 2026.</td>
+</tr>
+<tr>
+<td><strong>HF radio (TSM net capable)</strong></td>
+<td>🟡 Partial</td>
+<td>HF radios acquired (S6), but Command notes still not "capable of transmitting effectively in TSM Sunday nets." Hardware bought, capability not achieved.</td>
+</tr>
+<tr>
+<td><strong>Hit 50 active members</strong></td>
+<td>❌ Failed</td>
+<td>Currently <strong>41</strong> active/recruit on the roster (26 patched-active + 15 recruits; 1 now on leave). Never reached 50. Named as a top-3 failure by Command. Note the bigger picture: 57 <em>inactive</em> on the books — the active/inactive ratio is the real story (see Attendance).</td>
+</tr>
+<tr>
+<td><strong>Social media (1 post/week)</strong></td>
+<td>🟡 Weak</td>
+<td>2025 action item "will start soon, 1 post a week." 2026 S1 lists PAO and newsletter as failures; marketing campaign cited as a win but execution panned ("not Paul's job at it").</td>
+</tr>
+<tr>
+<td><strong>Non-FTX / social bonding events</strong></td>
+<td>❌ Recurring failure</td>
+<td>2025 flagged the "non-FTX activity gap"; 2026 Command + S3 both list social events as a top failure again. Year two, same hole.</td>
+</tr>
+<tr>
+<td><strong>Financial transparency / donations growth</strong></td>
+<td>❌ Backslid</td>
+<td>2025: build a visual goal tracker, grow donations. 2026: Command admits "haven't emphasized donations for ~6 months, balance plateaued"; S4 says donations declined.</td>
+</tr>
+<tr>
+<td><strong>TRADOC / training documentation</strong></td>
+<td>✅ Major win</td>
+<td>Praetorium portal + TRADOC docs is the standout delivery of the year. Working battle library + digital infrastructure now live.</td>
+</tr>
+<tr>
+<td><strong>Recruit's Bible / Handbook</strong></td>
+<td>✅ Done</td>
+<td>Explicitly flagged unfinished in 2025 ("Recruit's Bible needs to be finished!"). Now complete.</td>
+</tr>
+<tr>
+<td><strong>Basic Militia Rifleman Field Manual</strong></td>
+<td>❌ Still WIP</td>
+<td>Requested 2025 AND 2026. Intended as the conglomeration of all TRADOC docs in field-manual format — covering nearly all basic combat skills/tasks. CO-owned and self-identified as a primary personal failure. Needs a real deadline.</td>
+</tr>
+<tr>
+<td><strong>LLC / nonprofit / tax status</strong></td>
+<td>✅ Done</td>
+<td>2025 had an unresolved 501c3-vs-c4 debate. Resolved: the LLC now files federally as a <strong>private foundation</strong>. Legal/financial footing established.</td>
+</tr>
+<tr>
+<td><strong>VE (ham license examiner) team</strong></td>
+<td>✅ Done</td>
+<td>2026 S6 said "almost ready to launch." Launched — we have a functioning VE team (multiple ARRL VE certs in the unit).</td>
+</tr>
+<tr>
+<td><strong>CPR / medical certification program</strong></td>
+<td>❌ Failed</td>
+<td>2025 S5 wanted unit-wide CPR/ECA certs + a CPR manikin. Every attempt to stand up a unit program fell through; now relies entirely on individuals taking initiative. Got the AED, did NOT get the manikin. Field-Medic SOP / Medic-tab program still on S5's to-do; no official skills check-off doc exists (Hound has something informal).</td>
+</tr>
+<tr>
+<td><strong>Community service / volunteering</strong></td>
+<td>🟡 Partial</td>
+<td>2025 S1 said "need it desperately"; 2026 S1 still lists service projects as a failure. Reality is in between: 2 events delivered — Mental Health Awareness Mayday Festival (2025 &amp; 2026) and the Texas Toy Run biker charity at Christmas. Not zero, but thin. Needs to be better.</td>
+</tr>
+<tr>
+<td><strong>Member portal / digital infrastructure</strong></td>
+<td>✅ Major win</td>
+<td>Did not exist as a goal in 2025 in this form; built and shipped in 2026. "Revolutionized event planning and attendance tracking." Best thing we did all year.</td>
+</tr>
+<tr>
+<td><strong>Code of Conduct doc</strong></td>
+<td>✅ Done</td>
+<td>Requested repeatedly in 2025 (S3, S2, Command). Signed/active in 2026.</td>
+</tr>
+<tr>
+<td><strong>Two-tier / multi-level missions</strong></td>
+<td>✅ Matured</td>
+<td>2025 "implemented"; 2026 refined and praised across multiple shops. Keep it.</td>
+</tr>
+<tr>
+<td><strong>Attendance</strong></td>
+<td>❌ Worse, or at least no better</td>
+<td>The screaming theme of BOTH years. More on this below — it deserves its own fight.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Honest top-line:</strong> We had a transformational year on <strong>digital/admin infrastructure</strong> (portal, TRADOC, Recruit's Handbook, doc-signing, attendance tracking, leadership transition) and locked in some quiet structural wins (<strong>LLC/foundation status, VE team, AED</strong>). But it was a <strong>stagnant-to-failing year on physical assets (trailer), money (donations, PX), outreach (service, social media), the unfinished Militia Rifleman FM, a dropped medical program — and above all, attendance and engagement.</strong> We got dramatically better at <em>organizing ourselves</em> and no better at <em>getting bodies in the field.</em> Worth saying plainly: <strong>41 active against 57 inactive</strong> is the number that should bother us most.</p>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 0. The One-Page Scoreboard (2025 promises → 2026 reality)</label>
+    <textarea class="note" data-key="note::0-the-one-page-scoreboard-2025-promises-" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-1-attendance-engagement-the-fight-we-kee" class="sec">
+  <div class="content"><h2>1. ATTENDANCE &amp; ENGAGEMENT — The fight we keep losing</h2>
+<p><strong>This is the #1 recurring failure across both years and nearly every respondent. We will spend real time here.</strong></p>
+<p><strong>2025 said:</strong>
+- Chaos: attendance a top failure.
+- Delta: "Low attendance rates."
+- Badger: wanted "more participation from non-patched."
+- 2025 action item R5: <em>"Team leads must engage and stay on top of their attendance."</em>
+- 2025 action item R21: <em>"How do we keep or get people involved and coming back."</em></p>
+<p><strong>2026 says (a year later, louder):</strong>
+- Command: <em>"Attendance for FTXs has been terrible for our total membership volume."</em>
+- Bravo: single biggest gripe — <em>"Attendance."</em>
+- Alpha: "Lack of attendance, lack of troop response."
+- Echo: "Numbers dwindled to next to nothing... had these docs up for 2 days and only heard from ONE member (Pope)."
+- Foxtrot: "Not enough participants. Loss of new recruits."
+- S3: biggest gripe — "FTX attendance, expectations, and attendance communication."
+- S1: "Participation."</p>
+<p><strong>Discussion prompts — go hard:</strong></p>
+<ol>
+<li>We assigned this to team leads in 2025 ("TLs must stay on top of attendance"). <strong>Did that happen? Name names — which TLs actually ran an attendance/accountability process, and which didn't?</strong> Echo hearing from exactly one member in two days is not a member problem, it's a leadership-engagement problem. Agree or disagree?</li>
+<li>We built a portal that tracks attendance beautifully. <strong>Tracking is not improving.</strong> We can now <em>measure</em> the failure precisely — so what's the consequence structure? Right now there appears to be none. Should there be?</li>
+<li>Bravo, Alpha, Echo, Foxtrot — four geographic teams — all name attendance/numbers as their core problem. The 2025→2026 <strong>geographic fireteam reorg</strong> was supposed to help with local cohesion and turnout. <strong>Did it? Be specific.</strong> Alpha calls the geographic arrangement a "victory"; Echo says it grew their team; but turnout is still bad. Did we reorganize the deck chairs?</li>
+<li>Hard question for the room: <strong>Do we have a recruiting problem or a retention problem?</strong> S1 says recruiting is "knocking it out of the park." Foxtrot and Echo say they're <em>losing</em> new recruits. If we recruit well and still shrink, the leak is retention — and that's on the teams and the FTX experience, not the recruiters.</li>
+<li>What is the actual, enforced standard? Bravo/Delta want clarity. Define it today: <strong>how many FTXs/year is the minimum, what's the warning ladder, who enforces it.</strong> We have an Activity Policy now (6-week/2-month no-contact ladder) — is it being <em>used</em>, or is it a document nobody enforces?</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 1. ATTENDANCE &amp; ENGAGEMENT — The fight we keep losing</label>
+    <textarea class="note" data-key="note::1-attendance-engagement-the-fight-we-kee" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-2-the-trailer-and-physical-assets-a-year" class="sec">
+  <div class="content"><h2>2. THE TRAILER (and physical assets) — A year of asking, zero delivering</h2>
+<p><strong>Requested by S1, S3, S4, Command, Chaos-adjacent in 2025. Requested AGAIN by Command, Alpha, S6, Bravo, S4, Echo, S3, Foxtrot, S1 in 2026. This is unanimous and unresolved.</strong></p>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>This is the most-requested item two years running and it has not moved. <strong>Why? Is it money, decision paralysis, no owner, or no plan?</strong> Name the actual blocker.</li>
+<li>S1 floated concrete paths in 2026: "S4 Trailer? Chuck wagon Tatanka made? Romeo's little trailer he wants to fix up." <strong>Are any of these real options we can close on THIS summit, or are we going to ask again in 2027?</strong></li>
+<li>Proposal for the room: <strong>Assign a single owner, a budget ceiling, and a hard deadline before we leave today.</strong> If we can't do that, we should admit out loud that we don't actually intend to buy a trailer and stop putting it on every survey.</li>
+<li>Other physical asset asks clustering in 2026: <strong>shoot house / CQB site</strong> (Command, Alpha, Bravo, Echo, S3, Delta — huge demand), <strong>thermals/NODs</strong> (S2, Foxtrot), <strong>steel targets, water buffalo, canopy spreaders.</strong> Which of these are "nice to dream big" (S2's words) and which are fundable now? Prioritize honestly.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 2. THE TRAILER (and physical assets) — A year of asking, zero delivering</label>
+    <textarea class="note" data-key="note::2-the-trailer-and-physical-assets-a-year" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-3-comms-hardware-up-competence-and-inter" class="sec">
+  <div class="content"><h2>3. COMMS — Hardware up, competence and INTERNAL comms down</h2>
+<p><strong>The irony of the year, in the shop's own words.</strong></p>
+<p><strong>2025 said:</strong> S6 — "struggle with inter-team comms, interference, many freqs no good." Multiple teams wanted a comms class. Action item R14: j-poles/antennas.</p>
+<p><strong>2026 says:</strong>
+- S6's single biggest gripe, verbatim: <strong>"NO COMMUNICATION IN THE COMMUNICATIONS SHOP!!!!!!!!!!!!"</strong>
+- S6: "Lack of shop personnel involvement due to shop head transition. Losing shop lead. Lack of comms training beyond mission times."
+- Nearly every team wants radio refreshers: S2 ("a little time to refresh at the beginning of FTX"), Alpha, Bravo, Foxtrot, Delta, S3 ("encrypted comms").</p>
+<p><strong>Wins to acknowledge:</strong> Comms trailer acquisition "in progress," HF radios acquired, VE certification team nearly launched, radio etiquette improved, first shop meeting + cadence set.</p>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>S6 lost its shop lead and is rebuilding under Dizz. <strong>The shop that's supposed to model communication had an internal communication collapse.</strong> What does S6 need from Command to stabilize — people, authority, a deputy?</li>
+<li>Every team independently asked for <strong>the same thing two years running: short, recurring radio refreshers at the start of each FTX.</strong> This is cheap and we still haven't institutionalized it. <strong>Decision: do we mandate a 15-min comms refresher at every FTX start, owned by S6? Yes/no, today.</strong></li>
+<li>We bought HF but still can't hit the TSM Sunday net (Command). <strong>What's the gap — antenna, location, operator skill, licensing?</strong> Who closes it and by when?</li>
+<li>Quick-reference radio docs (HD2, mesh, comms plan) requested by S6, S2, Alpha, S1. The portal/TRADOC machine exists now — <strong>why aren't these already in it?</strong> Tasking for S6 + S3.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 3. COMMS — Hardware up, competence and INTERNAL comms down</label>
+    <textarea class="note" data-key="note::3-comms-hardware-up-competence-and-inter" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-4-training-content-strong-appetite-recur" class="sec">
+  <div class="content"><h2>4. TRAINING CONTENT — Strong appetite, recurring asks, one big tension</h2>
+<p><strong>The membership is hungry and specific about what it wants. We should feed it.</strong></p>
+<p><strong>Consistent two-year demand for:</strong>
+- <strong>CQB / MOUT / urban</strong> (2025 S3, Delta, Command; 2026 Command, Alpha, Bravo, Echo, S3, Delta — near-universal)
+- <strong>Land Nav</strong> (both years, nearly everyone)
+- <strong>React to Contact</strong> (S3, S2, S4, Foxtrot, Bravo 2026)
+- <strong>Live fire / marksmanship / DMR / Sharpshooter</strong> (S3 2025; Delta, Alpha, Bravo, S4 2026)
+- <strong>SERE / survival / bushcraft / homesteading</strong> (Chaos 2025; Command, Alpha, S4, Bravo 2026)
+- <strong>Multi-tier / multi-level missions</strong> (universal, and we deliver this — keep going)</p>
+<p><strong>The tension worth a real fight (Delta, bluntly):</strong></p>
+<blockquote>
+<p>Delta 2026: <em>"Too much classroom time given the short amount of time we have to train. Too much organization for the numbers we have."</em> And: <em>"S-Shops and similar roles should be exclusive to E-4 and above only."</em>
+S4 echoes the time discipline problem: <em>"We get sidetracked... a 30-minute training call turns into an hour and a half. CLEAR OBJECTIVE, AGENDA, DISCIPLINE."</em></p>
+</blockquote>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>Delta is saying out loud what others may feel: <strong>we've over-rotated on organization/admin/classroom and under-delivered on actual field reps.</strong> Is that fair? We're proud of the portal and the structure — has it come at the cost of trigger time and boots-in-the-dirt? Honest show of hands.</li>
+<li><strong>CQB/shoot-house is the most-requested capability we don't have.</strong> It connects directly to Section 2 (assets). Is the answer building one, renting (Stephenville apartments / Farmers Branch warehouses were floated in 2025), or partnering? Pick a path.</li>
+<li>Delta's "S-shops should be E-4+ only" is a real governance question. <strong>Do we agree leadership/shop roles require a rank/experience floor, or do we need bodies badly enough to take whoever steps up?</strong> This cuts against S1's separate gripe (see Section 6). Debate it.</li>
+<li>Tuesday virtual training: praised by Command (quality up) AND criticized by S4/Delta (too long, unfocused). <strong>Adopt S4's proposal: every Tuesday call and every shop/team meeting gets a written objective + agenda on the calendar, hard stop on time.</strong> Agree?</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 4. TRAINING CONTENT — Strong appetite, recurring asks, one big tension</label>
+    <textarea class="note" data-key="note::4-training-content-strong-appetite-recur" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-5-mission-design-rp-narrative-build-on-a" class="sec">
+  <div class="content"><h2>5. MISSION DESIGN &amp; RP / NARRATIVE — Build on a strength</h2>
+<p><strong>2025 introduced two-tier missions; 2026 wants to go bigger.</strong></p>
+<ul>
+<li>S3: Black Swan (CBRA) storyline has been "slow to advance"; RP fluff underdeveloped.</li>
+<li>S1 (swinging for the fences): <em>"Let's go all in and make FTXs like a live-action D&amp;D campaign. Create a story and have each FTX build off the last."</em></li>
+<li>Common asks: longer night missions, repetition-based missions, OPFOR/force-on-force, multi-evolution short missions, rescue, LP/OP setup, FOB hardening/defense.</li>
+<li>Multiple teams want <strong>inter-unit training</strong> (Echo, Command "multi-unit," S2).</li>
+</ul>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>Black Swan was a 2026 priority that "fizzled" (Command) and is "slow" (S3). <strong>Is Black Swan still the framework, or do we need a simpler narrative engine?</strong> S1's continuous-campaign idea is ambitious — is it realistic with our attendance reality, or does it punish the people who can't make every FTX?</li>
+<li>We do multi-tier missions well. <strong>Where's the next level — persistent OPFOR? A standing aggressor cell? Inter-unit force-on-force?</strong> Decide one signature mission concept for the year.</li>
+<li>Several teams want <strong>team-level autonomy</strong> (Chaos 2025 "missions as a team," Delta 2026 "team range day separate from unit FTX"). Do we empower teams to run their own mini-events between unit FTXs? That could <em>also</em> attack the attendance/cohesion problem.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 5. MISSION DESIGN &amp; RP / NARRATIVE — Build on a strength</label>
+    <textarea class="note" data-key="note::5-mission-design-rp-narrative-build-on-a" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-6-people-leadership-recognition-the-quie" class="sec">
+  <div class="content"><h2>6. PEOPLE, LEADERSHIP &amp; RECOGNITION — The quiet morale issues</h2>
+<p><strong>Smaller in word count, big in impact. Don't skip these.</strong></p>
+<p><strong>The promotions/recognition tension (S1, two angles):</strong>
+- S1 gripe: <em>"Ranks given for time served but not added responsibility."</em>
+- S1 ask: <em>"Recognition for people transitioning or taking on responsibilities out of necessity."</em>
+- Contrast with 2025 action items R11/R12: "patched auto-promote to PV2," "point system for promotions?"</p>
+<p><strong>Burnout &amp; the "go-getters" problem (recurring):</strong>
+- 2025 S5/3Way: <em>"Lots of people doing solid work. There's a lot more work that can be shared among the go-getters."</em>
+- 2025 S1: a core group "going way above and beyond holding the unit together."
+- 2026 Command: appointing qualified leaders specifically to <strong>"reduce burnout."</strong></p>
+<p><strong>The volunteer-respect issue (S5 2025, sharp):</strong>
+- <em>"My personal biggest gripe would be the lack of respect for my time as a volunteer"</em> — echoed by two S5 members. Mirrored in 2026 by S4/Delta's time-discipline complaints.</p>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li><strong>Are we promoting for tenure or for contribution?</strong> S1 says we reward time-in, not responsibility. If true, that demotivates exactly the go-getters holding us together. Do we want a contribution/points-based component? (We floated it in 2025 and didn't build it.)</li>
+<li>The same small group carries the unit, every year. <strong>Burnout is a named risk two years running.</strong> Command says it appointed leaders to fix this — did it work, or did we just give the tired people titles? Check in with the actual workhorses in this room right now.</li>
+<li>Foxtrot's information-flow gripe: <em>"Lack of communication from the top down on closing the loop on open topics... a source of info flow for members who missed the last FTX — promotions, new news, members dropped/on leave."</em> <strong>We literally just built portal features for some of this. Is the gap the tool or the habit of using it?</strong></li>
+<li>Recognition: cheap, high-impact, and we're not doing enough. S1 wants formal recognition for people stepping up out of necessity. <strong>Concrete proposal: a standing recognition mechanism (awards/ribbons in the portal already exist as a goal).</strong> Commit to launching it.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 6. PEOPLE, LEADERSHIP &amp; RECOGNITION — The quiet morale issues</label>
+    <textarea class="note" data-key="note::6-people-leadership-recognition-the-quie" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-7-documents-admin-from-we-need-everythin" class="sec">
+  <div class="content"><h2>7. DOCUMENTS &amp; ADMIN — From "we need everything" to "maybe less, please"</h2>
+<p><strong>A genuine success story, with a new and healthy problem.</strong></p>
+<p><strong>2025:</strong> desperate for docs — Code of Conduct, Militia Rifleman manual, ranks/structure explained, Recruit's Bible, mission planning SOP, field medic standard. Long list, little built.</p>
+<p><strong>2026:</strong> the tone flips —
+- Echo: <em>"We have all the documents we need. Adding more could blur the lines and make it difficult for someone new."</em>
+- S1: <em>"Less documents."</em>
+- S2, S4, Bravo: "command has provided everything we need; the portal has been very helpful."
+- Remaining real asks: <strong>Basic Militia Rifleman field manual</strong> (still not done — 2025 AND 2026), finish TRADOC docs, radio quick-refs, ERP locations/freqs, shop SOPs.</p>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>Huge credit due: we went from "document desert" to "maybe too many documents" in one year. <strong>Who built the bulk of it, and are we recognizing them?</strong> (See Section 6.)</li>
+<li>The <strong>Basic Militia Rifleman field manual</strong> is the one piece of content requested both years and still unfinished — it's meant to roll up all our TRADOC docs into a single field-manual format covering basic combat skills/tasks. It's a CO-owned item and a self-acknowledged personal failure. <strong>Assign a hard deadline today</strong> (or break it into chunks owned by the relevant shops, since the TRADOC source material largely exists) or formally kill it. The pieces are already written — this is an assembly/editing problem, not a research problem.</li>
+<li>New risk Echo raises: <strong>document sprawl creating friction for new members.</strong> Do we need an "essential 5 docs for FNGs" curated path in the portal vs. the full library? S1's "less documents" instinct agrees.</li>
+<li>Shop SOPs: Command wants all shops to draft/update SOPs this year and feed Black Swan planning. <strong>Set the deadline and the template now.</strong> This was an implied 2025 goal that didn't get standardized.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 7. DOCUMENTS &amp; ADMIN — From &quot;we need everything&quot; to &quot;maybe less, please&quot;</label>
+    <textarea class="note" data-key="note::7-documents-admin-from-we-need-everythin" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-8-logistics-money-the-business-side-the-" class="sec">
+  <div class="content"><h2>8. LOGISTICS, MONEY &amp; THE BUSINESS SIDE — The part nobody wants to own</h2>
+<p><strong>Quietly the area we've regressed in most.</strong></p>
+<ul>
+<li><strong>Donations:</strong> 2025 wanted transparency + a visual tracker + growth. 2026: Command admits 6 months of neglect + plateau; S4 says donations declined. <strong>We went backwards.</strong></li>
+<li><strong>PX / revenue:</strong> Talked up in 2025 (web store, tax tracking). Not stood up. Command still lists "stand up the PX and start generating revenue" in 2026.</li>
+<li><strong>LLC / nonprofit / taxes:</strong> ✅ Resolved — the LLC now files federally as a <strong>private foundation</strong>. The 2025 501c3-vs-c4 question is closed. Legal/financial footing is established; the open question is now <em>using</em> it (donation strategy, asset purchases), not creating it.</li>
+<li><strong>Food/meals:</strong> A real S4 win — Digger funding meals off-budget, quality up (coffee/hot chocolate), better equipment. Now needs better consumption forecasting to cut waste.</li>
+</ul>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li><strong>Donations regressed because no one owned the cadence.</strong> Who owns fundraising going forward, and what's the visual tracker we promised a year ago? Build it this week or admit we won't.</li>
+<li><strong>PX: two years of talk, zero revenue.</strong> Is this real or is it a fantasy we keep listing? If real: owner, platform, first product, deadline. If not: take it off the survey.</li>
+<li><strong>LLC/foundation status is done (private foundation).</strong> The question flips: now that we have the structure, are we <em>leveraging</em> it? Donation strategy, tax-deductible appeals, asset purchases through the foundation — who owns turning legal status into actual dollars?</li>
+<li>S4 self-critiqued honestly (food forecasting, team meeting leadership). Good. <strong>What does S4 need to delegate so Blackout isn't the single point of failure?</strong> (Ties to burnout, Section 6.)</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 8. LOGISTICS, MONEY &amp; THE BUSINESS SIDE — The part nobody wants to own</label>
+    <textarea class="note" data-key="note::8-logistics-money-the-business-side-the-" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-9-safety-security-quietly-excellent-keep" class="sec">
+  <div class="content"><h2>9. SAFETY &amp; SECURITY — Quietly excellent, keep it that way</h2>
+<p><strong>The one area with consistent, unglamorous, year-over-year wins. Acknowledge it.</strong></p>
+<ul>
+<li>S2 2026: zero intruders, all firearms handled safely and stowed, improved gate/armory rotations, on top of local intel.</li>
+<li>Foxtrot/S3 2026: "no medical emergencies," minimal injuries, safe FOB.</li>
+<li>2025 S3: "no negligent/retarded injuries, RL medical response fantastic."</li>
+</ul>
+<p><strong>Discussion prompts:</strong></p>
+<ol>
+<li>We have run safe operations two years straight. <strong>That's not luck, it's S2/S5 discipline. Name it and bank it.</strong></li>
+<li>S2's growth asks: NODs/thermals, FOB surveillance, trip-wire/alarm systems, MP-style scenario training, challenge/password set up in advance. <strong>Which are this year's priorities?</strong> The challenge/password-in-advance fix is free — just do it.</li>
+<li><strong>Medical (S5) — the shop that went quiet, and the program that stalled.</strong> S5 did not submit a 2026 survey at all — that itself needs addressing with Hound (now S5 Lead). On the 2025 asks: we <strong>got the AED</strong> (good), did <strong>not</strong> get the CPR manikin, and every attempt to stand up a <strong>unit CPR/ECA certification program fell through</strong> — it now relies entirely on individuals knocking it out solo. The <strong>Field-Medic SOP / Medic-tab program and an official skills check-off doc still don't exist</strong> (Hound has something informal). Hard questions: Why did the unit cert program fail three+ attempts — funding, instructor, or ownership? Does medical have a real owner with time, or is it one tired person? And: should completing the medical block require a <em>documented</em> check-off before patching, or are we patching people on vibes? This needs a direct answer at the summit.</li>
+</ol>
+<hr /></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 9. SAFETY &amp; SECURITY — Quietly excellent, keep it that way</label>
+    <textarea class="note" data-key="note::9-safety-security-quietly-excellent-keep" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+<section id="sec-10-closing-what-we-commit-to-before-we-w" class="sec">
+  <div class="content"><h2>10. CLOSING — What we commit to before we walk out</h2>
+<p><strong>Last year we generated a long list of action items and delivered maybe a third of them. The difference this year: every commitment gets an OWNER, a DEADLINE, and a CHECK-IN before the next summit.</strong></p>
+<p>Before adjourning, the room must produce a short, hard list — no more than ~7 items — each with:
+- <strong>One named owner</strong> (not "the shop," a person)
+- <strong>A deadline</strong> (a date, not "this year")
+- <strong>A definition of done</strong> (how we'll know at the 2027 summit whether it happened)</p>
+<p><strong>Candidate "must-decide-today" items, based on two years of unresolved asks:</strong></p>
+<ol>
+<li><strong>Attendance standard + enforcement</strong> — define the minimum FTXs/year, the warning ladder, and the enforcer. We have the Activity Policy written; decide today whether it's actually used. (41 active vs 57 inactive — this is the fight.)</li>
+<li><strong>Trailer</strong> — owner, budget ceiling, deadline. (3rd year on the list if we punt. Close on S1's concrete options: S4 trailer / Tatanka chuck wagon / Romeo's trailer.)</li>
+<li><strong>CQB/shoot-house path</strong> — build, rent, or partner. Most-requested capability we don't have. Pick one.</li>
+<li><strong>Mandatory FTX-start comms refresher</strong> — S6 owns, 15 min, every FTX. Cheap, asked-for two years running.</li>
+<li><strong>Donations cadence + visual tracker</strong> — one owner, restart now. We have the foundation status; now use it.</li>
+<li><strong>Basic Militia Rifleman FM</strong> — hard deadline or break into shop-owned chunks (source TRADOC docs already exist). CO-owned.</li>
+<li><strong>Medical program reboot</strong> — owner with actual time; decide whether a documented medical check-off gates patching; settle why the CPR-cert program keeps failing.</li>
+<li><strong>Recognition mechanism</strong> — launch the portal awards/ribbons; reward contribution, not just tenure (S1's tenure-vs-responsibility gripe).</li>
+</ol>
+<blockquote>
+<p><strong>The test for 2027:</strong> We don't want to sit in this room next year reading the same trailer request, the same attendance complaint, and the same comms-training ask. If an item shows up a third year running, that's a leadership failure, not a membership failure. Own your lane.</p>
+</blockquote>
+<hr />
+<p><em>Prepared from the MAR 2025 (10 responses) and APR 2026 (12 responses) Leadership Summit surveys. Quotes are verbatim from team/shop submissions.</em></p></div>
+  <div class="noteblock">
+    <label class="notelabel">📝 Notes / decisions / owner+deadline — 10. CLOSING — What we commit to before we walk out</label>
+    <textarea class="note" data-key="note::10-closing-what-we-commit-to-before-we-w" rows="4" placeholder="Live notes for this topic… (auto-saved)"></textarea>
+  </div>
+</section>
+  </main>
+</div>
+<script>
+const notes=document.querySelectorAll("textarea.note");
+function load(){notes.forEach(t=>{const v=localStorage.getItem(t.dataset.key);if(v!==null)t.value=v;});}
+let t0;
+function flash(msg){const s=document.getElementById("savedmsg");s.textContent=msg;clearTimeout(t0);t0=setTimeout(()=>s.textContent="notes auto-save locally",1500);}
+notes.forEach(t=>t.addEventListener("input",()=>{localStorage.setItem(t.dataset.key,t.value);flash("✓ saved");}));
+function exportNotes(){
+  let out="# 13th Legion 2026 Leadership Summit — Notes\n_Exported: "+new Date().toLocaleString()+"_\n\n";
+  const master=document.querySelector('[data-key="note::__master__"]');
+  if(master&&master.value.trim()){out+="## ⭐ TOP DECISIONS / ACTION ITEMS\n"+master.value.trim()+"\n\n---\n\n";}
+  document.querySelectorAll("section.sec").forEach(sec=>{
+    const ta=sec.querySelector("textarea.note");
+    if(!ta||ta.dataset.key==="note::__master__")return;
+    if(ta.value.trim()){
+      const lab=sec.querySelector(".notelabel").textContent.replace("📝 Notes / decisions / owner+deadline — ","");
+      out+="## "+lab+"\n"+ta.value.trim()+"\n\n";
+    }
+  });
+  const blob=new Blob([out],{type:"text/markdown"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="summit_2026_notes_"+new Date().toISOString().slice(0,10)+".md";a.click();
+}
+function clearAll(){if(confirm("Clear ALL notes? This cannot be undone.")){notes.forEach(t=>{t.value="";localStorage.removeItem(t.dataset.key);});flash("cleared");}}
+load();
+</script>
+</body></html>
