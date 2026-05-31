@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc_title }} — TRADOC — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .tradoc-nav {
+        max-width: 820px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .tradoc-nav a { color: #d4a537; text-decoration: none; font-size: 13px; }
+    .tradoc-nav a:hover { color: #e6b84a; }
+    .tradoc-breadcrumb { font-size: 13px; color: #888; }
+    .tradoc-breadcrumb a { color: #d4a537; text-decoration: none; }
+    .tradoc-breadcrumb span { color: #555; margin: 0 6px; }
+
+    .pdf-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 16px; border-radius: 4px; font-size: 13px; font-weight: 600;
+        text-decoration: none; background: rgba(212,165,55,0.12);
+        color: #d4a537; border: 1px solid rgba(212,165,55,0.3);
+        transition: all 0.2s;
+    }
+    .pdf-btn:hover { background: rgba(212,165,55,0.2); border-color: #d4a537; }
+
+    /* ─── Uniform dark-theme styling for ALL doc content ─── */
+    .tradoc-content {
+        color: #e0e0e0;
+        line-height: 1.7;
+        font-size: 14px;
+        max-width: 820px;
+        margin: 0 auto;
+    }
+
+    /* Document header */
+    .tradoc-content .doc-header {
+        text-align: center;
+        border-bottom: 2px solid rgba(212,165,55,0.4);
+        padding-bottom: 16px;
+        margin-bottom: 28px;
+    }
+    .tradoc-content .doc-header h1 {
+        color: #d4a537 !important;
+        font-size: 22pt !important;
+        margin: 8px 0 !important;
+    }
+    .tradoc-content .doc-header h2,
+    .tradoc-content .doc-header h3 {
+        color: #aaa !important;
+        font-size: 11pt !important;
+        font-weight: 400 !important;
+        margin: 4px 0 !important;
+        border: none !important;
+    }
+    .tradoc-content .doc-header p {
+        color: #888 !important;
+        margin: 4px 0 !important;
+    }
+
+    /* Print-style header class (BRM, UoF, CoF docs) */
+    .tradoc-content .header {
+        text-align: center;
+        border-bottom: 2px solid rgba(212,165,55,0.4) !important;
+        padding-bottom: 16px;
+        margin-bottom: 28px;
+    }
+    .tradoc-content .header h1 {
+        color: #d4a537 !important;
+        font-size: 22pt !important;
+    }
+    .tradoc-content .header .sub { color: #aaa !important; }
+    .tradoc-content .header .ref { color: #666 !important; }
+
+    /* Headings */
+    .tradoc-content h1 {
+        color: #d4a537 !important;
+        font-size: 18pt !important;
+        margin: 32px 0 12px !important;
+    }
+    .tradoc-content h2 {
+        color: #d4a537 !important;
+        font-size: 14pt !important;
+        margin: 32px 0 12px !important;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(212,165,55,0.25) !important;
+    }
+    .tradoc-content h3 {
+        color: #d4a537 !important;
+        font-size: 12pt !important;
+        margin: 24px 0 8px !important;
+    }
+    .tradoc-content h4 {
+        color: #ccc !important;
+        font-size: 11pt !important;
+        margin: 20px 0 6px !important;
+    }
+
+    /* Text */
+    .tradoc-content p {
+        color: #e0e0e0 !important;
+        margin: 8px 0 !important;
+    }
+    .tradoc-content strong, .tradoc-content b { color: #fff !important; }
+    .tradoc-content em, .tradoc-content i { color: #ccc; }
+    .tradoc-content a { color: #5b9bd5 !important; }
+
+    /* Lists */
+    .tradoc-content ul, .tradoc-content ol {
+        color: #e0e0e0;
+        padding-left: 24px;
+        margin: 8px 0;
+    }
+    .tradoc-content li {
+        margin-bottom: 4px;
+        color: #e0e0e0 !important;
+    }
+
+    /* Tables */
+    .tradoc-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 13px;
+        border: 1px solid #444;
+    }
+    .tradoc-content caption {
+        text-align: left;
+        color: #d4a537;
+        font-weight: 700;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    .tradoc-content th {
+        background: #1a1a2e !important;
+        color: #d4a537 !important;
+        border: 1px solid #444 !important;
+        padding: 8px 10px !important;
+        text-align: left;
+        font-weight: 700;
+    }
+    .tradoc-content td {
+        border: 1px solid #333 !important;
+        padding: 6px 10px !important;
+        color: #e0e0e0 !important;
+        background: transparent !important;
+        vertical-align: top;
+    }
+    .tradoc-content tr:nth-child(even) td { background: rgba(255,255,255,0.02) !important; }
+    .tradoc-content tr:hover td { background: rgba(212,165,55,0.04) !important; }
+
+    /* Special blocks */
+    .tradoc-content blockquote {
+        border-left: 3px solid #d4a537;
+        padding: 8px 16px;
+        margin: 16px 0;
+        color: #ccc;
+        font-style: italic;
+        background: rgba(212,165,55,0.04);
+    }
+    .tradoc-content code {
+        background: rgba(255,255,255,0.08);
+        padding: 1px 4px;
+        border-radius: 3px;
+        color: #e0e0e0;
+    }
+    .tradoc-content hr {
+        border: none;
+        border-top: 1px solid #333;
+        margin: 24px 0;
+    }
+    .tradoc-content .note, .tradoc-content .warning, .tradoc-content .important {
+        background: rgba(212,165,55,0.06) !important;
+        border: 1px solid rgba(212,165,55,0.2) !important;
+        border-left: 3px solid #d4a537 !important;
+        padding: 10px 14px !important;
+        margin: 12px 0 !important;
+        border-radius: 4px;
+        color: #e0e0e0 !important;
+    }
+
+    /* Images (land nav docs) */
+    .tradoc-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 8px 0;
+    }
+    .tradoc-content .img-caption {
+        font-size: 12px;
+        color: #888;
+        font-style: italic;
+        margin: 4px 0 12px;
+    }
+    .tradoc-content .landnav-img {
+        max-width: 100%;
+        border-radius: 4px;
+    }
+    .tradoc-content .landnav-img-row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+    }
+    .tradoc-content .landnav-img-row > div {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    /* Card grids (land nav index cards) */
+    .tradoc-content .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+    }
+    .tradoc-content .card {
+        background: rgba(212,165,55,0.06);
+        border: 1px solid rgba(212,165,55,0.15);
+        border-radius: 6px;
+        padding: 12px 14px;
+    }
+    .tradoc-content .card h3 {
+        font-size: 11pt !important;
+        margin: 0 0 4px !important;
+    }
+    .tradoc-content .card p {
+        font-size: 12px !important;
+        color: #aaa !important;
+        margin: 0 !important;
+    }
+
+    /* Override any inline backgrounds/colors from print docs */
+    .tradoc-content [style*="background-color"] { background-color: transparent !important; }
+    .tradoc-content [style*="color: #1"] { color: #e0e0e0 !important; }
+    .tradoc-content [style*="color: #2"] { color: #e0e0e0 !important; }
+    .tradoc-content [style*="color: #3"] { color: #ccc !important; }
+    .tradoc-content [style*="color: black"] { color: #e0e0e0 !important; }
+    .tradoc-content [align="center"] { text-align: center; }
+
+    /* Back link */
+    .tradoc-footer {
+        max-width: 820px;
+        margin: 32px auto 0;
+        padding-top: 16px;
+        border-top: 1px solid #333;
+    }
+    .tradoc-footer a {
+        color: #d4a537;
+        text-decoration: none;
+        font-size: 13px;
+    }
+    .tradoc-footer a:hover { color: #e6b84a; }
+</style>
+
+<div class="tradoc-nav">
+    <div class="tradoc-breadcrumb">
+        <a href="/training/tradoc">TRADOC</a>
+        <span>›</span>
+        Block {{ block_num }}: {{ block_name }}
+        <span>›</span>
+        {{ doc_title }}
+    </div>
+    {% if pdf_url %}
+    <a href="{{ pdf_url }}" class="pdf-btn" {% if pdf_external %}target="_blank"{% endif %}>📥 Download PDF</a>
+    {% endif %}
+</div>
+
+<div class="tradoc-content">
+    {% include tradoc_template %}
+</div>
+
+<div class="tradoc-footer">
+    <a href="/training/tradoc">← Back to TRADOC</a>
+</div>
+{% endblock %}

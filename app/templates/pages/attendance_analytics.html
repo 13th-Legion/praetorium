@@ -7,7 +7,7 @@
         <span style="font-size: 32px;">📊</span>
         <div>
             <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">FTX Attendance Analytics</h1>
-            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ total_events }} finalized event{{ 's' if total_events != 1 else '' }} · {{ roster_strength }} active members</p>
+            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ ftx_conducted }} 13th Legion FTX{{ 's' if ftx_conducted != 1 else '' }} · {{ roster_strength }} active members</p>
         </div>
     </div>
 
@@ -20,7 +20,7 @@
     <!-- Summary Cards -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
-            <div style="font-size: 32px; font-weight: 700; color: #d4a537;">{{ total_events }}</div>
+            <div style="font-size: 32px; font-weight: 700; color: #d4a537;">{{ ftx_conducted }}</div>
             <div style="font-size: 12px; color: #888; text-transform: uppercase;">FTXs Conducted</div>
         </div>
         <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
@@ -35,6 +35,147 @@
             <div style="font-size: 32px; font-weight: 700; color: #42a5f5;">{{ roster_strength }}</div>
             <div style="font-size: 12px; color: #888; text-transform: uppercase;">Roster Strength</div>
         </div>
+    </div>
+
+    <!-- ===== SUPERLATIVES / FUN CALLOUTS ===== -->
+    {% if superlatives %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        {% if superlatives.iron_man %}
+        <div style="background: linear-gradient(135deg, #2a2418, #1a1a2e); border: 1px solid rgba(212,165,55,0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #d4a537; text-transform: uppercase; letter-spacing: 1px;">🏅 Iron Man</div>
+            <div style="font-size: 18px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ superlatives.iron_man.name }}</div>
+            <div style="font-size: 12px; color: #888;">{% if superlatives.iron_man.callsign %}{{ superlatives.iron_man.callsign }} · {% endif %}{{ superlatives.iron_man.longest }} FTX streak</div>
+        </div>
+        {% endif %}
+        {% if superlatives.best_event %}
+        <div style="background: linear-gradient(135deg, #18261a, #1a1a2e); border: 1px solid rgba(76,175,80,0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #4caf50; text-transform: uppercase; letter-spacing: 1px;">📈 Biggest Turnout</div>
+            <div style="font-size: 18px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ superlatives.best_event.count }} present</div>
+            <div style="font-size: 12px; color: #888;">{{ superlatives.best_event.full_date }}</div>
+        </div>
+        {% endif %}
+        {% if superlatives.momentum_delta is defined %}
+        <div style="background: linear-gradient(135deg, #1a2230, #1a1a2e); border: 1px solid rgba(66,165,245,0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #42a5f5; text-transform: uppercase; letter-spacing: 1px;">{% if superlatives.momentum_delta >= 0 %}🚀 Momentum{% else %}📉 Cooling Off{% endif %}</div>
+            <div style="font-size: 18px; font-weight: 700; margin-top: 4px; color: {% if superlatives.momentum_delta >= 0 %}#4caf50{% else %}#ef5350{% endif %};">{% if superlatives.momentum_delta >= 0 %}+{% endif %}{{ superlatives.momentum_delta }} / event</div>
+            <div style="font-size: 12px; color: #888;">last 3 avg {{ superlatives.momentum_recent }} vs {{ superlatives.momentum_prior }}</div>
+        </div>
+        {% endif %}
+        {% if superlatives.best_month %}
+        <div style="background: linear-gradient(135deg, #261a26, #1a1a2e); border: 1px solid rgba(186,104,200,0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #ba68c8; text-transform: uppercase; letter-spacing: 1px;">☀️ Seasonality</div>
+            <div style="font-size: 18px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ superlatives.best_month.name }} is strongest</div>
+            <div style="font-size: 12px; color: #888;">{{ superlatives.best_month.avg }} avg · {{ superlatives.worst_month.name }} weakest ({{ superlatives.worst_month.avg }})</div>
+        </div>
+        {% endif %}
+        {% if superlatives.perfect_count %}
+        <div style="background: linear-gradient(135deg, #2a2418, #1a1a2e); border: 1px solid rgba(255,193,7,0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #ffc107; text-transform: uppercase; letter-spacing: 1px;">⭐ Perfect Attendance</div>
+            <div style="font-size: 18px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ superlatives.perfect_count }} member{{ 's' if superlatives.perfect_count != 1 else '' }} at 100%</div>
+            <div style="font-size: 12px; color: #888;">{% for p in superlatives.perfect %}{{ p.callsign or p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ===== ATTENDANCE TREND LINE ===== -->
+    {% if trend_svg.points %}
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">📈 Attendance Trend</h2>
+        <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Headcount per FTX over time. <span style="color:#d4a537;">◆</span> = MCFTX (multi-company).</p>
+        <div style="overflow-x: auto;">
+        <svg viewBox="0 0 {{ trend_svg.w }} {{ trend_svg.h }}" style="width: 100%; min-width: 700px; height: auto;" font-family="sans-serif">
+            {% for g in trend_svg.gridlines %}
+            <line x1="{{ trend_svg.pad }}" y1="{{ g.y }}" x2="{{ trend_svg.w - trend_svg.pad }}" y2="{{ g.y }}" stroke="#2a2a3e" stroke-width="1"/>
+            <text x="{{ trend_svg.pad - 8 }}" y="{{ g.y + 4 }}" fill="#666" font-size="11" text-anchor="end">{{ g.val }}</text>
+            {% endfor %}
+            <path d="{{ trend_svg.area }}" fill="rgba(212,165,55,0.12)" stroke="none"/>
+            <polyline points="{{ trend_svg.polyline }}" fill="none" stroke="#d4a537" stroke-width="2.5" stroke-linejoin="round"/>
+            {% for p in trend_svg.points %}
+            {% if p.is_mcftx %}
+            <rect x="{{ p.x - 4 }}" y="{{ p.y - 4 }}" width="8" height="8" transform="rotate(45 {{ p.x }} {{ p.y }})" fill="#d4a537" stroke="#1a1a2e" stroke-width="1.5"><title>{{ p.full_date }} — {{ p.count }} present (MCFTX)</title></rect>
+            {% else %}
+            <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="#4caf50" stroke="#1a1a2e" stroke-width="1.5"><title>{{ p.full_date }} — {{ p.count }} present</title></circle>
+            {% endif %}
+            {% endfor %}
+        </svg>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; padding: 4px {{ trend_svg.pad }}px 0; flex-wrap: nowrap; overflow: hidden;">
+            <span>{{ trend[0].label }}</span>
+            {% if trend|length > 2 %}<span>{{ trend[(trend|length // 2)].label }}</span>{% endif %}
+            <span>{{ trend[-1].label }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== ATTENDANCE HEATMAP ===== -->
+    {% if heat_rows %}
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">🔥 Turnout Heatmap</h2>
+        <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Headcount intensity by month. Darker = lower turnout. <span style="color:#555;">Aug = Family Day (no FTX)</span>.</p>
+        <div style="overflow-x: auto;">
+        <table style="border-collapse: separate; border-spacing: 3px; font-size: 11px; min-width: 640px;">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    {% for mo in ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+                    <th style="color: #888; font-weight: 500; padding: 2px;">{{ mo }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in heat_rows %}
+                <tr>
+                    <td style="color: #ccc; font-weight: 600; text-align: right; padding-right: 6px;">{{ row.year }}</td>
+                    {% for c in row.cells %}
+                    {% if c.is_aug %}
+                    <td style="width: 44px; height: 34px; background: repeating-linear-gradient(45deg,#15151f,#15151f 4px,#1a1a2e 4px,#1a1a2e 8px); border-radius: 4px; text-align: center; color: #444;" title="August — Family Day">—</td>
+                    {% elif c.count %}
+                    <td style="width: 44px; height: 34px; border-radius: 4px; text-align: center; font-weight: 600; background: rgba(212,165,55,{{ 0.12 + c.intensity * 0.88 }}); color: {% if c.intensity > 0.5 %}#1a1a2e{% else %}#d4a537{% endif %};" title="{{ row.year }} {{ c.month }} — {{ c.count }} present">{{ c.count }}</td>
+                    {% else %}
+                    <td style="width: 44px; height: 34px; background: #15151f; border-radius: 4px; text-align: center; color: #333;">·</td>
+                    {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== ATTENDANCE DISTRIBUTION + IRON MAN (two-col) ===== -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 24px;">
+        {% if hist_max %}
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px;">
+            <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">📊 Attendance Distribution</h2>
+            <p style="color: #888; font-size: 12px; margin: 0 0 16px;">How many members fall in each attendance-rate band.</p>
+            {% for b in hist_buckets %}
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="width: 56px; font-size: 11px; color: #888; text-align: right;">{{ b.label }}</span>
+                <div style="flex: 1; background: #111; border-radius: 4px; height: 22px; position: relative; overflow: hidden;">
+                    <div style="background: {{ b.color }}; height: 100%; width: {{ (b.count / hist_max * 100) if hist_max else 0 }}%; border-radius: 4px; min-width: {% if b.count %}2px{% else %}0{% endif %}; transition: width .3s;"></div>
+                    <span style="position: absolute; right: 6px; top: 2px; font-size: 11px; color: #ccc; font-weight: 600;">{{ b.count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if top_streaks %}
+        <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px;">
+            <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">🔗 Active Streaks</h2>
+            <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Consecutive FTXs attended (current · best).</p>
+            {% for s in top_streaks %}
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 9px;">
+                <span style="width: 20px; text-align: center; font-size: 13px;">{% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}<span style="color:#555;">{{ loop.index }}</span>{% endif %}</span>
+                <a href="/profile/{{ s.id }}" style="flex: 1; color: #d4a537; text-decoration: none; font-size: 13px;">{{ s.name }}{% if s.callsign %} <span style="color:#666;font-size:11px;">({{ s.callsign }})</span>{% endif %}</a>
+                <span style="font-weight: 700; color: {% if s.current >= 5 %}#4caf50{% elif s.current > 0 %}#9ccc65{% else %}#ef5350{% endif %}; font-size: 14px;">{{ s.current }}</span>
+                <span style="color: #555; font-size: 11px;">/ {{ s.longest }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Event History Table -->

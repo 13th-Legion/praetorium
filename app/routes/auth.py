@@ -64,12 +64,22 @@ async def login(request: Request):
         "redirect_uri": redirect_uri,
         "state": state,
     })
-    authorize_path = f"/index.php/apps/oauth2/authorize?{authorize_params}"
 
-    # Send to NC login page with redirect_url back to the authorize endpoint.
-    # NC honours redirect_url after successful authentication.
-    nc_login_url = f"{settings.nc_url}/login?redirect_url={quote(authorize_path, safe='')}"
-    return RedirectResponse(url=nc_login_url, status_code=302)
+    # Go DIRECTLY to the NC OAuth2 authorize endpoint.
+    #
+    # History: we previously wrapped this in NC's /login?redirect_url=... to dodge
+    # the Login Flow v2 double-prompt. But that wrapper BREAKS for users who are
+    # ALREADY logged into Nextcloud: NC's LoginController ignores redirect_url for
+    # authenticated sessions and dumps them on the cloud dashboard
+    # (cloud.13thlegion.org) instead of returning to the portal.
+    #
+    # Going direct to /authorize fixes the already-logged-in case (it grants in one
+    # shot). For logged-OUT users, NC's authorize -> ClientFlowLogin shows the login
+    # and returns here afterward. We've also added "Project Praetorium" to
+    # oauth2.skipAuthPickerApplications so NC skips the extra grant-confirmation page,
+    # giving a clean single-pass login for both states.
+    authorize_url = f"{settings.nc_url}/index.php/apps/oauth2/authorize?{authorize_params}"
+    return RedirectResponse(url=authorize_url, status_code=302)
 
 
 @router.get("/callback")

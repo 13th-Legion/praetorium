@@ -15,6 +15,7 @@
                 <th style="text-align: center; padding: 8px;">Waiver</th>
                 <th style="text-align: center; padding: 8px;">Code of Conduct</th>
                 <th style="text-align: center; padding: 8px;">By-Laws</th>
+                <th style="text-align: center; padding: 8px;">Activity Policy</th>
             </tr>
         </thead>
         <tbody>
@@ -46,6 +47,13 @@
                 <td style="padding: 8px; text-align: center;">
                     {% if m.bylaws_signed_at %}
                     <span style="color: #2e7d32;" title="{{ m.bylaws_signed_at.strftime('%Y-%m-%d %H:%M') }}">✅ {{ m.bylaws_signed_at.strftime('%m/%d/%y') }}</span>
+                    {% else %}
+                    <span style="color: #e65100;">❌ Unsigned</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 8px; text-align: center;">
+                    {% if m.activity_policy_signed_at %}
+                    <span style="color: #2e7d32;" title="{{ m.activity_policy_signed_at.strftime('%Y-%m-%d %H:%M') }}">✅ {{ m.activity_policy_signed_at.strftime('%m/%d/%y') }}</span>
                     {% else %}
                     <span style="color: #e65100;">❌ Unsigned</span>
                     {% endif %}

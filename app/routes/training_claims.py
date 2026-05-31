@@ -239,6 +239,8 @@ async def training_progress_widget(request: Request, db: AsyncSession = Depends(
         todos.append(('<a href="/api/s1/documents/sign/code_of_conduct" style="color:#d4a537;">Sign Code of Conduct</a>', '📝'))
     if not member.bylaws_signed_at:
         todos.append(('<a href="/api/s1/documents/sign/bylaws" style="color:#d4a537;">Sign TSM By-Laws</a>', '📝'))
+    if not member.activity_policy_signed_at:
+        todos.append(('<a href="/api/s1/documents/sign/activity_policy" style="color:#d4a537;">Sign Activity Policy</a>', '📝'))
 
     # TRADOC for recruits
     if member.status == "recruit" and done < total:

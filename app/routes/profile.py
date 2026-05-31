@@ -97,7 +97,9 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     )
     completed = {mt.item_id: mt for mt in result.scalars().all()}
 
-    # Group by block
+    # Group by block. Optional items (e.g. Advanced/Expert Land Nav) are still
+    # listed in their block but do NOT count toward TRADOC progress (they're extra,
+    # not required to get patched).
     blocks = {}
     for item in all_items:
         if item.block not in blocks:
@@ -107,10 +109,13 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
             "name": item.name,
             "done": item.id in completed,
             "signoff": completed.get(item.id),
+            "optional": item.optional,
         })
 
-    total = len(all_items)
-    done = len(completed)
+    # Progress = required items only
+    required_items = [i for i in all_items if not i.optional]
+    total = len(required_items)
+    done = len([i for i in required_items if i.id in completed])
 
     # All certifications — alphabetical, but comms certs grouped by precedence
     comms_sort = case(
@@ -188,6 +193,12 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
     ftx_history = await _get_ftx_history(member.id, db)
     conduct_violations = await get_violations_for_profile(member.id, db)
 
+    # Build My Documents list (view links + signed status for signable docs)
+    my_documents = []
+    for _k, _t, _signable, _attr in MY_DOCUMENTS:
+        _signed = getattr(member, _attr, None) if (_signable and _attr) else None
+        my_documents.append({"key": _k, "title": _t, "signable": _signable, "signed_at": _signed})
+
     # Fetch NC last login for this member
     nc_last_login = None
     if member.nc_username:
@@ -211,6 +222,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         "ftx_history": ftx_history,
         "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
+        "my_documents": my_documents,
         "now": datetime.utcnow(),
     })
 
@@ -239,6 +251,12 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
     ftx_history = await _get_ftx_history(member.id, db)
     conduct_violations = await get_violations_for_profile(member.id, db)
 
+    # Build My Documents list (view links + signed status for signable docs)
+    my_documents = []
+    for _k, _t, _signable, _attr in MY_DOCUMENTS:
+        _signed = getattr(member, _attr, None) if (_signable and _attr) else None
+        my_documents.append({"key": _k, "title": _t, "signable": _signable, "signed_at": _signed})
+
     # Fetch NC last login for this member
     nc_last_login = None
     if member.nc_username:
@@ -262,5 +280,50 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         "ftx_history": ftx_history,
         "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
+        "my_documents": my_documents,
         "now": datetime.utcnow(),
+    })
+
+# ─── My Documents (read-only viewer for unit documents) ──────────────────────
+
+# Document registry: key -> (title, signable flag, signed_at member attribute)
+MY_DOCUMENTS = [
+    ("activity_policy", "Activity Policy", True, "activity_policy_signed_at"),
+    ("code_of_conduct", "Code of Conduct", True, "code_of_conduct_signed_at"),
+    ("bylaws", "TSM By-Laws", True, "bylaws_signed_at"),
+    ("nda", "Non-Disclosure Agreement", True, "nda_signed_at"),
+    ("general_waiver", "General Waiver & Release of Liability", True, "waiver_signed_at"),
+]
+
+
+def _get_doc_content(doc_type: str):
+    """Return (title, html_content) for a document key, or (None, None)."""
+    from app.routes.doc_texts import (
+        CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, ACTIVITY_POLICY_TEXT,
+    )
+    from app.routes.s1_admin import NDA_TEXT, WAIVER_TEXT
+    mapping = {
+        "activity_policy": ("Activity Policy", ACTIVITY_POLICY_TEXT),
+        "code_of_conduct": ("Code of Conduct", CODE_OF_CONDUCT_TEXT),
+        "bylaws": ("TSM By-Laws", BYLAWS_TEXT),
+        "nda": ("Non-Disclosure Agreement", NDA_TEXT),
+        "general_waiver": ("General Waiver & Release of Liability", WAIVER_TEXT),
+    }
+    return mapping.get(doc_type, (None, None))
+
+
+@router.get("/document/{doc_type}")
+@require_auth
+async def view_document(request: Request, doc_type: str, db: AsyncSession = Depends(get_db)):
+    """Read-only document viewer for any logged-in member."""
+    user = get_current_user(request)
+    title, content = _get_doc_content(doc_type)
+    if not content:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return templates.TemplateResponse("pages/view_document.html", {
+        "request": request,
+        "user": user,
+        "doc_title": title,
+        "doc_content": content,
+        "doc_type": doc_type,
     })

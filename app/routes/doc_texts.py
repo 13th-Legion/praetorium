@@ -267,3 +267,43 @@ BYLAWS_TEXT = """
 <p>New units coming into TSM are supervised by the Regional Commander in that area, train with the nearest established TSM unit, and are brought to the Board of COs for interviewing when deemed capable of autonomous operation. A two-thirds majority vote by the CO Board is required for formal recognition.</p>
 <p>Once a specific unit/team reaches a member roster of two squads (16 people) they have the option of becoming their own dedicated TSM unit.</p>
 """
+
+
+ACTIVITY_POLICY_TEXT = """
+<h2 style="text-align:center;color:#d4a537;">TEXAS STATE MILITIA<br>13TH LEGION</h2>
+<h3 style="text-align:center;">ACTIVITY POLICY</h3>
+
+<h3>1. Purpose</h3>
+<p>Membership in the 13th Legion of the Texas State Militia is both a privilege to grow and a duty to contribute. This policy ensures operational security (OpSec) and readiness by setting participation expectations for all Legionaries, integrating new recruits, and managing inactivity.</p>
+
+<h3>2. Participation Requirements</h3>
+<ul>
+  <li>Legionaries are expected to make reasonable efforts to attend all Field Training Exercises (FTXs) and maintain regular contact with their assigned team leaders via approved channels (e.g., ProtonMail, Signal).</li>
+  <li><strong><em>No Contact</em></strong>:
+    <ul>
+      <li>After 6 weeks of no communication, the team leader, 1SG, or SFC will attempt outreach.</li>
+      <li>Non-response within 2 weeks (total 2 months) results in removal from the company.</li>
+    </ul>
+  </li>
+  <li><strong><em>No FTX Attendance</em></strong>:
+    <ul>
+      <li>After 2 months, a verbal warning is issued by the team leader.</li>
+      <li>After 3 months, a written warning is issued, requiring attendance at the next FTX.</li>
+      <li>After 4 months, non-attendance results in removal from the company.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>3. Exceptions</h3>
+<ul>
+  <li>Life challenges (e.g., work, family, emergencies) may qualify for exceptions if communicated in writing to the team leader and approved by command staff. Documentation will be retained per the Code of Conduct, Section 7.2.</li>
+  <li>Recurrent unexcused absences, especially after OPORD receipt, may lead to review under the Code of Conduct, Section 7.</li>
+  <li><strong>Leave of Absence:</strong> Patched members may request a 6-month leave of absence through unit Command. During an approved leave, the member is exempt from all participation requirements in this policy and is not subject to removal for inactivity. Leave is requested and managed through the member portal.</li>
+</ul>
+
+<h3>4. Disciplinary Actions</h3>
+<ul>
+  <li>Insubordination, as defined in the Code of Conduct (Section 5.2), related to team leader communication may result in immediate review and potential removal.</li>
+  <li>Violations of this policy are subject to remedial actions under the Code of Conduct, Section 7.</li>
+</ul>
+"""

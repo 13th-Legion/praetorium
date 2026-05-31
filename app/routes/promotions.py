@@ -31,19 +31,15 @@ RANK_ORDER = [
 RANK_INDEX = {r: i for i, r in enumerate(RANK_ORDER)}
 
 
-def _allowed_promotions(current_rank: str) -> list[tuple[str, str]]:
-    """Return list of (grade, display_label) the member could be promoted to."""
-    idx = RANK_INDEX.get(current_rank)
-    if idx is None:
-        return []
+def _allowed_rank_changes(current_rank: str) -> list[tuple[str, str]]:
+    """Return list of (grade, display_label) the member could be changed to (all ranks except current)."""
     choices = []
-    # Allow promotion within same track (enlisted/warrant/officer), one or two steps up
-    track_prefix = current_rank[0]  # 'E', 'W', or 'O'
-    for r in RANK_ORDER[idx + 1:]:
-        if r[0] == track_prefix:
-            abbr = RANK_ABBR.get(r, r)
-            title = RANK_TITLE.get(r, "")
-            choices.append((r, f"{abbr} — {title}"))
+    for r in RANK_ORDER:
+        if r == current_rank:
+            continue
+        abbr = RANK_ABBR.get(r, r)
+        title = RANK_TITLE.get(r, "")
+        choices.append((r, f"{abbr} — {title}"))
     return choices
 
 
@@ -135,7 +131,7 @@ async def promotions_dashboard(request: Request):
             "tig_display": _format_tig(tig_days) if tig_days >= 0 else "Unknown",
             "non_promotable": non_promotable,
             "np_reason": np_reason,
-            "allowed_promotions": _allowed_promotions(m.rank_grade),
+            "allowed_ranks": _allowed_rank_changes(m.rank_grade),
         })
 
     # Default sort: highest TIG first
@@ -175,18 +171,17 @@ async def promote_member(request: Request):
 
         old_rank = member.rank_grade
 
-        # Validate promotion direction
+        today = date.today()
         old_idx = RANK_INDEX.get(old_rank, -1)
         new_idx = RANK_INDEX.get(new_rank, -1)
-        if new_idx <= old_idx:
-            raise HTTPException(400, f"Cannot promote {old_rank} → {new_rank} (not a higher rank)")
+        is_promotion = new_idx > old_idx
+        action_word = "Promoted" if is_promotion else "Demoted"
 
-        # Check non-promotable hold
-        today = date.today()
-        if member.non_promotable_until and member.non_promotable_until >= today:
+        # Check non-promotable hold (only blocks promotions, not demotions)
+        if is_promotion and member.non_promotable_until and member.non_promotable_until >= today:
             raise HTTPException(400, f"Member is non-promotable until {member.non_promotable_until}")
 
-        # Execute promotion
+        # Execute rank change
         member.rank_grade = new_rank
 
         # Auto-patch: E-1 → E-2+ sets patch_date and status
@@ -202,7 +197,7 @@ async def promote_member(request: Request):
             old_rank=old_rank,
             new_rank=new_rank,
             changed_by=user.get("username", "unknown"),
-            notes=f"Promoted via Promotions Dashboard",
+            notes=f"{action_word} via Promotions Dashboard",
             effective_date=datetime.utcnow(),
         ))
 
@@ -214,13 +209,14 @@ async def promote_member(request: Request):
 
         await db.commit()
 
-        log.info(f"Promoted {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {user.get('username')}")
+        log.info(f"{action_word} {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {user.get('username')}")
 
     new_abbr = RANK_ABBR.get(new_rank, new_rank)
     old_abbr = RANK_ABBR.get(old_rank, old_rank)
+    action_label = "promoted" if RANK_INDEX.get(new_rank, -1) > RANK_INDEX.get(old_rank, -1) else "changed"
 
     return HTMLResponse(
-        content=f'<div id="promo-toast" class="toast success">✅ {old_abbr} {member.last_name} promoted to {new_abbr}</div>',
+        content=f'<div id="promo-toast" class="toast success">✅ {old_abbr} {member.last_name} {action_label} to {new_abbr}</div>',
         headers={"HX-Trigger": "promotionDone"},
     )
 
@@ -269,11 +265,9 @@ async def batch_promote(request: Request):
             old_rank = member.rank_grade
             old_idx = RANK_INDEX.get(old_rank, -1)
             new_idx = RANK_INDEX.get(new_rank, -1)
-            if new_idx <= old_idx:
-                errors.append(f"{member.last_name}: {old_rank} → {new_rank} not valid")
-                continue
+            is_promo = new_idx > old_idx
 
-            if member.non_promotable_until and member.non_promotable_until >= today:
+            if is_promo and member.non_promotable_until and member.non_promotable_until >= today:
                 errors.append(f"{member.last_name}: non-promotable hold")
                 continue
 
@@ -286,12 +280,13 @@ async def batch_promote(request: Request):
                 if member.status == "recruit":
                     member.status = "active"
 
+            action_word = "Promoted" if is_promo else "Demoted"
             db.add(RankHistory(
                 member_id=mid,
                 old_rank=old_rank,
                 new_rank=new_rank,
                 changed_by=username,
-                notes="Promoted via Batch Promotions",
+                notes=f"{action_word} via Batch Rank Change",
                 effective_date=datetime.utcnow(),
             ))
 
@@ -301,13 +296,13 @@ async def batch_promote(request: Request):
                 await _sync_nc_displayname(member.nc_username, member.display_name)
 
             results.append(f"{RANK_ABBR.get(old_rank, old_rank)} {member.last_name} → {RANK_ABBR.get(new_rank, new_rank)}")
-            log.info(f"Batch promoted {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {username}")
+            log.info(f"Batch {action_word.lower()} {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {username}")
 
         await db.commit()
 
     parts = []
     if results:
-        parts.append(f"✅ {len(results)} promotion(s): " + ", ".join(results))
+        parts.append(f"✅ {len(results)} rank change(s): " + ", ".join(results))
     if errors:
         parts.append(f"⚠️ {len(errors)} error(s): " + ", ".join(errors))
 

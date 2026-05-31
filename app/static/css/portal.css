@@ -788,3 +788,40 @@ a:hover { color: var(--accent-hover); }
     margin: 0;
     line-height: 1.3;
 }
+
+/* ── List indentation fix (global reset zeroed ul/ol padding, pushing
+   markers into the margin). Restore proper indent for content lists.
+   Inline-styled lists still override via specificity. ─────────────── */
+.content ul, .content ol,
+.content-wide ul, .content-wide ol,
+.card-body ul, .card-body ol,
+.doc-content ul, .doc-content ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+    list-style-position: outside;
+}
+.content li, .content-wide li,
+.card-body li, .doc-content li {
+    margin: 0.25rem 0;
+}
+
+/* ── Document viewer spacing: breathing room before main numbered sections
+   (h3) but NOT subsections (h4). Keeps Activity Policy / CoC / Bylaws /
+   NDA / Waiver readable. ─────────────────────────────────────────────── */
+.doc-content h3 {
+    margin-top: 1.6rem;
+    margin-bottom: 0.5rem;
+}
+.doc-content h3:first-child,
+.doc-content h2:first-child {
+    margin-top: 0;   /* no gap above the very first heading / title */
+}
+.doc-content h4 {
+    margin-top: 0.6rem;
+    margin-bottom: 0.3rem;
+}
+.doc-content h2 + h3,
+.doc-content h3[style*="text-align:center"] {
+    margin-top: 0.4rem;  /* centered subtitle right under the title block */
+}
+.doc-content p { margin: 0.5rem 0; }

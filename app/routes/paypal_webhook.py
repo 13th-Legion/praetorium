@@ -460,8 +460,15 @@ async def paypal_webhook(request: Request):
             matched_member = result.scalars().first()
 
         if matched_member:
-            # If this is an app fee and they haven't paid yet, mark it
-            if is_app_fee and matched_member.app_fee_status in ("pending", None):
+            # If this is an app fee and they haven't paid yet, mark it.
+            # IMPORTANT: only recruits/applicants owe an app fee. An active or
+            # patched member sending $50 is a DONATION, never an app fee — even
+            # if their app_fee_status was never tracked (true for pre-system OGs).
+            member_owes_app_fee = (
+                matched_member.status == "recruit"
+                and matched_member.patch_date is None
+            )
+            if is_app_fee and member_owes_app_fee and matched_member.app_fee_status in ("pending", None):
                 matched_member.app_fee_status = "paid"
                 matched_member.app_fee_method = "paypal"
                 matched_member.app_fee_paid_at = datetime.utcnow()
@@ -499,7 +506,7 @@ async def paypal_webhook(request: Request):
                 "source": "members",
                 "member_id": matched_member.id,
                 "name": f"{matched_member.first_name} {matched_member.last_name}",
-                "type": "app_fee" if is_app_fee and matched_member.app_fee_status == "paid" else "donation",
+                "type": "app_fee" if (is_app_fee and member_owes_app_fee and matched_member.app_fee_status == "paid") else "donation",
             })
 
     # ── Strategy 3: No match — alert S1 for manual resolution ────────────

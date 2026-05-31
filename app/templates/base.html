@@ -6,7 +6,7 @@
     <title>{% block title %}Praetorium{% endblock %} — 13th Legion</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/portal.css?v=pp027rsvp">
+    <link rel="stylesheet" href="/static/css/portal.css?v=pp202docspace">
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
     <!-- HTMX -->
@@ -23,7 +23,20 @@
         </div>
         <div class="nav-links">
             <a href="/dashboard" class="nav-link">🏠 Home</a>
-            <a href="/api/training/claim" class="nav-link">🎯 Training</a>
+            <div class="nav-dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">🎯 Training ▾</a>
+                <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 220px; z-index: 100; top: 100%; left: 0;">
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/api/training/claim" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">📝 Submit Training Claim</a>
+                    </div>
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/training/tradoc" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">📖 TRADOC</a>
+                    </div>
+                    <div>
+                        <a href="/training/library" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">📚 Battle Library</a>
+                    </div>
+                </div>
+            </div>
             <a href="/roster" class="nav-link">📋 Roster</a>
             <a href="/events" class="nav-link">📅 Events</a>
             <a href="https://cloud.13thlegion.org/apps/spreed" target="_blank" class="nav-link">💬 Talk ↗</a>

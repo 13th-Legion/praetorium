@@ -23,6 +23,7 @@ class TradocItem(Base):
     name: Mapped[str] = mapped_column(String(128))
     description: Mapped[Optional[str]] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    optional: Mapped[bool] = mapped_column(Boolean, default=False)  # extra/non-required (e.g. adv/expert land nav)
 
     # Relationships
     signoffs: Mapped[list["MemberTradoc"]] = relationship(back_populates="item")

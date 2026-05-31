@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Battle Library — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .lib-header { margin-bottom: 24px; }
+    .lib-header h2 { color: #d4a537; margin: 0 0 4px; }
+    .lib-header .subtitle { color: #888; font-size: 13px; }
+    .lib-stats { display: flex; gap: 16px; margin-top: 12px; font-size: 13px; }
+    .lib-stats span { background: #1a1a2e; padding: 4px 12px; border-radius: 4px; border: 1px solid #333; color: #888; }
+    .lib-stats .stat-val { color: #d4a537; font-weight: 700; }
+
+    .lib-card {
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .lib-card-header {
+        padding: 16px 20px;
+        background: rgba(212, 165, 55, 0.08);
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .lib-card-header h3 {
+        margin: 0;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #d4a537;
+    }
+    .lib-card-header .cat-icon { font-size: 20px; }
+    .lib-card-header .pub-count { font-size: 12px; color: #888; margin-left: auto; }
+
+    .lib-card-body { padding: 16px 20px; }
+
+    .pub-row {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        gap: 12px;
+    }
+    .pub-row:last-child { border-bottom: none; }
+    .pub-number { font-weight: 700; color: #d4a537; font-size: 13px; min-width: 80px; }
+    .pub-title { flex: 1; font-size: 14px; color: #e0e0e0; }
+    .pub-link {
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        background: rgba(40, 167, 69, 0.15);
+        color: #28a745;
+        border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+    .pub-link:hover { background: rgba(40, 167, 69, 0.25); border-color: #28a745; }
+
+    .empty-shelf {
+        text-align: center;
+        padding: 24px;
+        color: #555;
+        font-size: 13px;
+        font-style: italic;
+    }
+</style>
+
+<div class="lib-header">
+    <h2>📚 Battle Library</h2>
+    <div class="subtitle">Reference publications — Field Manuals, Training Circulars, and Army Techniques Publications</div>
+    <div class="lib-stats">
+        <span>Publications: <span class="stat-val">{{ total_pubs }}</span></span>
+        <span>Categories: <span class="stat-val">{{ categories|length }}</span></span>
+    </div>
+</div>
+
+{% for cat in categories %}
+<div class="lib-card">
+    <div class="lib-card-header">
+        <span class="cat-icon">{{ cat.icon }}</span>
+        <h3>{{ cat.category }}</h3>
+        <span class="pub-count">{{ cat.pubs|length }} publication{{ 's' if cat.pubs|length != 1 }}</span>
+    </div>
+    <div class="lib-card-body">
+        {% if cat.pubs %}
+            {% for pub in cat.pubs %}
+            <div class="pub-row">
+                <span class="pub-number">{{ pub.number }}</span>
+                <span class="pub-title">{{ pub.title }}</span>
+                {% if pub.url and pub.url != '#' %}
+                <a href="{{ pub.url }}" class="pub-link" target="_blank">View ↗</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-shelf">No publications added yet. Check back soon.</div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

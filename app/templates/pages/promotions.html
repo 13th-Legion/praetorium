@@ -55,7 +55,7 @@
 </style>
 
 <div class="promo-header">
-    <h2>⭐ Promotions Board</h2>
+    <h2>⭐ Promotions & Rank Management</h2>
     <div class="promo-stats">
         <span>Active Members: <span class="stat-val">{{ rows|length }}</span></span>
         <span>Non-Promotable: <span class="stat-val">{{ rows|selectattr('non_promotable')|list|length }}</span></span>
@@ -90,7 +90,7 @@
     <span style="color: #d4a537; font-weight: 700; font-size: 13px;">
         <span id="batch-count">0</span> selected
     </span>
-    <button class="promo-btn" onclick="batchPromote()" style="margin-left: 12px;">Promote Selected</button>
+<button class="promo-btn" onclick="batchPromote()" style="margin-left: 12px;">Apply Rank Changes</button>
     <button class="modal-cancel" onclick="clearBatch()" style="margin-left: 8px;">Clear</button>
 </div>
 
@@ -120,7 +120,7 @@
             data-rank-idx="{{ row.rank_index }}"
             data-np="{{ '1' if row.non_promotable else '0' }}">
             <td>
-                {% if not row.non_promotable and row.allowed_promotions %}
+                {% if row.allowed_ranks %}
                 <input type="checkbox" class="batch-check" data-member-id="{{ row.id }}" data-rank-select="rank-{{ row.id }}" onchange="updateBatchBar()">
                 {% endif %}
             </td>
@@ -146,22 +146,21 @@
             </td>
             <td>
                 {% if row.non_promotable %}
-                    <span class="np-badge" title="{{ row.np_reason }}">🚫 NON-PROMOTABLE</span>
-                {% elif row.allowed_promotions %}
+                    <span class="np-badge" title="{{ row.np_reason }}">🚫 NON-PROMOTABLE (↑)</span>
+                {% endif %}
+                {% if row.allowed_ranks %}
                     <select class="promo-select" id="rank-{{ row.id }}">
                         <option value="">— select —</option>
-                        {% for grade, label in row.allowed_promotions %}
+                        {% for grade, label in row.allowed_ranks %}
                         <option value="{{ grade }}">{{ label }}</option>
                         {% endfor %}
                     </select>
-                {% else %}
-                    <span style="color: #555; font-size: 12px;">Max rank</span>
                 {% endif %}
             </td>
             <td>
-                {% if not row.non_promotable and row.allowed_promotions %}
-                <button class="promo-btn" onclick="confirmPromotion({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')" {% if row.non_promotable %}disabled{% endif %}>
-                    Promote
+                {% if row.allowed_ranks %}
+                <button class="promo-btn" onclick="confirmPromotion({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')">
+                    Change Rank
                 </button>
                 {% endif %}
             </td>
@@ -179,14 +178,14 @@
 <!-- Confirmation Modal -->
 <div class="modal-overlay" id="promoModal">
     <div class="modal-box">
-        <h3>Confirm Promotion</h3>
+<h3>Confirm Rank Change</h3>
         <p id="promoModalText"></p>
         <form id="promoForm" hx-post="/api/s1/promotions/promote" hx-target="#promo-toast-area" hx-swap="innerHTML">
             <input type="hidden" name="member_id" id="promoMemberId">
             <input type="hidden" name="new_rank" id="promoNewRank">
             <div class="modal-actions">
                 <button type="button" class="modal-cancel" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="modal-confirm">Confirm Promotion</button>
+<button type="submit" class="modal-confirm">Confirm</button>
             </div>
         </form>
     </div>
@@ -205,7 +204,7 @@ function confirmPromotion(memberId, currentRank, lastName) {
     document.getElementById('promoMemberId').value = memberId;
     document.getElementById('promoNewRank').value = newRank;
     document.getElementById('promoModalText').textContent =
-        'Promote ' + currentRank + ' ' + lastName + ' to ' + newLabel + '?';
+        'Change ' + currentRank + ' ' + lastName + ' to ' + newLabel + '?';
     document.getElementById('promoModal').classList.add('active');
 }
 
@@ -267,7 +266,7 @@ function batchPromote() {
         return;
     }
     if (promotions.length === 0) return;
-    if (!confirm('Promote ' + promotions.length + ' member(s)?')) return;
+    if (!confirm('Change rank for ' + promotions.length + ' member(s)?')) return;
 
     var formData = new FormData();
     formData.append('promotions', JSON.stringify(promotions));

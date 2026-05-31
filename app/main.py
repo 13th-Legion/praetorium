@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from config import get_settings
 from app.database import engine, Base, async_session
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate
 
 
 @asynccontextmanager
@@ -179,6 +179,7 @@ app.include_router(events.router)
 app.include_router(announcements.router)
 app.include_router(member_edit.router)
 app.include_router(training_claims.router)
+app.include_router(training_library.router)
 app.include_router(awards.router)
 app.include_router(contact_edit.router)
 app.include_router(shops.router)

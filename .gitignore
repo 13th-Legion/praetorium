@@ -50,3 +50,9 @@ AGENTS.md
 SOUL.md
 IDENTITY.md
 *.bak
+
+# Timestamped/named backup files (server-side editing artifacts)
+*.bak.*
+*.bak-*
+# Local SQLite scratch DB (app uses Postgres)
+praetorium.db

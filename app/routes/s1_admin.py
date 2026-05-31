@@ -11,7 +11,7 @@ from sqlalchemy import select, update, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
-from app.routes.doc_texts import CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT
+from app.routes.doc_texts import CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, ACTIVITY_POLICY_TEXT
 from app.database import get_db
 from app.models.member import Member
 from app.models.recruiting import Recruiter, DocumentSignature, SeparationLog
@@ -294,7 +294,7 @@ async def sign_document_page(request: Request, doc_type: str, db: AsyncSession =
     """Page for a member to sign NDA or waiver."""
     user = request.session.get("user", {})
 
-    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws"):
+    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws", "activity_policy"):
         raise HTTPException(status_code=400, detail="Invalid document type")
 
     # Get the document content
@@ -307,6 +307,9 @@ async def sign_document_page(request: Request, doc_type: str, db: AsyncSession =
     elif doc_type == "code_of_conduct":
         doc_content = CODE_OF_CONDUCT_TEXT
         doc_title = "Code of Conduct"
+    elif doc_type == "activity_policy":
+        doc_content = ACTIVITY_POLICY_TEXT
+        doc_title = "Activity Policy"
     else:
         doc_content = BYLAWS_TEXT
         doc_title = "TSM By-Laws"
@@ -326,7 +329,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     """Process a digital signature submission."""
     user = request.session.get("user", {})
 
-    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws"):
+    if doc_type not in ("nda", "general_waiver", "code_of_conduct", "bylaws", "activity_policy"):
         raise HTTPException(status_code=400, detail="Invalid document type")
 
     form = await request.form()
@@ -369,13 +372,16 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     elif doc_type == "code_of_conduct":
         member.code_of_conduct_signed_at = datetime.utcnow()
         member.code_of_conduct_ip_address = ip_addr
+    elif doc_type == "activity_policy":
+        member.activity_policy_signed_at = datetime.utcnow()
+        member.activity_policy_ip_address = ip_addr
     else:
         member.bylaws_signed_at = datetime.utcnow()
         member.bylaws_ip_address = ip_addr
 
     await db.commit()
 
-    doc_labels_pretty = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "By-Laws"}
+    doc_labels_pretty = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "By-Laws", "activity_policy": "Activity Policy"}
     doc_title = doc_labels_pretty.get(doc_type, "Document")
 
     from app.routes.notifications import create_notification
@@ -384,7 +390,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     _rank = RANK_ABBR.get(member.rank_grade, "") if member.rank_grade else ""
     _callsign = f" ({member.callsign})" if member.callsign else ""
     _signer_display = f"{_rank} {member.last_name}{_callsign}".strip()
-    doc_names = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "TSM By-Laws"}
+    doc_names = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "TSM By-Laws", "activity_policy": "Activity Policy"}
     _doc_name = doc_names.get(doc_type, doc_type)
     # Notify Command + S1 Lead (based on NC group-derived portal_roles)
     from sqlalchemy import select as notif_select, or_
@@ -411,7 +417,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
 
     # Archive signed doc receipt to NC: Personnel/{LastName, FirstName}/Docs/
     try:
-        doc_labels = {"nda": "NDA", "general_waiver": "General_Waiver", "code_of_conduct": "Code_of_Conduct", "bylaws": "By_Laws"}
+        doc_labels = {"nda": "NDA", "general_waiver": "General_Waiver", "code_of_conduct": "Code_of_Conduct", "bylaws": "By_Laws", "activity_policy": "Activity_Policy"}
         doc_label = doc_labels.get(doc_type, "Document")
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         filename = f"{doc_label}_signed_{date_str}.txt"
@@ -2037,6 +2043,19 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
     )
     active_members = result.scalars().all()
 
+    # Leave-eligible = patched members (have a patch_date), active/recruit
+    leave_eligible = [m for m in active_members if m.patch_date]
+
+    # Members currently on leave (audit visibility)
+    on_leave_result = await db.execute(
+        select(Member)
+        .where(Member.on_leave == True)  # noqa: E712
+        .order_by(Member.leave_end)
+    )
+    on_leave_members = on_leave_result.scalars().all()
+    for _m in on_leave_members:
+        _m.rank_display = RANK_ABBR_S1.get(_m.rank_grade, "")
+
     # Recent separations (join member for name display)
     from sqlalchemy.orm import joinedload, relationship
     # Use a manual join since there's no relationship defined
@@ -2057,7 +2076,10 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
         "request": request,
         "user": user,
         "active_members": active_members,
+        "leave_eligible": leave_eligible,
+        "on_leave_members": on_leave_members,
         "recent_separations": recent_separations,
+        "now": datetime.utcnow(),
     })
 
 
@@ -2112,6 +2134,9 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
                 log_entry.nc_account_disabled = resp.status_code in (200, 100)
         except Exception:
             log_entry.nc_account_disabled = False
+        # Disabling the NC account does NOT evict the user from Talk rooms,
+        # so remove them from all NC Talk conversations explicitly.
+        _nc_talk_remove(member.nc_username)
 
     # Remove from NC groups if requested
     if remove_groups and member.nc_username:
@@ -2356,7 +2381,7 @@ document, they are waiving substantial legal rights, including the right to sue 
 
 EMAIL_BLAST_GROUPS = {
     "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
-    "patched": {"label": "All Patched Members", "filter": ["active"]},
+    "patched": {"label": "Patched", "filter": ["active"]},
     "leaders": {"label": "Leaders (NCOs + Officers)", "nc_groups": ["Leaders"]},
     "team_leaders": {"label": "Team Leaders", "nc_groups": ["Leaders"]},  # same NC group, filtered by billet
     "shop_leaders": {"label": "Shop Leaders (S1-S6)", "nc_groups": ["[S-1]", "[S-2]", "[S-3]", "[S-4]", "[S-5]", "[S-6]"]},
@@ -2577,3 +2602,270 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
             </div>
         </div>
     ''')
+# ─── PP: 6-Month Leave of Absence (patched members only) ─────────────────────
+
+NC_ON_LEAVE_GROUP = "on-leave"
+
+
+def _nc_talk_remove(nc_username: str) -> bool:
+    """Remove a user from all Nextcloud Talk rooms via occ. Disabling an NC
+    account does NOT evict them from Talk conversations, so this is required
+    on offboarding. Runs occ inside the nextcloud-app container."""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["docker", "exec", "-u", "www-data", "nextcloud-app",
+             "php", "occ", "talk:user:remove", "--user", nc_username],
+            capture_output=True, text=True, timeout=30,
+        )
+        ok = r.returncode == 0
+        if not ok:
+            logger.error(f"talk:user:remove failed for {nc_username}: {r.stderr.strip()}")
+        return ok
+    except Exception as e:
+        logger.error(f"talk:user:remove error for {nc_username}: {e}")
+        return False
+
+
+async def _nc_group_add(nc_username: str, group: str) -> bool:
+    """Add an NC user to a group via OCS API."""
+    try:
+        async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
+            resp = await client.post(
+                f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
+                headers={"OCS-APIRequest": "true"},
+                data={"groupid": group},
+                timeout=15,
+            )
+            return resp.status_code in (200, 100)
+    except Exception as e:
+        logger.error(f"NC group add ({group}) failed for {nc_username}: {e}")
+        return False
+
+
+async def _nc_group_remove(nc_username: str, group: str) -> bool:
+    """Remove an NC user from a group via OCS API."""
+    try:
+        async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
+            resp = await client.delete(
+                f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
+                headers={"OCS-APIRequest": "true"},
+                data={"groupid": group},
+                timeout=15,
+            )
+            return resp.status_code in (200, 100)
+    except Exception as e:
+        logger.error(f"NC group remove ({group}) failed for {nc_username}: {e}")
+        return False
+
+
+def _send_leave_email(member, leave_start, leave_end, kind: str):
+    """Send leave-of-absence email. kind = 'start' | 'return'."""
+    if not member.email:
+        logger.warning(f"No email for {member.first_name} {member.last_name}, skipping leave email")
+        return False
+
+    start_str = leave_start.strftime('%B %d, %Y')
+    end_str = leave_end.strftime('%B %d, %Y')
+
+    if kind == "start":
+        subject = "13th Legion — Leave of Absence Confirmed"
+        intro = (
+            f"This confirms your approved <strong>6-month leave of absence</strong> from the 13th Legion. "
+            f"Welcome to the break — you've earned it."
+        )
+        body_html = f"""
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 6px 0; font-weight: bold; width: 140px;">Leave Start:</td>
+                    <td style="padding: 6px 0;">{start_str}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold;">Leave End:</td>
+                    <td style="padding: 6px 0;">{end_str}</td></tr>
+            </table>
+            <h3 style="color: #1a1a2e; border-bottom: 1px solid #ddd; padding-bottom: 8px;">During Your Leave</h3>
+            <ul style="color: #555;">
+                <li>You are <strong>not</strong> required to attend FTXs or any unit events.</li>
+                <li>You are <strong>not</strong> required to respond to communications or check in.</li>
+                <li>You do <strong>not</strong> need to log into the portal or Nextcloud.</li>
+                <li>You are exempt from the unit Activity Policy for the full duration.</li>
+                <li>Your account stays active — nothing will be disabled while you're on leave.</li>
+            </ul>
+            <p>Your leave will automatically end on <strong>{end_str}</strong>, at which point you'll
+            return to active status and the Activity Policy will apply again. We'll send you a
+            reminder when that day comes.</p>
+            <p>Enjoy the time off. The Legion will be here when you get back.</p>
+        """
+        body_plain = f"""This confirms your approved 6-month leave of absence from the 13th Legion.
+
+Leave Start: {start_str}
+Leave End:   {end_str}
+
+During your leave:
+- You are NOT required to attend FTXs or any unit events.
+- You are NOT required to respond to communications or check in.
+- You do NOT need to log into the portal or Nextcloud.
+- You are exempt from the unit Activity Policy for the full duration.
+- Your account stays active — nothing will be disabled while you're on leave.
+
+Your leave will automatically end on {end_str}, at which point you'll return to
+active status and the Activity Policy will apply again.
+
+Enjoy the time off. The Legion will be here when you get back.
+
+Questions? Contact admin@13thlegion.org
+"""
+    else:  # return
+        subject = "13th Legion — Leave of Absence Ended"
+        intro = (
+            f"Your 6-month leave of absence has officially ended as of <strong>{end_str}</strong>. "
+            f"Welcome back to the 13th Legion."
+        )
+        body_html = f"""
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 6px 0; font-weight: bold; width: 140px;">Leave Period:</td>
+                    <td style="padding: 6px 0;">{start_str} &ndash; {end_str}</td></tr>
+                <tr><td style="padding: 6px 0; font-weight: bold;">Status:</td>
+                    <td style="padding: 6px 0;">Active</td></tr>
+            </table>
+            <h3 style="color: #1a1a2e; border-bottom: 1px solid #ddd; padding-bottom: 8px;">What This Means</h3>
+            <ul style="color: #555;">
+                <li>You are now <strong>subject to the unit Activity Policy</strong> again.</li>
+                <li>You're expected to make reasonable efforts to attend FTXs and maintain
+                    regular contact with your team leader.</li>
+                <li>Reach out to your team leader to get plugged back in for the next FTX.</li>
+            </ul>
+            <p>Good to have you back. If you need more time, contact Command before your
+            obligations resume — don't just go quiet.</p>
+        """
+        body_plain = f"""Your 6-month leave of absence has officially ended as of {end_str}.
+Welcome back to the 13th Legion.
+
+Leave Period: {start_str} - {end_str}
+Status: Active
+
+What this means:
+- You are now SUBJECT TO the unit Activity Policy again.
+- You're expected to make reasonable efforts to attend FTXs and maintain regular
+  contact with your team leader.
+- Reach out to your team leader to get plugged back in for the next FTX.
+
+Good to have you back. If you need more time, contact Command before your
+obligations resume — don't just go quiet.
+
+Questions? Contact admin@13thlegion.org
+"""
+
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1a1a2e; padding: 20px; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 24px;">13th Legion</h1>
+            <p style="color: #aaa; margin: 4px 0 0; font-size: 12px;">Texas State Militia</p>
+        </div>
+        <div style="padding: 24px; background: #f9f9f9; color: #333;">
+            <p>Dear {member.first_name},</p>
+            <p>{intro}</p>
+            {body_html}
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+            <p style="color: #888; font-size: 12px;">
+                If you have questions, contact us at
+                <a href="mailto:admin@13thlegion.org">admin@13thlegion.org</a>
+            </p>
+        </div>
+    </div>
+    """
+    plain = f"Dear {member.first_name},\n\n{body_plain}"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = member.email
+    msg.attach(MIMEText(plain, "plain"))
+    msg.attach(MIMEText(html, "html"))
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_USER, [member.email], msg.as_string())
+        logger.info(f"Leave ({kind}) email sent to {member.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send leave ({kind}) email to {member.email}: {e}")
+        return False
+
+
+@router.post("/leave/{member_id}")
+@require_auth
+async def place_on_leave(request: Request, member_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    """Place a patched member on a 6-month leave of absence."""
+    from datetime import date as _date
+    from dateutil.relativedelta import relativedelta
+
+    user = request.session.get("user", {})
+    require_s1(user)
+
+    result = await db.execute(select(Member).where(Member.id == member_id))
+    member = result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # Eligibility: patched members only
+    if not member.patch_date:
+        return HTMLResponse(
+            '<div style="padding:12px;background:#ffebee;border-left:4px solid #c62828;border-radius:4px;color:#c62828;">'
+            '❌ Only patched members are eligible for leave of absence.</div>',
+            status_code=400,
+        )
+    if member.on_leave:
+        return HTMLResponse(
+            '<div style="padding:12px;background:#fff3e0;border-left:4px solid #e65100;border-radius:4px;color:#e65100;">'
+            f'⚠️ {member.first_name} {member.last_name} is already on leave (through {member.leave_end.strftime("%b %d, %Y") if member.leave_end else "?"}).</div>',
+            status_code=400,
+        )
+
+    start = _date.today()
+    end = start + relativedelta(months=6)
+    member.on_leave = True
+    member.leave_start = start
+    member.leave_end = end
+
+    # Add to NC on-leave group (immune to user_retention auto-disable)
+    nc_added = False
+    if member.nc_username:
+        nc_added = await _nc_group_add(member.nc_username, NC_ON_LEAVE_GROUP)
+
+    await db.commit()
+
+    # Email (background — smtplib is sync)
+    if member.email:
+        background_tasks.add_task(_send_leave_email, member, start, end, "start")
+
+    return HTMLResponse(f"""
+        <div style="padding: 16px; background: #e8f5e9; border-left: 4px solid #2e7d32; border-radius: 4px; color:#1b5e20;">
+            <strong>On Leave:</strong> {member.first_name} {member.last_name}
+            <br>Leave period: {start.strftime('%b %d, %Y')} &rarr; {end.strftime('%b %d, %Y')}
+            {'<br>Added to NC on-leave group (retention-exempt) ✅' if nc_added else ('<br>⚠️ NC group add failed — check manually' if member.nc_username else '')}
+            {'<br>Leave email queued ✅' if member.email else '<br>⚠️ No email on file'}
+        </div>
+    """)
+
+
+async def _process_leave_returns(db: AsyncSession) -> list:
+    """Return members whose leave has ended; clear flag, remove NC group, email.
+    Intended to be called daily by cron. Returns list of (member, emailed)."""
+    from datetime import date as _date
+    today = _date.today()
+    result = await db.execute(
+        select(Member).where(Member.on_leave == True, Member.leave_end < today)  # noqa: E712
+    )
+    returning = result.scalars().all()
+    processed = []
+    for m in returning:
+        m.on_leave = False
+        if m.nc_username:
+            await _nc_group_remove(m.nc_username, NC_ON_LEAVE_GROUP)
+        # Send return email synchronously (cron context, no BackgroundTasks)
+        emailed = False
+        if m.email:
+            emailed = _send_leave_email(m, m.leave_start, m.leave_end, "return")
+        processed.append((m, emailed))
+    await db.commit()
+    return processed

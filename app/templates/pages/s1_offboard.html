@@ -62,6 +62,65 @@
         <div id="offboard-result" style="padding: 0 16px 16px;"></div>
     </div>
 
+    <!-- Leave of Absence (patched members only) -->
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="card-title">🏖️ Place on Leave (6 Months)</h2>
+        <form hx-post="" hx-swap="innerHTML" hx-target="#leave-result" id="leave-form"
+              style="padding: 16px;">
+            <p style="color:#666; font-size:13px; margin:0 0 14px;">
+                Grants a patched member a 6-month leave of absence. They are exempt from the
+                Activity Policy, not required to attend or check in, and their Nextcloud account
+                stays active (immune to inactivity auto-disable). Leave auto-ends after 6 months
+                with a return notice. <strong>Patched members only.</strong>
+            </p>
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Member</label>
+                <select name="member_id" required
+                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                    onchange="document.getElementById('leave-form').setAttribute('hx-post', '/api/s1/leave/' + this.value); htmx.process(document.getElementById('leave-form'));">
+                    <option value="">Select patched member...</option>
+                    {% for m in leave_eligible %}
+                    <option value="{{ m.id }}">{{ m.last_name }}, {{ m.first_name }} {% if m.callsign %}({{ m.callsign }}){% endif %}{% if m.on_leave %} — ON LEAVE{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button hx-disabled-elt="this" type="submit" style="
+                padding: 10px 24px; background: #2e7d32; color: #fff; border: none;
+                border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            ">Place on Leave</button>
+        </form>
+        <div id="leave-result" style="padding: 0 16px 16px;"></div>
+    </div>
+
+    <!-- Members currently on leave -->
+    <h2>Members Currently on Leave{% if on_leave_members %} ({{ on_leave_members|length }}){% endif %}</h2>
+    {% if on_leave_members %}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #333;">
+                <th style="text-align: left; padding: 8px;">Name</th>
+                <th style="text-align: left; padding: 8px;">Team / Shop</th>
+                <th style="text-align: left; padding: 8px;">Leave Start</th>
+                <th style="text-align: left; padding: 8px;">Returns</th>
+                <th style="text-align: left; padding: 8px;">Days Left</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in on_leave_members %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;"><a href="/profile/{{ m.id }}" style="color:#d4a537;text-decoration:none;">{{ m.rank_display }} {{ m.last_name }}, {{ m.first_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %}</a></td>
+                <td style="padding: 8px; color:#aaa;">{{ m.team or '—' }}{% if m.primary_billet %} · {{ m.primary_billet.split(':')[0] }}{% endif %}</td>
+                <td style="padding: 8px;">{{ m.leave_start.strftime('%Y-%m-%d') if m.leave_start else '—' }}</td>
+                <td style="padding: 8px;">{{ m.leave_end.strftime('%Y-%m-%d') if m.leave_end else '—' }}</td>
+                <td style="padding: 8px; color:#aaa;">{% if m.leave_end %}{{ (m.leave_end - now.date()).days }}d{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #888; margin-bottom: 24px;">No members are currently on leave.</p>
+    {% endif %}
+
     <!-- Recent separations log -->
     <h2>Recent Separations</h2>
     {% if recent_separations %}

@@ -79,6 +79,9 @@ class Event(Base):
     finalized_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     finalized_by: Mapped[Optional[str]] = mapped_column(String(64))
 
+    # Invite groups
+    invite_groups: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated keys from RECIPIENT_GROUPS
+
     # Audit
     created_by: Mapped[str] = mapped_column(String(64))  # NC username
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

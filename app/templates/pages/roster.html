@@ -61,7 +61,7 @@
                     <tr class="roster-row row-tl">
                         <td class="name-cell">
                             <span class="rank-badge rank-{{ shop.lead.rank_grade[:1] if shop.lead.rank_grade else 'E' }}">{{ rank_abbr.get(shop.lead.rank_grade, '—') }}</span>
-                            <a href="/profile/{{ shop.lead.id }}" class="member-link">{{ shop.lead.last_name }}, {{ shop.lead.first_name }}</a>
+                            <a href="/profile/{{ shop.lead.id }}" class="member-link">{{ shop.lead.last_name }}, {{ shop.lead.first_name }}</a>{% if shop.lead.on_leave %}<span style="color:#d4a537;font-size:0.75rem;margin-left:4px;" title="On leave{% if shop.lead.leave_end %} · returns {{ shop.lead.leave_end.strftime('%b %d, %Y') }}{% endif %}">🌴</span>{% endif %}
                             <span style="background:#d4a537;color:#1a1a2e;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;">Lead</span>
                         </td>
                         <td>{{ shop.lead.callsign or '—' }}</td>
@@ -73,7 +73,7 @@
                     <tr class="roster-row">
                         <td class="name-cell">
                             <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
-                            <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>
+                            <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.on_leave %}<span style="color:#d4a537;font-size:0.75rem;margin-left:4px;" title="On leave{% if m.leave_end %} · returns {{ m.leave_end.strftime('%b %d, %Y') }}{% endif %}">🌴</span>{% endif %}
                         </td>
                         <td>{{ m.callsign or '—' }}</td>
                         <td class="text-muted">{{ m.primary_billet or '—' }}</td>
@@ -118,7 +118,7 @@
                 <tr class="roster-row {% if _is_tl %} row-tl{% elif 'assistant team leader' in _t %} row-atl{% elif _is_command %} row-command{% endif %}">
                     <td class="name-cell">
                         <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
-                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}
+                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}{% if m.on_leave %}<span style="color:#d4a537;font-size:0.75rem;margin-left:4px;" title="On leave{% if m.leave_end %} · returns {{ m.leave_end.strftime('%b %d, %Y') }}{% endif %}">🌴</span>{% endif %}
                     </td>
                     <td>{{ m.callsign or '—' }}</td>
                     <td class="text-muted" title="{{ m.primary_billet or '' }}">{{ m.primary_billet or '—' }}</td>
@@ -155,7 +155,7 @@
                 <tr class="roster-row {% if m.rank_grade in ('E-1', 'E-2') %}row-recruit{% endif %}{% if _is_tl %} row-tl{% elif 'assistant team leader' in _t %} row-atl{% elif _is_command %} row-command{% endif %}">
                     <td class="name-cell">
                         <span class="rank-badge rank-{{ m.rank_grade[:1] if m.rank_grade else 'E' }}">{{ rank_abbr.get(m.rank_grade, '—') }}</span>
-                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}{% if view_mode == 'team' and m.is_hq %}<span style="color:#d4a537; font-size:0.75rem; margin-left:4px;" title="HQ Element">⭐</span>{% endif %}
+                        <a href="/profile/{{ m.id }}" class="member-link">{{ m.last_name }}, {{ m.first_name }}</a>{% if m.is_founder %}<span class="founder-mark" title="Founding Member">🏛</span>{% endif %}{% if m.on_leave %}<span style="color:#d4a537;font-size:0.75rem;margin-left:4px;" title="On leave{% if m.leave_end %} · returns {{ m.leave_end.strftime('%b %d, %Y') }}{% endif %}">🌴</span>{% endif %}{% if view_mode == 'team' and m.is_hq %}<span style="color:#d4a537; font-size:0.75rem; margin-left:4px;" title="HQ Element">⭐</span>{% endif %}
                     </td>
                     <td>{{ m.callsign or '—' }}</td>
                     <td class="text-muted" title="{{ m.primary_billet or '' }}">{{ m.primary_billet or '—' }}</td>

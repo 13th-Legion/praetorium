@@ -42,6 +42,11 @@ class Member(Base):
     patch_date: Mapped[Optional[date]] = mapped_column(Date)
     separation_date: Mapped[Optional[date]] = mapped_column(Date)
 
+    # Leave of Absence (6-month, patched members only)
+    on_leave: Mapped[bool] = mapped_column(Boolean, default=False)
+    leave_start: Mapped[Optional[date]] = mapped_column(Date)
+    leave_end: Mapped[Optional[date]] = mapped_column(Date)
+
     # Contact (PII — respect RBAC)
     phone: Mapped[Optional[str]] = mapped_column(String(20))
     address: Mapped[Optional[str]] = mapped_column(Text)
@@ -88,6 +93,8 @@ class Member(Base):
     code_of_conduct_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
     bylaws_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     bylaws_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
+    activity_policy_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    activity_policy_ip_address: Mapped[Optional[str]] = mapped_column(String(255))
 
     # Recruiter assignment (PP-022)
     assigned_recruiter: Mapped[Optional[str]] = mapped_column(String(64))  # NC username

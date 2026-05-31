@@ -539,6 +539,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 <input type="number" name="training_block" min="1" max="4" value="{{ event.training_block or '' }}"
                     style="width:80px;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
             </div>
+            {% if recipient_groups is defined %}
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Invite Groups</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    {% set current_groups = (event.invite_groups or "").split(",") | map("trim") | list %}
+                    {% for key, group in recipient_groups.items() %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;cursor:pointer;font-size:12px;">
+                        <input type="checkbox" name="invite_groups" value="{{ key }}" {% if key in current_groups or (not event.invite_groups and key == "entire_unit") %}checked{% endif %} style="accent-color:#d4a537;">
+                        {{ group.label }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Changing groups affects new RSVPs only — existing RSVPs are not modified.</span>
+            </div>
+            {% endif %}
             <div style="margin-bottom:12px;padding:12px;background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.2);border-radius:6px;">
                 <div style="font-size:13px;color:#d4a537;font-weight:600;margin-bottom:8px;">RSVP Controls</div>
                 <div style="margin-bottom:8px;">

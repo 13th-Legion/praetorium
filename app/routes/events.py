@@ -23,7 +23,7 @@ from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc
 from config import get_settings
-from app.constants import RANK_ABBR
+from app.constants import RANK_ABBR, RECIPIENT_GROUPS
 
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
@@ -105,6 +105,49 @@ def _calc_warno_schedule(category: str, date_start) -> "datetime | None":
         return date_start - timedelta(days=lead)
 
 
+async def _resolve_invite_groups(db, group_keys: list) -> set:
+    """Resolve invite group keys to member IDs. Optimized: single query per group type."""
+    import json
+    member_ids = set()
+
+    filter_keys = [k for k in group_keys if "filter" in RECIPIENT_GROUPS.get(k, {})]
+    role_keys = [k for k in group_keys if "roles" in RECIPIENT_GROUPS.get(k, {})]
+
+    # Resolve filter-based groups (status filter)
+    for key in filter_keys:
+        config = RECIPIENT_GROUPS[key]
+        result = await db.execute(
+            select(Member.id).where(Member.status.in_(config["filter"]))
+        )
+        member_ids.update(r[0] for r in result.all())
+
+    # Resolve role-based groups - load all active/recruit once, filter in Python
+    if role_keys:
+        result = await db.execute(
+            select(Member.id, Member.portal_roles).where(
+                Member.status.in_(["active", "recruit"])
+            )
+        )
+        rows = result.all()
+        for (mid, portal_roles_raw) in rows:
+            if not portal_roles_raw:
+                continue
+            try:
+                roles = json.loads(portal_roles_raw) if isinstance(portal_roles_raw, str) else portal_roles_raw
+                if not isinstance(roles, list):
+                    continue
+                member_role_set = set(roles)
+            except Exception:
+                continue
+            for key in role_keys:
+                config = RECIPIENT_GROUPS[key]
+                if member_role_set & set(config["roles"]):
+                    member_ids.add(mid)
+                    break
+
+    return member_ids
+
+
 async def _activate_warno(db, event):
     """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active members."""
     import httpx as _httpx
@@ -125,6 +168,21 @@ async def _activate_warno(db, event):
     )
     existing_ids = {r[0] for r in existing_rsvps.all()}
 
+    # Determine target member IDs based on invite_groups
+    if event.invite_groups:
+        group_keys = [g.strip() for g in event.invite_groups.split(",") if g.strip()]
+        target_ids = await _resolve_invite_groups(db, group_keys)
+    else:
+        # Default: all active/recruit members
+        ids_result = await db.execute(
+            select(Member.id).where(
+                Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+                Member.company == "13th Legion",
+            )
+        )
+        target_ids = {r[0] for r in ids_result.all()}
+
+    # Also fetch full member objects for email/notification (active only, with email)
     members_result = await db.execute(
         select(Member).where(
             Member.status.in_(["active", "recruit", "Active", "Recruit"]),
@@ -132,8 +190,9 @@ async def _activate_warno(db, event):
         )
     )
     members = members_result.scalars().all()
+
     for m in members:
-        if m.id not in existing_ids:
+        if m.id not in existing_ids and m.id in target_ids:
             db.add(EventRSVP(
                 event_id=event.id,
                 member_id=m.id,
@@ -656,6 +715,7 @@ async def events_page(request: Request):
         "category_labels": CATEGORY_LABELS,
         "members": members,
         "rank_abbr": RANK_ABBR,
+        "recipient_groups": RECIPIENT_GROUPS,
     })
 
 
@@ -680,13 +740,18 @@ async def _maintain_event_roster(db, event_id, event):
     existing_rsvps = existing_result.scalars().all()
     existing_by_member = {r.member_id: r for r in existing_rsvps}
 
-    # Get all current active/recruit member IDs
-    active_result = await db.execute(
-        select(Member.id).where(
-            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+    # Get target member IDs based on event invite_groups
+    if event.invite_groups:
+        group_keys = [g.strip() for g in event.invite_groups.split(",") if g.strip()]
+        active_ids = await _resolve_invite_groups(db, group_keys)
+    else:
+        # Default: all active/recruit
+        active_result = await db.execute(
+            select(Member.id).where(
+                Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+            )
         )
-    )
-    active_ids = {r[0] for r in active_result.all()}
+        active_ids = {r[0] for r in active_result.all()}
 
     changed = False
 
@@ -702,9 +767,17 @@ async def _maintain_event_roster(db, event_id, event):
         ))
         changed = True
 
-    # 2. Prune separated members (only if their RSVP is still pending)
+    # 2. Prune separated/inactive members only (not invite-group mismatches)
+    #    Manual additions outside the invite group should persist.
+    all_active_result = await db.execute(
+        select(Member.id).where(
+            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+        )
+    )
+    all_active_ids = {r[0] for r in all_active_result.all()}
+
     for member_id, rsvp in existing_by_member.items():
-        if member_id not in active_ids and rsvp.status == "pending":
+        if member_id not in all_active_ids and rsvp.status == "pending":
             await db.delete(rsvp)
             changed = True
 
@@ -822,6 +895,7 @@ async def event_detail(request: Request, event_id: int):
         "schedule_by_day": schedule_by_day,
         "schedule_instructors": schedule_instructors,
         "now": _now_ct(),
+        "recipient_groups": RECIPIENT_GROUPS,
     })
 
 
@@ -994,7 +1068,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                     db, member_id, "event", f"OPORD - {evt_title}",
                     body=f"{date_str} - Operations Order published",
                     link=f"/events/{evt_id}",
-                    icon="clipboard"
+                    icon="📋"
                 )
             except Exception:
                 pass
@@ -1005,7 +1079,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                     db, member_id, "event", f"WARNO - {evt_title}",
                     body=f"{date_str} - RSVP now open",
                     link=f"/events/{evt_id}",
-                    icon="zap"
+                    icon="⚡"
                 )
             except Exception:
                 pass
@@ -1201,6 +1275,7 @@ async def create_event(request: Request):
     description = form.get("description", "").strip() or None
     training_block = form.get("training_block", "").strip()
     instructor_id = form.get("instructor_id", "").strip()
+    invite_groups = form.getlist("invite_groups")
 
     # Parse split date + military time fields
     date_start_date = form.get("date_start_date", "").strip()
@@ -1241,6 +1316,7 @@ async def create_event(request: Request):
             warno_scheduled_at=warno_sched,
             training_block=int(training_block) if training_block else None,
             instructor_id=int(instructor_id) if instructor_id else None,
+            invite_groups=",".join(invite_groups) if invite_groups else None,
             created_by=user.get("username", "unknown"),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -1250,12 +1326,16 @@ async def create_event(request: Request):
 
         # Create pending RSVPs only for RSVP-enabled events
         if rsvp_on:
-            members_result = await db.execute(
-                select(Member.id).where(
-                    Member.status.in_(["active", "recruit", "Active", "Recruit"])
+            if invite_groups:
+                rsvp_member_ids = await _resolve_invite_groups(db, invite_groups)
+            else:
+                ids_result = await db.execute(
+                    select(Member.id).where(
+                        Member.status.in_(["active", "recruit", "Active", "Recruit"])
+                    )
                 )
-            )
-            for (mid,) in members_result.all():
+                rsvp_member_ids = {r[0] for r in ids_result.all()}
+            for mid in rsvp_member_ids:
                 db.add(EventRSVP(
                     event_id=event.id,
                     member_id=mid,
@@ -1348,6 +1428,11 @@ async def edit_event(request: Request, event_id: int):
         elif "rsvp_deadline_date" in form.keys():
             # Explicitly cleared
             event.rsvp_deadline = None
+
+        # invite_groups
+        if "invite_groups" in form.keys():
+            groups = form.getlist("invite_groups")
+            event.invite_groups = ",".join(groups) if groups else None
 
         event.updated_at = datetime.utcnow()
         logger.warning(f"AFTER: date_start={event.date_start}, date_end={event.date_end}")

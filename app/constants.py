@@ -79,3 +79,13 @@ LEADERSHIP_TITLES = [
 ]
 
 STATUS_OPTIONS: list[str] = ["recruit", "active", "separated", "inactive", "blacklisted"]
+
+
+# ─── Recipient Groups (shared between Email Blast and Events) ────────────────
+
+RECIPIENT_GROUPS: dict[str, dict] = {
+    "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
+    "patched": {"label": "Patched", "filter": ["active"]},
+    "leaders": {"label": "Leaders (NCOs + Officers)", "roles": ["command", "leader", "officer"]},
+    "command": {"label": "Command", "roles": ["command"]},
+}

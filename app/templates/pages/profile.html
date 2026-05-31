@@ -78,6 +78,9 @@
             {% endif %}
             <div class="profile-meta">
                 <span class="status-badge status-{{ member.status }}">{{ member.status|capitalize }}</span>
+                {% if member.on_leave %}
+                <span class="status-badge" style="background:rgba(212,165,55,0.18);color:#d4a537;border:1px solid rgba(212,165,55,0.4);" title="On leave of absence{% if member.leave_start %} from {{ member.leave_start.strftime('%b %d, %Y') }}{% endif %}{% if member.leave_end %} through {{ member.leave_end.strftime('%b %d, %Y') }}{% endif %}">🌴 On Leave{% if member.leave_end %} · returns {{ member.leave_end.strftime('%b %d') }}{% endif %}</span>
+                {% endif %}
                 {% if member.non_promotable_until and member.non_promotable_until > now.date() %}
                 {% if is_own or "command" in user.roles or "admin" in user.roles or "s1" in user.roles %}
                 <span class="status-badge" style="background:rgba(220,53,69,0.2);color:#dc3545;border:1px solid rgba(220,53,69,0.3);">⛔ Non-Promotable until {{ member.non_promotable_until.strftime('%b %Y') }}</span>
@@ -114,6 +117,12 @@
                     <span class="detail-label">Team</span>
                     <span>{{ member.team or '—' }}</span>
                 </div>
+                {% if member.on_leave %}
+                <div class="detail-row">
+                    <span class="detail-label">Leave of Absence</span>
+                    <span class="text-accent">{{ member.leave_start.strftime('%b %d, %Y') if member.leave_start else '?' }} → {{ member.leave_end.strftime('%b %d, %Y') if member.leave_end else '?' }}</span>
+                </div>
+                {% endif %}
                 {% if member.leadership_title %}
                 <div class="detail-row">
                     <span class="detail-label">Position</span>
@@ -555,14 +564,15 @@
                 <h3 class="card-title">
                     {% if block_num == 0 %}Every FTX{% else %}Block {{ block_num }}: {{ block['name'] }}{% endif %}
                     <span class="tradoc-block-count">
-                        {{ block['items']|selectattr('done')|list|length }}/{{ block['items']|length }}
+                        {% set req_items = block['items']|rejectattr('optional')|list %}
+                        {{ req_items|selectattr('done')|list|length }}/{{ req_items|length }}
                     </span>
                 </h3>
                 <div class="card-body">
                     {% for item in block['items'] %}
                     <div class="tradoc-item {% if item.done %}tradoc-done{% endif %}">
                         <span class="tradoc-check">{% if item.done %}☑{% else %}☐{% endif %}</span>
-                        <span class="tradoc-name">{{ item.name }}</span>
+                        <span class="tradoc-name">{{ item.name }}{% if item.optional %} <span style="font-size:10px;font-weight:600;color:#42a5f5;background:rgba(66,165,245,0.15);padding:1px 6px;border-radius:3px;margin-left:4px;">EXTRA</span>{% endif %}</span>
                         {% if item.done and item.signoff %}
                         <span class="tradoc-signoff text-muted">
                             — {{ item.signoff.signed_off_by or '' }}
@@ -572,6 +582,32 @@
                     </div>
                     {% endfor %}
                 </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if member and my_documents %}
+    <!-- My Documents -->
+    <div class="card" style="margin-top: 16px;">
+        <h3 class="card-title">📁 My Documents</h3>
+        <div class="card-body">
+            <p style="font-size:12px;color:#888;margin:0 0 12px;">Unit policies and agreements. Click any document to view.</p>
+            {% for d in my_documents %}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
+                <a href="/profile/document/{{ d.key }}" style="color:#d4a537;text-decoration:none;font-size:14px;">📄 {{ d.title }}</a>
+                <span style="font-size:11px;white-space:nowrap;">
+                    {% if d.signable %}
+                        {% if d.signed_at %}
+                        <span style="color:#4caf50;" title="{{ d.signed_at.strftime('%Y-%m-%d %H:%M') }}">✅ Signed {{ d.signed_at.strftime('%m/%d/%y') }}</span>
+                        {% else %}
+                        <a href="/api/s1/documents/sign/{{ d.key }}" style="color:#ef5350;text-decoration:none;">✍️ Sign now</a>
+                        {% endif %}
+                    {% else %}
+                        <span style="color:#888;">Reference</span>
+                    {% endif %}
+                </span>
             </div>
             {% endfor %}
         </div>
