@@ -15,6 +15,8 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:var(--font-body);background:var(--bg-primary);color:var(--text-primary);}
 #bar{position:sticky;top:0;z-index:50;background:var(--bg-secondary);border-bottom:2px solid var(--accent);color:var(--text-primary);display:flex;align-items:center;gap:14px;padding:9px 16px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+.hdr-logo{height:34px;width:auto;flex:0 0 auto;display:block;}
+.hdr-logo.tsm{filter:drop-shadow(0 0 1px rgba(201,162,39,.6));}
 #bar h1{font-family:var(--font-heading);font-weight:600;letter-spacing:.5px;font-size:16px;margin:0;flex:0 0 auto;color:#fff;}
 #bar h1 .gold{color:var(--accent);}
 #bar .spacer{flex:1;}
@@ -56,7 +58,9 @@ textarea.note:focus{outline:2px solid var(--accent);background:#15152a;}
 </style></head>
 <body>
 <div id="bar">
-  <h1>👻 13th Legion — <span class="gold">2026 Leadership Summit</span></h1>
+  <img src="/static/img/crest.png" class="hdr-logo crest" alt="13th Legion crest">
+  <h1>13th Legion — <span class="gold">2026 Leadership Summit</span></h1>
+  <img src="/static/img/tsm_seal.png" class="hdr-logo tsm" alt="Texas State Militia seal">
   <span class="saved" id="savedmsg">notes auto-save locally</span>
   <span class="spacer"></span>
   <button onclick="exportNotes()">⬇ Export Notes</button>
