@@ -271,6 +271,7 @@ async def battle_library_page(request: Request):
             "id": d.id,
             "number": d.pub_number,
             "title": d.title,
+            "pub_date": d.pub_date,
             "url": f"/training/library/{d.id}/file",
             "category": d.category,
             "sort_order": d.sort_order,
@@ -325,6 +326,7 @@ async def battle_library_upload(request: Request):
     category = (form.get("category") or "").strip()
     pub_number = (form.get("pub_number") or "").strip()
     title = (form.get("title") or "").strip()
+    pub_date = (form.get("pub_date") or "").strip()
 
     if not upload or not getattr(upload, "filename", None):
         raise HTTPException(status_code=400, detail="No file provided")
@@ -351,6 +353,7 @@ async def battle_library_upload(request: Request):
             category=category,
             pub_number=pub_number or "—",
             title=title,
+            pub_date=pub_date or None,
             filename=stored_name,
             original_filename=orig,
             stored_path=str(stored_path),
@@ -372,6 +375,7 @@ async def battle_library_edit(request: Request, doc_id: int):
     category = (form.get("category") or "").strip()
     pub_number = (form.get("pub_number") or "").strip()
     title = (form.get("title") or "").strip()
+    pub_date = (form.get("pub_date") or "").strip()
     sort_order_raw = (form.get("sort_order") or "").strip()
     upload = form.get("file")
 
@@ -390,6 +394,8 @@ async def battle_library_edit(request: Request, doc_id: int):
             doc.title = title
         if pub_number:
             doc.pub_number = pub_number
+        if pub_date:
+            doc.pub_date = pub_date
         if sort_order_raw:
             try:
                 doc.sort_order = int(sort_order_raw)

@@ -17,6 +17,7 @@ class LibraryDocument(Base):
     category: Mapped[str] = mapped_column(String(16))  # FM | TC | ATP | TM | Other
     pub_number: Mapped[str] = mapped_column(String(64))  # e.g. "FM 3-24"
     title: Mapped[str] = mapped_column(String(255))
+    pub_date: Mapped[str | None] = mapped_column(String(32), nullable=True)  # publication date from cover, e.g. "April 2014"
     filename: Mapped[str] = mapped_column(String(255))  # stored filename on disk (uuid.pdf)
     original_filename: Mapped[str] = mapped_column(String(255))  # uploader filename
     stored_path: Mapped[str] = mapped_column(String(512))  # absolute path under /app/data/library

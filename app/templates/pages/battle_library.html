@@ -49,6 +49,7 @@
     .pub-row:last-child { border-bottom: none; }
     .pub-number { font-weight: 700; color: #d4a537; font-size: 13px; min-width: 80px; }
     .pub-title { flex: 1; font-size: 14px; color: #e0e0e0; }
+    .pub-date { font-size: 12px; color: #888; min-width: 100px; text-align: right; }
     .pub-link {
         padding: 4px 12px;
         border-radius: 4px;
@@ -130,6 +131,7 @@
         </select>
         <input type="text" name="pub_number" placeholder="Pub number (e.g. FM 3-24)">
         <input type="text" name="title" placeholder="Title" required>
+        <input type="text" name="pub_date" placeholder="Pub date (e.g. April 2014)" style="max-width:160px;">
         <input type="file" name="file" accept="application/pdf" required>
         <button type="submit" class="lib-btn">Upload</button>
     </form>
@@ -149,6 +151,7 @@
             <div class="pub-row">
                 <span class="pub-number">{{ pub.number }}</span>
                 <span class="pub-title">{{ pub.title }}</span>
+                {% if pub.pub_date %}<span class="pub-date">{{ pub.pub_date }}</span>{% endif %}
                 <span class="pub-actions">
                     {% if pub.url and pub.url != '#' %}
                     <a href="{{ pub.url }}" class="pub-link" target="_blank">View ↗</a>
@@ -171,6 +174,7 @@
                         </select>
                         <input type="text" name="pub_number" value="{{ pub.number }}" placeholder="Pub number">
                         <input type="text" name="title" value="{{ pub.title }}" placeholder="Title">
+                        <input type="text" name="pub_date" value="{{ pub.pub_date or '' }}" placeholder="Pub date" style="max-width:140px;">
                         <input type="text" name="sort_order" value="{{ pub.sort_order }}" placeholder="Sort" style="max-width:70px;">
                         <input type="file" name="file" accept="application/pdf">
                         <button type="submit" class="lib-btn">Save</button>
