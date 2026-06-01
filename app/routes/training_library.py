@@ -1,14 +1,33 @@
 """Training Library — TRADOC documents and Battle Library (FMs, TCs, ATPs)."""
 
 import logging
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Request, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from app.auth import require_auth, get_current_user
+from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
 from app.models.training import TradocItem
+from app.models.library import LibraryDocument
+
+# ── Battle Library storage config ────────────────────────────────────────────
+LIBRARY_DIR = Path("/app/data/library")
+MAX_LIBRARY_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MANAGE_ROLES = ("command", "s1_lead", "s3", "admin")
+
+# Category code → display metadata for the Battle Library page
+LIBRARY_CATEGORIES = [
+    {"code": "FM", "category": "Field Manuals (FM)", "icon": "📗"},
+    {"code": "TC", "category": "Training Circulars (TC)", "icon": "📘"},
+    {"code": "ATP", "category": "Army Techniques Publications (ATP)", "icon": "📙"},
+    {"code": "TM", "category": "Technical Manuals (TM)", "icon": "📕"},
+    {"code": "Other", "category": "Other Publications", "icon": "📚"},
+]
+VALID_CATEGORY_CODES = {c["code"] for c in LIBRARY_CATEGORIES}
 
 log = logging.getLogger(__name__)
 
@@ -158,32 +177,6 @@ TRADOC_DOCS = {
     },
 }
 
-# ─── Battle Library publications ─────────────────────────────────────────────
-
-BATTLE_LIBRARY = [
-    {
-        "category": "Field Manuals (FM)",
-        "icon": "📗",
-        "pubs": [],
-    },
-    {
-        "category": "Training Circulars (TC)",
-        "icon": "📘",
-        "pubs": [],
-    },
-    {
-        "category": "Army Techniques Publications (ATP)",
-        "icon": "📙",
-        "pubs": [],
-    },
-    {
-        "category": "Technical Manuals (TM)",
-        "icon": "📕",
-        "pubs": [],
-    },
-]
-
-
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 @router.get("/tradoc", response_class=HTMLResponse)
@@ -249,17 +242,203 @@ async def tradoc_doc_page(request: Request, slug: str):
     })
 
 
+def _can_manage_library(user) -> bool:
+    """True if the user holds a role allowed to manage Battle Library docs."""
+    if not user:
+        return False
+    return bool(set(user.get("roles", [])).intersection(set(MANAGE_ROLES)))
+
+
 @router.get("/library", response_class=HTMLResponse)
 @require_auth
 async def battle_library_page(request: Request):
     """Battle Library — FMs, TCs, ATPs, and other reference publications."""
     user = get_current_user(request)
 
-    total_pubs = sum(len(cat["pubs"]) for cat in BATTLE_LIBRARY)
+    async with async_session() as db:
+        result = await db.execute(
+            select(LibraryDocument).order_by(
+                LibraryDocument.sort_order, LibraryDocument.pub_number
+            )
+        )
+        docs = result.scalars().all()
+
+    # Group docs into the fixed category buckets (preserve display order).
+    by_code = {c["code"]: [] for c in LIBRARY_CATEGORIES}
+    for d in docs:
+        code = d.category if d.category in by_code else "Other"
+        by_code[code].append({
+            "id": d.id,
+            "number": d.pub_number,
+            "title": d.title,
+            "url": f"/training/library/{d.id}/file",
+            "category": d.category,
+            "sort_order": d.sort_order,
+        })
+
+    categories = [
+        {"category": c["category"], "code": c["code"], "icon": c["icon"],
+         "pubs": by_code[c["code"]]}
+        for c in LIBRARY_CATEGORIES
+    ]
 
     return templates.TemplateResponse("pages/battle_library.html", {
         "request": request,
         "user": user,
-        "categories": BATTLE_LIBRARY,
-        "total_pubs": total_pubs,
+        "categories": categories,
+        "total_pubs": len(docs),
+        "can_manage": _can_manage_library(user),
+        "manage_categories": LIBRARY_CATEGORIES,
     })
+
+
+@router.get("/library/{doc_id}/file")
+@require_auth
+async def battle_library_file(request: Request, doc_id: int):
+    """Serve a Battle Library PDF inline (all authed members)."""
+    async with async_session() as db:
+        doc = (await db.execute(
+            select(LibraryDocument).where(LibraryDocument.id == doc_id)
+        )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    path = Path(doc.stored_path)
+    if not path.is_file():
+        log.error(f"Library file missing on disk: {doc.stored_path}")
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    safe_name = (doc.original_filename or doc.filename or "document.pdf")
+    return FileResponse(
+        str(path),
+        media_type=doc.mime_type or "application/pdf",
+        filename=safe_name,
+        content_disposition_type="inline",
+    )
+
+
+@router.post("/library/upload")
+@require_role(*MANAGE_ROLES)
+async def battle_library_upload(request: Request):
+    """Upload a new Battle Library publication."""
+    user = get_current_user(request)
+    form = await request.form()
+    upload: UploadFile = form.get("file")
+    category = (form.get("category") or "").strip()
+    pub_number = (form.get("pub_number") or "").strip()
+    title = (form.get("title") or "").strip()
+
+    if not upload or not getattr(upload, "filename", None):
+        raise HTTPException(status_code=400, detail="No file provided")
+    if category not in VALID_CATEGORY_CODES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    orig = upload.filename
+    if not orig.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    data = await upload.read()
+    if len(data) > MAX_LIBRARY_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File exceeds 50MB limit")
+
+    LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid.uuid4().hex}.pdf"
+    stored_path = LIBRARY_DIR / stored_name
+    stored_path.write_bytes(data)
+
+    async with async_session() as db:
+        doc = LibraryDocument(
+            category=category,
+            pub_number=pub_number or "—",
+            title=title,
+            filename=stored_name,
+            original_filename=orig,
+            stored_path=str(stored_path),
+            file_size=len(data),
+            mime_type=upload.content_type or "application/pdf",
+            uploaded_by=(user or {}).get("username") or (user or {}).get("nc_username") or "unknown",
+        )
+        db.add(doc)
+        await db.commit()
+    log.info(f"Battle Library upload: {category} {pub_number} '{title}' by {doc.uploaded_by}")
+    return RedirectResponse(url="/training/library", status_code=303)
+
+
+@router.post("/library/{doc_id}/edit")
+@require_role(*MANAGE_ROLES)
+async def battle_library_edit(request: Request, doc_id: int):
+    """Edit Battle Library doc metadata (and optionally replace the file)."""
+    form = await request.form()
+    category = (form.get("category") or "").strip()
+    pub_number = (form.get("pub_number") or "").strip()
+    title = (form.get("title") or "").strip()
+    sort_order_raw = (form.get("sort_order") or "").strip()
+    upload = form.get("file")
+
+    async with async_session() as db:
+        doc = (await db.execute(
+            select(LibraryDocument).where(LibraryDocument.id == doc_id)
+        )).scalar_one_or_none()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        if category:
+            if category not in VALID_CATEGORY_CODES:
+                raise HTTPException(status_code=400, detail="Invalid category")
+            doc.category = category
+        if title:
+            doc.title = title
+        if pub_number:
+            doc.pub_number = pub_number
+        if sort_order_raw:
+            try:
+                doc.sort_order = int(sort_order_raw)
+            except ValueError:
+                pass
+
+        # Optional file replacement
+        if upload and getattr(upload, "filename", None):
+            if not upload.filename.lower().endswith(".pdf"):
+                raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+            data = await upload.read()
+            if len(data) > MAX_LIBRARY_FILE_SIZE:
+                raise HTTPException(status_code=400, detail="File exceeds 50MB limit")
+            old_path = Path(doc.stored_path)
+            LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
+            stored_name = f"{uuid.uuid4().hex}.pdf"
+            new_path = LIBRARY_DIR / stored_name
+            new_path.write_bytes(data)
+            doc.filename = stored_name
+            doc.original_filename = upload.filename
+            doc.stored_path = str(new_path)
+            doc.file_size = len(data)
+            doc.mime_type = upload.content_type or "application/pdf"
+            try:
+                if old_path.is_file():
+                    old_path.unlink()
+            except OSError as e:
+                log.warning(f"Could not remove replaced library file {old_path}: {e}")
+
+        await db.commit()
+    return RedirectResponse(url="/training/library", status_code=303)
+
+
+@router.post("/library/{doc_id}/delete")
+@require_role(*MANAGE_ROLES)
+async def battle_library_delete(request: Request, doc_id: int):
+    """Delete a Battle Library doc (DB row + file on disk)."""
+    async with async_session() as db:
+        doc = (await db.execute(
+            select(LibraryDocument).where(LibraryDocument.id == doc_id)
+        )).scalar_one_or_none()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        path = Path(doc.stored_path)
+        await db.delete(doc)
+        await db.commit()
+    try:
+        if path.is_file():
+            path.unlink()
+    except OSError as e:
+        log.warning(f"Could not remove library file {path}: {e}")
+    return RedirectResponse(url="/training/library", status_code=303)
