@@ -43,11 +43,9 @@
         display: flex;
         align-items: center;
         padding: 8px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
         gap: 12px;
     }
-    .pub-row:last-child { border-bottom: none; }
-    .pub-number { font-weight: 700; color: #d4a537; font-size: 13px; min-width: 80px; }
+    .pub-number { font-weight: 700; color: #d4a537; font-size: 13px; min-width: 90px; white-space: nowrap; }
     .pub-title { flex: 1; font-size: 14px; color: #e0e0e0; }
     .pub-date { font-size: 12px; color: #888; min-width: 100px; text-align: right; }
     .pub-link {
@@ -106,7 +104,9 @@
     .lib-btn-danger:hover { background: rgba(220,53,69,0.28); }
     .pub-actions { display: flex; gap: 6px; align-items: center; }
     .pub-actions form { display: inline; margin: 0; }
-    details.lib-edit { margin-top: 6px; width: 100%; }
+    .pub-item { border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .pub-item:last-child { border-bottom: none; }
+    details.lib-edit { margin: 0 0 8px; padding-left: 92px; }
     details.lib-edit summary { cursor: pointer; color: #888; font-size: 12px; }
     details.lib-edit .lib-form-row { margin-top: 8px; }
 </style>
@@ -148,6 +148,7 @@
     <div class="lib-card-body">
         {% if cat.pubs %}
             {% for pub in cat.pubs %}
+            <div class="pub-item">
             <div class="pub-row">
                 <span class="pub-number">{{ pub.number }}</span>
                 <span class="pub-title">{{ pub.title }}</span>
@@ -163,6 +164,7 @@
                     </form>
                     {% endif %}
                 </span>
+            </div>
                 {% if can_manage %}
                 <details class="lib-edit">
                     <summary>Edit</summary>
