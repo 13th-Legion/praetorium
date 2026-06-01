@@ -308,11 +308,18 @@ async def battle_library_file(request: Request, doc_id: int):
         log.error(f"Library file missing on disk: {doc.stored_path}")
         raise HTTPException(status_code=404, detail="File not found on disk")
     safe_name = (doc.original_filename or doc.filename or "document.pdf")
+    # ETag from file size + mtime so a swapped file (new mtime/size) busts browser cache.
+    st = path.stat()
+    etag = f'"{doc.id}-{st.st_size}-{int(st.st_mtime)}"'
+    if request.headers.get("if-none-match") == etag:
+        from fastapi.responses import Response
+        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "no-cache, must-revalidate"})
     return FileResponse(
         str(path),
         media_type=doc.mime_type or "application/pdf",
         filename=safe_name,
         content_disposition_type="inline",
+        headers={"ETag": etag, "Cache-Control": "no-cache, must-revalidate"},
     )
 
 
