@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Weapons Qualification — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .wq-header { margin-bottom: 24px; }
+    .wq-header h2 { color: #d4a537; margin: 0 0 4px; }
+    .wq-header .subtitle { color: #888; font-size: 13px; }
+
+    .wq-card {
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        padding: 16px 20px;
+    }
+    .wq-card h3 {
+        margin: 0 0 12px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #d4a537;
+    }
+    .wq-select { background: #0f1626; border: 1px solid #333; color: #e0e0e0; padding: 8px 12px; border-radius: 4px; font-size: 14px; min-width: 320px; }
+    .wq-btn { padding: 8px 18px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid rgba(40,167,69,0.4); background: rgba(40,167,69,0.15); color: #28a745; }
+    .wq-btn:hover { background: rgba(40,167,69,0.3); }
+
+    .wq-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 16px; }
+    .wq-row:last-child { border-bottom: none; }
+    .wq-name { flex: 1; font-size: 14px; color: #e0e0e0; }
+    .wq-opts { display: flex; gap: 14px; align-items: center; }
+    .wq-opts label { font-size: 13px; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .wq-empty { text-align: center; padding: 24px; color: #555; font-size: 13px; font-style: italic; }
+    .wq-meta { font-size: 12px; color: #888; margin-bottom: 12px; }
+</style>
+
+<div class="wq-header">
+    <h2>🎯 Weapons Qualification</h2>
+    <div class="subtitle">Record per-FTX pass/fail. Member list auto-populates from checked-in attendees.</div>
+</div>
+
+<div class="wq-card">
+    <h3>Select FTX</h3>
+    <form method="get" action="/training/weapons-qual">
+        <select name="event_id" class="wq-select" onchange="this.form.submit()">
+            <option value="">— choose an FTX —</option>
+            {% for ev in events %}
+            <option value="{{ ev.id }}" {% if selected and selected.id == ev.id %}selected{% endif %}>
+                {{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="wq-btn">Load</button></noscript>
+    </form>
+</div>
+
+{% if selected %}
+<div class="wq-card">
+    <h3>{{ selected.title }} — {{ selected.date_start.strftime('%d %b %Y') }}</h3>
+    <div class="wq-meta">Checked-in attendees: {{ members|length }}. Set each result and Save. "None" clears a record.</div>
+    {% if members %}
+    <form method="post" action="/training/weapons-qual/{{ selected.id }}/save">
+        {% for m in members %}
+        <div class="wq-row">
+            <span class="wq-name">{{ m.name }}</span>
+            <span class="wq-opts">
+                <label><input type="radio" name="result_{{ m.id }}" value="pass" {% if m.current == 'pass' %}checked{% endif %}> ✅ Pass</label>
+                <label><input type="radio" name="result_{{ m.id }}" value="fail" {% if m.current == 'fail' %}checked{% endif %}> ❌ Fail</label>
+                <label><input type="radio" name="result_{{ m.id }}" value="none" {% if not m.current %}checked{% endif %}> — None</label>
+            </span>
+        </div>
+        {% endfor %}
+        <div style="margin-top:16px;">
+            <button type="submit" class="wq-btn">Save Results</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="wq-empty">No checked-in attendees for this FTX. (Members must be checked in by S1 first.)</div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

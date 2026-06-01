@@ -10,6 +10,8 @@ from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, Certification, MemberCertification
+from app.models.weapons_qual import MemberWeaponsQual
+from app.models.events import Event
 from app.models.awards import MemberAward
 from app.models.rank_history import RankHistory
 from app.models.events import Event, EventRSVP
@@ -152,6 +154,40 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     )
     awards = result.scalars().all()
 
+    # Weapons Qualification — most recent PASSED qual, with its FTX event.
+    wq_row = (await db.execute(
+        select(MemberWeaponsQual, Event)
+        .join(Event, Event.id == MemberWeaponsQual.event_id)
+        .where(MemberWeaponsQual.member_id == member_id, MemberWeaponsQual.passed.is_(True))
+        .order_by(Event.date_start.desc())
+        .limit(1)
+    )).first()
+    # Also surface the most recent attempt (pass or fail) for context.
+    last_attempt = (await db.execute(
+        select(MemberWeaponsQual, Event)
+        .join(Event, Event.id == MemberWeaponsQual.event_id)
+        .where(MemberWeaponsQual.member_id == member_id)
+        .order_by(Event.date_start.desc())
+        .limit(1)
+    )).first()
+    weapons_qual = None
+    if wq_row:
+        q, ev = wq_row
+        weapons_qual = {
+            "passed": True,
+            "event_title": ev.title,
+            "event_id": ev.id,
+            "date": (q.qualified_on or (ev.date_start.date() if ev.date_start else None)),
+        }
+    elif last_attempt:
+        q, ev = last_attempt
+        weapons_qual = {
+            "passed": False,
+            "event_title": ev.title,
+            "event_id": ev.id,
+            "date": (q.qualified_on or (ev.date_start.date() if ev.date_start else None)),
+        }
+
     return {
         "blocks": blocks,
         "total": total,
@@ -159,6 +195,7 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
         "pct": round(done / total * 100) if total > 0 else 0,
         "certs": certs,
         "awards": awards,
+        "weapons_qual": weapons_qual,
     }
 
 

@@ -184,6 +184,44 @@
             </div>
         </div>
 
+        <!-- Weapons Qualification -->
+        <div class="card">
+            <h3 class="card-title">🎯 Weapons Qualification</h3>
+            <div class="card-body">
+                {% if training and training.weapons_qual %}
+                    {% set wq = training.weapons_qual %}
+                    {% if wq.passed %}
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span style="color:#28a745;font-weight:700;">✅ Qualified</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Qualified At</span>
+                        <span>{{ wq.event_title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Date</span>
+                        <span>{{ wq.date.strftime('%d %b %Y') if wq.date else '—' }}</span>
+                    </div>
+                    {% else %}
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span style="color:#dc3545;font-weight:700;">❌ Not Qualified</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Last Attempt</span>
+                        <span>{{ wq.event_title }}{% if wq.date %} — {{ wq.date.strftime('%d %b %Y') }}{% endif %}</span>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span class="text-muted">— No qualification on record</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- FTX Attendance History -->
         {% set can_see_ftx = is_own or "command" in user.roles or "admin" in user.roles or "s1" in user.roles or "leader" in user.roles %}
         {% if can_see_ftx %}

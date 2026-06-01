@@ -23,3 +23,4 @@ from app.models.elections import (  # noqa: F401
 )
 
 from app.models.library import LibraryDocument  # noqa: F401
+from app.models.weapons_qual import MemberWeaponsQual  # noqa: F401
