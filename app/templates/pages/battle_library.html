@@ -68,6 +68,46 @@
         font-size: 13px;
         font-style: italic;
     }
+
+    /* Management UI */
+    .lib-manage {
+        background: #16213e;
+        border: 1px solid #2a4d3a;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        padding: 16px 20px;
+    }
+    .lib-manage h3 {
+        margin: 0 0 12px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #28a745;
+    }
+    .lib-form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .lib-form-row input[type=text],
+    .lib-form-row select,
+    .lib-form-row input[type=file] {
+        background: #0f1626; border: 1px solid #333; color: #e0e0e0;
+        padding: 6px 10px; border-radius: 4px; font-size: 13px;
+    }
+    .lib-form-row input[type=text] { flex: 1; min-width: 160px; }
+    .lib-btn {
+        padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: 600;
+        cursor: pointer; border: 1px solid rgba(40,167,69,0.4);
+        background: rgba(40,167,69,0.15); color: #28a745;
+    }
+    .lib-btn:hover { background: rgba(40,167,69,0.3); }
+    .lib-btn-danger {
+        border-color: rgba(220,53,69,0.4); background: rgba(220,53,69,0.12); color: #dc3545;
+    }
+    .lib-btn-danger:hover { background: rgba(220,53,69,0.28); }
+    .pub-actions { display: flex; gap: 6px; align-items: center; }
+    .pub-actions form { display: inline; margin: 0; }
+    details.lib-edit { margin-top: 6px; width: 100%; }
+    details.lib-edit summary { cursor: pointer; color: #888; font-size: 12px; }
+    details.lib-edit .lib-form-row { margin-top: 8px; }
 </style>
 
 <div class="lib-header">
@@ -78,6 +118,23 @@
         <span>Categories: <span class="stat-val">{{ categories|length }}</span></span>
     </div>
 </div>
+
+{% if can_manage %}
+<div class="lib-manage">
+    <h3>➕ Add Publication</h3>
+    <form action="/training/library/upload" method="post" enctype="multipart/form-data" class="lib-form-row">
+        <select name="category" required>
+            {% for c in manage_categories %}
+            <option value="{{ c.code }}">{{ c.category }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" name="pub_number" placeholder="Pub number (e.g. FM 3-24)">
+        <input type="text" name="title" placeholder="Title" required>
+        <input type="file" name="file" accept="application/pdf" required>
+        <button type="submit" class="lib-btn">Upload</button>
+    </form>
+</div>
+{% endif %}
 
 {% for cat in categories %}
 <div class="lib-card">
@@ -92,8 +149,33 @@
             <div class="pub-row">
                 <span class="pub-number">{{ pub.number }}</span>
                 <span class="pub-title">{{ pub.title }}</span>
-                {% if pub.url and pub.url != '#' %}
-                <a href="{{ pub.url }}" class="pub-link" target="_blank">View ↗</a>
+                <span class="pub-actions">
+                    {% if pub.url and pub.url != '#' %}
+                    <a href="{{ pub.url }}" class="pub-link" target="_blank">View ↗</a>
+                    {% endif %}
+                    {% if can_manage %}
+                    <form action="/training/library/{{ pub.id }}/delete" method="post"
+                          onsubmit="return confirm('Delete this publication?');">
+                        <button type="submit" class="lib-btn lib-btn-danger">Delete</button>
+                    </form>
+                    {% endif %}
+                </span>
+                {% if can_manage %}
+                <details class="lib-edit">
+                    <summary>Edit</summary>
+                    <form action="/training/library/{{ pub.id }}/edit" method="post" enctype="multipart/form-data" class="lib-form-row">
+                        <select name="category">
+                            {% for c in manage_categories %}
+                            <option value="{{ c.code }}" {% if c.code == pub.category %}selected{% endif %}>{{ c.category }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="pub_number" value="{{ pub.number }}" placeholder="Pub number">
+                        <input type="text" name="title" value="{{ pub.title }}" placeholder="Title">
+                        <input type="text" name="sort_order" value="{{ pub.sort_order }}" placeholder="Sort" style="max-width:70px;">
+                        <input type="file" name="file" accept="application/pdf">
+                        <button type="submit" class="lib-btn">Save</button>
+                    </form>
+                </details>
                 {% endif %}
             </div>
             {% endfor %}

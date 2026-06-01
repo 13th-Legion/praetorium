@@ -31,6 +31,8 @@ services:
       - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
     depends_on:
       - db
+    volumes:
+      - library_data:/app/data/library
     networks:
       - praetorium
     logging:
@@ -59,6 +61,7 @@ services:
 
 volumes:
   pgdata:
+  library_data:
 
 networks:
   praetorium:

@@ -21,3 +21,5 @@ from app.models.elections import (  # noqa: F401
     Election, ElectionNomination, ElectionNominationReceipt,
     ElectionBallot, ElectionVoterRoll,
 )
+
+from app.models.library import LibraryDocument  # noqa: F401
