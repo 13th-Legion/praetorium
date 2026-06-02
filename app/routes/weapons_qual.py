@@ -31,7 +31,7 @@ def _can_manage(user) -> bool:
 
 @router.get("", response_class=HTMLResponse)
 @require_auth
-async def weapons_qual_page(request: Request, event_id: int | None = None):
+async def weapons_qual_page(request: Request, event_id: int | None = None, saved: int | None = None):
     """Record weapons qualification results for an FTX. S3/Command/S1-Lead only."""
     user = get_current_user(request)
     if not _can_manage(user):
@@ -83,6 +83,7 @@ async def weapons_qual_page(request: Request, event_id: int | None = None):
         "events": events,
         "selected": selected,
         "members": members,
+        "saved": saved,
     })
 
 
@@ -112,6 +113,7 @@ async def weapons_qual_save(request: Request, event_id: int):
             )).scalars().all()
         }
 
+        saved_count = 0
         # Form fields look like result_<member_id> = pass | fail | none
         for key, val in form.items():
             if not key.startswith("result_"):
@@ -143,6 +145,7 @@ async def weapons_qual_save(request: Request, event_id: int):
                     qualified_on=qual_date,
                     recorded_by=recorder,
                 ))
+            saved_count += 1
         await db.commit()
-    log.info(f"Weapons qual saved for event {event_id} by {recorder}")
-    return RedirectResponse(url=f"/training/weapons-qual?event_id={event_id}", status_code=303)
+    log.info(f"Weapons qual saved for event {event_id} by {recorder} ({saved_count} records)")
+    return RedirectResponse(url=f"/training/weapons-qual?event_id={event_id}&saved={saved_count}", status_code=303)
