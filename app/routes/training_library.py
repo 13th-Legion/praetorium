@@ -21,6 +21,8 @@ MANAGE_ROLES = ("command", "s1_lead", "s3", "admin")
 
 # Category code → display metadata for the Battle Library page
 LIBRARY_CATEGORIES = [
+    {"code": "13LG", "category": "13LG Publications", "icon": "⚔️"},
+    {"code": "TSM", "category": "TSM Publications", "icon": "🛡️"},
     {"code": "FM", "category": "Field Manuals (FM)", "icon": "📗"},
     {"code": "TC", "category": "Training Circulars (TC)", "icon": "📘"},
     {"code": "ATP", "category": "Army Techniques Publications (ATP)", "icon": "📙"},
