@@ -1,4 +1,4 @@
-"""Training models — TRADOC checklist, certifications, training claims."""
+"""Training models — TRADOC blocks/items, certifications, training claims."""
 
 from datetime import datetime, date
 from typing import Optional
@@ -12,18 +12,44 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+class TradocBlock(Base):
+    """A TRADOC training block (e.g., 'Theory & Medical'). Groups TradocItems."""
+
+    __tablename__ = "tradoc_blocks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, unique=True)  # 0 = Every FTX, 1-4 = blocks
+    name: Mapped[str] = mapped_column(String(64))
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    def __repr__(self):
+        return f"<TradocBlock {self.number}: {self.name}>"
+
+
 class TradocItem(Base):
-    """A single TRADOC checklist item (e.g., 'Basic Rifle Marksmanship')."""
+    """A single TRADOC checklist item / subject (e.g., 'Basic Rifle Marksmanship')."""
 
     __tablename__ = "tradoc_items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    block: Mapped[int] = mapped_column(Integer)  # 1-4, 0 = every FTX
-    block_name: Mapped[str] = mapped_column(String(64))
+    block: Mapped[int] = mapped_column(Integer)  # 1-4, 0 = every FTX (kept in sync w/ TradocBlock.number)
+    block_name: Mapped[str] = mapped_column(String(64))  # denormalized, synced from TradocBlock.name
     name: Mapped[str] = mapped_column(String(128))
     description: Mapped[Optional[str]] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     optional: Mapped[bool] = mapped_column(Boolean, default=False)  # extra/non-required (e.g. adv/expert land nav)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")  # soft-delete
+
+    # ── Documentation ────────────────────────────────────────────────────────
+    # doc_type: 'none' = no doc, 'markdown' = in-app authored markdown (doc_body),
+    #           'pdf' = direct PDF link (doc_url), 'external' = off-site link (doc_url),
+    #           'page' = legacy hardcoded HTML template page (doc_url is the slug route)
+    doc_type: Mapped[str] = mapped_column(String(16), default="none", server_default="none")
+    doc_title: Mapped[Optional[str]] = mapped_column(String(160))
+    doc_url: Mapped[Optional[str]] = mapped_column(Text)  # for pdf/external/page
+    doc_body: Mapped[Optional[str]] = mapped_column(Text)  # markdown source for doc_type='markdown'
 
     # Relationships
     signoffs: Mapped[list["MemberTradoc"]] = relationship(back_populates="item")

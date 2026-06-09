@@ -111,6 +111,61 @@
     }
     .status-dot.green { background: #28a745; }
     .status-dot.gray { background: #555; }
+
+    /* ─── Management controls ─── */
+    .mgmt-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;
+        text-decoration: none; cursor: pointer; border: 1px solid #444;
+        background: #1a1a2e; color: #ccc; transition: all 0.2s;
+    }
+    .mgmt-btn:hover { border-color: #d4a537; color: #d4a537; }
+    .mgmt-btn.primary { background: rgba(212,165,55,0.15); color: #d4a537; border-color: rgba(212,165,55,0.4); }
+    .mgmt-btn.danger:hover { border-color: #b71c1c; color: #e57373; }
+    .mgmt-btn.tiny { padding: 3px 8px; font-size: 11px; }
+    .mgmt-bar { display: flex; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
+    .block-actions { display: flex; gap: 6px; align-items: center; }
+    .subject-actions { display: flex; gap: 6px; align-items: center; }
+    .archived-tag {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+        background: rgba(183,28,28,0.15); color: #e57373;
+        border: 1px solid rgba(183,28,28,0.3); padding: 1px 6px; border-radius: 3px;
+        margin-left: 8px;
+    }
+    .block-card.is-archived { opacity: 0.6; }
+    .subject-row.is-archived { opacity: 0.6; }
+    /* Archived rows hidden unless 'Show archived' is on */
+    [data-archived="1"] { display: none; }
+    body.show-archived [data-archived="1"] { display: flex; }
+    body.show-archived .block-card[data-archived="1"] { display: block; }
+
+    /* Modal */
+    .tdc-modal {
+        display: none; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(0,0,0,0.7); align-items: flex-start; justify-content: center;
+        overflow-y: auto; padding: 40px 16px;
+    }
+    .tdc-modal.open { display: flex; }
+    .tdc-modal-box {
+        background: #16213e; border: 1px solid #333; border-radius: 8px;
+        width: 100%; max-width: 680px; padding: 24px; margin: auto;
+    }
+    .tdc-modal-box h3 { color: #d4a537; margin: 0 0 16px; font-size: 1.1rem; }
+    .tdc-field { margin-bottom: 14px; }
+    .tdc-field label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
+    .tdc-field input[type=text], .tdc-field input[type=number],
+    .tdc-field select, .tdc-field textarea {
+        width: 100%; padding: 8px 10px; background: #0f1626; color: #e0e0e0;
+        border: 1px solid #333; border-radius: 4px; font-size: 13px; box-sizing: border-box;
+        font-family: inherit;
+    }
+    .tdc-field textarea { resize: vertical; min-height: 80px; }
+    .tdc-field .hint { font-size: 11px; color: #666; margin-top: 3px; }
+    .tdc-row { display: flex; gap: 12px; }
+    .tdc-row > div { flex: 1; }
+    .tdc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .tdc-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ccc; }
+    .tdc-check input { width: auto; }
 </style>
 
 <div class="tradoc-header">
@@ -120,30 +175,73 @@
         <span>Documents: <span class="stat-val">{{ doc_count }}</span> / {{ total_subjects }}</span>
         <span>Blocks: <span class="stat-val">{{ blocks|length }}</span></span>
     </div>
+    {% if can_manage %}
+    <div class="mgmt-bar">
+        <button type="button" class="mgmt-btn primary" onclick="openBlockModal()">➕ Add Block</button>
+        <button type="button" class="mgmt-btn" onclick="openSubjectModal()">➕ Add Subject</button>
+        <label class="tdc-check" style="margin-left:auto;">
+            <input type="checkbox" id="toggle-archived" onchange="document.body.classList.toggle('show-archived', this.checked)">
+            Show archived
+        </label>
+    </div>
+    {% endif %}
 </div>
 
 {% for block in blocks %}
-<div class="block-card" id="block-{{ block.number }}">
-    <div class="block-header" onclick="this.parentElement.classList.toggle('collapsed')">
-        <div>
-            <h3>Block {{ block.number }}: {{ block.name }}</h3>
+<div class="block-card{{ ' is-archived' if block.archived }}" id="block-{{ block.number }}"
+     {% if block.archived %}data-archived="1"{% endif %}>
+    <div class="block-header">
+        <div onclick="this.closest('.block-card').classList.toggle('collapsed')" style="flex:1;cursor:pointer;">
+            <h3>Block {{ block.number }}: {{ block.name }}
+                {% if block.archived %}<span class="archived-tag">Archived</span>{% endif %}
+            </h3>
             <div class="block-meta">
-                {{ block.subjects|length }} subject{{ 's' if block.subjects|length != 1 }} ·
-                {{ block.subjects|selectattr('doc')|list|length }} document{{ 's' if block.subjects|selectattr('doc')|list|length != 1 }}
+                {{ block.subjects|rejectattr('archived')|list|length }} subject{{ 's' if block.subjects|rejectattr('archived')|list|length != 1 }} ·
+                {{ block.subjects|rejectattr('archived')|selectattr('doc')|list|length }} document{{ 's' if block.subjects|rejectattr('archived')|selectattr('doc')|list|length != 1 }}
             </div>
         </div>
+        {% if can_manage %}
+        <div class="block-actions">
+            <button type="button" class="mgmt-btn tiny" onclick="event.stopPropagation();editBlock(this)"
+                data-id="{{ block.id }}" data-number="{{ block.number }}" data-name="{{ block.name|e }}"
+                data-desc="{{ block.description|e }}" data-sort="{{ block.sort_order }}">✏️ Edit</button>
+            <button type="button" class="mgmt-btn tiny" onclick="event.stopPropagation();addSubjectTo({{ block.number }})">➕ Subject</button>
+            <form method="post" action="/training/tradoc/manage/block/{{ block.id }}/archive" style="display:inline;"
+                  onsubmit="return confirm('{{ 'Restore' if block.archived else 'Archive' }} this block?')">
+                {% if block.archived %}<input type="hidden" name="unarchive" value="1">{% endif %}
+                <button type="submit" class="mgmt-btn tiny danger" onclick="event.stopPropagation()">{{ '♻️ Restore' if block.archived else '🗄️ Archive' }}</button>
+            </form>
+        </div>
+        {% endif %}
         <span class="chevron">▼</span>
     </div>
     <div class="block-body">
         {% for subject in block.subjects %}
-        <div class="subject-row">
+        <div class="subject-row{{ ' is-archived' if subject.archived }}" {% if subject.archived %}data-archived="1"{% endif %}>
             <span class="status-dot {{ 'green' if subject.doc else 'gray' }}"></span>
             <div class="subject-name">
                 {{ subject.name }}
+                {% if subject.optional %}<span style="font-size:11px;color:#888;">(optional)</span>{% endif %}
+                {% if subject.archived %}<span class="archived-tag">Archived</span>{% endif %}
                 {% if subject.description %}
                 <div class="subject-desc">{{ subject.description }}</div>
                 {% endif %}
             </div>
+            {% if can_manage %}
+            <div class="subject-actions">
+                <button type="button" class="mgmt-btn tiny" onclick="editSubject(this)"
+                    data-id="{{ subject.id }}" data-block="{{ block.number }}" data-name="{{ subject.name|e }}"
+                    data-desc="{{ subject.description|e }}" data-sort="{{ subject.sort_order }}"
+                    data-optional="{{ '1' if subject.optional else '' }}"
+                    data-doctype="{{ subject.doc_type }}" data-doctitle="{{ subject.doc_title|e }}"
+                    data-docurl="{{ subject.doc_url|e }}">✏️</button>
+                <form method="post" action="/training/tradoc/manage/subject/{{ subject.id }}/archive" style="display:inline;"
+                      onsubmit="return confirm('{{ 'Restore' if subject.archived else 'Archive' }} this subject? Sign-off history is kept.')">
+                    {% if subject.archived %}<input type="hidden" name="unarchive" value="1">{% endif %}
+                    <button type="submit" class="mgmt-btn tiny danger">{{ '♻️' if subject.archived else '🗄️' }}</button>
+                </form>
+            </div>
+            {% endif %}
             {% if subject.doc %}
                 {% if subject.doc.type == 'page' %}
                 <a href="{{ subject.doc.url }}" class="doc-link available">
@@ -170,5 +268,219 @@
     </div>
 </div>
 {% endfor %}
+
+{% if can_manage %}
+<!-- Doc bodies (markdown) keyed by subject id, for the editor -->
+<script type="application/json" id="doc-bodies">
+{
+{% for block in blocks %}{% for subject in block.subjects %}"{{ subject.id }}": {{ subject.doc_body|tojson }}{% if not loop.last %},{% endif %}
+{% endfor %}{% if not loop.last and block.subjects %},{% endif %}{% endfor %}
+}
+</script>
+
+<!-- Block list for subject block-selector -->
+<script type="application/json" id="block-list">
+[{% for block in blocks %}{"number":{{ block.number }},"name":{{ block.name|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+</script>
+
+<!-- ===== Block Modal ===== -->
+<div class="tdc-modal" id="block-modal">
+  <div class="tdc-modal-box">
+    <h3 id="block-modal-title">Add Block</h3>
+    <form id="block-form" method="post">
+      <div class="tdc-row">
+        <div class="tdc-field">
+          <label>Block Number *</label>
+          <input type="number" name="number" id="blk-number" required>
+          <div class="hint">0 = Every FTX, 1–4 = training blocks</div>
+        </div>
+        <div class="tdc-field">
+          <label>Sort Order</label>
+          <input type="number" name="sort_order" id="blk-sort" value="0">
+          <div class="hint">Blank/0 = auto</div>
+        </div>
+      </div>
+      <div class="tdc-field">
+        <label>Name *</label>
+        <input type="text" name="name" id="blk-name" required>
+      </div>
+      <div class="tdc-field">
+        <label>Description</label>
+        <textarea name="description" id="blk-desc"></textarea>
+      </div>
+      <div class="tdc-actions">
+        <button type="button" class="mgmt-btn" onclick="closeModal('block-modal')">Cancel</button>
+        <button type="submit" class="mgmt-btn primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Subject Modal ===== -->
+<div class="tdc-modal" id="subject-modal">
+  <div class="tdc-modal-box">
+    <h3 id="subject-modal-title">Add Subject</h3>
+    <form id="subject-form" method="post">
+      <div class="tdc-row">
+        <div class="tdc-field">
+          <label>Block *</label>
+          <select name="block" id="subj-block" required></select>
+        </div>
+        <div class="tdc-field">
+          <label>Sort Order</label>
+          <input type="number" name="sort_order" id="subj-sort" value="0">
+          <div class="hint">Blank/0 = append</div>
+        </div>
+      </div>
+      <div class="tdc-field">
+        <label>Subject Name *</label>
+        <input type="text" name="name" id="subj-name" required>
+      </div>
+      <div class="tdc-field">
+        <label>Description</label>
+        <textarea name="description" id="subj-desc"></textarea>
+      </div>
+      <div class="tdc-field">
+        <label class="tdc-check"><input type="checkbox" name="optional" id="subj-optional" value="1"> Optional (extra / non-required)</label>
+      </div>
+      <div class="tdc-field">
+        <label>Documentation Type</label>
+        <select name="doc_type" id="subj-doctype" onchange="updateDocFields()">
+          <option value="none">None</option>
+          <option value="markdown">Markdown page (write below)</option>
+          <option value="pdf">PDF link</option>
+          <option value="external">External link</option>
+          <option value="page">Legacy HTML page (advanced)</option>
+        </select>
+      </div>
+      <div class="tdc-field" id="doc-title-field" style="display:none;">
+        <label>Document Title</label>
+        <input type="text" name="doc_title" id="subj-doctitle">
+      </div>
+      <div class="tdc-field" id="doc-url-field" style="display:none;">
+        <label>Document URL / Slug</label>
+        <input type="text" name="doc_url" id="subj-docurl">
+        <div class="hint" id="doc-url-hint"></div>
+      </div>
+      <div class="tdc-field" id="doc-body-field" style="display:none;">
+        <label>Document Content (Markdown)</label>
+        <div id="editor-toolbar"></div>
+        <textarea name="doc_body" id="subj-docbody" style="min-height:240px;font-family:monospace;"
+          placeholder="# Heading&#10;&#10;Write markdown here. Supports headings, **bold**, lists, tables, links, code."></textarea>
+        <div class="hint">Markdown — headings (#), **bold**, lists, | tables |, [links](url), `code`.</div>
+      </div>
+      <div class="tdc-actions">
+        <button type="button" class="mgmt-btn" onclick="closeModal('subject-modal')">Cancel</button>
+        <button type="submit" class="mgmt-btn primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  var DOC_BODIES = {};
+  var BLOCKS = [];
+  try { DOC_BODIES = JSON.parse(document.getElementById('doc-bodies').textContent || '{}'); } catch(e){}
+  try { BLOCKS = JSON.parse(document.getElementById('block-list').textContent || '[]'); } catch(e){}
+  window._tdcDocBodies = DOC_BODIES;
+
+  function fillBlockSelect(sel, val){
+    sel.innerHTML = '';
+    BLOCKS.forEach(function(b){
+      var o = document.createElement('option');
+      o.value = b.number; o.textContent = 'Block ' + b.number + ': ' + b.name;
+      if (val !== undefined && val !== null && String(b.number) === String(val)) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+
+  window.closeModal = function(id){ document.getElementById(id).classList.remove('open'); };
+
+  // ----- Block modal -----
+  window.openBlockModal = function(){
+    var f = document.getElementById('block-form');
+    f.action = '/training/tradoc/manage/block/create';
+    document.getElementById('block-modal-title').textContent = 'Add Block';
+    document.getElementById('blk-number').value = '';
+    document.getElementById('blk-number').readOnly = false;
+    document.getElementById('blk-name').value = '';
+    document.getElementById('blk-desc').value = '';
+    document.getElementById('blk-sort').value = '0';
+    document.getElementById('block-modal').classList.add('open');
+  };
+  window.editBlock = function(btn){
+    var f = document.getElementById('block-form');
+    f.action = '/training/tradoc/manage/block/' + btn.dataset.id + '/edit';
+    document.getElementById('block-modal-title').textContent = 'Edit Block';
+    document.getElementById('blk-number').value = btn.dataset.number;
+    document.getElementById('blk-number').readOnly = true;
+    document.getElementById('blk-name').value = btn.dataset.name;
+    document.getElementById('blk-desc').value = btn.dataset.desc;
+    document.getElementById('blk-sort').value = btn.dataset.sort;
+    document.getElementById('block-modal').classList.add('open');
+  };
+
+  // ----- Subject modal -----
+  window.updateDocFields = function(){
+    var t = document.getElementById('subj-doctype').value;
+    document.getElementById('doc-title-field').style.display = (t === 'none') ? 'none' : 'block';
+    document.getElementById('doc-url-field').style.display = (t === 'pdf' || t === 'external' || t === 'page') ? 'block' : 'none';
+    document.getElementById('doc-body-field').style.display = (t === 'markdown') ? 'block' : 'none';
+    var hint = document.getElementById('doc-url-hint');
+    if (t === 'pdf') hint.textContent = 'e.g. /static/tradoc/file.pdf';
+    else if (t === 'external') hint.textContent = 'Full https:// URL';
+    else if (t === 'page') hint.textContent = 'Internal route, e.g. /training/tradoc/brm';
+    else hint.textContent = '';
+  };
+
+  function resetSubjectForm(){
+    document.getElementById('subj-name').value = '';
+    document.getElementById('subj-desc').value = '';
+    document.getElementById('subj-sort').value = '0';
+    document.getElementById('subj-optional').checked = false;
+    document.getElementById('subj-doctype').value = 'none';
+    document.getElementById('subj-doctitle').value = '';
+    document.getElementById('subj-docurl').value = '';
+    document.getElementById('subj-docbody').value = '';
+    updateDocFields();
+  }
+
+  window.openSubjectModal = function(){
+    var f = document.getElementById('subject-form');
+    f.action = '/training/tradoc/manage/subject/create';
+    document.getElementById('subject-modal-title').textContent = 'Add Subject';
+    fillBlockSelect(document.getElementById('subj-block'));
+    resetSubjectForm();
+    document.getElementById('subject-modal').classList.add('open');
+  };
+  window.addSubjectTo = function(blockNum){
+    window.openSubjectModal();
+    fillBlockSelect(document.getElementById('subj-block'), blockNum);
+  };
+  window.editSubject = function(btn){
+    var f = document.getElementById('subject-form');
+    f.action = '/training/tradoc/manage/subject/' + btn.dataset.id + '/edit';
+    document.getElementById('subject-modal-title').textContent = 'Edit Subject';
+    fillBlockSelect(document.getElementById('subj-block'), btn.dataset.block);
+    document.getElementById('subj-name').value = btn.dataset.name || '';
+    document.getElementById('subj-desc').value = btn.dataset.desc || '';
+    document.getElementById('subj-sort').value = btn.dataset.sort || '0';
+    document.getElementById('subj-optional').checked = !!btn.dataset.optional;
+    document.getElementById('subj-doctype').value = btn.dataset.doctype || 'none';
+    document.getElementById('subj-doctitle').value = btn.dataset.doctitle || '';
+    document.getElementById('subj-docurl').value = btn.dataset.docurl || '';
+    document.getElementById('subj-docbody').value = DOC_BODIES[btn.dataset.id] || '';
+    updateDocFields();
+    document.getElementById('subject-modal').classList.add('open');
+  };
+
+  // close on backdrop click
+  document.querySelectorAll('.tdc-modal').forEach(function(m){
+    m.addEventListener('click', function(e){ if (e.target === m) m.classList.remove('open'); });
+  });
+})();
+</script>
+{% endif %}
 
 {% endblock %}

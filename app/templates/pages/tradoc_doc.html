@@ -271,7 +271,13 @@
 </div>
 
 <div class="tradoc-content">
-    {% include tradoc_template %}
+    {% if tradoc_template %}
+        {% include tradoc_template %}
+    {% elif markdown_html %}
+        {{ markdown_html | safe }}
+    {% else %}
+        <p style="color:#888;">No content yet.</p>
+    {% endif %}
 </div>
 
 <div class="tradoc-footer">

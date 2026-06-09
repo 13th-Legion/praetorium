@@ -1,6 +1,6 @@
 # Import all models so Alembic sees them
 from app.models.member import Member
-from app.models.training import TradocItem, MemberTradoc, Certification, MemberCertification, TrainingClaim
+from app.models.training import TradocBlock, TradocItem, MemberTradoc, Certification, MemberCertification, TrainingClaim
 from app.models.awards import MemberAward  # noqa: F401
 from app.models.enums import RankGrade, MemberStatus, TrainingBlock  # noqa: F401
 from app.models.tlas import ThreatLevelEntry, ThreatLevel, TLAS_CONFIG  # noqa: F401

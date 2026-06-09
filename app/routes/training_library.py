@@ -4,6 +4,8 @@ import logging
 import uuid
 from pathlib import Path
 
+import bleach
+import markdown as md
 from fastapi import APIRouter, Request, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,8 +13,42 @@ from sqlalchemy import select
 
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
-from app.models.training import TradocItem
+from app.models.training import TradocBlock, TradocItem
 from app.models.library import LibraryDocument
+
+# ── Markdown rendering (TRADOC docs) ─────────────────────────────────────────
+# Allowed HTML tags after markdown conversion (sanitized with bleach).
+_MD_ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
+    "p", "pre", "hr", "br", "h1", "h2", "h3", "h4", "h5", "h6",
+    "table", "thead", "tbody", "tr", "th", "td", "img", "span", "div",
+]
+_MD_ALLOWED_ATTRS = {
+    **bleach.sanitizer.ALLOWED_ATTRIBUTES,
+    "a": ["href", "title", "target", "rel"],
+    "img": ["src", "alt", "title", "width", "height"],
+    "td": ["align"], "th": ["align"],
+}
+
+
+def render_markdown(text: str) -> str:
+    """Convert markdown to sanitized HTML for TRADOC doc pages."""
+    if not text:
+        return ""
+    html = md.markdown(
+        text,
+        extensions=["extra", "sane_lists", "nl2br", "toc", "tables", "fenced_code"],
+    )
+    clean = bleach.clean(html, tags=_MD_ALLOWED_TAGS, attributes=_MD_ALLOWED_ATTRS, strip=True)
+    return clean
+
+
+TRADOC_MANAGE_ROLES = ("command", "s3", "admin")
+
+
+def _can_manage_tradoc(user) -> bool:
+    if not user:
+        return False
+    return bool(set(user.get("roles", [])).intersection(set(TRADOC_MANAGE_ROLES)))
 
 # ── Battle Library storage config ────────────────────────────────────────────
 LIBRARY_DIR = Path("/app/data/library")
@@ -181,50 +217,128 @@ TRADOC_DOCS = {
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
+def _item_doc(item) -> dict | None:
+    """Build the doc dict for a subject from its DB doc fields, or None."""
+    dtype = (item.doc_type or "none")
+    if dtype == "none" or (not item.doc_url and not item.doc_body and dtype != "markdown"):
+        # markdown with empty body still counts as a doc page if doc_body set below
+        if not (dtype == "markdown" and item.doc_body):
+            return None
+    if dtype == "markdown":
+        if not item.doc_body:
+            return None
+        return {"type": "markdown", "title": item.doc_title or item.name,
+                "url": f"/training/tradoc/{item.id}"}
+    if dtype in ("pdf", "external"):
+        if not item.doc_url:
+            return None
+        return {"type": dtype, "title": item.doc_title or item.name, "url": item.doc_url}
+    if dtype == "page":
+        if not item.doc_url:
+            return None
+        return {"type": "page", "title": item.doc_title or item.name, "url": item.doc_url}
+    return None
+
+
 @router.get("/tradoc", response_class=HTMLResponse)
 @require_auth
 async def tradoc_page(request: Request):
     """TRADOC training document library organized by basic training block."""
     user = get_current_user(request)
+    can_manage = _can_manage_tradoc(user)
 
     async with async_session() as db:
-        result = await db.execute(
+        block_rows = (await db.execute(
+            select(TradocBlock).order_by(TradocBlock.sort_order, TradocBlock.number)
+        )).scalars().all()
+        item_rows = (await db.execute(
             select(TradocItem).order_by(TradocItem.block, TradocItem.sort_order)
-        )
-        items = result.scalars().all()
+        )).scalars().all()
 
-    blocks = {}
-    for item in items:
-        if item.block == 0:
+    # Group items by block number
+    items_by_block = {}
+    for item in item_rows:
+        items_by_block.setdefault(item.block, []).append(item)
+
+    blocks = []
+    doc_count = 0
+    total_subjects = 0
+    for blk in block_rows:
+        if blk.archived and not can_manage:
             continue
-        if item.block not in blocks:
-            blocks[item.block] = {
-                "number": item.block,
-                "name": item.block_name,
-                "subjects": [],
-            }
-        doc = TRADOC_DOCS.get(item.name)
-        blocks[item.block]["subjects"].append({
-            "name": item.name,
-            "description": item.description,
-            "doc": doc,
+        subjects = []
+        for item in items_by_block.get(blk.number, []):
+            if item.archived and not can_manage:
+                continue
+            doc = _item_doc(item)
+            if doc and not item.archived:
+                doc_count += 1
+            if not item.archived:
+                total_subjects += 1
+            subjects.append({
+                "id": item.id,
+                "name": item.name,
+                "description": item.description,
+                "sort_order": item.sort_order,
+                "optional": item.optional,
+                "archived": item.archived,
+                "doc": doc,
+                "doc_type": item.doc_type or "none",
+                "doc_title": item.doc_title or "",
+                "doc_url": item.doc_url or "",
+                "doc_body": item.doc_body or "",
+            })
+        blocks.append({
+            "id": blk.id,
+            "number": blk.number,
+            "name": blk.name,
+            "description": blk.description or "",
+            "sort_order": blk.sort_order,
+            "archived": blk.archived,
+            "subjects": subjects,
         })
 
     return templates.TemplateResponse("pages/tradoc.html", {
         "request": request,
         "user": user,
-        "blocks": sorted(blocks.values(), key=lambda b: b["number"]),
-        "doc_count": len(TRADOC_DOCS),
-        "total_subjects": sum(len(b["subjects"]) for b in blocks.values()),
+        "blocks": blocks,
+        "doc_count": doc_count,
+        "total_subjects": total_subjects,
+        "can_manage": can_manage,
     })
 
 
 @router.get("/tradoc/{slug}", response_class=HTMLResponse)
 @require_auth
 async def tradoc_doc_page(request: Request, slug: str):
-    """Render a single TRADOC training document."""
+    """Render a single TRADOC training document.
+
+    If `slug` is numeric it is a TradocItem id (DB markdown doc). Otherwise it
+    falls back to the legacy hardcoded HTML template pages in TRADOC_PAGES.
+    """
     user = get_current_user(request)
 
+    # Numeric slug => DB-backed markdown doc
+    if slug.isdigit():
+        async with async_session() as db:
+            item = (await db.execute(
+                select(TradocItem).where(TradocItem.id == int(slug))
+            )).scalar_one_or_none()
+        if not item or item.doc_type != "markdown" or not item.doc_body:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return templates.TemplateResponse("pages/tradoc_doc.html", {
+            "request": request,
+            "user": user,
+            "doc_title": item.doc_title or item.name,
+            "block_num": item.block,
+            "block_name": item.block_name,
+            "pdf_url": "",
+            "pdf_external": False,
+            "tradoc_template": None,
+            "markdown_html": render_markdown(item.doc_body),
+        })
+
+    # Legacy hardcoded template page
     page = TRADOC_PAGES.get(slug)
     if not page:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -241,6 +355,7 @@ async def tradoc_doc_page(request: Request, slug: str):
         "pdf_url": pdf_url,
         "pdf_external": pdf_external,
         "tradoc_template": page["template"],
+        "markdown_html": None,
     })
 
 

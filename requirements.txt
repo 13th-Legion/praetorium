@@ -19,6 +19,7 @@ httpx==0.28.*             # async HTTP client (NC API)
 
 # HTML sanitization
 bleach==6.*
+markdown==3.*            # TRADOC doc rendering
 
 # Utils
 python-dotenv==1.0.*
