@@ -26,6 +26,10 @@ templates = Jinja2Templates(directory="app/templates")
 
 from app.constants import S1_ROLES as EDIT_ROLES, RANK_CHOICES as RANK_OPTIONS, STATUS_OPTIONS, TEAM_OPTIONS, LEADERSHIP_TITLES
 from app.geo import assign_zone, geocode_zip
+from app.settings import (
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
+    NC_SVC_USER, NC_SVC_PASS,
+)
 
 BILLET_OPTIONS = [
     ("S1: Administration (Lead)", "S1 — Administration (Lead)"),
@@ -452,3 +456,116 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     # Redirect back to profile
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"/profile/{member_id}", status_code=303)
+
+
+# ─── Resend NC/Portal credentials (PP-223) ────────────────────────────────────
+# Decoupled from the Deck recruit-pipeline: resets the member's Nextcloud
+# password and emails fresh credentials, keyed off the member record. Closes
+# the gap where hand-provisioned / legacy accounts never got a welcome email.
+
+def _build_credentials_email(first_name: str, nc_username: str, temp_password: str, to_email: str):
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    subject = "13th Legion — Your Nextcloud & Portal Access"
+    html_body = f"""<div style="font-family:sans-serif;max-width:600px;">
+    <h2 style="color:#d4a537;">Welcome to the 13th Legion</h2>
+    <p>Welcome to the 13th Legion digital infrastructure, {first_name}!</p>
+    <p>Your Nextcloud account is ready. This is where we manage files, calendars, tasks, and comms for the unit.</p>
+    <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:16px 0;">
+        <p style="margin:4px 0;"><strong>Nextcloud:</strong> <a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></p>
+        <p style="margin:4px 0;"><strong>Username:</strong> <code>{nc_username}</code></p>
+        <p style="margin:4px 0;"><strong>Temporary Password:</strong> <code>{temp_password}</code></p>
+        <p style="margin:4px 0;"><strong>Portal:</strong> <a href="https://portal.13thlegion.org">portal.13thlegion.org</a></p>
+        <p style="margin:4px 0;font-size:12px;color:#666;">(Portal uses the same Nextcloud login)</p>
+    </div>
+    <p><strong>First steps:</strong></p>
+    <ol>
+        <li>Log in to Nextcloud and <strong>change your password</strong> (Settings &rarr; Security)</li>
+        <li>Set up <strong>2FA</strong> (Settings &rarr; Security &rarr; TOTP)</li>
+        <li>Install the <strong>Nextcloud app</strong> on your phone for notifications</li>
+        <li>Log in to the <strong>Portal</strong> to see your profile, training record, and upcoming events</li>
+    </ol>
+    <p>If you have any issues, reach out to Cav or Archer.</p>
+    <p>V/R,<br>13th Legion S6</p>
+</div>"""
+    text_body = f"""Welcome to the 13th Legion, {first_name}!
+
+Your Nextcloud account is ready.
+
+Nextcloud: https://cloud.13thlegion.org
+Username: {nc_username}
+Temporary Password: {temp_password}
+Portal: https://portal.13thlegion.org (same login)
+
+First steps:
+1. Log in to Nextcloud and change your password (Settings > Security)
+2. Set up 2FA (Settings > Security > TOTP)
+3. Install the Nextcloud app on your phone
+4. Log in to the Portal to see your profile and training record
+
+Questions? Contact admin@13thlegion.org
+
+V/R,
+13th Legion S6"""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_email
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+    return msg
+
+
+@router.post("/{member_id}/resend-credentials")
+@require_auth
+async def resend_credentials(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
+    """Reset the member's NC password and email fresh credentials. S1/Command/Admin."""
+    import secrets, string, smtplib
+
+    user = get_current_user(request)
+    if not _can_edit(user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    member = (await db.execute(select(Member).where(Member.id == member_id))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    if not member.nc_username:
+        raise HTTPException(status_code=400, detail="Member has no Nextcloud username")
+    if not member.email:
+        raise HTTPException(status_code=400, detail="Member has no email on record")
+
+    temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(14))
+
+    # 1. Reset NC password
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.put(
+                f"{settings.nc_url}/ocs/v2.php/cloud/users/{member.nc_username}",
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+                headers={"OCS-APIRequest": "true"},
+                data={"key": "password", "value": temp_password},
+            )
+        if resp.status_code != 200:
+            log.error(f"Resend creds: NC password reset failed for {member.nc_username}: {resp.status_code}")
+            raise HTTPException(status_code=502, detail=f"NC password reset failed (HTTP {resp.status_code})")
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Resend creds: NC reset error for {member.nc_username}: {e}")
+        raise HTTPException(status_code=502, detail=f"NC reset error: {e}")
+
+    # 2. Send the credentials email via Proton Bridge
+    msg = _build_credentials_email(member.first_name, member.nc_username, temp_password, member.email)
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_USER, [member.email], msg.as_string())
+        log.info(f"Resent credentials to {member.email} for {member.nc_username} by {user.get('username')}")
+    except Exception as e:
+        log.error(f"Resend creds: NC reset OK but email failed for {member.email}: {e}")
+        raise HTTPException(status_code=502, detail=f"Password was reset but email failed: {e}")
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/api/members/{member_id}/edit?creds_sent=1", status_code=303)

@@ -5,6 +5,12 @@
 <div style="max-width:700px;margin:0 auto;">
     <h1>✏️ Edit Member: {{ member.first_name }} {{ member.last_name }}</h1>
 
+    {% if request.query_params.get('creds_sent') %}
+    <div style="margin:0 0 16px;padding:10px 14px;background:rgba(46,125,50,0.15);border:1px solid #2e7d32;border-radius:6px;color:#81c784;font-size:13px;">
+        ✅ Credentials reset and emailed to <strong>{{ member.email }}</strong>.
+    </div>
+    {% endif %}
+
     <form method="POST" action="/api/members/{{ member.id }}/edit">
         <!-- Identity -->
         <div class="card" style="margin-bottom:16px;">
@@ -200,6 +206,26 @@
             </button>
         </div>
     </form>
+
+    <!-- Account Access (PP-223): resend NC/Portal credentials -->
+    <div style="margin-top:8px;margin-bottom:32px;padding:16px;background:#1e1e2e;border:1px solid #3a3a4e;border-radius:8px;">
+        <div style="font-size:13px;font-weight:700;color:#d4a537;margin-bottom:6px;">Account Access</div>
+        <p style="font-size:12px;color:#999;margin:0 0 10px;">
+            Resets this member's Nextcloud password and emails fresh login credentials to
+            <strong style="color:#bbb;">{{ member.email or '(no email on record)' }}</strong>.
+            Use when a member never received their welcome email or is locked out.
+        </p>
+        <form method="POST" action="/api/members/{{ member.id }}/resend-credentials"
+              onsubmit="return confirm('Reset {{ member.first_name }} {{ member.last_name }}\'s Nextcloud password and email new credentials to {{ member.email }}?');">
+            <button type="submit"
+                {% if not member.nc_username or not member.email %}disabled title="Requires both an NC username and an email on record"{% endif %}
+                style="padding:7px 18px;background:#2a2a3e;color:#d4a537;border:1px solid #d4a537;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;{% if not member.nc_username or not member.email %}opacity:0.4;cursor:not-allowed;{% endif %}">
+                ✉ Resend Credentials
+            </button>
+            {% if not member.nc_username %}<span style="font-size:11px;color:#c62828;margin-left:8px;">No NC username</span>{% endif %}
+            {% if not member.email %}<span style="font-size:11px;color:#c62828;margin-left:8px;">No email on record</span>{% endif %}
+        </form>
+    </div>
 </div>
 
 <style>
