@@ -191,6 +191,76 @@
                     <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Central Time — 24hr military (blank = all day)</span>
                 </div>
             </div>
+            <!-- Repeat / recurring series (PP-224) -->
+            <div style="margin-bottom:12px;padding:12px;background:rgba(212,165,55,0.05);border:1px solid #2a2a4a;border-radius:6px;">
+                <label style="display:block;font-size:13px;color:#d4a537;font-weight:600;margin-bottom:6px;">🔁 Repeat</label>
+                <select name="recur_freq" id="recur-freq" onchange="updateRecurUI()"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="">Does not repeat</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="YEARLY">Yearly</option>
+                </select>
+
+                <!-- Monthly mode -->
+                <div id="recur-monthly" style="display:none;margin-top:10px;">
+                    <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px;">Monthly pattern</label>
+                    <select name="recur_monthly_mode" id="recur-monthly-mode" onchange="updateRecurUI()"
+                        style="width:100%;padding:7px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                        <option value="day">On a specific day of the month</option>
+                        <option value="nth_weekday">On the Nth weekday (e.g. 2nd Tuesday)</option>
+                        <option value="last_day">On the last day of the month</option>
+                        <option value="first_day">On the first day of the month</option>
+                    </select>
+                    <div id="recur-monthday-wrap" style="margin-top:8px;">
+                        <label style="font-size:12px;color:#aaa;">Day of month</label>
+                        <input type="number" name="recur_monthday" min="1" max="31" value="1"
+                            style="width:80px;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;margin-left:8px;">
+                        <span style="font-size:11px;color:#666;">(or -1 for last day)</span>
+                    </div>
+                    <div id="recur-nth-wrap" style="display:none;margin-top:8px;gap:8px;">
+                        <select name="recur_nth" style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                            <option value="1">1st</option>
+                            <option value="2">2nd</option>
+                            <option value="3">3rd</option>
+                            <option value="4">4th</option>
+                            <option value="-1">Last</option>
+                        </select>
+                        <select name="recur_weekday" style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;margin-left:6px;">
+                            <option value="MO">Monday</option>
+                            <option value="TU">Tuesday</option>
+                            <option value="WE">Wednesday</option>
+                            <option value="TH">Thursday</option>
+                            <option value="FR">Friday</option>
+                            <option value="SA">Saturday</option>
+                            <option value="SU">Sunday</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- End condition (required when repeating) -->
+                <div id="recur-end" style="display:none;margin-top:10px;">
+                    <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px;">Ends</label>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <select name="recur_end_mode" id="recur-end-mode" onchange="updateRecurUI()"
+                            style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                            <option value="count">After N occurrences</option>
+                            <option value="until">On a date</option>
+                        </select>
+                        <span id="recur-count-wrap">
+                            <input type="number" name="recur_count" min="1" max="52" value="12"
+                                style="width:70px;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                            <span style="font-size:11px;color:#666;">occurrences (max 52)</span>
+                        </span>
+                        <span id="recur-until-wrap" style="display:none;">
+                            <input type="date" name="recur_until"
+                                style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                        </span>
+                    </div>
+                    <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Series is capped at 52 occurrences.</span>
+                </div>
+            </div>
+
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
                 <input type="text" name="location" id="evt-location"
@@ -248,6 +318,22 @@
         theme: 'snow',
         modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
     });
+
+    // Recurring-event UI toggles (PP-224)
+    function updateRecurUI() {
+        var freq = document.getElementById('recur-freq').value;
+        var repeating = !!freq;
+        document.getElementById('recur-end').style.display = repeating ? 'block' : 'none';
+        document.getElementById('recur-monthly').style.display = (freq === 'MONTHLY') ? 'block' : 'none';
+        if (freq === 'MONTHLY') {
+            var mode = document.getElementById('recur-monthly-mode').value;
+            document.getElementById('recur-monthday-wrap').style.display = (mode === 'day') ? 'block' : 'none';
+            document.getElementById('recur-nth-wrap').style.display = (mode === 'nth_weekday') ? 'flex' : 'none';
+        }
+        var endMode = document.getElementById('recur-end-mode').value;
+        document.getElementById('recur-count-wrap').style.display = (endMode === 'count') ? 'inline' : 'none';
+        document.getElementById('recur-until-wrap').style.display = (endMode === 'until') ? 'inline' : 'none';
+    }
     
     // Auto-set location to NC Talk for online training
     document.querySelector('select[name="category"]').addEventListener('change', function(e) {

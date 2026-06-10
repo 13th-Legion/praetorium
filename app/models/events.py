@@ -82,6 +82,12 @@ class Event(Base):
     # Invite groups
     invite_groups: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated keys from RECIPIENT_GROUPS
 
+    # Recurrence (PP-224) — materialized series: one Event row per occurrence,
+    # linked by series_id. Master holds the RRULE.
+    series_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)  # UUID grouping occurrences; null = standalone
+    recurrence_rule: Mapped[Optional[str]] = mapped_column(Text)  # iCal RRULE string (on master only)
+    is_series_master: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
     # Audit
     created_by: Mapped[str] = mapped_column(String(64))  # NC username
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

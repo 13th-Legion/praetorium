@@ -5,6 +5,7 @@ dashboard widget, and full events pages.
 """
 
 import re
+import uuid
 from datetime import datetime, date, timedelta, time as dtime
 from typing import Optional
 
@@ -402,6 +403,99 @@ def _expand_recurring(start: datetime, rrule_str: str,
         return occurrences
     except Exception:
         return []
+
+
+# ─── Recurring-event series builder (PP-224) ───────────────────────────────
+MAX_SERIES_OCCURRENCES = 52
+_WEEKDAY_CODES = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
+
+
+def build_rrule_from_form(form) -> Optional[str]:
+    """Build an iCal RRULE string from create-event form fields, or None if not recurring.
+
+    Form fields (all optional unless recurring):
+      recur_freq      : '' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+      recur_monthly_mode (when MONTHLY):
+          'day'        -> on a specific numeric day; recur_monthday (1-31, or -1 for last)
+          'nth_weekday'-> recur_nth (1-4 or -1) + recur_weekday (MO..SU)
+          'first_day'  -> BYMONTHDAY=1
+          'last_day'   -> BYMONTHDAY=-1
+      recur_end_mode  : 'count' | 'until'
+      recur_count     : int (capped at MAX_SERIES_OCCURRENCES)
+      recur_until     : 'YYYY-MM-DD'
+    Returns an RRULE WITHOUT the leading 'RRULE:' prefix, or None.
+    """
+    freq = (form.get("recur_freq") or "").strip().upper()
+    if freq not in ("WEEKLY", "MONTHLY", "YEARLY"):
+        return None
+
+    parts = [f"FREQ={freq}"]
+
+    if freq == "MONTHLY":
+        mode = (form.get("recur_monthly_mode") or "day").strip()
+        if mode == "day":
+            md = (form.get("recur_monthday") or "").strip()
+            try:
+                mdi = int(md)
+            except ValueError:
+                mdi = 0
+            if mdi == -1 or 1 <= mdi <= 31:
+                parts.append(f"BYMONTHDAY={mdi}")
+        elif mode == "nth_weekday":
+            nth = (form.get("recur_nth") or "").strip()
+            wd = (form.get("recur_weekday") or "").strip().upper()
+            try:
+                nthi = int(nth)
+            except ValueError:
+                nthi = 0
+            if wd in _WEEKDAY_CODES and (nthi == -1 or 1 <= nthi <= 4):
+                parts.append(f"BYDAY={nthi}{wd}")
+        elif mode == "first_day":
+            parts.append("BYMONTHDAY=1")
+        elif mode == "last_day":
+            parts.append("BYMONTHDAY=-1")
+
+    # End condition (required; default to a bounded count if somehow missing)
+    end_mode = (form.get("recur_end_mode") or "count").strip()
+    if end_mode == "until":
+        until = (form.get("recur_until") or "").strip()
+        if until:
+            try:
+                u = datetime.strptime(until, "%Y-%m-%d")
+                parts.append(f"UNTIL={u.strftime('%Y%m%dT235959')}")
+            except ValueError:
+                parts.append(f"COUNT={MAX_SERIES_OCCURRENCES}")
+        else:
+            parts.append(f"COUNT={MAX_SERIES_OCCURRENCES}")
+    else:
+        cnt = (form.get("recur_count") or "").strip()
+        try:
+            cnti = int(cnt)
+        except ValueError:
+            cnti = MAX_SERIES_OCCURRENCES
+        cnti = max(1, min(cnti, MAX_SERIES_OCCURRENCES))
+        parts.append(f"COUNT={cnti}")
+
+    return ";".join(parts)
+
+
+def generate_series_starts(start: datetime, rrule_str: str) -> list[datetime]:
+    """Expand an RRULE into a bounded list of occurrence start datetimes (<= 52).
+
+    Always includes the DTSTART as the first occurrence. Hard-capped so a bad
+    UNTIL can never produce an unbounded series.
+    """
+    try:
+        dtstart_str = start.strftime("%Y%m%dT%H%M%S")
+        rule = rrulestr(f"DTSTART:{dtstart_str}\nRRULE:{rrule_str}", ignoretz=True)
+        out = []
+        for occ in rule:
+            out.append(occ)
+            if len(out) >= MAX_SERIES_OCCURRENCES:
+                break
+        return out
+    except Exception:
+        return [start]
 
 
 def _parse_events_ical(ical_data: str, window_start: datetime, window_end: datetime) -> list[dict]:
@@ -1318,30 +1412,20 @@ async def create_event(request: Request):
 
     # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
     rsvp_on = category in RSVP_CATEGORIES and category not in ("ftx", "mcftx")
-    warno_sched = _calc_warno_schedule(category, date_start)
+
+    # Recurrence (PP-224): build RRULE + occurrence start datetimes.
+    rrule_str = build_rrule_from_form(form)
+    event_duration = (date_end - date_start) if date_end else None
+    if rrule_str:
+        starts = generate_series_starts(date_start, rrule_str)
+        series_id = uuid.uuid4().hex
+    else:
+        starts = [date_start]
+        series_id = None
 
     async with async_session() as db:
-        event = Event(
-            title=title,
-            category=category,
-            description=description,
-            location=location,
-            date_start=date_start,
-            date_end=date_end,
-            status="active",
-            rsvp_enabled=rsvp_on,
-            warno_scheduled_at=warno_sched,
-            training_block=int(training_block) if training_block else None,
-            instructor_id=int(instructor_id) if instructor_id else None,
-            invite_groups=",".join(invite_groups) if invite_groups else None,
-            created_by=user.get("username", "unknown"),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        db.add(event)
-        await db.flush()
-
-        # Create pending RSVPs only for RSVP-enabled events
+        # Resolve the RSVP recipient set ONCE (same for every occurrence)
+        rsvp_member_ids = set()
         if rsvp_on:
             if invite_groups:
                 rsvp_member_ids = await _resolve_invite_groups(db, invite_groups)
@@ -1352,29 +1436,67 @@ async def create_event(request: Request):
                     )
                 )
                 rsvp_member_ids = {r[0] for r in ids_result.all()}
-            for mid in rsvp_member_ids:
-                db.add(EventRSVP(
-                    event_id=event.id,
-                    member_id=mid,
-                    status="pending",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
-                ))
+
+        first_event = None
+        for idx, occ_start in enumerate(starts):
+            occ_end = (occ_start + event_duration) if event_duration else None
+            occ_warno = _calc_warno_schedule(category, occ_start)
+            event = Event(
+                title=title,
+                category=category,
+                description=description,
+                location=location,
+                date_start=occ_start,
+                date_end=occ_end,
+                status="active",
+                rsvp_enabled=rsvp_on,
+                warno_scheduled_at=occ_warno,
+                training_block=int(training_block) if training_block else None,
+                instructor_id=int(instructor_id) if instructor_id else None,
+                invite_groups=",".join(invite_groups) if invite_groups else None,
+                series_id=series_id,
+                recurrence_rule=rrule_str if (series_id and idx == 0) else None,
+                is_series_master=bool(series_id and idx == 0),
+                created_by=user.get("username", "unknown"),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            db.add(event)
+            await db.flush()
+            if first_event is None:
+                first_event = event
+            if rsvp_on and rsvp_member_ids:
+                for mid in rsvp_member_ids:
+                    db.add(EventRSVP(
+                        event_id=event.id,
+                        member_id=mid,
+                        status="pending",
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                    ))
 
         await db.commit()
 
         from app.routes.notifications import create_notification_for_all
+        n = len(starts)
+        if n > 1:
+            notif_title = f"📅 New Event Series: {title}"
+            notif_body = f"{n} occurrences starting {date_start_date} {date_start_time}".strip()
+        else:
+            notif_title = f"📅 New Event: {title}"
+            notif_body = f"{date_start_date} {date_start_time}".strip()
         await create_notification_for_all(
-            db, "event",
-            f"📅 New Event: {title}",
-            body=f"{date_start_date} {date_start_time}".strip(),
-            link=f"/events/{event.id}",
-            icon="📅"
+            db, "event", notif_title, body=notif_body,
+            link=f"/events/{first_event.id}", icon="📅"
         )
 
+    if len(starts) > 1:
+        msg = f'✅ Series "{title}" created — {len(starts)} occurrences.'
+    else:
+        msg = f'✅ Event "{title}" created.'
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'✅ Event "{title}" created.</div>'
+        f'{msg}</div>'
         '<script>setTimeout(()=>window.location.reload(),1000)</script>'
     )
 
@@ -1453,12 +1575,77 @@ async def edit_event(request: Request, event_id: int):
 
         event.updated_at = datetime.utcnow()
         logger.warning(f"AFTER: date_start={event.date_start}, date_end={event.date_end}")
+
+        # Series scope (PP-224): optionally propagate CONTENT changes to this + all
+        # future occurrences in the same series. Date/time stays per-occurrence
+        # (changing the recurrence pattern is a separate operation).
+        scope = (form.get("series_scope") or "this").strip()
+        propagated = 0
+        if scope == "future" and event.series_id:
+            future = (await db.execute(
+                select(Event).where(
+                    Event.series_id == event.series_id,
+                    Event.date_start >= event.date_start,
+                    Event.id != event.id,
+                )
+            )).scalars().all()
+            for ev in future:
+                ev.title = event.title
+                ev.category = event.category
+                ev.location = event.location
+                ev.description = event.description
+                ev.training_block = event.training_block
+                ev.instructor_id = event.instructor_id
+                ev.rsvp_enabled = event.rsvp_enabled
+                ev.invite_groups = event.invite_groups
+                ev.updated_at = datetime.utcnow()
+                propagated += 1
+
         await db.commit()
 
+    extra = f" (+{propagated} future occurrences)" if propagated else ""
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'✅ Event updated. <a href="/events/{event_id}" style="color:#8f8;text-decoration:underline;">Refresh</a></div>'
+        f'✅ Event updated{extra}. <a href="/events/{event_id}" style="color:#8f8;text-decoration:underline;">Refresh</a></div>'
         f'<script>window.location.href="/events/{event_id}";</script>'
+    )
+
+
+@router.post("/api/events/{event_id}/cancel", response_class=HTMLResponse)
+@require_role("command", "s3", "admin")
+async def cancel_event(request: Request, event_id: int):
+    """Cancel an event (PP-224). For series, supports 'this' vs 'this and future'.
+
+    Cancelling sets status='cancelled' and disables RSVP. Does not hard-delete
+    (preserves attendance history / audit).
+    """
+    form = await request.form()
+    scope = (form.get("series_scope") or "this").strip()
+    async with async_session() as db:
+        event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+        if not event:
+            return HTMLResponse("Event not found", status_code=404)
+        targets = [event]
+        if scope == "future" and event.series_id:
+            future = (await db.execute(
+                select(Event).where(
+                    Event.series_id == event.series_id,
+                    Event.date_start >= event.date_start,
+                    Event.id != event.id,
+                )
+            )).scalars().all()
+            targets.extend(future)
+        for ev in targets:
+            ev.status = "cancelled"
+            ev.rsvp_enabled = False
+            ev.updated_at = datetime.utcnow()
+        await db.commit()
+        n = len(targets)
+    label = f"{n} occurrences cancelled" if n > 1 else "Event cancelled"
+    return HTMLResponse(
+        '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
+        f'✅ {label}.</div>'
+        '<script>setTimeout(()=>window.location.href="/events",900)</script>'
     )
 
 
