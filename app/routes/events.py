@@ -22,7 +22,7 @@ from app.database import async_session
 from app.models.events import Event, EventRSVP, EventDocument, EventAARItem
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
-from app.models.training import TradocItem, MemberTradoc
+from app.models.training import TradocItem, MemberTradoc, TradocBlock
 from config import get_settings
 from app.constants import RANK_ABBR, RECIPIENT_GROUPS
 
@@ -540,6 +540,25 @@ def _parse_events_ical(ical_data: str, window_start: datetime, window_end: datet
 
 # ─── Formatting Helpers ──────────────────────────────────────────────────────
 
+def _parse_blocks_form(form) -> list[int]:
+    """PP-225: parse selected TRADOC block numbers from an event form.
+
+    Prefers the multi-value `training_blocks` checkboxes/select; falls back to
+    the legacy single `training_block` field. Returns a de-duplicated, sorted
+    list of ints (empty if none selected).
+    """
+    raw = form.getlist("training_blocks")
+    if not raw:
+        single = (form.get("training_block") or "").strip()
+        raw = [single] if single else []
+    out = set()
+    for v in raw:
+        v = str(v).strip()
+        if v.lstrip("-").isdigit():
+            out.add(int(v))
+    return sorted(out)
+
+
 def _parse_mil_datetime(date_str: str, time_str: str = "") -> datetime:
     """Parse a date string + optional HHMM military time into a naive CT datetime.
 
@@ -799,6 +818,9 @@ async def events_page(request: Request):
         all_members_result = await db.scalars(select(Member).where(Member.status.in_(["active", "recruit"])).order_by(Member.last_name))
         members = all_members_result.all()
 
+        # PP-225: selectable TRADOC blocks (single source of truth = TRADOC table)
+        tradoc_blocks = await _active_tradoc_blocks(db)
+
     # Split into upcoming and past
     upcoming = [e for e in events_data if not e["is_past"]]
     upcoming.reverse()  # ascending for upcoming
@@ -827,7 +849,20 @@ async def events_page(request: Request):
         "members": members,
         "rank_abbr": RANK_ABBR,
         "recipient_groups": RECIPIENT_GROUPS,
+        "tradoc_blocks": tradoc_blocks,
     })
+
+
+async def _active_tradoc_blocks(db):
+    """Selectable TRADOC blocks for event forms (PP-225). Excludes Block 0
+    ("Every FTX", always credited) and archived blocks. Source of truth =
+    the TRADOC table managed at /training/tradoc."""
+    rows = await db.execute(
+        select(TradocBlock.number, TradocBlock.name).where(
+            and_(TradocBlock.archived == False, TradocBlock.number != 0)
+        ).order_by(TradocBlock.sort_order, TradocBlock.number)
+    )
+    return [{"number": r[0], "name": r[1]} for r in rows.all()]
 
 
 # ─── Event Detail Page ───────────────────────────────────────────────────────
@@ -983,6 +1018,9 @@ async def event_detail(request: Request, event_id: int):
                 abbr = RANK_ABBR.get(m.rank_grade, "")
                 schedule_instructors[m.id] = f"{abbr} {m.last_name}".strip()
 
+        # PP-225: selectable TRADOC blocks (single source of truth = TRADOC table)
+        tradoc_blocks = await _active_tradoc_blocks(db)
+
     rsvp_locked = bool(event.rsvp_deadline and _now_ct() > event.rsvp_deadline)
 
     return templates.TemplateResponse("pages/event_detail.html", {
@@ -1007,6 +1045,7 @@ async def event_detail(request: Request, event_id: int):
         "schedule_instructors": schedule_instructors,
         "now": _now_ct(),
         "recipient_groups": RECIPIENT_GROUPS,
+        "tradoc_blocks": tradoc_blocks,
     })
 
 
@@ -1384,7 +1423,9 @@ async def create_event(request: Request):
     category = form.get("category", "other")
     location = form.get("location", "").strip() or None
     description = form.get("description", "").strip() or None
-    training_block = form.get("training_block", "").strip()
+    # PP-225: multi-select TRADOC blocks. Accept the new multi-value
+    # training_blocks[] (preferred) and fall back to the legacy single field.
+    training_blocks = _parse_blocks_form(form)
     instructor_id = form.get("instructor_id", "").strip()
     invite_groups = form.getlist("invite_groups")
 
@@ -1451,7 +1492,8 @@ async def create_event(request: Request):
                 status="active",
                 rsvp_enabled=rsvp_on,
                 warno_scheduled_at=occ_warno,
-                training_block=int(training_block) if training_block else None,
+                training_block=(training_blocks[0] if training_blocks else None),
+                training_blocks=(",".join(str(b) for b in training_blocks) if training_blocks else None),
                 instructor_id=int(instructor_id) if instructor_id else None,
                 invite_groups=",".join(invite_groups) if invite_groups else None,
                 series_id=series_id,
@@ -1546,9 +1588,12 @@ async def edit_event(request: Request, event_id: int):
                 )
             except ValueError:
                 pass
-        if form.get("training_block") is not None:
-            tb = form["training_block"].strip()
-            event.training_block = int(tb) if tb else None
+        # PP-225: multi-select TRADOC blocks. Only touch if the form carries
+        # block fields (training_blocks[] multi-value or legacy training_block).
+        if ("training_blocks" in form.keys()) or ("training_block" in form.keys()):
+            tblocks = _parse_blocks_form(form)
+            event.training_blocks = ",".join(str(b) for b in tblocks) if tblocks else None
+            event.training_block = tblocks[0] if tblocks else None
         if form.get("instructor_id") is not None:
             iid = form["instructor_id"].strip()
             event.instructor_id = int(iid) if iid else None
@@ -1595,6 +1640,7 @@ async def edit_event(request: Request, event_id: int):
                 ev.location = event.location
                 ev.description = event.description
                 ev.training_block = event.training_block
+                ev.training_blocks = event.training_blocks
                 ev.instructor_id = event.instructor_id
                 ev.rsvp_enabled = event.rsvp_enabled
                 ev.invite_groups = event.invite_groups
@@ -1868,7 +1914,8 @@ async def pending_finalization_widget(request: Request):
         all_day = (event.date_start.hour == 0 and event.date_start.minute == 0
                    and (not event.date_end or (event.date_end.hour == 0 and event.date_end.minute == 0)))
         date_str = _format_range(event.date_start, event.date_end, all_day)
-        block_str = f' · Block {event.training_block}' if event.training_block else ''
+        _bl = event.block_list
+        block_str = (' · Block ' + ', '.join(str(b) for b in _bl)) if _bl else ''
 
         html_parts.append(f"""
         <a href="/events/{event.id}" style="text-decoration:none;color:inherit;">
@@ -2618,23 +2665,38 @@ async def unfinalize_event(request: Request, event_id: int):
     )
 
 
-# ─── PP-074c: Auto-Credit TRADOC on Finalization ────────────────────────────
+# ─── PP-074c / PP-225: Auto-Credit TRADOC on Finalization ───────────────────
+# Block→subject mapping is now sourced from the TRADOC table (TradocItem),
+# which is the single source of truth (managed at /training/tradoc). We always
+# credit Block 0 ("Every FTX") items plus every block selected on the event.
+# Only NON-archived, NON-optional (required) subjects are auto-credited; the
+# optional/advanced subjects (e.g. Advanced/Expert Land Nav) require a manual
+# sign-off.
 
-BLOCK_0_ITEMS = [19, 20, 21]  # FOB Setup, Guard Duty, Stand-To
-BLOCK_ITEMS = {
-    1: [1, 2, 3, 4],           # Customs, D&C, Gear Review, Medical
-    2: [5, 6, 7, 8, 9],        # Weapons Fam, BRM, Rifle Qual, Drills, UoF
-    3: [10, 11, 12],            # Comms, Convoy, Land Nav
-    4: [13, 14, 15, 16, 17, 18],  # React Ambush, H&A, IMT, Patrol, React Contact, Recon
-}
+
+async def _items_for_blocks(db, block_numbers) -> list[int]:
+    """Return required (non-optional, non-archived) TradocItem IDs for the
+    given block numbers, sourced live from the TRADOC table. Block 0 is
+    always included ("Every FTX" items)."""
+    wanted = {0}
+    for b in (block_numbers or []):
+        wanted.add(int(b))
+    rows = await db.execute(
+        select(TradocItem.id).where(
+            and_(
+                TradocItem.block.in_(list(wanted)),
+                TradocItem.archived == False,
+                TradocItem.optional == False,
+            )
+        )
+    )
+    return [r[0] for r in rows.all()]
 
 
 async def _auto_credit_tradoc(db, event: Event) -> str:
     """Auto-credit TRADOC items for all attendees. Returns summary string."""
-    # Determine items to credit
-    items_to_credit = list(BLOCK_0_ITEMS)
-    if event.training_block and event.training_block in BLOCK_ITEMS:
-        items_to_credit.extend(BLOCK_ITEMS[event.training_block])
+    # Determine items to credit — DB-driven across ALL selected blocks + Block 0
+    items_to_credit = await _items_for_blocks(db, event.block_list)
 
     # Get attendees
     attendees_result = await db.execute(

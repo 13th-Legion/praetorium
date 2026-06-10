@@ -36,7 +36,8 @@ class Event(Base):
     status: Mapped[str] = mapped_column(String(16), default="draft")
 
     # Training linkage
-    training_block: Mapped[Optional[int]] = mapped_column(Integer)  # TRADOC block 1-4, null if N/A
+    training_block: Mapped[Optional[int]] = mapped_column(Integer)  # DEPRECATED single block — kept for back-compat; use training_blocks
+    training_blocks: Mapped[Optional[str]] = mapped_column(String(64))  # Comma-separated TRADOC block numbers, e.g. "1,3" (PP-225)
     training_site: Mapped[Optional[str]] = mapped_column(String(16))  # able, baker, charlie, dog, easy
     rally_point: Mapped[Optional[str]] = mapped_column(Text)  # S2-assigned rally point address/description
     rally_point_time: Mapped[Optional[str]] = mapped_column(String(8))  # Rally time in HHMM format (e.g. "0600")
@@ -108,6 +109,24 @@ class Event(Base):
     guard_duties: Mapped[list["EventGuardDuty"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     vexillations: Mapped[list["EventVexillation"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     aar_items: Mapped[list["EventAARItem"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+
+    @property
+    def block_list(self) -> list[int]:
+        """Parsed list of TRADOC block numbers (PP-225).
+
+        Prefers the comma-separated training_blocks; falls back to the legacy
+        single training_block int. Returns [] if none set.
+        """
+        if self.training_blocks:
+            out = []
+            for part in self.training_blocks.split(","):
+                part = part.strip()
+                if part.lstrip("-").isdigit():
+                    out.append(int(part))
+            return out
+        if self.training_block is not None:
+            return [self.training_block]
+        return []
 
     def __repr__(self):
         return f"<Event {self.id}: {self.title} ({self.category}, {self.status})>"

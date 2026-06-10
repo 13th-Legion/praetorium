@@ -11,7 +11,7 @@
             <div style="color: #999; font-size: 14px;">
                 {{ event.date_start.strftime("%b %d") }}{% if event.date_end %} – {{ event.date_end.strftime("%b %d, %Y") }}{% else %}, {{ event.date_start.strftime("%Y") }}{% endif %}
                 {% if event.location %} · {{ event.location }}{% endif %}
-                {% if event.training_block %} · <span style="color: #d4a537;">Block {{ event.training_block }}</span>{% endif %}
+                {% if event.block_list %} · <span style="color: #d4a537;">Block {{ event.block_list | join(', ') }}</span>{% endif %}
             </div>
         </div>
         <a href="/events/{{ event.id }}" style="color: #d4a537; font-size: 13px; text-decoration: none; border: 1px solid #d4a537; padding: 6px 12px; border-radius: 4px;">View Event →</a>

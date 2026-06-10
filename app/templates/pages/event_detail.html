@@ -69,8 +69,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 {% if event.instructor %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">👨‍🏫 Instructor: <a href="/profile/{{ event.instructor.id }}" style="color:#d4a537; text-decoration:none;">{{ rank_abbr.get(event.instructor.rank_grade, '') }} {{ event.instructor.last_name }}, {{ event.instructor.first_name }}</a></div>
                 {% endif %}
-                {% if event.training_block %}
-                <div style="font-size:13px;color:#888;">🎓 Training Block {{ event.training_block }}</div>
+                {% if event.block_list %}
+                <div style="font-size:13px;color:#888;">🎓 Training Block {{ event.block_list | join(', ') }}</div>
                 {% endif %}
             </div>
         </div>
@@ -535,9 +535,18 @@ document.addEventListener("DOMContentLoaded", function() {
                 </div>
             </div>
             <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Training Block</label>
-                <input type="number" name="training_block" min="1" max="4" value="{{ event.training_block or '' }}"
-                    style="width:80px;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Training Block(s) <span style="color:#666;font-weight:400;">— select all that apply</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    {% set sel_blocks = event.block_list %}
+                    {% for blk in tradoc_blocks %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;cursor:pointer;font-size:12px;">
+                        <input type="checkbox" name="training_blocks" value="{{ blk.number }}" {% if blk.number in sel_blocks %}checked{% endif %} style="accent-color:#d4a537;">
+                        Block {{ blk.number }} — {{ blk.name }}
+                    </label>
+                    {% else %}
+                    <span style="font-size:12px;color:#666;">No TRADOC blocks defined. Manage at /training/tradoc.</span>
+                    {% endfor %}
+                </div>
             </div>
             {% if recipient_groups is defined %}
             <div style="margin-bottom:12px;">

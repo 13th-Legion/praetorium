@@ -50,8 +50,8 @@
                 <div style="flex:1;">
                     <span style="font-weight:600;font-size:14px;">{{ e.event.title }}</span>
                     <span style="font-size:12px;color:#aaa;margin-left:8px;">{{ e.date_display }}</span>
-                    {% if e.event.training_block %}
-                    <span style="font-size:11px;color:#888;margin-left:6px;">· Block {{ e.event.training_block }}</span>
+                    {% if e.event.block_list %}
+                    <span style="font-size:11px;color:#888;margin-left:6px;">· Block {{ e.event.block_list | join(', ') }}</span>
                     {% endif %}
                 </div>
                 <div style="font-size:12px;color:#d4a537;font-weight:600;white-space:nowrap;">
@@ -282,9 +282,17 @@
                 <div id="editor-container" style="background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;min-height:100px;"></div>
             </div>
             <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Training Block (1-4, blank if N/A)</label>
-                <input type="number" name="training_block" min="1" max="4"
-                    style="width:80px;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Training Block(s) <span style="color:#666;font-weight:400;">— select all that apply, blank if N/A</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    {% for blk in tradoc_blocks %}
+                    <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;cursor:pointer;font-size:12px;">
+                        <input type="checkbox" name="training_blocks" value="{{ blk.number }}" style="accent-color:#d4a537;">
+                        Block {{ blk.number }} — {{ blk.name }}
+                    </label>
+                    {% else %}
+                    <span style="font-size:12px;color:#666;">No TRADOC blocks defined. Manage at /training/tradoc.</span>
+                    {% endfor %}
+                </div>
             </div>
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Invite Groups</label>
