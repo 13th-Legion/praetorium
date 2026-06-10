@@ -149,12 +149,15 @@ async def _resolve_invite_groups(db, group_keys: list) -> set:
 
 
 async def _activate_warno(db, event):
-    """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active members."""
+    """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active+recruit members."""
     import httpx as _httpx
     import smtplib
+    import logging
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from datetime import datetime as _dt
+
+    _warno_log = logging.getLogger("events.warno")
 
     settings = get_settings()
     now = _dt.utcnow()
@@ -226,8 +229,14 @@ async def _activate_warno(db, event):
 
     # 3. Email all active members
     try:
-        active_members = [m for m in members if m.email and m.status in ("active", "Active")]
-        if active_members:
+        # Recipients: all active AND recruit members with an email.
+        # (Recruits attend FTXs and need WARNOs — they were wrongly excluded here
+        # from 2026-04-14 until this fix, even though RSVPs/notifications include them.)
+        warno_recipients = [
+            m for m in members
+            if m.email and m.status in ("active", "Active", "recruit", "Recruit")
+        ]
+        if warno_recipients:
             html_body = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
@@ -263,7 +272,8 @@ async def _activate_warno(db, event):
 </div>
 </body></html>"""
 
-            for member in active_members:
+            _sent = 0
+            for member in warno_recipients:
                 try:
                     msg = MIMEMultipart("alternative")
                     msg["Subject"] = f"⚡ WARNO — {event.title}"
@@ -274,8 +284,15 @@ async def _activate_warno(db, event):
                         s.starttls()
                         s.login(SMTP_USER, SMTP_PASS)
                         s.sendmail(SMTP_USER, [member.email], msg.as_string())
-                except Exception:
-                    pass  # Skip individual email failures
+                    _sent += 1
+                except Exception as _warno_err:
+                    _warno_log.warning(
+                        f"WARNO email failed for {getattr(member, 'email', '?')} "
+                        f"(member {getattr(member, 'id', '?')}, {getattr(member, 'status', '?')}): {_warno_err}"
+                    )
+            _warno_log.info(
+                f"WARNO '{event.title}': emailed {_sent}/{len(warno_recipients)} active+recruit members"
+            )
     except Exception:
         pass  # Don't fail WARNO if email blast fails
 
