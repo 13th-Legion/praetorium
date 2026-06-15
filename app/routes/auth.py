@@ -26,28 +26,16 @@ oauth.register(
 )
 
 
-@router.get("/login")
-async def login(request: Request):
-    """Redirect to Nextcloud OAuth2 login.
+def _build_authorize_url(request: "Request") -> str:
+    """Clear the session, mint a fresh OAuth2 state, and return the NC
+    /authorize URL. Shared by both the direct path and the seeded path."""
+    import secrets
+    import time
+    from urllib.parse import urlencode
 
-    Nextcloud's OAuth2 authorize endpoint uses Login Flow v2 when the user
-    isn't logged in.  That flow drops the redirect URI, stranding users on
-    the NC dashboard after they authenticate (the "double login" bug).
-
-    Fix: route users through NC's standard login page first, with
-    redirect_url pointing back to the OAuth2 authorize endpoint.  Once
-    they're authenticated, the authorize endpoint sees the active session
-    and completes the OAuth2 grant correctly in one shot.
-    """
     # Clear stale session so the OAuth2 state token is written to a fresh
     # cookie — prevents "State token does not match" after session expiry.
     request.session.clear()
-
-    # Build the OAuth2 authorize URL manually so we can wrap it in NC's
-    # login redirect instead of sending users there directly.
-    import secrets
-    import time
-    from urllib.parse import urlencode, quote
 
     state = secrets.token_urlsafe(32)
     redirect_uri = f"{settings.app_url}/auth/callback"
@@ -64,21 +52,61 @@ async def login(request: Request):
         "redirect_uri": redirect_uri,
         "state": state,
     })
+    return f"{settings.nc_url}/index.php/apps/oauth2/authorize?{authorize_params}"
 
-    # Go DIRECTLY to the NC OAuth2 authorize endpoint.
-    #
-    # History: we previously wrapped this in NC's /login?redirect_url=... to dodge
-    # the Login Flow v2 double-prompt. But that wrapper BREAKS for users who are
-    # ALREADY logged into Nextcloud: NC's LoginController ignores redirect_url for
-    # authenticated sessions and dumps them on the cloud dashboard
-    # (cloud.13thlegion.org) instead of returning to the portal.
-    #
-    # Going direct to /authorize fixes the already-logged-in case (it grants in one
-    # shot). For logged-OUT users, NC's authorize -> ClientFlowLogin shows the login
-    # and returns here afterward. We've also added "Project Praetorium" to
-    # oauth2.skipAuthPickerApplications so NC skips the extra grant-confirmation page,
-    # giving a clean single-pass login for both states.
-    authorize_url = f"{settings.nc_url}/index.php/apps/oauth2/authorize?{authorize_params}"
+
+@router.get("/login")
+async def login(request: Request):
+    """Redirect to Nextcloud OAuth2 login.
+
+    Two routing modes, selected by the ?seed query param:
+
+    DEFAULT (no ?seed) — go DIRECTLY to NC's /oauth2/authorize.
+        Fast, single-pass for users ALREADY logged into Nextcloud (NC sees the
+        active session and grants immediately). For logged-OUT users this still
+        works most of the time, but can intermittently fail with a 403 on
+        `POST /login/flow` — see the SameSite note below.
+
+    SEEDED (?seed=1) — route through NC's first-party /index.php/login page
+        with redirect_url -> the INTERNAL authorize path. The user types
+        credentials on an unambiguously first-party cloud.13thlegion.org page,
+        which seeds NC's nc_sameSiteCookie{lax,strict} cookies same-site BEFORE
+        the grant POST, so `POST /login/flow` passes NC's SameSite/CSRF check.
+        The error/login page sends users here after a failed attempt (auto-retry).
+
+    Why two modes:
+        NC's LoginController.showLoginForm() IGNORES redirect_url when the user
+        is already logged in (it hard-redirects to the dashboard — see
+        core/Controller/LoginController.php). So we cannot send logged-IN users
+        through /login. And logged-OUT users initiating cross-site directly at
+        /authorize hit NC's SameSiteCookieMiddleware quirk: the grant
+        `POST /login/flow` (generateAppPassword) has #[UseSession] but NOT
+        #[NoSameSiteCookieRequired], so it requires the lax SameSite cookie;
+        when the browser omits it on the cross-site-initiated POST, NC returns
+        403 "Access forbidden". Seeding via /login fixes that for logged-out users
+        while the direct path stays fast for logged-in users.
+    """
+    from urllib.parse import urlencode, quote
+
+    authorize_url = _build_authorize_url(request)
+    seed = request.query_params.get("seed")
+
+    if seed:
+        # SEEDED PATH: hand the user to NC's own first-party login page so the
+        # SameSite cookies are established same-site before the grant POST.
+        # redirect_url must be an INTERNAL NC path (LoginController only honors
+        # internal redirect targets); we strip the origin from authorize_url.
+        #
+        # _build_authorize_url() just cleared the session, which wiped any
+        # _seed_retry marker. Re-arm it so that if THIS seeded attempt also
+        # fails, the callback's loop guard trips and shows a real error instead
+        # of looping back into /auth/login?seed=1 forever.
+        request.session["_seed_retry"] = True
+        internal_authorize = authorize_url[len(settings.nc_url):] if authorize_url.startswith(settings.nc_url) else authorize_url
+        login_url = f"{settings.nc_url}/index.php/login?redirect_url={quote(internal_authorize, safe='')}"
+        return RedirectResponse(url=login_url, status_code=302)
+
+    # DEFAULT PATH: direct to /authorize (fast for already-logged-in users).
     return RedirectResponse(url=authorize_url, status_code=302)
 
 
@@ -88,10 +116,26 @@ async def callback(request: Request):
     try:
         token = await oauth.nextcloud.authorize_access_token(request)
     except Exception as e:
+        # The OAuth grant failed. The most common cause is NC's intermittent
+        # SameSite 403 on `POST /login/flow` for logged-OUT users initiating the
+        # flow cross-site (see /auth/login docstring). That derails the flow and
+        # we land here with a missing/mismatched state. Retry ONCE through the
+        # seeded path (NC first-party /login) which establishes the SameSite
+        # cookies same-site and reliably completes the grant.
+        #
+        # Guard against loops: only auto-retry if we haven't already seeded.
+        if not request.session.get("_seed_retry"):
+            request.session["_seed_retry"] = True
+            return RedirectResponse(url="/auth/login?seed=1", status_code=302)
+        # Already retried via the seeded path — show the error for real.
+        request.session.pop("_seed_retry", None)
         return templates.TemplateResponse("pages/login.html", {
             "request": request,
             "error": f"OAuth error: {str(e)}",
         })
+
+    # Success — clear any retry marker.
+    request.session.pop("_seed_retry", None)
 
     # Fetch user info using the access token
     resp = await oauth.nextcloud.get(
