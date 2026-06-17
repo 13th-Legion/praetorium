@@ -74,14 +74,14 @@ async def aar_library(request: Request):
             select(Event)
             .where(Event.aar_published_at.is_not(None))
             .options(selectinload(Event.aar_items))
-            .order_by(Event.aar_published_at.desc())
+            .order_by(Event.date_start.desc())
         )
         events = result.scalars().all()
 
     aars = [_summarize(e) for e in events]
 
-    # distinct years + types for filters
-    years = sorted({_to_cdt(a["published_at"]).year for a in aars if a["published_at"]}, reverse=True)
+    # distinct years + types for filters (by event date, not publish date)
+    years = sorted({_to_cdt(a["date_start"]).year for a in aars if a["date_start"]}, reverse=True)
     types = sorted({a["category"] for a in aars if a["category"]})
 
     return templates.TemplateResponse("pages/aar_library.html", {
