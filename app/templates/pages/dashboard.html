@@ -48,6 +48,19 @@
     </div>
 
     <div class="dashboard-grid">
+        {% if latest_aar %}
+        <div class="card">
+            <h2 class="card-title">📋 Latest AAR</h2>
+            <div class="card-body">
+                <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;color:#d4a537;font-size:0.95rem;">{{ latest_aar.title }}</div>
+                <div style="color:#aaa;font-size:12px;margin:2px 0 8px;">{{ latest_aar.date_start | cdt and (latest_aar.date_start | cdt).strftime('%d %b %Y')|upper }}</div>
+                {% if latest_aar.snippet %}<div style="color:#bbb;font-size:13px;line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">{{ latest_aar.snippet }}</div>{% endif %}
+                <a href="/events/{{ latest_aar.id }}#aar" style="color:#d4a537;text-decoration:none;font-size:13px;">Read full AAR →</a>
+                <span style="color:#555;margin:0 8px;">|</span>
+                <a href="/aars" style="color:#888;text-decoration:none;font-size:12px;">View all AARs →</a>
+            </div>
+        </div>
+        {% endif %}
         <!-- Quick Info -->
         <div class="card">
             <h2 class="card-title">Your Status</h2>

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}After-Action Reviews — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .aar-header { margin-bottom: 24px; }
+    .aar-header h2 { color: #d4a537; margin: 0 0 4px; font-family: 'Oswald', sans-serif; }
+    .aar-header .subtitle { color: #888; font-size: 13px; }
+    .aar-filters { display: flex; gap: 12px; margin: 16px 0 24px; flex-wrap: wrap; align-items: center; }
+    .aar-filters select, .aar-filters input {
+        background: #1a1a2e; border: 1px solid #333; border-radius: 4px;
+        color: #ccc; padding: 6px 10px; font-size: 13px;
+    }
+    .aar-filters input { min-width: 220px; }
+    .aar-count { color: #888; font-size: 12px; margin-left: auto; }
+
+    .aar-card {
+        background: #16213e; border: 1px solid #333; border-radius: 8px;
+        margin-bottom: 16px; overflow: hidden; transition: border-color 0.15s;
+    }
+    .aar-card:hover { border-color: #d4a537; }
+    .aar-card-body { padding: 16px 20px; }
+    .aar-card-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .aar-card-top h3 {
+        margin: 0; font-family: 'Oswald', sans-serif; font-size: 1.05rem;
+        text-transform: uppercase; letter-spacing: 0.04em; color: #d4a537;
+    }
+    .aar-date { color: #aaa; font-size: 13px; font-weight: 600; }
+    .aar-type {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+        background: rgba(212,165,55,0.12); color: #d4a537; padding: 2px 8px;
+        border-radius: 10px; border: 1px solid rgba(212,165,55,0.3);
+    }
+    .aar-snippet { color: #bbb; font-size: 13px; line-height: 1.55; margin: 10px 0 12px; white-space: pre-wrap; }
+    .aar-meta { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+    .aar-counts span { color: #888; margin-right: 12px; }
+    .aar-counts .c-right { color: #4caf50; }
+    .aar-counts .c-improve { color: #d4a537; }
+    .aar-counts .c-wrong { color: #e07a5f; }
+    .aar-pub { color: #666; }
+    .aar-actions { margin-left: auto; display: flex; gap: 8px; }
+    .aar-btn {
+        font-size: 12px; text-decoration: none; padding: 4px 12px;
+        border-radius: 4px; border: 1px solid #d4a537; color: #d4a537;
+    }
+    .aar-btn:hover { background: rgba(212,165,55,0.12); }
+    .aar-btn.pdf { border-color: #555; color: #aaa; }
+    .aar-btn.pdf:hover { background: #222; }
+    .aar-empty { text-align: center; color: #777; padding: 48px 0; font-size: 14px; }
+</style>
+
+<div class="aar-header">
+    <h2>📋 After-Action Reviews</h2>
+    <div class="subtitle">Published AARs across all training and operations — institutional memory for the entire unit.</div>
+</div>
+
+{% if aars %}
+<div class="aar-filters">
+    <select id="aar-year" onchange="filterAARs()">
+        <option value="">All Years</option>
+        {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+    </select>
+    <select id="aar-type" onchange="filterAARs()">
+        <option value="">All Types</option>
+        {% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+    <input type="text" id="aar-search" placeholder="Search title or intent…" oninput="filterAARs()">
+    <span class="aar-count" id="aar-count">{{ aars|length }} AAR{{ 's' if aars|length != 1 else '' }}</span>
+</div>
+
+<div id="aar-list">
+    {% for a in aars %}
+    <div class="aar-card"
+         data-year="{{ a.published_at | cdt and (a.published_at | cdt).year }}"
+         data-type="{{ a.category }}"
+         data-search="{{ (a.title ~ ' ' ~ a.snippet) | lower }}">
+        <div class="aar-card-body">
+            <div class="aar-card-top">
+                <h3>{{ a.title }}</h3>
+                <span class="aar-date">{{ a.date_start | mildate_aar }}</span>
+                {% if a.category %}<span class="aar-type">{{ a.category }}</span>{% endif %}
+            </div>
+            {% if a.snippet %}<div class="aar-snippet">{{ a.snippet }}</div>{% endif %}
+            <div class="aar-meta">
+                <div class="aar-counts">
+                    {% if a.n_right %}<span class="c-right">✅ {{ a.n_right }} sustain</span>{% endif %}
+                    {% if a.n_improve %}<span class="c-improve">⚠️ {{ a.n_improve }} improve</span>{% endif %}
+                    {% if a.n_wrong %}<span class="c-wrong">❌ {{ a.n_wrong }}</span>{% endif %}
+                    <span class="aar-pub">Published {{ a.published_at | mildate_aar }}{% if a.published_by %} · {{ a.published_by }}{% endif %}</span>
+                </div>
+                <div class="aar-actions">
+                    <a class="aar-btn" href="/events/{{ a.id }}#aar">View AAR</a>
+                    <a class="aar-btn pdf" href="/api/events/{{ a.id }}/aar/pdf">📄 PDF</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<div class="aar-empty" id="aar-noresults" style="display:none;">No AARs match your filters.</div>
+{% else %}
+<div class="aar-empty">No published AARs yet. Once an FTX or training AAR is published, it'll appear here.</div>
+{% endif %}
+
+<script>
+function filterAARs() {
+    var y = document.getElementById('aar-year').value;
+    var t = document.getElementById('aar-type').value;
+    var q = document.getElementById('aar-search').value.toLowerCase().trim();
+    var cards = document.querySelectorAll('#aar-list .aar-card');
+    var shown = 0;
+    cards.forEach(function(c) {
+        var okY = !y || c.getAttribute('data-year') === y;
+        var okT = !t || c.getAttribute('data-type') === t;
+        var okQ = !q || (c.getAttribute('data-search') || '').indexOf(q) !== -1;
+        var vis = okY && okT && okQ;
+        c.style.display = vis ? '' : 'none';
+        if (vis) shown++;
+    });
+    document.getElementById('aar-count').textContent = shown + ' AAR' + (shown !== 1 ? 's' : '');
+    var nr = document.getElementById('aar-noresults');
+    if (nr) nr.style.display = shown === 0 ? 'block' : 'none';
+}
+</script>
+{% endblock %}

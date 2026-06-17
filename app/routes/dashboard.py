@@ -9,6 +9,7 @@ from app.auth import require_auth
 from app.database import async_session
 from app.models.elections import Election, ElectionBallot
 from app.models.member import Member
+from app.models.events import Event
 from app.routes.elections import _auto_advance
 
 router = APIRouter(tags=["dashboard"])
@@ -85,6 +86,26 @@ async def dashboard(request: Request):
                 if winner:
                     election_winner_name = winner.display_name
 
+    # Latest published AAR (PP-XXX) for dashboard card
+    latest_aar = None
+    async with async_session() as db2:
+        _r = await db2.execute(
+            select(Event)
+            .where(Event.aar_published_at.is_not(None))
+            .order_by(Event.aar_published_at.desc())
+            .limit(1)
+        )
+        _ev = _r.scalar_one_or_none()
+        if _ev:
+            _intent = (_ev.aar_commander_intent or "").strip()
+            latest_aar = {
+                "id": _ev.id,
+                "title": _ev.title,
+                "date_start": _ev.date_start,
+                "published_at": _ev.aar_published_at,
+                "snippet": _intent[:120] + ("\u2026" if len(_intent) > 120 else ""),
+            }
+
     return templates.TemplateResponse("pages/dashboard.html", {
         "request": request,
         "user": user,
@@ -92,4 +113,5 @@ async def dashboard(request: Request):
         "is_s1_lead": "s1_lead" in roles or bool(roles & {"command", "admin"}),
         "active_election": active_election,
         "election_winner_name": election_winner_name,
+        "latest_aar": latest_aar,
     })

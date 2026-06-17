@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     <!-- After Action Review (PP-125) -->
     {% if event.finalized_at and event.category in ['ftx', 'mcftx'] %}
-    <div class="card" style="margin-bottom:16px;">
+    <div id="aar" class="card" style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <h2 class="card-title" style="font-size:0.9rem;margin:0;">📋 After Action Review</h2>
             {% if event.aar_published_at %}
