@@ -2829,16 +2829,15 @@ async def save_aar(request: Request, event_id: int):
             event.aar_published_at = now
             event.aar_published_by = username
 
-            # Snapshot data for background tasks before commit
-            attending_result = await db.execute(
-                select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
-                    and_(
-                        EventRSVP.event_id == event_id,
-                        EventRSVP.status == "attending",
-                    )
+            # Snapshot data for background tasks before commit.
+            # AAR emails go to ALL active members (patched + recruits), not just FTX
+            # attendees — same recipient model as WARNO (fixes the recruit-exclusion bug).
+            recipients_result = await db.execute(
+                select(Member).where(
+                    Member.status.in_(["active", "recruit", "Active", "Recruit"])
                 )
             )
-            _attending_emails = [(m.email, m.first_name, m.last_name) for m in attending_result.scalars().all() if m.email]
+            _attending_emails = [(m.email, m.first_name, m.last_name) for m in recipients_result.scalars().all() if m.email]
 
             aar_result = await db.execute(
                 select(EventAARItem).where(EventAARItem.event_id == event_id).order_by(EventAARItem.ordinal)
