@@ -325,14 +325,27 @@ async def recruiting_analytics(request: Request):
     # the fee is a hard gate to getting on the roster, so by definition every
     # member/recruit shown here has paid. We therefore do NOT flag fee tracking
     # as a gap; we surface it as a 100%-complete prerequisite instead.
+    # Recruiter credit IS meant to flow from Deck (a recruit card is assigned to
+    # a recruiter; reaching the Complete stack = that recruiter finished the
+    # process). But two things break it today:
+    #   1) Pipeline cards are not actually being assigned to recruiters
+    #      (assignedUsers is empty across all stacks).
+    #   2) Completed cards auto-delete from the Complete stack after 10 days
+    #      (s1_admin.py), so even a correct assignment leaves no persistent
+    #      credit trail — and members.assigned_recruiter / total_recruited are
+    #      never stamped at completion.
     recruiter_field_populated = any(m.assigned_recruiter for m in members)
 
     data_gaps = []
     if not recruiter_field_populated:
         data_gaps.append(
-            "Per-member recruiter assignment (members.assigned_recruiter) is "
-            "blank for everyone, and recruiters.total_recruited is 0 across the "
-            "board — so we can't attribute joins to a specific recruiter yet.")
+            "Recruiter credit isn't captured yet. The design is sound — a recruit's "
+            "Deck card is assigned to a recruiter and reaching the Complete stack "
+            "means that recruiter saw them through. But in practice pipeline cards "
+            "aren't being assigned (assignedUsers is empty), and Complete-stack cards "
+            "auto-delete after 10 days, so nothing stamps members.assigned_recruiter "
+            "or recruiters.total_recruited. Fix = assign cards + persist the assignee "
+            "to the member record at completion before the card is purged.")
 
     # ---------- Funnel conversion summary ----------
     conv_recruit_to_patch = round(100 * patched_n / total, 1) if total else 0
