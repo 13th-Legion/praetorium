@@ -52,6 +52,26 @@
     .modal-actions { display: flex; gap: 12px; justify-content: center; }
     .modal-cancel { background: #333; color: #ccc; border: none; border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; }
     .modal-confirm { background: #d4a537; color: #1a1a2e; border: none; border-radius: 4px; padding: 8px 20px; cursor: pointer; font-size: 13px; font-weight: 700; }
+
+    /* Staged-for-formation panel */
+    .staged-panel { background: #14141f; border: 1px solid #d4a537; border-radius: 8px; padding: 16px 18px; margin-bottom: 20px; }
+    .staged-panel .sp-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .staged-panel h3 { margin: 0; color: #d4a537; font-size: 16px; }
+    .staged-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .staged-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .staged-table th { color: #d4a537; text-align: left; padding: 6px 10px; border-bottom: 1px solid #333; font-size: 12px; }
+    .staged-table td { padding: 6px 10px; border-bottom: 1px solid #2a2a3a; vertical-align: middle; }
+    .staged-action-tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .sa-promotion { background: rgba(40,167,69,0.2); color: #28a745; }
+    .sa-patch { background: rgba(212,165,55,0.2); color: #d4a537; }
+    .sa-demotion { background: rgba(220,53,69,0.2); color: #dc3545; }
+    .sa-officer { color: #d4a537; font-weight: 700; font-size: 11px; margin-left: 4px; }
+    .sp-link-btn { background: #2a2a3a; color: #d4a537; border: 1px solid #d4a537; border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+    .sp-link-btn:hover { background: #d4a537; color: #1a1a2e; }
+    .sp-remove { background: #721c24; color: #f8d7da; border: none; border-radius: 4px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+    .sp-edit { background: #333; color: #ccc; border: none; border-radius: 4px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+    .stage-btn { background: #2a2a3a; color: #d4a537; border: 1px solid #d4a537; border-radius: 4px; padding: 5px 12px; font-weight: 600; font-size: 12px; cursor: pointer; margin-left: 6px; }
+    .stage-btn:hover { background: #d4a537; color: #1a1a2e; }
 </style>
 
 <div class="promo-header">
@@ -85,6 +105,55 @@
 </div>
 
 <div id="promo-toast-area" style="margin-bottom: 12px;"></div>
+
+<!-- Staged for Formation panel -->
+<div class="staged-panel" id="stagedPanel">
+    <div class="sp-head">
+        <h3>📋 Staged for Formation <span style="color:#888;font-weight:400;font-size:13px;">({{ staged_rows|length }})</span></h3>
+        <div class="staged-actions">
+            <a class="sp-link-btn" href="/api/s1/promotions/export" target="_blank">🖨️ Export Formation Sheet</a>
+            {% if staged_rows %}
+            <button class="promo-btn" onclick="finalizeAll()">✅ Finalize All</button>
+            {% endif %}
+        </div>
+    </div>
+    {% if staged_rows %}
+    <table class="staged-table">
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Rank Change</th>
+                <th>Name</th>
+                <th>Callsign</th>
+                <th>Formation</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in staged_rows %}
+            <tr>
+                <td>
+                    <span class="staged-action-tag sa-{{ s.action_type }}">{{ s.action_label }}</span>
+                    {% if s.is_officer %}<span class="sa-officer">★ OFFICER</span>{% endif %}
+                </td>
+                <td>{{ s.from_abbr }} → <strong>{{ s.to_abbr }}</strong></td>
+                <td>{{ s.last_name }}, {{ s.first_name }}</td>
+                <td>{{ s.callsign }}</td>
+                <td>{{ s.target_date_str }}</td>
+                <td style="max-width:200px;color:#aaa;">{{ s.notes }}</td>
+                <td style="white-space:nowrap;">
+                    <button class="sp-edit" onclick="openStageEdit({{ s.id }}, '{{ s.last_name }}', '{{ s.to_rank }}', {{ s.allowed_ranks|tojson }})">Edit</button>
+                    <button class="sp-remove" onclick="removeStage({{ s.id }}, '{{ s.last_name }}')">Remove</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="color:#888;font-size:13px;">Nothing staged yet. Use the <strong>Stage</strong> button on a roster row to plan a formation promotion or patch.</div>
+    {% endif %}
+</div>
 
 <div id="batch-bar" style="display:none; margin-bottom: 12px; padding: 10px 16px; background: #1a1a2e; border: 1px solid #d4a537; border-radius: 6px; align-items: center; gap: 12px; flex-wrap: wrap;">
     <span style="color: #d4a537; font-weight: 700; font-size: 13px;">
@@ -157,10 +226,13 @@
                     </select>
                 {% endif %}
             </td>
-            <td>
+            <td style="white-space:nowrap;">
                 {% if row.allowed_ranks %}
                 <button class="promo-btn" onclick="confirmPromotion({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')">
                     Change Rank
+                </button>
+                <button class="stage-btn" onclick="stageMember({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')">
+                    Stage
                 </button>
                 {% endif %}
             </td>
@@ -188,6 +260,19 @@
 <button type="submit" class="modal-confirm">Confirm</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Stage Edit Modal -->
+<div class="modal-overlay" id="stageEditModal">
+    <div class="modal-box">
+        <h3>Edit Staged Target</h3>
+        <p id="stageEditText"></p>
+        <select class="promo-select" id="stageEditSelect" style="width:100%;margin-bottom:16px;"></select>
+        <div class="modal-actions">
+            <button type="button" class="modal-cancel" onclick="closeStageEdit()">Cancel</button>
+            <button type="button" class="modal-confirm" onclick="submitStageEdit()">Save</button>
+        </div>
     </div>
 </div>
 
@@ -221,6 +306,83 @@ document.getElementById('promoModal').addEventListener('click', function(e) {
 document.body.addEventListener('promotionDone', function() {
     closeModal();
     setTimeout(function() { window.location.reload(); }, 1500);
+});
+
+// Refresh the staged panel after any staging change
+document.body.addEventListener('promotionStaged', function() {
+    setTimeout(function() { window.location.reload(); }, 1200);
+});
+
+// ─── Staged Promotions / Formation workflow ────────────────────────────────
+function _postForm(url, data) {
+    var fd = new FormData();
+    Object.keys(data).forEach(function(k) { if (data[k] !== undefined && data[k] !== null) fd.append(k, data[k]); });
+    return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            document.getElementById('promo-toast-area').innerHTML = html;
+            setTimeout(function() { window.location.reload(); }, 1300);
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function stageMember(memberId, currentRank, lastName) {
+    var sel = document.getElementById('rank-' + memberId);
+    if (!sel || !sel.value) {
+        alert('Select a target rank to stage.');
+        return;
+    }
+    var newRank = sel.value;
+    var newLabel = sel.options[sel.selectedIndex].text;
+    var target = prompt('Formation/FTX date (YYYY-MM-DD), or leave blank for TBD:\n\nStaging ' + currentRank + ' ' + lastName + ' → ' + newLabel, '');
+    if (target === null) return; // cancelled
+    var notes = prompt('Optional notes for this staged change:', '');
+    if (notes === null) notes = '';
+    _postForm('/api/s1/promotions/stage', {
+        member_id: memberId,
+        to_rank: newRank,
+        target_date: target.trim(),
+        notes: notes.trim(),
+    });
+}
+
+function removeStage(stageId, lastName) {
+    if (!confirm('Remove ' + lastName + ' from the staged formation? (no-show / scrub)')) return;
+    _postForm('/api/s1/promotions/stage/' + stageId + '/remove', {});
+}
+
+function finalizeAll() {
+    if (!confirm('Finalize ALL staged rank changes? This executes the real promotions/patches now.')) return;
+    _postForm('/api/s1/promotions/finalize', {});
+}
+
+var _stageEditId = null;
+function openStageEdit(stageId, lastName, currentTo, allowedRanks) {
+    _stageEditId = stageId;
+    var sel = document.getElementById('stageEditSelect');
+    sel.innerHTML = '';
+    (allowedRanks || []).forEach(function(pair) {
+        var opt = document.createElement('option');
+        opt.value = pair[0];
+        opt.textContent = pair[1];
+        if (pair[0] === currentTo) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    document.getElementById('stageEditText').textContent = 'Change target rank for ' + lastName + ':';
+    document.getElementById('stageEditModal').classList.add('active');
+}
+function closeStageEdit() {
+    document.getElementById('stageEditModal').classList.remove('active');
+    _stageEditId = null;
+}
+function submitStageEdit() {
+    var sel = document.getElementById('stageEditSelect');
+    if (!_stageEditId || !sel.value) { closeStageEdit(); return; }
+    _postForm('/api/s1/promotions/stage/' + _stageEditId + '/edit', { to_rank: sel.value });
+    closeStageEdit();
+}
+document.getElementById('stageEditModal').addEventListener('click', function(e) {
+    if (e.target === this) closeStageEdit();
 });
 
 // ─── Batch Promotions ────────────────────────────────────────────────────
