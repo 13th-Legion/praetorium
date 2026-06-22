@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Recruiting Analytics{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+    <span style="font-size: 32px;">🎖️</span>
+    <div>
+      <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">Recruiting &amp; Onboarding Analytics</h1>
+      <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ total }} people through the door · {{ active_n }} active · {{ patched_n }} patched</p>
+      <p style="color: #666; font-size: 11px; margin: 2px 0 0;">13th Legion era only (joined Jan 2024+).{% if pre_founding_n %} {{ pre_founding_n }} pre-founding carry-over member{{ 's' if pre_founding_n != 1 else '' }} excluded.{% endif %}</p>
+    </div>
+  </div>
+
+  {% if total == 0 %}
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 40px; text-align: center; color: #888;">
+    No member records yet.
+  </div>
+  {% else %}
+
+  <!-- ===== Data-gap honesty banner ===== -->
+  {% if data_gaps %}
+  <div style="background: linear-gradient(135deg, #2a1f18, #1a1a2e); border: 1px solid rgba(243,156,18,0.45); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+    <div style="font-size: 11px; color: #f39c12; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚠️ Data gaps — what we can't show (and why)</div>
+    <ul style="margin: 0; padding-left: 18px; color: #c9c9c9; font-size: 13px; line-height: 1.5;">
+      {% for g in data_gaps %}<li>{{ g }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- ===== Status distribution cards ===== -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    {% for c in status_cards %}
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
+      <div style="font-size: 32px; font-weight: 700; color: {{ c.color }};">{{ c.count }}</div>
+      <div style="font-size: 12px; color: #888; text-transform: uppercase;">{{ c.label }}</div>
+      <div style="font-size: 11px; color: #666; margin-top: 2px;">{{ c.pct }}% of {{ total }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ===== Key conversion callouts ===== -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <div style="background: linear-gradient(135deg, #18261a, #1a1a2e); border: 1px solid rgba(76,175,80,0.4); border-radius: 8px; padding: 16px;">
+      <div style="font-size: 11px; color: #4caf50; text-transform: uppercase; letter-spacing: 1px;">✅ Survival Rate</div>
+      <div style="font-size: 22px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ survival }}%</div>
+      <div style="font-size: 12px; color: #888;">{{ active_n }} of {{ total }} still active</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #1a2230, #1a1a2e); border: 1px solid rgba(66,165,245,0.4); border-radius: 8px; padding: 16px;">
+      <div style="font-size: 11px; color: #42a5f5; text-transform: uppercase; letter-spacing: 1px;">🎓 Patch Rate</div>
+      <div style="font-size: 22px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ conv_recruit_to_patch }}%</div>
+      <div style="font-size: 12px; color: #888;">{{ patched_n }} reached full membership</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #2a2418, #1a1a2e); border: 1px solid rgba(212,165,55,0.4); border-radius: 8px; padding: 16px;">
+      <div style="font-size: 11px; color: #d4a537; text-transform: uppercase; letter-spacing: 1px;">📝 Fully Onboarded</div>
+      <div style="font-size: 22px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ fully_signed }}</div>
+      <div style="font-size: 12px; color: #888;">signed all 5 documents</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #261a26, #1a1a2e); border: 1px solid rgba(186,104,200,0.4); border-radius: 8px; padding: 16px;">
+      <div style="font-size: 11px; color: #ba68c8; text-transform: uppercase; letter-spacing: 1px;">🪖 Veterans</div>
+      <div style="font-size: 22px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ veterans }} vets</div>
+      <div style="font-size: 12px; color: #888;">prior military service</div>
+    </div>
+  </div>
+
+  <!-- ===== Did they ever show? (FTX reach) ===== -->
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Did They Ever Make It to an FTX?</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">The real funnel leak. Of {{ total }} members who joined the 13th, how many ever checked in to a single FTX/MCFTX ({{ ftx13_count }} finalized 13th-era field events on record)?</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 18px;">
+      <div style="background: linear-gradient(135deg, #18261a, #1a1a2e); border: 1px solid rgba(76,175,80,0.4); border-radius: 8px; padding: 16px;">
+        <div style="font-size: 11px; color: #4caf50; text-transform: uppercase; letter-spacing: 1px;">🥾 Made It to ≥1 FTX</div>
+        <div style="font-size: 26px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ ever_attended_n }} <span style="font-size:14px;color:#888;">({{ ever_attended_pct }}%)</span></div>
+        <div style="font-size: 12px; color: #888;">checked in to at least one field event</div>
+      </div>
+      <div style="background: linear-gradient(135deg, #2a1818, #1a1a2e); border: 1px solid rgba(239,83,80,0.45); border-radius: 8px; padding: 16px;">
+        <div style="font-size: 11px; color: #ef5350; text-transform: uppercase; letter-spacing: 1px;">👻 Never Showed</div>
+        <div style="font-size: 26px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ never_attended_n }} <span style="font-size:14px;color:#888;">({{ (100 - ever_attended_pct) | round(1) }}%)</span></div>
+        <div style="font-size: 12px; color: #888;">joined but never made a single FTX</div>
+      </div>
+    </div>
+
+    <!-- Reach by status: what share of each status ever showed -->
+    <div style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">FTX reach by current status</div>
+    {% for a in attend_by_status %}
+    <div style="margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 3px;">
+        <span>{{ a.label }}</span>
+        <span style="color: {{ a.color }}; font-weight: 700;">{{ a.attended }}/{{ a.total }} <span style="color:#666; font-weight:400;">({{ a.pct }}%)</span></span>
+      </div>
+      <div style="background: #0f0f1a; border-radius: 4px; height: 16px; overflow: hidden;">
+        <div style="height: 100%; width: {{ a.pct }}%; background: {{ a.color }}; border-radius: 4px;"></div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if never_status_rows %}
+    <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a2a3a;">
+      <div style="font-size: 11px; color: #ef5350; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Who the {{ never_attended_n }} no-shows are now</div>
+      <div style="display: flex; height: 24px; border-radius: 4px; overflow: hidden; background: #0f0f1a; margin-bottom: 8px;">
+        {% for r in never_status_rows %}<div title="{{ r.label }}: {{ r.count }} ({{ r.pct }}%)" style="background: {{ r.color }}; width: {{ r.pct }}%;"></div>{% endfor %}
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: #888;">
+        {% for r in never_status_rows %}<span><span style="display:inline-block;width:10px;height:10px;background:{{ r.color }};border-radius:2px;"></span> {{ r.label }} {{ r.count }}</span>{% endfor %}
+      </div>
+      <p style="color: #666; font-size: 11px; margin: 10px 0 0;">Recruits here are still in the pipeline (haven't hit their first FTX yet). Inactive/separated no-shows are the people who signed up and ghosted before ever taking the field.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ===== Intake vs Attrition flow ===== -->
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Intake vs. Attrition by Month</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Green = joins · Red = separations. Bars scaled to busiest month ({{ max_flow }}).</p>
+    <div style="display: flex; align-items: flex-end; gap: 3px; height: 160px; overflow-x: auto; padding-bottom: 4px;">
+      {% for r in flow_rows %}
+      <div style="display: flex; flex-direction: column; align-items: center; min-width: 26px; flex: 1;">
+        <div style="display: flex; align-items: flex-end; gap: 2px; height: 130px;">
+          <div title="{{ r.label }}: {{ r.joins }} joined"
+               style="width: 9px; background: linear-gradient(#4caf50,#2e7d32); border-radius: 2px 2px 0 0; height: {{ (r.joins / max_flow * 100) | round(1) }}%;"></div>
+          <div title="{{ r.label }}: {{ r.seps }} separated"
+               style="width: 9px; background: linear-gradient(#ef5350,#b71c1c); border-radius: 2px 2px 0 0; height: {{ (r.seps / max_flow * 100) | round(1) }}%;"></div>
+        </div>
+        <div style="font-size: 8px; color: #666; margin-top: 4px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;">{{ r.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== Onboarding funnel ===== -->
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Onboarding Funnel</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Document completion → patch. Note: signed-doc tracking only started March 2026, so older members predate it and read as un-signed.</p>
+    {% for f in funnel %}
+    <div style="margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 3px;">
+        <span>{{ f.label }}{% if f.note %} <span style="color:#666; font-size:11px;">· {{ f.note }}</span>{% endif %}</span>
+        <span style="color: {{ f.color }}; font-weight: 700;">{{ f.count }} <span style="color:#666; font-weight:400;">({{ f.pct }}%)</span></span>
+      </div>
+      <div style="background: #0f0f1a; border-radius: 4px; height: 18px; overflow: hidden;">
+        <div style="height: 100%; width: {{ f.pct }}%; background: linear-gradient(90deg, {{ f.color }}, {{ f.color }}aa); border-radius: 4px;"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 24px; margin-bottom: 24px;">
+    <!-- ===== Separations breakdown ===== -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px;">
+      <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Why People Leave</h2>
+      <p style="color: #888; font-size: 12px; margin: 0 0 16px;">{{ sep_total }} departures (inactive + separated + blacklisted)</p>
+      {% for s in sep_reasons %}
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 3px;">
+          <span>{{ s.reason }}</span>
+          <span style="color: {{ s.color }}; font-weight: 700;">{{ s.count }} ({{ s.pct }}%)</span>
+        </div>
+        <div style="background: #0f0f1a; border-radius: 4px; height: 16px; overflow: hidden;">
+          <div style="height: 100%; width: {{ s.pct }}%; background: {{ s.color }}; border-radius: 4px;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ===== Time-to-patch & tenure ===== -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px;">
+      <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 16px;">Timing</h2>
+      {% if time_to_patch %}
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 11px; color: #4caf50; text-transform: uppercase; letter-spacing: 1px;">⏱️ Time to Patch (join → patch)</div>
+        <div style="font-size: 20px; color: #e0e0e0; font-weight: 700;">{{ time_to_patch.median }} <span style="font-size:13px;color:#888;">days median</span></div>
+        <div style="font-size: 12px; color: #888;">mean {{ time_to_patch.mean }} · range {{ time_to_patch.min }}–{{ time_to_patch.max }} days · n={{ time_to_patch.count }}</div>
+        {% if time_to_patch.median == 0 %}<div style="font-size: 11px; color: #f39c12; margin-top: 4px;">⚠️ median 0 = most patch dates were bulk-backfilled, not organically logged</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if tenure %}
+      <div>
+        <div style="font-size: 11px; color: #ef5350; text-transform: uppercase; letter-spacing: 1px;">🚪 Tenure of Departed (join → leave)</div>
+        <div style="font-size: 20px; color: #e0e0e0; font-weight: 700;">{{ tenure.median }} <span style="font-size:13px;color:#888;">days median</span></div>
+        <div style="font-size: 12px; color: #888;">mean {{ tenure.mean }} · range {{ tenure.min }}–{{ tenure.max }} days · n={{ tenure.count }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== Cohort survival by join year ===== -->
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Cohort Survival by Join Year</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Where each year's intake stands today. Stacked bar = composition; % = still-active retention.</p>
+    {% for c in cohort_rows %}
+    <div style="margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 4px;">
+        <span><strong style="color:#d4a537;">{{ c.year }}</strong> · {{ c.total }} joined</span>
+        <span style="color: {% if c.retention >= 50 %}#4caf50{% elif c.retention >= 25 %}#f39c12{% else %}#ef5350{% endif %}; font-weight: 700;">{{ c.retention }}% retained</span>
+      </div>
+      <div style="display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: #0f0f1a;">
+        {% if c.active %}<div title="Active: {{ c.active }}" style="background:#4caf50; width: {{ (c.active / c.total * 100) | round(1) }}%;"></div>{% endif %}
+        {% if c.recruit %}<div title="Recruit: {{ c.recruit }}" style="background:#42a5f5; width: {{ (c.recruit / c.total * 100) | round(1) }}%;"></div>{% endif %}
+        {% if c.inactive %}<div title="Inactive: {{ c.inactive }}" style="background:#888; width: {{ (c.inactive / c.total * 100) | round(1) }}%;"></div>{% endif %}
+        {% if c.separated %}<div title="Separated: {{ c.separated }}" style="background:#f39c12; width: {{ (c.separated / c.total * 100) | round(1) }}%;"></div>{% endif %}
+        {% if c.blacklisted %}<div title="Blacklisted: {{ c.blacklisted }}" style="background:#ef5350; width: {{ (c.blacklisted / c.total * 100) | round(1) }}%;"></div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; color: #888;">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#4caf50;border-radius:2px;"></span> Active</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#42a5f5;border-radius:2px;"></span> Recruit</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#888;border-radius:2px;"></span> Inactive</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#f39c12;border-radius:2px;"></span> Separated</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#ef5350;border-radius:2px;"></span> Blacklisted</span>
+    </div>
+  </div>
+
+  <!-- ===== Recruiter board ===== -->
+  <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Recruiter Roster &amp; Load</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Current pipeline load per recruiter. (total_recruited credit isn't being incremented — see data gaps.)</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+      {% for r in recruiter_rows %}
+      <div style="background: #0f0f1a; border: 1px solid #2a2a3a; border-radius: 6px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #e0e0e0; font-weight: 700; font-size: 14px;">{{ r.name }}</span>
+          <span style="font-size: 10px; color: {% if r.active %}#4caf50{% else %}#666{% endif %}; text-transform: uppercase;">{{ 'active' if r.active else 'inactive' }}</span>
+        </div>
+        <div style="margin-top: 8px; background: #1a1a2e; border-radius: 4px; height: 14px; overflow: hidden;">
+          {% set pct = (r.load / r.max_load * 100) if r.max_load else 0 %}
+          <div style="height:100%; width: {{ [pct,100]|min }}%; background: {% if r.load > r.max_load %}#ef5350{% elif r.load == r.max_load %}#f39c12{% else %}#4caf50{% endif %};"></div>
+        </div>
+        <div style="font-size: 11px; color: #888; margin-top: 4px;">load {{ r.load }}/{{ r.max_load }}{% if r.load > r.max_load %} <span style="color:#ef5350;">⚠ over capacity</span>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}
