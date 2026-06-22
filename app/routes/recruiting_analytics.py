@@ -319,18 +319,15 @@ async def recruiting_analytics(request: Request):
         })
 
     # ---------- Data-gap callouts (honesty layer) ----------
-    fee_populated = any(
-        (m.app_fee_status and m.app_fee_status != "pending") or m.app_fee_method
-        for m in members
-    )
+    # NOTE: the $50 application fee IS tracked — but via the PayPal webhook
+    # (PP-126) matching payments against Deck pipeline cards, NOT the
+    # members.app_fee_status column (which stays 'pending' by design). Paying
+    # the fee is a hard gate to getting on the roster, so by definition every
+    # member/recruit shown here has paid. We therefore do NOT flag fee tracking
+    # as a gap; we surface it as a 100%-complete prerequisite instead.
     recruiter_field_populated = any(m.assigned_recruiter for m in members)
 
     data_gaps = []
-    if not fee_populated:
-        data_gaps.append(
-            "Application-fee tracking is empty — every member reads 'pending' "
-            "with no payment method. The fields exist (PP-021) but nobody is "
-            "logging who paid. Can't chart who paid until it's being recorded.")
     if not recruiter_field_populated:
         data_gaps.append(
             "Per-member recruiter assignment (members.assigned_recruiter) is "
