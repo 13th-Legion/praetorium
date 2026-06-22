@@ -57,57 +57,42 @@ def _build_authorize_url(request: "Request") -> str:
 
 @router.get("/login")
 async def login(request: Request):
-    """Redirect to Nextcloud OAuth2 login.
+    """Redirect to Nextcloud OAuth2 login (ALWAYS via the seeded first-party path).
 
-    Two routing modes, selected by the ?seed query param:
+    We ALWAYS route through NC's first-party /index.php/login page with
+    redirect_url -> the INTERNAL /oauth2/authorize path. This seeds NC's
+    nc_sameSiteCookie{lax,strict} cookies same-site BEFORE the grant POST, so
+    `POST /login/flow` (generateAppPassword) passes NC's SameSite/CSRF check
+    instead of intermittently returning 403 "Access forbidden".
 
-    DEFAULT (no ?seed) — go DIRECTLY to NC's /oauth2/authorize.
-        Fast, single-pass for users ALREADY logged into Nextcloud (NC sees the
-        active session and grants immediately). For logged-OUT users this still
-        works most of the time, but can intermittently fail with a 403 on
-        `POST /login/flow` — see the SameSite note below.
+    History: we previously sent ALREADY-logged-in users straight to /authorize
+    (the "direct path") on the assumption that NC's LoginController ignores
+    redirect_url for authenticated sessions. That assumption is FALSE on
+    NC 32.x: an authenticated hit to /index.php/login?redirect_url=<internal>
+    honors the internal redirect and lands cleanly on the grant page WITH the
+    SameSite cookies seeded. The direct path was the sole cause of the
+    intermittent "Forbidden" on grant (a stale-session grant POST dropped the
+    lax SameSite cookie -> 403). Always-seeding fixes it for both logged-in and
+    logged-out users. Verified live 2026-06-21.
 
-    SEEDED (?seed=1) — route through NC's first-party /index.php/login page
-        with redirect_url -> the INTERNAL authorize path. The user types
-        credentials on an unambiguously first-party cloud.13thlegion.org page,
-        which seeds NC's nc_sameSiteCookie{lax,strict} cookies same-site BEFORE
-        the grant POST, so `POST /login/flow` passes NC's SameSite/CSRF check.
-        The error/login page sends users here after a failed attempt (auto-retry).
-
-    Why two modes:
-        NC's LoginController.showLoginForm() IGNORES redirect_url when the user
-        is already logged in (it hard-redirects to the dashboard — see
-        core/Controller/LoginController.php). So we cannot send logged-IN users
-        through /login. And logged-OUT users initiating cross-site directly at
-        /authorize hit NC's SameSiteCookieMiddleware quirk: the grant
-        `POST /login/flow` (generateAppPassword) has #[UseSession] but NOT
-        #[NoSameSiteCookieRequired], so it requires the lax SameSite cookie;
-        when the browser omits it on the cross-site-initiated POST, NC returns
-        403 "Access forbidden". Seeding via /login fixes that for logged-out users
-        while the direct path stays fast for logged-in users.
+    The ?seed query param is retained for backward-compat (the error page and
+    callback retry still link to ?seed=1) but is now a no-op distinction:
+    every path seeds.
     """
-    from urllib.parse import urlencode, quote
+    from urllib.parse import quote
 
     authorize_url = _build_authorize_url(request)
-    seed = request.query_params.get("seed")
 
-    if seed:
-        # SEEDED PATH: hand the user to NC's own first-party login page so the
-        # SameSite cookies are established same-site before the grant POST.
-        # redirect_url must be an INTERNAL NC path (LoginController only honors
-        # internal redirect targets); we strip the origin from authorize_url.
-        #
-        # _build_authorize_url() just cleared the session, which wiped any
-        # _seed_retry marker. Re-arm it so that if THIS seeded attempt also
-        # fails, the callback's loop guard trips and shows a real error instead
-        # of looping back into /auth/login?seed=1 forever.
-        request.session["_seed_retry"] = True
-        internal_authorize = authorize_url[len(settings.nc_url):] if authorize_url.startswith(settings.nc_url) else authorize_url
-        login_url = f"{settings.nc_url}/index.php/login?redirect_url={quote(internal_authorize, safe='')}"
-        return RedirectResponse(url=login_url, status_code=302)
+    # _build_authorize_url() cleared the session (wiping any _seed_retry marker).
+    # Arm it so the callback's loop guard can surface a real error instead of
+    # looping forever if even the seeded attempt fails.
+    request.session["_seed_retry"] = True
 
-    # DEFAULT PATH: direct to /authorize (fast for already-logged-in users).
-    return RedirectResponse(url=authorize_url, status_code=302)
+    # redirect_url must be an INTERNAL NC path (LoginController only honors
+    # internal redirect targets); strip the origin from authorize_url.
+    internal_authorize = authorize_url[len(settings.nc_url):] if authorize_url.startswith(settings.nc_url) else authorize_url
+    login_url = f"{settings.nc_url}/index.php/login?redirect_url={quote(internal_authorize, safe='')}"
+    return RedirectResponse(url=login_url, status_code=302)
 
 
 @router.get("/callback")
