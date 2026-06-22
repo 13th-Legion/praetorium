@@ -522,6 +522,135 @@ ADVANCE_LABELS = {
 }
 
 
+# ─── PP-052: Recruiter Credit & Load Accounting ─────────────────────────────
+# current_load = ACTIVE pipeline assignments only (members with status='recruit'
+# assigned to that recruiter). total_recruited = lifetime completed onboardings
+# (incremented once when a recruit reaches the Complete stack). Historically
+# both were broken: current_load only ever incremented (never decremented) and
+# total_recruited was never touched. These helpers fix that going forward and
+# provide a one-time recompute to clear the garbage counters.
+
+async def _match_member_by_card_title(db, card_title: str):
+    """Match a Deck card title back to a Member row by name.
+
+    Mirrors the name-matching logic in _send_welcome_email so completion
+    credit lands on the same member the welcome email targets.
+    """
+    from sqlalchemy import select as _select
+    name = (card_title or "").strip().lstrip("✅📋🔍").strip()
+    if not name:
+        return None
+    name_parts = name.split(None, 1)
+    try:
+        if len(name_parts) >= 2:
+            result = await db.execute(
+                _select(Member).where(
+                    Member.first_name == name_parts[0],
+                    Member.last_name == name_parts[1],
+                )
+            )
+        else:
+            result = await db.execute(
+                _select(Member).where(Member.last_name == name)
+            )
+        return result.scalar_one_or_none()
+    except Exception as e:
+        logger.error(f"Credit — member lookup failed for '{name}': {e}")
+        return None
+
+
+async def _credit_recruiter_on_completion(card_title: str) -> str:
+    """Persist recruiter credit when a recruit completes onboarding.
+
+    Called when a card is moved into the Complete stack (15 -> 16). Matches the
+    card to a Member; if that member has an assigned_recruiter, increments that
+    Recruiter.total_recruited by 1 and decrements current_load by 1 (floor 0).
+    Idempotency guard: only credits while the member is still status='recruit'
+    (i.e. not yet flipped/patched), so re-runs of the same completion don't
+    double-count. Returns an HTML status snippet (or '' if nothing to credit).
+    """
+    from app.database import async_session
+    from sqlalchemy import select as _select
+    try:
+        async with async_session() as db:
+            member = await _match_member_by_card_title(db, card_title)
+            if not member:
+                return ''
+            recruiter_username = (member.assigned_recruiter or "").strip()
+            if not recruiter_username:
+                return ''
+            r_result = await db.execute(
+                _select(Recruiter).where(Recruiter.nc_username == recruiter_username)
+            )
+            recruiter = r_result.scalar_one_or_none()
+            if not recruiter:
+                return ''
+            recruiter.total_recruited = (recruiter.total_recruited or 0) + 1
+            recruiter.current_load = max(0, (recruiter.current_load or 0) - 1)
+            await db.commit()
+            logger.info(
+                f"Recruiter credit: {recruiter.nc_username} +1 recruited "
+                f"(total={recruiter.total_recruited}, load={recruiter.current_load}) "
+                f"for {member.first_name} {member.last_name}"
+            )
+            return (
+                f'<span style="color:#2e7d32;font-size:11px;"> 🎖️ Credit → '
+                f'{recruiter.display_name}</span>'
+            )
+    except Exception as e:
+        logger.error(f"Recruiter credit failed for card '{card_title}': {e}")
+    return ''
+
+
+async def _release_recruiter_load(db, member) -> None:
+    """Decrement a recruiter's current_load when a recruit leaves the active
+    pipeline (declined / separated / dropped) without completing. Floors at 0.
+    Safe to call even if the member has no assigned recruiter."""
+    from sqlalchemy import select as _select
+    recruiter_username = (getattr(member, "assigned_recruiter", None) or "").strip()
+    if not recruiter_username:
+        return
+    try:
+        r_result = await db.execute(
+            _select(Recruiter).where(Recruiter.nc_username == recruiter_username)
+        )
+        recruiter = r_result.scalar_one_or_none()
+        if recruiter:
+            recruiter.current_load = max(0, (recruiter.current_load or 0) - 1)
+    except Exception as e:
+        logger.error(f"Load release failed for recruiter '{recruiter_username}': {e}")
+
+
+async def recompute_recruiter_loads(db) -> dict:
+    """One-time / on-demand backfill: set every recruiter's current_load to the
+    true count of ACTIVE pipeline assignments = members with status='recruit'
+    whose assigned_recruiter == that recruiter's nc_username. Clears the garbage
+    counters (Moreno 23/5, Wall 10/5, Boyd 8/5, etc.). Does NOT touch
+    total_recruited. Commits and returns {nc_username: new_load}.
+
+    Parent invocation (run once after deploy) — see the report for the exact
+    `docker compose exec app python -c "..."` one-liner that wraps this in an
+    async_session and asyncio.run().
+    """
+    from sqlalchemy import select as _select
+    recruiters = (await db.execute(_select(Recruiter))).scalars().all()
+    recruits = (await db.execute(
+        _select(Member).where(Member.status == "recruit")
+    )).scalars().all()
+    load_by_user = {}
+    for m in recruits:
+        u = (m.assigned_recruiter or "").strip()
+        if u:
+            load_by_user[u] = load_by_user.get(u, 0) + 1
+    result = {}
+    for r in recruiters:
+        r.current_load = load_by_user.get(r.nc_username, 0)
+        result[r.nc_username] = r.current_load
+    await db.commit()
+    logger.info(f"recompute_recruiter_loads: {result}")
+    return result
+
+
 async def _fetch_pipeline_applicants() -> list[dict]:
     """Fetch applicants from the S1 Recruit Pipeline Deck board."""
     url = f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks"
@@ -685,20 +814,25 @@ async def _fetch_full_pipeline() -> dict:
                         "stack_id": stack_id,
                     })
 
-                # Auto-delete completed cards older than 10 days
+                # Auto-ARCHIVE completed cards older than 10 days (was: delete).
+                # Archiving preserves the card (and its recruiter assignment /
+                # history) in Deck instead of destroying it, so recruiter-credit
+                # and onboarding analytics retain a trail. Deck archives via
+                # PUT /cards/{id} with archived=true (title is required by the API).
                 if stack_id == 16:
                     stale = [c for c in cards if c["days"] >= 10]
                     for stale_card in stale:
                         try:
-                            await client.delete(
+                            await client.put(
                                 f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/16/cards/{stale_card['id']}",
                                 headers={"OCS-APIRequest": "true"},
                                 auth=(NC_SVC_USER, NC_SVC_PASS),
+                                json={"title": stale_card.get("name") or "Recruit", "archived": True},
                                 timeout=10,
                             )
-                            logger.info(f"Auto-deleted completed pipeline card: {stale_card['name']} ({stale_card['days']}d old)")
+                            logger.info(f"Auto-archived completed pipeline card: {stale_card['name']} ({stale_card['days']}d old)")
                         except Exception as e:
-                            logger.error(f"Failed to auto-delete pipeline card {stale_card['id']}: {e}")
+                            logger.error(f"Failed to auto-archive pipeline card {stale_card['id']}: {e}")
                     cards = [c for c in cards if c["days"] < 10]
 
                 columns[stack_id] = {
@@ -1043,10 +1177,18 @@ async def advance_pipeline_stage(request: Request, card_id: int):
                 if next_stack_id == 15:
                     welcome_status = await _send_welcome_email(card_title, card_desc)
 
+                # Persist recruiter credit when reaching the Complete stack
+                # (15 -> 16). This makes credit durable in the DB regardless of
+                # the Deck card later auto-purging from the Complete stack.
+                credit_status = ""
+                if next_stack_id == 16:
+                    credit_status = await _credit_recruiter_on_completion(card_title)
+
                 return HTMLResponse(
                     f'<div style="display:flex;align-items:center;gap:8px;">'
                     f'<span style="color:#2e7d32;font-weight:600;">✅ → {next_name}</span>'
                     f'{welcome_status}'
+                    f'{credit_status}'
                     f'<span style="color:#888;font-size:11px;">by {by}</span>'
                     f'</div>',
                     headers={"HX-Trigger": "pipelineChanged"},
@@ -1201,7 +1343,7 @@ async def resume_applicant(request: Request, card_id: int):
 
 @router.post("/pipeline/{card_id}/decline")
 @require_auth
-async def decline_applicant(request: Request, card_id: int):
+async def decline_applicant(request: Request, card_id: int, db: AsyncSession = Depends(get_db)):
     """Decline/reject an applicant — archives the Deck card."""
     user = request.session.get("user", {})
     require_pipeline(user)
@@ -1265,6 +1407,14 @@ async def decline_applicant(request: Request, card_id: int):
                         "archived": True,
                     },
                 )
+
+            # Release the assigned recruiter's pipeline load (declined recruit
+            # leaves the active pipeline without completing).
+            if card_data:
+                member = await _match_member_by_card_title(db, card_data.get("title", ""))
+                if member:
+                    await _release_recruiter_load(db, member)
+                    await db.commit()
 
             return HTMLResponse(
                 f'<div style="padding:8px;background:rgba(198,40,40,0.1);border-radius:4px;">'
@@ -2104,6 +2254,10 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
 
     initiated_by = user.get("display_name", user.get("uid", "unknown"))
 
+    # If this member is still in the active recruit pipeline, releasing them
+    # frees their recruiter's current_load. Capture before the status flips.
+    was_recruit = member.status == "recruit"
+
     # Update member status
     if reason == "blacklisted":
         member.status = "blacklisted"
@@ -2162,6 +2316,11 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
 
     log_entry.portal_access_revoked = revoke_portal
     db.add(log_entry)
+
+    # Release recruiter load if this was an active recruit (not a patched member).
+    if was_recruit:
+        await _release_recruiter_load(db, member)
+
     await db.commit()
 
     # Send separation notification email in background (smtplib is synchronous)

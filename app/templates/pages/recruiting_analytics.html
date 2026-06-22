@@ -7,8 +7,8 @@
     <span style="font-size: 32px;">🎖️</span>
     <div>
       <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">Recruiting &amp; Onboarding Analytics</h1>
-      <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ total }} people through the door · {{ active_n }} active · {{ patched_n }} patched</p>
-      <p style="color: #666; font-size: 11px; margin: 2px 0 0;">13th Legion era only (joined Jan 2024+).{% if pre_founding_n %} {{ pre_founding_n }} pre-founding carry-over member{{ 's' if pre_founding_n != 1 else '' }} excluded.{% endif %}</p>
+      <p style="color: #888; font-size: 13px; margin: 4px 0 0;">{{ total }} people through the door · {{ active_n }} active (patched) · {{ recruit_n }} recruits</p>
+      <p style="color: #666; font-size: 11px; margin: 2px 0 0;">Headline membership counts <strong>everyone currently on the books</strong>, including pre-founding members still serving. The founding-date scope (Jan 2024+) applies <strong>only</strong> to the historical funnel/intake/cohort/timing charts below.{% if pre_founding_n %} {{ pre_founding_n }} pre-founding carry-over{{ 's' if pre_founding_n != 1 else '' }} on record ({{ pre_founding_serving_n }} still serving) are excluded from those history charts.{% endif %}</p>
     </div>
   </div>
 
@@ -28,6 +28,17 @@
   </div>
   {% endif %}
 
+  <!-- ===== Roster-aligned headline ===== -->
+  <div style="background: linear-gradient(135deg, #1a2230, #18261a); border: 1px solid rgba(212,165,55,0.45); border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px;">
+      <div style="font-size: 11px; color: #d4a537; text-transform: uppercase; letter-spacing: 1px;">📋 On the roster</div>
+      <div style="font-size: 30px; font-weight: 800; color: #e0e0e0; line-height: 1;">{{ on_roster_n }}</div>
+      <div style="font-size: 15px; color: #aaa;">= <span style="color:#4caf50;font-weight:700;">{{ patched_roster_n }} patched</span> + <span style="color:#42a5f5;font-weight:700;">{{ recruit_n }} recruits</span></div>
+    </div>
+    <p style="color: #888; font-size: 12px; margin: 8px 0 0;">Matches the unit roster page: <strong>on the roster</strong> = status <code>active</code> or <code>recruit</code>.</p>
+    <p style="color: #777; font-size: 11px; margin: 4px 0 0;">ℹ️ <strong>“Active” means patched / full member.</strong> Every active member has completed onboarding and earned the patch — the two sets are identical in practice. “Recruit” = still in the pipeline, not yet patched.</p>
+  </div>
+
   <!-- ===== Status distribution cards ===== -->
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 24px;">
     {% for c in status_cards %}
@@ -44,7 +55,7 @@
     <div style="background: linear-gradient(135deg, #18261a, #1a1a2e); border: 1px solid rgba(76,175,80,0.4); border-radius: 8px; padding: 16px;">
       <div style="font-size: 11px; color: #4caf50; text-transform: uppercase; letter-spacing: 1px;">✅ Survival Rate</div>
       <div style="font-size: 22px; color: #e0e0e0; font-weight: 700; margin-top: 4px;">{{ survival }}%</div>
-      <div style="font-size: 12px; color: #888;">{{ active_n }} of {{ total }} still active</div>
+      <div style="font-size: 12px; color: #888;">{{ active_n }} of {{ total }} still active (patched &amp; serving)</div>
     </div>
     <div style="background: linear-gradient(135deg, #1a2230, #1a1a2e); border: 1px solid rgba(66,165,245,0.4); border-radius: 8px; padding: 16px;">
       <div style="font-size: 11px; color: #42a5f5; text-transform: uppercase; letter-spacing: 1px;">🎓 Patch Rate</div>
@@ -117,7 +128,7 @@
   <!-- ===== Intake vs Attrition flow ===== -->
   <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
     <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Intake vs. Attrition by Month</h2>
-    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Green = joins · Red = separations. Bars scaled to busiest month ({{ max_flow }}).</p>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Green = joins · Red = separations. Bars scaled to busiest month ({{ max_flow }}). <span style="color:#666;">13th-era intake only (Jan 2024+); pre-founding carry-overs excluded.</span></p>
     <div style="display: flex; align-items: flex-end; gap: 3px; height: 160px; overflow-x: auto; padding-bottom: 4px;">
       {% for r in flow_rows %}
       <div style="display: flex; flex-direction: column; align-items: center; min-width: 26px; flex: 1;">
@@ -136,7 +147,7 @@
   <!-- ===== Onboarding funnel ===== -->
   <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
     <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Onboarding Funnel</h2>
-    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Document completion → patch. Note: signed-doc tracking only started March 2026, so older members predate it and read as un-signed.</p>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Document completion → patch, scoped to 13th-era intake ({{ funnel_total }} rows; pre-founding carry-overs excluded). Note: signed-doc tracking only started March 2026, so older members predate it and read as un-signed.</p>
     {% for f in funnel %}
     <div style="margin-bottom: 10px;">
       <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 3px;">
@@ -192,7 +203,7 @@
   <!-- ===== Cohort survival by join year ===== -->
   <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
     <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Cohort Survival by Join Year</h2>
-    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Where each year's intake stands today. Stacked bar = composition; % = still-active retention.</p>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Where each year's intake stands today. Stacked bar = composition; % = still-active retention. <span style="color:#666;">13th-era intake only (Jan 2024+); pre-founding carry-overs excluded.</span></p>
     {% for c in cohort_rows %}
     <div style="margin-bottom: 14px;">
       <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ccc; margin-bottom: 4px;">
@@ -219,9 +230,9 @@
 
   <!-- ===== Recruiter board ===== -->
   <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Recruiter Roster &amp; Load</h2>
-    <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Current pipeline load per recruiter. (total_recruited credit isn't being incremented — see data gaps.)</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+    <h2 style="font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 18px; margin: 0 0 4px;">Recruiter Roster, Load &amp; Credit</h2>
+    <p style="color: #888; font-size: 12px; margin: 0 0 16px;"><strong style="color:#4caf50;">Load</strong> = active pipeline assignments (recruits currently assigned). <strong style="color:#d4a537;">Recruited</strong> = lifetime completed onboardings. Lifetime credit accrues forward from now (PP-052) — historical credit is unrecoverable, so counts start at 0. Run the one-time load recompute to clear stale counters.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px;">
       {% for r in recruiter_rows %}
       <div style="background: #0f0f1a; border: 1px solid #2a2a3a; border-radius: 6px; padding: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -232,7 +243,10 @@
           {% set pct = (r.load / r.max_load * 100) if r.max_load else 0 %}
           <div style="height:100%; width: {{ [pct,100]|min }}%; background: {% if r.load > r.max_load %}#ef5350{% elif r.load == r.max_load %}#f39c12{% else %}#4caf50{% endif %};"></div>
         </div>
-        <div style="font-size: 11px; color: #888; margin-top: 4px;">load {{ r.load }}/{{ r.max_load }}{% if r.load > r.max_load %} <span style="color:#ef5350;">⚠ over capacity</span>{% endif %}</div>
+        <div style="display:flex; justify-content:space-between; font-size: 11px; margin-top: 6px;">
+          <span style="color: #4caf50;">load {{ r.load }}/{{ r.max_load }}{% if r.load > r.max_load %} <span style="color:#ef5350;">⚠ over</span>{% endif %}</span>
+          <span style="color: #d4a537;">🎖️ {{ r.recruited }} recruited</span>
+        </div>
       </div>
       {% endfor %}
     </div>

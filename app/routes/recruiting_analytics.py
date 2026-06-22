@@ -101,13 +101,33 @@ async def recruiting_analytics(request: Request):
         )).scalars().all()
         all_rsvps = (await db.execute(select(EventRSVP))).scalars().all()
 
-    # ---- Founding-date filter (request: ditch pre-13th intake) ----
-    # Keep only members who joined on/after the 13th's founding for all funnel
-    # analysis. Members with no join_date are kept (we can't prove they predate
-    # the unit) but won't appear in date-based charts.
+    # ---- Founding-date filter (scope: HISTORY/FUNNEL ONLY) ----
+    # IMPORTANT: the founding-date filter is a *pipeline-history* scope, NOT a
+    # membership scope. Pre-founding carry-over members who are CURRENTLY
+    # SERVING (active/patched) are real current members and MUST be counted in
+    # all headline membership numbers so the page reconciles with the roster.
+    #
+    #   - headline membership / status cards / survival / patch / onboarded /
+    #     veteran / fee / FTX-reach / roster totals  -> use ALL members
+    #   - intake-by-month / cohort-by-join-year / time-to-patch / tenure
+    #     (historical pipeline noise)                 -> use funnel_members only
+    #
+    # `funnel_members` drops pre-founding intake (their join predates the 13th
+    # and would pollute funnel/cohort/time-series math). Members with no
+    # join_date are kept in the funnel set (we can't prove they predate us) but
+    # won't appear in date-based charts.
     pre_founding = [m for m in all_members if m.join_date and m.join_date < FOUNDING_DATE]
-    members = [m for m in all_members if not (m.join_date and m.join_date < FOUNDING_DATE)]
+    funnel_members = [m for m in all_members if not (m.join_date and m.join_date < FOUNDING_DATE)]
     pre_founding_n = len(pre_founding)
+
+    # `members` is the headline membership universe = EVERYONE. All headline
+    # cards/metrics below use this so pre-founding current members are counted.
+    members = all_members
+
+    # Pre-founding members who are CURRENTLY SERVING (active/patched). These are
+    # the people the old code wrongly excluded from headline counts.
+    pre_founding_serving = [m for m in pre_founding if m.status == "active"]
+    pre_founding_serving_n = len(pre_founding_serving)
 
     # ---- "Made it to a single FTX" set (request #4) ----
     # 13th-era finalized FTX/MCFTX events only (exclude Pre-13th titled events,
@@ -119,14 +139,15 @@ async def recruiting_analytics(request: Request):
         if r.event_id in ftx13_ids and r.attended
     }
 
-    total = len(members)
+    total = len(members)            # everyone ever in the system (headline base)
+    funnel_total = len(funnel_members)  # 13th-era intake only (funnel base)
 
     if total == 0:
         return templates.TemplateResponse("pages/recruiting_analytics.html", {
             "request": request, "user": user, "total": 0,
         })
 
-    # ---------- Headline status distribution ----------
+    # ---------- Headline status distribution (ALL members) ----------
     status_counter = Counter(m.status for m in members)
     status_cards = []
     for st in ["active", "recruit", "inactive", "separated", "blacklisted"]:
@@ -141,14 +162,22 @@ async def recruiting_analytics(request: Request):
     recruit_n = status_counter.get("recruit", 0)
     left_n = sum(status_counter.get(s, 0) for s in LEFT_STATUSES)
 
-    # ---------- Intake by month (joins) ----------
+    # ---------- Roster-aligned headline (matches roster.py) ----------
+    # "On the roster" = status IN ('active','recruit'). 'active' administratively
+    # MEANS patched / full member (every active member has a patch_date; the two
+    # sets are identical in prod). Surface that explicitly so 'active' is not
+    # ambiguous (Cav noted he didn't know what 'active' referenced).
+    on_roster_n = active_n + recruit_n           # 26 + 12 = 38
+    patched_roster_n = active_n                  # 26 patched / full members
+
+    # ---------- Intake by month (joins) — 13th-era funnel only ----------
     join_by_month = defaultdict(int)
-    for m in members:
+    for m in funnel_members:
         if m.join_date:
             join_by_month[_ym(m.join_date)] += 1
     # Separations by month
     sep_by_month = defaultdict(int)
-    for m in members:
+    for m in funnel_members:
         if m.separation_date:
             sep_by_month[_ym(m.separation_date)] += 1
 
@@ -172,25 +201,30 @@ async def recruiting_analytics(request: Request):
         running += r["net"]
         net_series.append(running)
 
-    # ---------- Onboarding funnel (signed docs -> patch) ----------
+    # ---------- Onboarding funnel (signed docs -> patch) — 13th-era funnel ----
+    # This is a pipeline-history view scoped to 13th-era intake, so it uses
+    # funnel_members (not the all-members headline universe).
     def signed(attr):
-        return sum(1 for m in members if getattr(m, attr) is not None)
+        return sum(1 for m in funnel_members if getattr(m, attr) is not None)
 
     funnel = [
-        {"label": "Entered as recruit", "count": total, "color": "#42a5f5",
-         "note": "every row in the system"},
+        {"label": "Entered as recruit", "count": funnel_total, "color": "#42a5f5",
+         "note": "13th-era intake rows"},
         {"label": "Signed NDA", "count": signed("nda_signed_at"), "color": "#5c9ce6"},
         {"label": "Signed Waiver", "count": signed("waiver_signed_at"), "color": "#6fae8f"},
         {"label": "Signed Code of Conduct", "count": signed("code_of_conduct_signed_at"), "color": "#8bbf6a"},
         {"label": "Signed Bylaws", "count": signed("bylaws_signed_at"), "color": "#b0c44d"},
         {"label": "Signed Activity Policy", "count": signed("activity_policy_signed_at"), "color": "#d4a537"},
-        {"label": "Patched (graduated)", "count": sum(1 for m in members if m.patch_date), "color": "#4caf50",
+        {"label": "Patched (graduated)", "count": sum(1 for m in funnel_members if m.patch_date), "color": "#4caf50",
          "note": "completed TRADOC, full member"},
     ]
     funnel_max = funnel[0]["count"] or 1
     for f in funnel:
         f["pct"] = round(100 * f["count"] / funnel_max, 1)
 
+    # Headline "fully onboarded" / "patched" cards count EVERYONE currently in
+    # the system (incl. pre-founding current members), so they reconcile with
+    # the roster. (active==patched in prod, so patched_n should equal active_n.)
     fully_signed = sum(
         1 for m in members
         if all(getattr(m, a) is not None for a in [
@@ -199,9 +233,9 @@ async def recruiting_analytics(request: Request):
     )
     patched_n = sum(1 for m in members if m.patch_date)
 
-    # ---------- Cohort outcomes by join year ----------
+    # ---------- Cohort outcomes by join year — 13th-era funnel only ----------
     cohort = defaultdict(lambda: Counter())
-    for m in members:
+    for m in funnel_members:
         if m.join_date:
             cohort[m.join_date.year][m.status] += 1
     cohort_rows = []
@@ -219,9 +253,9 @@ async def recruiting_analytics(request: Request):
             "retention": round(100 * active / yr_total, 1) if yr_total else 0,
         })
 
-    # ---------- Separations breakdown ----------
+    # ---------- Separations breakdown — 13th-era funnel only ----------
     sep_reason_counter = Counter()
-    for m in members:
+    for m in funnel_members:
         if m.separation_date or m.status in LEFT_STATUSES:
             reason = (m.separation_reason or "").strip().lower()
             # Normalize freeform reasons to a bucket
@@ -245,15 +279,15 @@ async def recruiting_analytics(request: Request):
             "color": SEP_REASON_COLOR.get(reason, "#bbbbbb"),
         })
 
-    # ---------- Tenure / time-to-patch ----------
+    # ---------- Tenure / time-to-patch — 13th-era funnel only ----------
     patch_days = [
         (m.patch_date - m.join_date).days
-        for m in members
+        for m in funnel_members
         if m.patch_date and m.join_date and (m.patch_date - m.join_date).days >= 0
     ]
     tenure_days = [
         (m.separation_date - m.join_date).days
-        for m in members
+        for m in funnel_members
         if m.separation_date and m.join_date and (m.separation_date - m.join_date).days >= 0
     ]
 
@@ -270,6 +304,10 @@ async def recruiting_analytics(request: Request):
     tenure = _stats(tenure_days)
 
     # ---------- Recruiter credit ----------
+    # current_load = ACTIVE pipeline assignments (should be recomputed via the
+    # one-time backfill so it equals the count of status='recruit' members
+    # assigned to that recruiter). total_recruited = lifetime completed
+    # onboardings, accruing forward from now (PP-052).
     recruiter_rows = []
     for r in recruiters:
         recruiter_rows.append({
@@ -277,13 +315,14 @@ async def recruiting_analytics(request: Request):
             "active": r.is_active, "load": r.current_load,
             "max_load": r.max_load, "recruited": r.total_recruited,
         })
-    recruiter_rows.sort(key=lambda x: (x["load"], x["recruited"]), reverse=True)
+    recruiter_rows.sort(key=lambda x: (x["recruited"], x["load"]), reverse=True)
 
     # ---------- Flags ----------
     veterans = sum(1 for m in members if m.is_veteran)
 
     # ---------- "Never made it to a single FTX" (request #4) ----------
-    # Of post-founding members, who has zero FTX check-ins ever? This is the
+    # Across ALL members (NOT founding-scoped — this is a membership question,
+    # not pipeline history), who has zero FTX check-ins ever? This is the
     # recruiting funnel's real leak: people who signed up and never showed.
     ever_attended_n = sum(1 for m in members if m.id in attended_member_ids)
     never_attended = [m for m in members if m.id not in attended_member_ids]
@@ -325,27 +364,30 @@ async def recruiting_analytics(request: Request):
     # the fee is a hard gate to getting on the roster, so by definition every
     # member/recruit shown here has paid. We therefore do NOT flag fee tracking
     # as a gap; we surface it as a 100%-complete prerequisite instead.
-    # Recruiter credit IS meant to flow from Deck (a recruit card is assigned to
-    # a recruiter; reaching the Complete stack = that recruiter finished the
-    # process). But two things break it today:
-    #   1) Pipeline cards are not actually being assigned to recruiters
-    #      (assignedUsers is empty across all stacks).
-    #   2) Completed cards auto-delete from the Complete stack after 10 days
-    #      (s1_admin.py), so even a correct assignment leaves no persistent
-    #      credit trail — and members.assigned_recruiter / total_recruited are
-    #      never stamped at completion.
+    # Recruiter credit (PP-052): credit now persists to the DB at completion.
+    # When a recruit's card reaches the Complete stack, the portal stamps the
+    # assignee onto members.assigned_recruiter and increments
+    # recruiters.total_recruited (and decrements current_load). Two honesty
+    # caveats remain: (1) historical completed cards were deleted with no trail,
+    # so total_recruited starts at 0 for everyone and accrues FORWARD from now —
+    # past credit is unrecoverable; (2) credit only lands if the recruit was
+    # actually assigned a recruiter while in the pipeline.
     recruiter_field_populated = any(m.assigned_recruiter for m in members)
 
     data_gaps = []
+    data_gaps.append(
+        "Historical recruiter credit is unrecoverable. Completed pipeline cards "
+        "were auto-deleted before credit was persisted, so there is no trail of "
+        "who recruited the current roster. As of PP-052 the portal now stamps "
+        "members.assigned_recruiter and increments recruiters.total_recruited the "
+        "moment a recruit reaches the Complete stack — so lifetime-recruited "
+        "counts start at 0 and accrue forward from now. They are not retroactive.")
     if not recruiter_field_populated:
         data_gaps.append(
-            "Recruiter credit isn't captured yet. The design is sound — a recruit's "
-            "Deck card is assigned to a recruiter and reaching the Complete stack "
-            "means that recruiter saw them through. But in practice pipeline cards "
-            "aren't being assigned (assignedUsers is empty), and Complete-stack cards "
-            "auto-delete after 10 days, so nothing stamps members.assigned_recruiter "
-            "or recruiters.total_recruited. Fix = assign cards + persist the assignee "
-            "to the member record at completion before the card is purged.")
+            "No current member has an assigned_recruiter on record yet, so even "
+            "in-flight recruits won't generate credit until they're assigned a "
+            "recruiter in the pipeline. Assign recruiters to active recruit cards "
+            "so their completion credits the right person.")
 
     # ---------- Funnel conversion summary ----------
     conv_recruit_to_patch = round(100 * patched_n / total, 1) if total else 0
@@ -353,7 +395,9 @@ async def recruiting_analytics(request: Request):
 
     return templates.TemplateResponse("pages/recruiting_analytics.html", {
         "request": request, "user": user,
-        "total": total,
+        "total": total, "funnel_total": funnel_total,
+        "on_roster_n": on_roster_n, "patched_roster_n": patched_roster_n,
+        "pre_founding_serving_n": pre_founding_serving_n,
         "active_n": active_n, "recruit_n": recruit_n, "left_n": left_n,
         "patched_n": patched_n, "fully_signed": fully_signed,
         "status_cards": status_cards,
