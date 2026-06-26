@@ -91,6 +91,55 @@
             margin-top: 20px;
             min-height: 150px;
         }
+        .pay-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #555;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 22px 0 18px;
+        }
+        .pay-divider::before, .pay-divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #333;
+        }
+        .pay-divider span { padding: 0 12px; }
+        #venmo-btn {
+            display: block;
+            background: #3D95CE;
+            color: #fff;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            padding: 13px 0;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        #venmo-btn:hover { background: #2f7bb0; }
+        .venmo-hint {
+            font-size: 12px;
+            color: #888;
+            margin: 14px 0 10px;
+            line-height: 1.5;
+        }
+        #venmo-qr {
+            display: flex;
+            justify-content: center;
+        }
+        #venmo-qr img, #venmo-qr canvas {
+            background: #fff;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .venmo-handle {
+            font-size: 13px;
+            color: #3D95CE;
+            font-weight: 600;
+            margin-top: 8px;
+        }
         .footer {
             margin-top: 30px;
             font-size: 11px;
@@ -134,6 +183,17 @@
 
     <div id="paypal-button-container"></div>
 
+    <div class="pay-divider"><span>or</span></div>
+
+    <!-- Venmo -->
+    <a id="venmo-btn" href="#" target="_blank" rel="noopener" onclick="return goVenmo();">
+        <svg viewBox="0 0 256 256" width="20" height="20" style="vertical-align:middle;margin-right:8px;" aria-hidden="true"><rect width="256" height="256" rx="36" fill="#fff"/><path d="M175 48c6 10 9 21 9 35 0 44-37 101-67 141H86L58 64l52-5 14 116c13-21 29-55 29-78 0-12-2-21-6-29l28-20z" fill="#3D95CE"/></svg>
+        Donate with Venmo
+    </a>
+    <div class="venmo-hint">Opens Venmo with your amount &amp; note pre-filled. On a computer? Scan the QR with your phone:</div>
+    <div id="venmo-qr"></div>
+    <div class="venmo-handle">@{{ venmo_username }}</div>
+
     <div id="success-msg" class="success-msg">
         <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
         <div style="font-weight: 600; margin-bottom: 5px;">Thank You!</div>
@@ -141,7 +201,7 @@
     </div>
 
     <div class="footer">
-        Payments processed securely via PayPal.<br>
+        Payments processed securely via PayPal or Venmo.<br>
         The Texas State Militia is a 501(c)(3) private foundation. Donations may be tax-deductible to the extent permitted by law. Consult your tax advisor.
     </div>
 </div>
@@ -162,6 +222,11 @@
             selectedAmount = val;
             document.getElementById('custom-amount').value = val;
         }
+        if (typeof updateVenmoQR === 'function') {
+            updateVenmoQR();
+            var vb = document.getElementById('venmo-btn');
+            if (vb) vb.href = venmoUrl();
+        }
     }
 
     function onCustomChange() {
@@ -171,7 +236,43 @@
             // Deselect preset buttons
             document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
         }
+        updateVenmoQR();
     }
+
+    // ── Venmo deep-link + QR ────────────────────────────────────────────────
+    const VENMO_USER = "{{ venmo_username }}";
+    const VENMO_NOTE = "{{ venmo_note }}";
+
+    function venmoUrl() {
+        const amt = parseFloat(document.getElementById('custom-amount').value) || 0;
+        let u = "https://venmo.com/" + encodeURIComponent(VENMO_USER) +
+                "?txn=pay&note=" + encodeURIComponent(VENMO_NOTE);
+        if (amt >= 1) u += "&amount=" + amt.toFixed(2);
+        return u;
+    }
+    function goVenmo() {
+        const amt = parseFloat(document.getElementById('custom-amount').value);
+        if (!amt || amt < 1) { alert("Please enter a valid donation amount."); return false; }
+        document.getElementById('venmo-btn').href = venmoUrl();
+        return true;  // allow the link to open
+    }
+    function updateVenmoQR() {
+        const box = document.getElementById('venmo-qr');
+        if (!box || typeof QRCode === 'undefined') return;
+        box.innerHTML = '';
+        new QRCode(box, { text: venmoUrl(), width: 132, height: 132,
+                          colorDark: "#000", colorLight: "#fff" });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script>
+    // Render initial QR + keep button href current.
+    updateVenmoQR();
+    document.getElementById('custom-amount').addEventListener('input', function(){
+        updateVenmoQR();
+        document.getElementById('venmo-btn').href = venmoUrl();
+    });
+    document.getElementById('venmo-btn').href = venmoUrl();
 </script>
 
 <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>

@@ -9,6 +9,9 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+# Venmo business profile handle (no @). Deep-link + QR donation option.
+VENMO_USERNAME = os.getenv("VENMO_USERNAME", "xiiiventures")
+VENMO_NOTE = os.getenv("VENMO_NOTE", "13th Legion Donation")
 
 
 @router.get("/donate", response_class=HTMLResponse)
@@ -18,6 +21,8 @@ async def donate_page(request: Request):
     return templates.TemplateResponse("pages/donate.html", {
         "request": request,
         "paypal_client_id": PAYPAL_CLIENT_ID,
+        "venmo_username": VENMO_USERNAME,
+        "venmo_note": VENMO_NOTE,
         "user_email": (user or {}).get("email", ""),
         "user_name": (user or {}).get("display_name", ""),
     })
