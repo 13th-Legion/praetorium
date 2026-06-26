@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, desc
@@ -121,11 +121,13 @@ async def newsletter_edit(nl_id: int, request: Request, db: AsyncSession = Depen
 # ─── Inline image upload (returns hosted URL for the editor) ──────────────────
 @router.post("/image-upload", response_model=None)
 @require_auth
-async def newsletter_image_upload(
-    request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
-):
+async def newsletter_image_upload(request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
+    form = await request.form()
+    file: UploadFile = form.get("file")
+    if not file or not getattr(file, "filename", None):
+        return JSONResponse({"error": "No file provided."}, status_code=400)
     data = await file.read()
     if len(data) > MAX_IMAGE_BYTES:
         return JSONResponse({"error": f"Image exceeds {MAX_IMAGE_BYTES // (1024*1024)}MB limit."}, status_code=400)
@@ -149,14 +151,16 @@ async def newsletter_image_upload(
 # ─── Attachment upload ───────────────────────────────────────────────────────
 @router.post("/{nl_id}/attachment", response_class=HTMLResponse, response_model=None)
 @require_auth
-async def newsletter_attachment_add(
-    nl_id: int, request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
-):
+async def newsletter_attachment_add(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
     nl = await db.get(Newsletter, nl_id)
     if not nl:
         raise HTTPException(404, "Newsletter not found")
+    form = await request.form()
+    file: UploadFile = form.get("file")
+    if not file or not getattr(file, "filename", None):
+        return HTMLResponse('<div style="color:#ef5350;">No file provided.</div>', status_code=400)
     data = await file.read()
     mime = file.content_type or "application/octet-stream"
     if mime not in ALLOWED_ATTACH_MIMES:
@@ -189,7 +193,7 @@ async def newsletter_attachment_add(
     return _attachment_row_html(rec, nl_id)
 
 
-@router.post("/{nl_id}/attachment/{att_id}/delete", response_class=HTMLResponse)
+@router.post("/{nl_id}/attachment/{att_id}/delete", response_class=HTMLResponse, response_model=None)
 @require_auth
 async def newsletter_attachment_delete(
     nl_id: int, att_id: int, request: Request, db: AsyncSession = Depends(get_db)
@@ -217,26 +221,22 @@ def _attachment_row_html(att: NewsletterAttachment, nl_id: int) -> str:
 
 
 # ─── Save (draft / schedule) ─────────────────────────────────────────────────
-@router.post("/save", response_class=JSONResponse)
+@router.post("/save", response_class=JSONResponse, response_model=None)
 @require_auth
-async def newsletter_save(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    nl_id: str = Form(""),
-    title: str = Form(...),
-    subject: str = Form(...),
-    crest_key: str = Form(DEFAULT_CREST),
-    body_html: str = Form(""),
-    groups: str = Form(""),           # comma-separated keys
-    action: str = Form("draft"),      # draft | schedule | send
-    scheduled_date: str = Form(""),   # YYYY-MM-DD (CDT)
-    scheduled_time: str = Form(""),   # HH:MM (24h CDT)
-):
+async def newsletter_save(request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
 
-    title = title.strip()
-    subject = subject.strip()
+    form = await request.form()
+    nl_id = (form.get("nl_id") or "").strip()
+    title = (form.get("title") or "").strip()
+    subject = (form.get("subject") or "").strip()
+    crest_key = form.get("crest_key") or DEFAULT_CREST
+    body_html = form.get("body_html") or ""
+    groups = form.get("groups") or ""
+    action = form.get("action") or "draft"
+    scheduled_date = form.get("scheduled_date") or ""
+    scheduled_time = form.get("scheduled_time") or ""
     if not title:
         return JSONResponse({"error": "Title is required."}, status_code=400)
     if not subject:
@@ -249,7 +249,7 @@ async def newsletter_save(
 
     # Load or create
     nl = None
-    if nl_id.strip():
+    if nl_id:
         nl = await db.get(Newsletter, int(nl_id))
     if nl is None:
         nl = Newsletter(created_by=user.get("username", ""),
@@ -303,13 +303,13 @@ async def newsletter_save(
 
 
 # ─── Preview recipients ──────────────────────────────────────────────────────
-@router.post("/preview-recipients", response_class=HTMLResponse)
+@router.post("/preview-recipients", response_class=HTMLResponse, response_model=None)
 @require_auth
-async def newsletter_preview_recipients(
-    request: Request, db: AsyncSession = Depends(get_db), groups: str = Form("")
-):
+async def newsletter_preview_recipients(request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
+    form = await request.form()
+    groups = form.get("groups") or ""
     group_keys = [g for g in groups.split(",") if g in EMAIL_BLAST_GROUPS]
     if not group_keys:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
@@ -323,7 +323,7 @@ async def newsletter_preview_recipients(
 
 
 # ─── Send now ────────────────────────────────────────────────────────────────
-@router.post("/{nl_id}/send-now", response_class=JSONResponse)
+@router.post("/{nl_id}/send-now", response_class=JSONResponse, response_model=None)
 @require_auth
 async def newsletter_send_now(
     nl_id: int, request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
@@ -343,7 +343,7 @@ async def newsletter_send_now(
 
 
 # ─── Cancel a scheduled send ─────────────────────────────────────────────────
-@router.post("/{nl_id}/cancel", response_class=JSONResponse)
+@router.post("/{nl_id}/cancel", response_class=JSONResponse, response_model=None)
 @require_auth
 async def newsletter_cancel(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
@@ -356,7 +356,7 @@ async def newsletter_cancel(nl_id: int, request: Request, db: AsyncSession = Dep
     return JSONResponse({"ok": True})
 
 
-@router.post("/{nl_id}/delete", response_class=JSONResponse)
+@router.post("/{nl_id}/delete", response_class=JSONResponse, response_model=None)
 @require_auth
 async def newsletter_delete(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = _user(request)
