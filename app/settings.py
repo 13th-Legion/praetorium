@@ -19,3 +19,7 @@ SMTP_FROM = os.getenv("SMTP_FROM", "13th Legion <admin@13thlegion.org>")
 
 # Reapply URL
 REAPPLY_URL = os.getenv("REAPPLY_URL", "https://cloud.13thlegion.org/apps/forms/s/Sia3N7Bn7wCW3fLPLZRGP3Tm")
+
+# Public base URL of the portal — used to build ABSOLUTE asset URLs that must
+# resolve from remote email clients (inline newsletter images, seasonal crests).
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://portal.13thlegion.org").rstrip("/")

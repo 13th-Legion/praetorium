@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Legionary Dispatch — Compose{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h1 style="margin:0;">{% if nl %}Edit Newsletter{% else %}New Newsletter{% endif %}</h1>
+        <a href="/api/s1/newsletter" style="color:#888;font-size:13px;text-decoration:none;">← All issues</a>
+    </div>
+    <p style="color:#888;margin-bottom:20px;">Legionary Dispatch — embedded images, attachments, seasonal masthead, send now or schedule.</p>
+
+    <div class="card" style="padding:22px;">
+        <input type="hidden" id="nl-id" value="{{ nl.id if nl else '' }}">
+
+        <!-- Masthead: crest + title -->
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+            <div style="flex:1;min-width:240px;">
+                <label style="font-weight:600;display:block;margin-bottom:6px;">Issue Title</label>
+                <input type="text" id="nl-title" placeholder="Legionary Dispatch — November 2025"
+                    value="{{ nl.title if nl else '' }}"
+                    style="width:100%;padding:10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;box-sizing:border-box;">
+            </div>
+            <div style="width:220px;">
+                <label style="font-weight:600;display:block;margin-bottom:6px;">Seasonal Crest</label>
+                <select id="nl-crest" onchange="updateCrestPreview()"
+                    style="width:100%;padding:10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;">
+                    {% for key, c in crests.items() %}
+                    <option value="{{ key }}" {% if nl and nl.crest_key == key %}selected{% elif not nl and key == default_crest %}selected{% endif %}>{{ c.emoji }} {{ c.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="width:74px;text-align:center;">
+                <label style="font-weight:600;display:block;margin-bottom:6px;font-size:11px;color:#888;">Preview</label>
+                <img id="crest-preview" src="/static/img/crests/standard.png" alt="crest"
+                    style="width:60px;height:60px;object-fit:contain;background:#1a1a2e;border-radius:6px;padding:4px;">
+            </div>
+        </div>
+
+        <!-- Subject -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:6px;">Email Subject</label>
+            <input type="text" id="nl-subject" placeholder="e.g., Legionary Dispatch — November"
+                value="{{ nl.subject if nl else '' }}"
+                style="width:100%;padding:10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;box-sizing:border-box;">
+        </div>
+
+        <!-- Recipients -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:8px;color:#d4a537;">Recipients</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                {% set sel = (nl.groups_csv.split(',') if nl and nl.groups_csv else []) %}
+                {% for key, group in groups.items() %}
+                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;cursor:pointer;font-size:13px;">
+                    <input type="checkbox" class="nl-group" value="{{ key }}" {% if key in sel %}checked{% endif %} style="accent-color:#d4a537;">
+                    {{ group.label }}
+                </label>
+                {% endfor %}
+            </div>
+            <button type="button" onclick="previewRecipients()"
+                style="margin-top:10px;padding:6px 14px;background:rgba(212,165,55,0.15);border:1px solid #d4a537;border-radius:4px;color:#d4a537;font-size:12px;font-weight:600;cursor:pointer;">Preview Recipients</button>
+            <div id="recipient-preview"></div>
+        </div>
+
+        <!-- Body editor -->
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:6px;">Newsletter Body</label>
+            <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+            <style>
+            .ql-toolbar.ql-snow { background:#2a2a3e; border:1px solid #444 !important; border-radius:4px 4px 0 0; }
+            .ql-toolbar .ql-stroke { stroke:#ccc !important; }
+            .ql-toolbar .ql-fill { fill:#ccc !important; }
+            .ql-toolbar .ql-picker-label { color:#ccc !important; }
+            .ql-toolbar .ql-picker-options { background:#2a2a3e !important; border-color:#444 !important; }
+            .ql-toolbar .ql-picker-item { color:#ccc !important; }
+            .ql-toolbar button.ql-active .ql-stroke { stroke:#d4a537 !important; }
+            .ql-toolbar button.ql-active .ql-fill { fill:#d4a537 !important; }
+            .ql-container.ql-snow { background:#2a2a3e; border:1px solid #444 !important; border-top:none !important; border-radius:0 0 4px 4px; color:#eee; font-size:14px; min-height:280px; }
+            .ql-editor { min-height:280px; line-height:1.6; }
+            .ql-editor.ql-blank::before { color:#888 !important; font-style:normal !important; }
+            .ql-editor a { color:#d4a537; }
+            .ql-editor img { max-width:100%; border-radius:4px; }
+            .ql-snow .ql-tooltip { background:#1a1a2e !important; border-color:#444 !important; color:#eee !important; }
+            .ql-snow .ql-tooltip input[type=text] { background:#2a2a3e !important; color:#eee !important; border-color:#555 !important; }
+            </style>
+            <div id="nl-toolbar">
+                <span class="ql-formats">
+                    <select class="ql-header"><option value="">Normal</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button><button class="ql-strike"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button><button class="ql-blockquote"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-link"></button><button class="ql-image"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-clean"></button>
+                </span>
+            </div>
+            <div id="nl-editor"></div>
+            <p style="font-size:11px;color:#666;margin-top:4px;">Use the image button to embed photos inline. Body is wrapped in the Legionary Dispatch masthead + signature automatically.</p>
+        </div>
+
+        <!-- Attachments -->
+        <div style="margin-bottom:18px;">
+            <label style="font-weight:600;display:block;margin-bottom:6px;">Attachments (PDF / images / docs)</label>
+            <div id="att-list">
+                {% if attachments %}{% for a in attachments %}
+                <div id="att-{{ a.id }}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid #444;border-radius:4px;margin-bottom:6px;">
+                    <span style="font-size:13px;color:#ddd;">📎 {{ a.orig_name }} <span style="color:#888;">({{ (a.size // 1024) or 1 }} KB)</span></span>
+                    <button type="button" hx-post="/api/s1/newsletter/{{ nl.id }}/attachment/{{ a.id }}/delete" hx-target="#att-{{ a.id }}" hx-swap="outerHTML" style="background:none;border:none;color:#ef5350;cursor:pointer;">✕</button>
+                </div>
+                {% endfor %}{% endif %}
+            </div>
+            <div id="att-upload-zone" style="margin-top:6px;">
+                <input type="file" id="att-file" style="display:none;" onchange="uploadAttachment()">
+                <button type="button" id="att-btn" onclick="document.getElementById('att-file').click()"
+                    style="padding:8px 16px;background:rgba(255,255,255,0.05);border:1px dashed #666;border-radius:6px;color:#aaa;font-size:13px;cursor:pointer;">+ Add attachment</button>
+                <span id="att-hint" style="font-size:11px;color:#666;margin-left:8px;">Save the newsletter first to attach files. Max 15MB each, 18MB total.</span>
+            </div>
+        </div>
+
+        <!-- Schedule -->
+        <div style="margin-bottom:18px;padding:14px;background:rgba(255,255,255,0.03);border:1px solid #333;border-radius:6px;">
+            <label style="font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="nl-schedule-toggle" onchange="toggleSchedule()" style="accent-color:#d4a537;"
+                    {% if nl and nl.status == 'scheduled' %}checked{% endif %}>
+                Schedule for later (instead of sending now)
+            </label>
+            <div id="schedule-fields" style="display:{% if nl and nl.status == 'scheduled' %}flex{% else %}none{% endif %};gap:12px;margin-top:12px;">
+                <div>
+                    <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">Date (CDT)</label>
+                    <input type="date" id="nl-sched-date"
+                        value="{{ nl.scheduled_at.strftime('%Y-%m-%d') if nl and nl.scheduled_at else '' }}"
+                        style="padding:8px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;">
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">Time (CDT, 24h)</label>
+                    <input type="time" id="nl-sched-time"
+                        value="{{ nl.scheduled_at.strftime('%H:%M') if nl and nl.scheduled_at else '09:00' }}"
+                        style="padding:8px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div id="nl-result" style="margin-bottom:12px;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="button" onclick="saveNewsletter('draft')"
+                style="padding:10px 22px;background:rgba(255,255,255,0.06);border:1px solid #666;border-radius:6px;color:#ddd;font-weight:600;cursor:pointer;">Save Draft</button>
+            <button type="button" id="primary-action-btn" onclick="primaryAction()"
+                style="padding:10px 28px;background:#d4a537;color:#1a1a2e;border:none;border-radius:6px;font-weight:700;font-size:15px;cursor:pointer;">Send Now</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+var CRESTS = {{ crests | tojson }};
+var nlQuill = new Quill('#nl-editor', {
+    theme: 'snow',
+    modules: { toolbar: '#nl-toolbar' },
+    placeholder: 'Legionaries,\n\nCompose the dispatch…'
+});
+{% if nl %}nlQuill.root.innerHTML = {{ (nl.body_html or '') | tojson }};{% endif %}
+
+// Custom image handler — upload to server, insert hosted URL (no base64).
+nlQuill.getModule('toolbar').addHandler('image', function() {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+    input.onchange = function() {
+        var file = input.files[0];
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('file', file);
+        fetch('/api/s1/newsletter/image-upload', { method: 'POST', body: fd })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d.error) { alert(d.error); return; }
+                var range = nlQuill.getSelection(true);
+                nlQuill.insertEmbed(range.index, 'image', d.url);
+                nlQuill.setSelection(range.index + 1);
+            }).catch(function(e){ alert('Image upload failed: ' + e); });
+    };
+});
+
+function updateCrestPreview() {
+    var key = document.getElementById('nl-crest').value;
+    document.getElementById('crest-preview').src = '/static/img/crests/' + (CRESTS[key] ? CRESTS[key].file : 'standard.png');
+}
+function selectedGroups() {
+    return Array.from(document.querySelectorAll('.nl-group:checked')).map(function(c){ return c.value; });
+}
+function previewRecipients() {
+    var fd = new FormData();
+    fd.append('groups', selectedGroups().join(','));
+    fetch('/api/s1/newsletter/preview-recipients', { method:'POST', body: fd })
+        .then(function(r){ return r.text(); })
+        .then(function(h){ document.getElementById('recipient-preview').innerHTML = h; });
+}
+function toggleSchedule() {
+    var on = document.getElementById('nl-schedule-toggle').checked;
+    document.getElementById('schedule-fields').style.display = on ? 'flex' : 'none';
+    document.getElementById('primary-action-btn').textContent = on ? 'Schedule' : 'Send Now';
+}
+
+function collectForm(action) {
+    var fd = new FormData();
+    fd.append('nl_id', document.getElementById('nl-id').value);
+    fd.append('title', document.getElementById('nl-title').value.trim());
+    fd.append('subject', document.getElementById('nl-subject').value.trim());
+    fd.append('crest_key', document.getElementById('nl-crest').value);
+    fd.append('body_html', nlQuill.root.innerHTML);
+    fd.append('groups', selectedGroups().join(','));
+    fd.append('action', action);
+    if (action === 'schedule') {
+        fd.append('scheduled_date', document.getElementById('nl-sched-date').value);
+        fd.append('scheduled_time', document.getElementById('nl-sched-time').value);
+    }
+    return fd;
+}
+
+function saveNewsletter(action) {
+    return fetch('/api/s1/newsletter/save', { method:'POST', body: collectForm(action) })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d.error) { showResult(d.error, true); return null; }
+            document.getElementById('nl-id').value = d.id;
+            document.getElementById('att-hint').textContent = 'Max 15MB each, 18MB total.';
+            return d;
+        });
+}
+
+function primaryAction() {
+    var scheduled = document.getElementById('nl-schedule-toggle').checked;
+    if (!document.getElementById('nl-title').value.trim()) { showResult('Title is required.', true); return; }
+    if (!document.getElementById('nl-subject').value.trim()) { showResult('Subject is required.', true); return; }
+    if (selectedGroups().length === 0) { showResult('Select at least one recipient group.', true); return; }
+
+    if (scheduled) {
+        saveNewsletter('schedule').then(function(d){
+            if (d) showResult('⏰ Scheduled. It will send automatically at the chosen time.', false);
+        });
+        return;
+    }
+    if (!confirm('Send this newsletter now? This cannot be undone.')) return;
+    // Save first (persist body/crest/recipients), then fire send-now.
+    saveNewsletter('draft').then(function(d){
+        if (!d) return;
+        fetch('/api/s1/newsletter/' + d.id + '/send-now', { method:'POST' })
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+                if (res.error) { showResult(res.error, true); return; }
+                showResult('✅ Newsletter queued for delivery. Archiving to Nextcloud after send.', false);
+            });
+    });
+}
+
+function uploadAttachment() {
+    var nlId = document.getElementById('nl-id').value;
+    if (!nlId) {
+        // Auto-save a draft so we have an id to attach to.
+        saveNewsletter('draft').then(function(d){ if (d) doUpload(d.id); });
+        return;
+    }
+    doUpload(nlId);
+}
+function doUpload(nlId) {
+    var f = document.getElementById('att-file').files[0];
+    if (!f) return;
+    var fd = new FormData();
+    fd.append('file', f);
+    fetch('/api/s1/newsletter/' + nlId + '/attachment', { method:'POST', body: fd })
+        .then(function(r){ return r.text(); })
+        .then(function(h){
+            if (h.indexOf('color:#ef5350') !== -1) { document.getElementById('nl-result').innerHTML = h; return; }
+            document.getElementById('att-list').insertAdjacentHTML('beforeend', h);
+            if (window.htmx) htmx.process(document.getElementById('att-list'));
+            document.getElementById('att-file').value = '';
+        });
+}
+
+function showResult(msg, isErr) {
+    document.getElementById('nl-result').innerHTML =
+        '<div style="padding:12px;border-radius:6px;background:' +
+        (isErr ? 'rgba(239,83,80,0.15);border:1px solid rgba(239,83,80,0.4);color:#ef5350;' : 'rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);color:#27ae60;') +
+        '">' + msg + '</div>';
+}
+
+updateCrestPreview();
+toggleSchedule();
+</script>
+{% endblock %}

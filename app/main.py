@@ -16,14 +16,24 @@ from sqlalchemy import select
 
 from config import get_settings
 from app.database import engine, Base, async_session
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
-    yield
-    await engine.dispose()
+    import asyncio
+    from app.newsletter_scheduler import newsletter_scheduler_loop
+    _nl_task = asyncio.create_task(newsletter_scheduler_loop())
+    try:
+        yield
+    finally:
+        _nl_task.cancel()
+        try:
+            await _nl_task
+        except (asyncio.CancelledError, Exception):
+            pass
+        await engine.dispose()
 
 
 settings = get_settings()
@@ -31,7 +41,7 @@ settings = get_settings()
 
 # ─── Contact Verification Middleware ─────────────────────────────────────────
 
-VERIFY_BYPASS = {"/auth/", "/verify-contact", "/static/", "/health", "/api/docs", "/favicon.ico"}
+VERIFY_BYPASS = {"/auth/", "/verify-contact", "/static/", "/nlmedia/", "/health", "/api/docs", "/favicon.ico"}
 
 
 class ContactVerifyMiddleware(BaseHTTPMiddleware):
@@ -74,7 +84,7 @@ class ContactVerifyMiddleware(BaseHTTPMiddleware):
 # ─── Display Name & Role Refresh Middleware ───────────────────────────────────
 
 DISPLAY_REFRESH_INTERVAL = 15 * 60  # 15 minutes in seconds
-DISPLAY_REFRESH_BYPASS = {"/auth/", "/static/", "/health", "/favicon.ico"}
+DISPLAY_REFRESH_BYPASS = {"/auth/", "/static/", "/nlmedia/", "/health", "/favicon.ico"}
 
 
 class DisplayRefreshMiddleware(BaseHTTPMiddleware):
@@ -154,6 +164,15 @@ async def favicon():
 
 # Static files & templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Public (unauthenticated) newsletter media — inline images embedded in sent
+# emails must be fetchable by remote mail clients (Gmail image proxy, etc.).
+# Stored in the mounted /app/data/newsletter volume (deploy-safe).
+import os as _os
+_nlmedia_dir = _os.getenv("NEWSLETTER_DATA_DIR", "/app/data/newsletter")
+_os.makedirs(_os.path.join(_nlmedia_dir, "images"), exist_ok=True)
+_os.makedirs(_os.path.join(_nlmedia_dir, "attachments"), exist_ok=True)
+app.mount("/nlmedia", StaticFiles(directory=_nlmedia_dir), name="nlmedia")
 templates = Jinja2Templates(directory="app/templates")
 
 # Custom Jinja2 filters
@@ -200,6 +219,7 @@ app.include_router(donate.router)
 app.include_router(weapons_qual.router)
 app.include_router(tradoc_admin.router)
 app.include_router(aars.router)
+app.include_router(newsletter.router)
 
 
 # ─── Contact Verification Routes ────────────────────────────────────────────

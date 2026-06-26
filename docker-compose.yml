@@ -33,6 +33,7 @@ services:
       - db
     volumes:
       - library_data:/app/data/library
+      - newsletter_data:/app/data/newsletter
     networks:
       - praetorium
     logging:
@@ -62,6 +63,7 @@ services:
 volumes:
   pgdata:
   library_data:
+  newsletter_data:
 
 networks:
   praetorium:
