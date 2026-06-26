@@ -24,6 +24,18 @@ async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
     import asyncio
     from app.newsletter_scheduler import newsletter_scheduler_loop
+    # Seed newsletter section templates (idempotent insert-if-missing).
+    try:
+        from app.database import async_session as _async_session
+        from app.newsletter_sections_seed import seed_section_templates
+        async with _async_session() as _db:
+            _n = await seed_section_templates(_db)
+            if _n:
+                import logging as _lg
+                _lg.getLogger("uvicorn.error").info(f"Seeded {_n} newsletter section templates")
+    except Exception as _e:
+        import logging as _lg
+        _lg.getLogger("uvicorn.error").warning(f"Newsletter section seed skipped: {_e}")
     _nl_task = asyncio.create_task(newsletter_scheduler_loop())
     try:
         yield

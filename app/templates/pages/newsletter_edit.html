@@ -66,6 +66,23 @@
         <!-- Body editor -->
         <div style="margin-bottom:16px;">
             <label style="font-weight:600;display:block;margin-bottom:6px;">Newsletter Body</label>
+
+            <!-- Section palette -->
+            <div style="margin-bottom:10px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid #333;border-radius:6px;">
+                <div style="font-size:12px;color:#d4a537;font-weight:600;margin-bottom:6px;">➕ Add a section</div>
+                <div id="section-palette" style="display:flex;flex-wrap:wrap;gap:6px;">
+                    <span style="font-size:11px;color:#888;">Loading sections…</span>
+                </div>
+                <div style="margin-top:8px;">
+                    <button type="button" onclick="insertBlankSection()" style="padding:5px 12px;background:rgba(255,255,255,0.06);border:1px dashed #666;border-radius:4px;color:#aaa;font-size:12px;cursor:pointer;">+ Blank Section</button>
+                    <button type="button" onclick="toggleOutline()" style="padding:5px 12px;background:rgba(255,255,255,0.06);border:1px solid #555;border-radius:4px;color:#aaa;font-size:12px;cursor:pointer;margin-left:6px;">☰ Reorder Sections</button>
+                </div>
+                <!-- Drag-reorder outline -->
+                <div id="section-outline" style="display:none;margin-top:10px;padding:8px;background:#1a1a2e;border:1px solid #444;border-radius:6px;">
+                    <div style="font-size:11px;color:#888;margin-bottom:6px;">Drag to reorder · sections are split on each ◆ heading</div>
+                    <div id="outline-list"></div>
+                </div>
+            </div>
             <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
             <style>
             .ql-toolbar.ql-snow { background:#2a2a3e; border:1px solid #444 !important; border-radius:4px 4px 0 0; }
@@ -298,5 +315,125 @@ function showResult(msg, isErr) {
 
 updateCrestPreview();
 toggleSchedule();
+
+// ─── Section template system ────────────────────────────────────────────────
+var IS_EXISTING = {{ 'true' if nl else 'false' }};
+
+function loadSectionPalette() {
+    fetch('/api/s1/newsletter/sections/list')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            var per = (d.sections||[]).filter(function(s){ return s.category==='per_issue'; });
+            var rec = (d.sections||[]).filter(function(s){ return s.category==='recurring'; });
+            var html = '';
+            function btns(list, color){
+                return list.map(function(s){
+                    return '<button type="button" onclick="insertSection(\''+s.key+'\')" '+
+                      'style="padding:5px 10px;background:rgba(212,165,55,0.10);border:1px solid '+color+';border-radius:4px;color:'+color+';font-size:11px;cursor:pointer;">'+
+                      s.title + (s.dynamic ? ' ⚡' : '') + '</button>';
+                }).join('');
+            }
+            html = btns(per, '#d4a537');
+            if (rec.length) html += '<span style="width:100%;font-size:10px;color:#666;margin:4px 0 0;">Recurring (pre-loaded on new newsletters):</span>' + btns(rec, '#7fa7d4');
+            document.getElementById('section-palette').innerHTML = html || '<span style="font-size:11px;color:#888;">No sections defined.</span>';
+        });
+}
+
+function insertSection(key) {
+    fetch('/api/s1/newsletter/sections/'+key+'/render')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d.error) { alert(d.error); return; }
+            // Insert at end of current content via Quill clipboard (preserves formatting).
+            var len = nlQuill.getLength();
+            nlQuill.clipboard.dangerouslyPasteHTML(len, d.html);
+        });
+}
+
+function insertBlankSection() {
+    var name = prompt('Section heading:', 'New Section');
+    if (!name) return;
+    var html = '<h2>◆ ' + name.replace(/</g,'&lt;') + '</h2><p><br></p>';
+    nlQuill.clipboard.dangerouslyPasteHTML(nlQuill.getLength(), html);
+}
+
+// Pre-load recurring block into a brand-new newsletter (not existing drafts).
+function preloadRecurring() {
+    if (IS_EXISTING) return;
+    fetch('/api/s1/newsletter/sections/preload')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d.html && nlQuill.getText().trim() === '') {
+                nlQuill.clipboard.dangerouslyPasteHTML(0, d.html);
+            }
+        });
+}
+
+// ── Drag-reorder: split body on ◆ H2 headings, reorder, reassemble ──────────
+function toggleOutline() {
+    var el = document.getElementById('section-outline');
+    if (el.style.display === 'none') { buildOutline(); el.style.display = 'block'; }
+    else { el.style.display = 'none'; }
+}
+
+function splitSections() {
+    // Returns array of {title, html} by splitting the editor HTML on <h2> blocks.
+    var root = nlQuill.root.cloneNode(true);
+    var nodes = Array.from(root.childNodes);
+    var sections = []; var cur = null;
+    nodes.forEach(function(n){
+        var isH = n.nodeType===1 && n.tagName==='H2';
+        if (isH) {
+            cur = { title: n.textContent.replace(/^\s*◆\s*/,''), nodes: [n] };
+            sections.push(cur);
+        } else if (cur) {
+            cur.nodes.push(n);
+        } else {
+            cur = { title: '(intro)', nodes: [n] };
+            sections.push(cur);
+        }
+    });
+    return sections.map(function(s){
+        var wrap = document.createElement('div');
+        s.nodes.forEach(function(n){ wrap.appendChild(n.cloneNode(true)); });
+        return { title: s.title, html: wrap.innerHTML };
+    });
+}
+
+var _outlineSections = [];
+function buildOutline() {
+    _outlineSections = splitSections();
+    var list = document.getElementById('outline-list');
+    list.innerHTML = _outlineSections.map(function(s, i){
+        return '<div class="outline-item" draggable="true" data-idx="'+i+'" '+
+          'style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin-bottom:4px;background:#2a2a3e;border:1px solid #444;border-radius:4px;cursor:grab;font-size:12px;color:#ddd;">'+
+          '<span style="color:#666;">☰</span>'+ (s.title || '(untitled)') +'</div>';
+    }).join('');
+    var items = list.querySelectorAll('.outline-item');
+    var dragIdx = null;
+    items.forEach(function(it){
+        it.addEventListener('dragstart', function(){ dragIdx = +it.dataset.idx; it.style.opacity='0.4'; });
+        it.addEventListener('dragend', function(){ it.style.opacity='1'; });
+        it.addEventListener('dragover', function(e){ e.preventDefault(); });
+        it.addEventListener('drop', function(e){
+            e.preventDefault();
+            var dropIdx = +it.dataset.idx;
+            if (dragIdx===null || dragIdx===dropIdx) return;
+            var moved = _outlineSections.splice(dragIdx,1)[0];
+            _outlineSections.splice(dropIdx,0,moved);
+            applyOutlineOrder();
+            buildOutline();
+        });
+    });
+}
+
+function applyOutlineOrder() {
+    var html = _outlineSections.map(function(s){ return s.html; }).join('');
+    nlQuill.setContents([]); // clear
+    nlQuill.clipboard.dangerouslyPasteHTML(0, html);
+}
+
+loadSectionPalette();
+preloadRecurring();
 </script>
 {% endblock %}

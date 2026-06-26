@@ -24,6 +24,8 @@ from app.auth import require_auth
 from app.database import get_db
 from app.constants import UNIT_COMMS_ROLES
 from app.models.newsletter import Newsletter, NewsletterImage, NewsletterAttachment
+from app.models.newsletter_section import NewsletterSectionTemplate
+from app.models.events import Event
 from app.newsletter_assets import (
     SEASONAL_CRESTS, DEFAULT_CREST, crest_url, crest_available,
     NEWSLETTER_IMG_DIR, NEWSLETTER_ATTACH_DIR, image_url,
@@ -376,3 +378,91 @@ async def newsletter_delete(nl_id: int, request: Request, db: AsyncSession = Dep
         await db.commit()
         return JSONResponse({"ok": True})
     return JSONResponse({"error": "Cannot delete a sent newsletter."}, status_code=400)
+
+
+# ─── Section template library (one-click section blocks) ─────────────────────
+
+async def _render_dynamic_section(db: AsyncSession, source: str, fallback_html: str) -> str:
+    """Render a dynamic section's body at compose time. Currently supports the
+    live events/training calendar pulled from Praetorium events."""
+    if source == "events_calendar":
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        horizon = now + timedelta(days=400)
+        rows = (await db.execute(
+            select(Event)
+            .where(Event.date_start >= now - timedelta(days=1), Event.date_start <= horizon)
+            .order_by(Event.date_start)
+        )).scalars().all()
+        if not rows:
+            return fallback_html
+        items = []
+        for e in rows:
+            d = e.date_start
+            label = d.strftime("%d %b %Y").upper()
+            items.append(f"<li>{label} — {e.title}</li>")
+        from app.settings import PUBLIC_BASE_URL as _P
+        return (
+            "<p>Upcoming training and events:</p><ul>" + "".join(items) + "</ul>"
+            f'<p>Full schedule any time at <a href="{_P}/events">{_P}/events</a>.</p>'
+        )
+    return fallback_html
+
+
+@router.get("/sections/list", response_class=JSONResponse, response_model=None)
+@require_auth
+async def newsletter_sections_list(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return the section-template palette (per-issue + recurring), for the composer."""
+    user = _user(request)
+    _require_s1(user)
+    rows = (await db.execute(
+        select(NewsletterSectionTemplate)
+        .where(NewsletterSectionTemplate.is_active.is_(True))
+        .order_by(NewsletterSectionTemplate.default_order)
+    )).scalars().all()
+    out = [{
+        "id": r.id, "key": r.key, "title": r.title, "category": r.category,
+        "preload": r.preload, "dynamic": bool(r.dynamic_source), "order": r.default_order,
+    } for r in rows]
+    return JSONResponse({"sections": out})
+
+
+@router.get("/sections/{key}/render", response_class=JSONResponse, response_model=None)
+@require_auth
+async def newsletter_section_render(key: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Return a single section as composer-ready HTML (header + body), resolving
+    dynamic sections (e.g. live training calendar)."""
+    user = _user(request)
+    _require_s1(user)
+    tpl = (await db.execute(
+        select(NewsletterSectionTemplate).where(NewsletterSectionTemplate.key == key)
+    )).scalar_one_or_none()
+    if not tpl:
+        return JSONResponse({"error": "Unknown section."}, status_code=404)
+    body = tpl.body_html
+    if tpl.dynamic_source:
+        body = await _render_dynamic_section(db, tpl.dynamic_source, tpl.body_html)
+    # Section block: ◆ heading + body, wrapped so it's a draggable unit in the editor.
+    html = f'<h2>\u25c6 {tpl.title}</h2>{body}<p><br></p>'
+    return JSONResponse({"key": tpl.key, "title": tpl.title, "html": html, "category": tpl.category})
+
+
+@router.get("/sections/preload", response_class=JSONResponse, response_model=None)
+@require_auth
+async def newsletter_sections_preload(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return the pre-load recurring block (rendered, in order) for new drafts."""
+    user = _user(request)
+    _require_s1(user)
+    rows = (await db.execute(
+        select(NewsletterSectionTemplate)
+        .where(NewsletterSectionTemplate.is_active.is_(True),
+               NewsletterSectionTemplate.preload.is_(True))
+        .order_by(NewsletterSectionTemplate.default_order)
+    )).scalars().all()
+    chunks = []
+    for tpl in rows:
+        body = tpl.body_html
+        if tpl.dynamic_source:
+            body = await _render_dynamic_section(db, tpl.dynamic_source, tpl.body_html)
+        chunks.append(f'<h2>\u25c6 {tpl.title}</h2>{body}<p><br></p>')
+    return JSONResponse({"html": "".join(chunks)})
