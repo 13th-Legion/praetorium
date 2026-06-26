@@ -1697,6 +1697,61 @@ async def cancel_event(request: Request, event_id: int):
 
 # ─── Dashboard Widget (updated to use DB with CalDAV fallback) ───────────────
 
+@router.get("/api/events/tradoc-agenda", response_class=HTMLResponse, response_model=None)
+@require_auth
+async def tradoc_agenda(request: Request):
+    """Render a training agenda (TRADOC subjects) for the given block numbers, for
+    one-click insertion into an FTX event description. ?blocks=1,3 (and
+    optionally &include_every=1 to prepend the 'Every FTX' block 0)."""
+    from app.settings import PUBLIC_BASE_URL
+    qs = request.query_params
+    raw = (qs.get("blocks") or "").strip()
+    block_nums = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part.lstrip("-").isdigit():
+            block_nums.append(int(part))
+    include_every = qs.get("include_every", "1") not in ("0", "false", "")
+    # Always surface 'Every FTX' (block 0) first for FTXs unless explicitly off.
+    ordered = ([0] if (include_every and 0 not in block_nums) else []) + block_nums
+    if not ordered:
+        return HTMLResponse('<p style="color:#888;">Select one or more training blocks first.</p>')
+
+    async with async_session() as db:
+        blocks = (await db.execute(
+            select(TradocBlock).where(TradocBlock.archived.is_(False))
+        )).scalars().all()
+        by_num = {b.number: b for b in blocks}
+        parts = []
+        for num in ordered:
+            blk = by_num.get(num)
+            if not blk:
+                continue
+            items = (await db.execute(
+                select(TradocItem)
+                .where(TradocItem.block == num, TradocItem.archived.is_(False))
+                .order_by(TradocItem.sort_order, TradocItem.name)
+            )).scalars().all()
+            if not items:
+                continue
+            parts.append(f"<h3>{blk.name}</h3>")
+            lis = []
+            for it in items:
+                label = it.name
+                # Link items that have docs to the TRADOC subject page.
+                if it.doc_type and it.doc_type != "none":
+                    url = f"{PUBLIC_BASE_URL}/training/tradoc"
+                    label = f'<a href="{url}">{it.name}</a>'
+                suffix = " <em>(optional)</em>" if it.optional else ""
+                lis.append(f"<li>{label}{suffix}</li>")
+            parts.append("<ul>" + "".join(lis) + "</ul>")
+
+    if not parts:
+        return HTMLResponse('<p style="color:#888;">No TRADOC subjects found for the selected blocks.</p>')
+    agenda = '<h2>Training Agenda</h2>' + "".join(parts)
+    return HTMLResponse(agenda)
+
+
 @router.get("/api/events/upcoming", response_class=HTMLResponse)
 @require_auth
 async def upcoming_events(request: Request):
