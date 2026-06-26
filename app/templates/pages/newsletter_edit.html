@@ -32,7 +32,9 @@
             <div style="width:74px;text-align:center;">
                 <label style="font-weight:600;display:block;margin-bottom:6px;font-size:11px;color:#888;">Preview</label>
                 <img id="crest-preview" src="/static/img/crests/standard.png" alt="crest"
+                    onerror="this.onerror=null;this.src='/static/img/crests/standard.png';var n=document.getElementById('crest-note');if(n)n.style.display='block';"
                     style="width:60px;height:60px;object-fit:contain;background:#1a1a2e;border-radius:6px;padding:4px;">
+                <div id="crest-note" style="display:none;font-size:9px;color:#d4a537;margin-top:3px;line-height:1.2;">art pending — using standard</div>
             </div>
         </div>
 
@@ -191,6 +193,8 @@ nlQuill.getModule('toolbar').addHandler('image', function() {
 
 function updateCrestPreview() {
     var key = document.getElementById('nl-crest').value;
+    var note = document.getElementById('crest-note');
+    if (note) note.style.display = 'none';
     document.getElementById('crest-preview').src = '/static/img/crests/' + (CRESTS[key] ? CRESTS[key].file : 'standard.png');
 }
 function selectedGroups() {
