@@ -149,19 +149,40 @@ async def _resolve_invite_groups(db, group_keys: list) -> set:
     return member_ids
 
 
-async def _activate_warno(db, event):
-    """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active+recruit members."""
+async def _activate_warno(db, event, *, already_claimed=False):
+    """Activate WARNO for an event: enable RSVP, create pending RSVPs, cross-post to Talk, email active+recruit members.
+
+    IDEMPOTENT: atomically claims the WARNO via a conditional UPDATE so concurrent
+    or duplicate calls (e.g. the manual Issue button racing the banner auto-issuer,
+    or two page loads) cannot both send emails/notifications. Pass already_claimed=True
+    when the caller has already atomically set warno_issued_at in the same txn.
+    """
     import httpx as _httpx
     import smtplib
     import logging
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from datetime import datetime as _dt
+    from sqlalchemy import update as _sa_update
 
     _warno_log = logging.getLogger("events.warno")
 
     settings = get_settings()
     now = _dt.utcnow()
+
+    # ── Idempotency claim ─────────────────────────────────────────────────────
+    # Atomically claim the WARNO. If another request already issued it, bail out
+    # silently — prevents the duplicate-email / duplicate-notification storm.
+    if not already_claimed:
+        claim = await db.execute(
+            _sa_update(Event)
+            .where(Event.id == event.id, Event.warno_issued_at.is_(None))
+            .values(warno_issued_at=now)
+        )
+        if claim.rowcount == 0:
+            _warno_log.info(f"WARNO '{event.title}' already issued — skipping duplicate activation.")
+            return None
+        event.warno_issued_at = now
 
     # 1. Enable RSVP and create pending RSVPs for all active/recruit members
     event.rsvp_enabled = True
@@ -273,24 +294,37 @@ async def _activate_warno(db, event):
 </div>
 </body></html>"""
 
+            # Reuse ONE SMTP connection for every recipient. Opening a fresh
+            # starttls+login per member (the old behavior) meant ~40 sequential
+            # TLS handshakes inside the request — that's what hammered the droplet
+            # and triggered the gateway timeout on manual WARNO pushes.
             _sent = 0
-            for member in warno_recipients:
-                try:
-                    msg = MIMEMultipart("alternative")
-                    msg["Subject"] = f"⚡ WARNO — {event.title}"
-                    msg["From"] = SMTP_FROM
-                    msg["To"] = member.email
-                    msg.attach(MIMEText(html_body, "html"))
-                    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-                        s.starttls()
-                        s.login(SMTP_USER, SMTP_PASS)
-                        s.sendmail(SMTP_USER, [member.email], msg.as_string())
-                    _sent += 1
-                except Exception as _warno_err:
-                    _warno_log.warning(
-                        f"WARNO email failed for {getattr(member, 'email', '?')} "
-                        f"(member {getattr(member, 'id', '?')}, {getattr(member, 'status', '?')}): {_warno_err}"
-                    )
+            _smtp = None
+            try:
+                _smtp = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
+                _smtp.starttls()
+                if SMTP_PASS:
+                    _smtp.login(SMTP_USER, SMTP_PASS)
+                for member in warno_recipients:
+                    try:
+                        msg = MIMEMultipart("alternative")
+                        msg["Subject"] = f"⚡ WARNO — {event.title}"
+                        msg["From"] = SMTP_FROM
+                        msg["To"] = member.email
+                        msg.attach(MIMEText(html_body, "html"))
+                        _smtp.sendmail(SMTP_USER, [member.email], msg.as_string())
+                        _sent += 1
+                    except Exception as _warno_err:
+                        _warno_log.warning(
+                            f"WARNO email failed for {getattr(member, 'email', '?')} "
+                            f"(member {getattr(member, 'id', '?')}, {getattr(member, 'status', '?')}): {_warno_err}"
+                        )
+            finally:
+                if _smtp is not None:
+                    try:
+                        _smtp.quit()
+                    except Exception:
+                        pass
             _warno_log.info(
                 f"WARNO '{event.title}': emailed {_sent}/{len(warno_recipients)} active+recruit members"
             )
@@ -2012,7 +2046,8 @@ async def warno_banner(request: Request):
             )
         )
         for event in pending_warnos.scalars().all():
-            event.warno_issued_at = now
+            # _activate_warno atomically claims warno_issued_at (idempotent) —
+            # do NOT pre-set it here or two concurrent banner loads both send.
             await _activate_warno(db, event)
         await db.commit()
 
@@ -2185,7 +2220,8 @@ async def issue_warno(request: Request, event_id: int):
         event = result.scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
-        event.warno_issued_at = now
+        # _activate_warno atomically claims warno_issued_at (idempotent guard) so
+        # a manual push can't double-send with the scheduled-WARNO banner auto-issuer.
         await _activate_warno(db, event)
         await db.commit()
 
