@@ -119,7 +119,7 @@ async def newsletter_edit(nl_id: int, request: Request, db: AsyncSession = Depen
 
 
 # ─── Inline image upload (returns hosted URL for the editor) ──────────────────
-@router.post("/image-upload")
+@router.post("/image-upload", response_model=None)
 @require_auth
 async def newsletter_image_upload(
     request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
@@ -147,7 +147,7 @@ async def newsletter_image_upload(
 
 
 # ─── Attachment upload ───────────────────────────────────────────────────────
-@router.post("/{nl_id}/attachment", response_class=HTMLResponse)
+@router.post("/{nl_id}/attachment", response_class=HTMLResponse, response_model=None)
 @require_auth
 async def newsletter_attachment_add(
     nl_id: int, request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
