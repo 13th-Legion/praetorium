@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 import smtplib
 import logging
 from email.mime.text import MIMEText
@@ -22,48 +23,69 @@ from app.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 
 logger = logging.getLogger(__name__)
 
-# Mirror of EMAIL_BLAST_GROUPS in s1_admin (kept here to avoid a circular import).
+# Recipient groups for Unit Comms + newsletters. `predicate` is evaluated per
+# member (already restricted to active/recruit) so leader/shop/command groups
+# actually filter instead of silently blasting the whole unit.
 EMAIL_BLAST_GROUPS = {
-    "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
-    "patched": {"label": "Patched", "filter": ["active"]},
-    "leaders": {"label": "Leaders (NCOs + Officers)", "nc_groups": ["Leaders"]},
-    "team_leaders": {"label": "Team Leaders", "nc_groups": ["Leaders"]},
-    "shop_leaders": {"label": "Shop Leaders (S1-S6)",
-                     "nc_groups": ["[S-1]", "[S-2]", "[S-3]", "[S-4]", "[S-5]", "[S-6]"]},
-    "command": {"label": "Command", "nc_groups": ["Command"]},
+    "entire_unit":  {"label": "Entire Unit",              "statuses": ["active", "recruit"]},
+    "patched":      {"label": "Patched",                  "statuses": ["active"]},
+    "leaders":      {"label": "Leaders (NCOs + Officers)", "statuses": ["active"], "roles_any": ["nco", "officer", "command", "leader"]},
+    "team_leaders": {"label": "Team Leaders",             "statuses": ["active"], "leadership_any": ["team leader", "assistant team leader", "platoon leader", "first sergeant", "executive officer", "commanding officer"]},
+    "shop_leaders": {"label": "Shop Leaders (S1-S6)",     "statuses": ["active"], "billet_contains": "(lead)"},
+    "command":      {"label": "Command",                  "statuses": ["active"], "roles_any": ["command"]},
 }
+
+
+def _member_roles(m: Member) -> set[str]:
+    try:
+        return {r.lower() for r in json.loads(m.portal_roles or "[]")}
+    except Exception:
+        return set()
+
+
+def _member_matches(m: Member, config: dict) -> bool:
+    """Whether member m belongs to the group described by config."""
+    if m.status not in config.get("statuses", ["active", "recruit"]):
+        return False
+    # If no further predicate, the status restriction is the whole group.
+    has_predicate = any(k in config for k in ("roles_any", "leadership_any", "billet_contains"))
+    if not has_predicate:
+        return True
+    if "roles_any" in config:
+        if _member_roles(m) & set(config["roles_any"]):
+            return True
+    if "leadership_any" in config:
+        lt = (m.leadership_title or "").strip().lower()
+        if lt and any(x in lt for x in config["leadership_any"]):
+            return True
+    if "billet_contains" in config:
+        billet = (m.primary_billet or "").lower()
+        if config["billet_contains"] in billet:
+            return True
+    return False
 
 
 async def resolve_recipients(db: AsyncSession, group_keys: list[str]) -> list[tuple[str, str]]:
     """Return [(email, display_name)] for the union of the selected groups.
-    Mirrors the email-blast logic exactly so newsletters and blasts target the
-    same audiences."""
-    member_ids: set[int] = set()
-    for grp in group_keys:
-        config = EMAIL_BLAST_GROUPS.get(grp)
-        if not config:
-            continue
-        if "filter" in config:
-            result = await db.execute(select(Member).where(Member.status.in_(config["filter"])))
-            for m in result.scalars().all():
-                if m.email:
-                    member_ids.add(m.id)
-        elif "nc_groups" in config:
-            result = await db.execute(
-                select(Member).where(Member.status.in_(["active", "recruit"]))
-            )
-            for m in result.scalars().all():
-                member_ids.add(m.id)
-    if not member_ids:
+    Single source of truth for both Unit Comms (email-blast) and newsletters.
+    """
+    configs = [EMAIL_BLAST_GROUPS[g] for g in group_keys if g in EMAIL_BLAST_GROUPS]
+    if not configs:
         return []
-    result = await db.execute(select(Member).where(Member.id.in_(member_ids)))
-    members = result.scalars().all()
+    # Pull the candidate pool once (active + recruit covers every group).
+    pool = (await db.execute(
+        select(Member).where(Member.status.in_(["active", "recruit"]))
+    )).scalars().all()
     seen = set()
     out = []
-    for m in members:
-        if m.email and m.email.lower() not in seen:
-            seen.add(m.email.lower())
-            out.append((m.email, m.display_name))
+    for m in pool:
+        if not m.email:
+            continue
+        if any(_member_matches(m, cfg) for cfg in configs):
+            key = m.email.lower()
+            if key not in seen:
+                seen.add(key)
+                out.append((m.email, m.display_name))
     return out
 
 

@@ -22,7 +22,7 @@ import bleach
 
 from app.auth import require_auth
 from app.database import get_db
-from app.constants import S1_ROLES
+from app.constants import UNIT_COMMS_ROLES
 from app.models.newsletter import Newsletter, NewsletterImage, NewsletterAttachment
 from app.newsletter_assets import (
     SEASONAL_CRESTS, DEFAULT_CREST, crest_url, crest_available,
@@ -61,7 +61,7 @@ def _user(request: Request) -> dict:
 
 def _require_s1(user: dict):
     roles = set(user.get("roles", []))
-    if not (roles & set(S1_ROLES)):
+    if not (roles & set(UNIT_COMMS_ROLES)):
         raise HTTPException(status_code=403, detail="S1 / Command access required")
 
 

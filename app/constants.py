@@ -35,6 +35,9 @@ RANK_CHOICES: list[tuple[str, str]] = [
 COMMAND_ROLES: set[str] = {"command", "admin"}
 S1_ROLES: set[str] = {"command", "admin", "s1_lead"}
 PIPELINE_ROLES: set[str] = {"command", "admin", "s1", "s1_lead"}
+# Unit Comms + Legionary Dispatch newsletter — open to all of S1, not just the
+# S1 lead (Cav directive 2026-06-25). Does NOT grant other S1 admin actions.
+UNIT_COMMS_ROLES: set[str] = {"command", "admin", "s1", "s1_lead"}
 AWARD_ROLES: set[str] = {"command", "admin", "s1", "leader"}
 
 # ─── Team / Element Constants ────────────────────────────────────────────────

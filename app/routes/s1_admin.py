@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/s1", tags=["s1-admin"])
 templates = Jinja2Templates(directory="app/templates")
 
 # Groups with S1 admin access
-from app.constants import S1_ROLES, PIPELINE_ROLES
+from app.constants import S1_ROLES, PIPELINE_ROLES, UNIT_COMMS_ROLES
 
 NC_URL = "https://cloud.13thlegion.org"
 
@@ -172,6 +172,12 @@ def is_s1(user: dict) -> bool:
 def require_s1(user: dict):
     if not is_s1(user):
         raise HTTPException(status_code=403, detail="S1 / Command access required")
+
+
+def require_unit_comms(user: dict):
+    """Unit Comms / newsletter access — open to all of S1, not just the S1 lead."""
+    if not (set(user.get("roles", [])) & UNIT_COMMS_ROLES):
+        raise HTTPException(status_code=403, detail="S1 access required")
 
 
 def is_pipeline(user: dict) -> bool:
@@ -2538,14 +2544,9 @@ document, they are waiving substantial legal rights, including the right to sue 
 
 # ─── PP-107: S1 Email Blast ─────────────────────────────────────────────────
 
-EMAIL_BLAST_GROUPS = {
-    "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
-    "patched": {"label": "Patched", "filter": ["active"]},
-    "leaders": {"label": "Leaders (NCOs + Officers)", "nc_groups": ["Leaders"]},
-    "team_leaders": {"label": "Team Leaders", "nc_groups": ["Leaders"]},  # same NC group, filtered by billet
-    "shop_leaders": {"label": "Shop Leaders (S1-S6)", "nc_groups": ["[S-1]", "[S-2]", "[S-3]", "[S-4]", "[S-5]", "[S-6]"]},
-    "command": {"label": "Command", "nc_groups": ["Command"]},
-}
+# Recipient groups + resolver are defined once in newsletter_send so Unit Comms
+# and the Legionary Dispatch newsletter always target identical audiences.
+from app.newsletter_send import EMAIL_BLAST_GROUPS, resolve_recipients  # noqa: E402
 
 
 @router.get("/email-blast")
@@ -2553,7 +2554,7 @@ EMAIL_BLAST_GROUPS = {
 async def email_blast_page(request: Request, db: AsyncSession = Depends(get_db)):
     """Email blast compose page."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_unit_comms(user)
 
     return templates.TemplateResponse("pages/s1_email_blast.html", {
         "request": request,
@@ -2567,7 +2568,7 @@ async def email_blast_page(request: Request, db: AsyncSession = Depends(get_db))
 async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_db)):
     """Preview recipients for selected groups."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_unit_comms(user)
 
     form = await request.form()
     selected_groups = form.getlist("groups")
@@ -2575,45 +2576,15 @@ async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_d
     if not selected_groups:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
 
-    # Build recipient list
-    member_ids = set()
-    for grp in selected_groups:
-        config = EMAIL_BLAST_GROUPS.get(grp)
-        if not config:
-            continue
-        if "filter" in config:
-            result = await db.execute(
-                select(Member).where(Member.status.in_(config["filter"]))
-            )
-            for m in result.scalars().all():
-                if m.email:
-                    member_ids.add(m.id)
-
-        elif "nc_groups" in config:
-            # Get members by checking their NC groups via roles
-            result = await db.execute(
-                select(Member).where(Member.status.in_(["active", "recruit"]))
-            )
-            for m in result.scalars().all():
-                member_ids.add(m.id)
-
-    # Fetch actual member info for preview
-    if not member_ids:
-        return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients found.</div>')
-
-    result = await db.execute(
-        select(Member).where(Member.id.in_(member_ids)).order_by(Member.last_name)
-    )
-    members = result.scalars().all()
-
-    # Filter to only those with email addresses
-    recipients = [m for m in members if m.email]
+    # Shared resolver — real NC-group/billet/leadership filtering.
+    recipients = await resolve_recipients(db, selected_groups)
+    recipients.sort(key=lambda r: r[1].split()[-1] if r[1] else "")
 
     if not recipients:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients have email addresses on file.</div>')
 
     names_html = ", ".join(
-        f'<span style="color:#ccc;">{m.display_name}</span>' for m in recipients
+        f'<span style="color:#ccc;">{name}</span>' for _email, name in recipients
     )
 
     return HTMLResponse(f'''
@@ -2629,7 +2600,7 @@ async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_d
 async def send_email_blast(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """Send an email blast to selected groups."""
     user = request.session.get("user", {})
-    require_s1(user)
+    require_unit_comms(user)
 
     form = await request.form()
     selected_groups = form.getlist("groups")
@@ -2643,37 +2614,12 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
     if not selected_groups:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
 
-    # Build recipient list
-    member_ids = set()
-    for grp in selected_groups:
-        config = EMAIL_BLAST_GROUPS.get(grp)
-        if not config:
-            continue
-        if "filter" in config:
-            result = await db.execute(
-                select(Member).where(Member.status.in_(config["filter"]))
-            )
-            for m in result.scalars().all():
-                if m.email:
-                    member_ids.add(m.id)
-        elif "nc_groups" in config:
-            result = await db.execute(
-                select(Member).where(Member.status.in_(["active", "recruit"]))
-            )
-            for m in result.scalars().all():
-                member_ids.add(m.id)
+    # Shared resolver — real NC-group/billet/leadership filtering.
+    recipient_emails = await resolve_recipients(db, selected_groups)
 
-    result = await db.execute(
-        select(Member).where(Member.id.in_(member_ids))
-    )
-    members = result.scalars().all()
-    recipients = [m for m in members if m.email]
-
-    if not recipients:
+    if not recipient_emails:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients with email addresses.</div>')
 
-    # Extract email list before session closes (ORM objects detach in background threads)
-    recipient_emails = [(m.email, m.display_name) for m in recipients]
     recipient_count = len(recipient_emails)
 
     sender_name = user.get("display_name", user.get("username", "S1"))
