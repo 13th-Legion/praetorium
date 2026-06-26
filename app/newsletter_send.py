@@ -153,6 +153,70 @@ def html_to_plaintext(body_html: str) -> str:
     return t.strip()
 
 
+def send_email_sync(
+    *,
+    subject: str,
+    html_body: str,
+    plain_body: str,
+    sender_from: str,
+    recipients: list[tuple[str, str]],
+    attachment_files: list[tuple[str, str, str]],  # (disk_path, orig_name, mime_type)
+) -> tuple[int, int, str | None]:
+    """Generic attachment-capable SMTP send for a PRE-RENDERED html body.
+    Used by Unit Comms (which keeps its own email template) so it gets the same
+    inline-image + attachment behavior as newsletters."""
+    loaded_atts = []
+    for disk_path, orig_name, mime_type in attachment_files:
+        try:
+            with open(disk_path, "rb") as fh:
+                loaded_atts.append((fh.read(), orig_name, mime_type))
+        except Exception as e:
+            logger.error(f"Unit comms attachment unreadable {disk_path}: {e}")
+
+    sent = failed = 0
+    err = None
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            if SMTP_PASS:
+                server.login(SMTP_USER, SMTP_PASS)
+            for email_addr, _name in recipients:
+                try:
+                    if loaded_atts:
+                        msg = MIMEMultipart("mixed")
+                        alt = MIMEMultipart("alternative")
+                        alt.attach(MIMEText(plain_body, "plain"))
+                        alt.attach(MIMEText(html_body, "html"))
+                        msg.attach(alt)
+                        for data, oname, mtype in loaded_atts:
+                            maintype, _, subtype = mtype.partition("/")
+                            if maintype == "image":
+                                part = MIMEImage(data, _subtype=subtype or "octet-stream")
+                            elif mtype == "application/pdf":
+                                part = MIMEApplication(data, _subtype="pdf")
+                            else:
+                                part = MIMEApplication(data)
+                            part.add_header("Content-Disposition", "attachment", filename=oname)
+                            msg.attach(part)
+                    else:
+                        msg = MIMEMultipart("alternative")
+                        msg.attach(MIMEText(plain_body, "plain"))
+                        msg.attach(MIMEText(html_body, "html"))
+                    msg["Subject"] = subject
+                    msg["From"] = sender_from
+                    msg["To"] = email_addr
+                    server.send_message(msg)
+                    sent += 1
+                except Exception as e:
+                    failed += 1
+                    logger.warning(f"Unit comms send failed to {email_addr}: {e}")
+    except Exception as e:
+        err = str(e)
+        logger.error(f"Unit comms SMTP connection failed: {e}")
+    logger.info(f"Unit comms '{subject}' complete: {sent} sent, {failed} failed")
+    return sent, failed, err
+
+
 def send_newsletter_sync(
     *,
     subject: str,

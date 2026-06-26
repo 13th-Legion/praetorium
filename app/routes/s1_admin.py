@@ -2595,10 +2595,11 @@ async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_d
     ''')
 
 
-@router.post("/email-blast/send", response_class=HTMLResponse)
+@router.post("/email-blast/send", response_class=HTMLResponse, response_model=None)
 @require_auth
 async def send_email_blast(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
-    """Send an email blast to selected groups."""
+    """Send an email blast to selected groups (with optional inline images +
+    file attachments)."""
     user = request.session.get("user", {})
     require_unit_comms(user)
 
@@ -2614,6 +2615,45 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
     if not selected_groups:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
 
+    # Sanitize body (now that it can carry inline <img> embeds).
+    import bleach as _bleach
+    body = _bleach.clean(
+        body,
+        tags=["p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", "ul", "ol", "li",
+              "blockquote", "a", "img", "span", "div"],
+        attributes={"a": ["href", "title", "target", "rel"],
+                    "img": ["src", "alt", "width", "height", "style"],
+                    "span": ["style"], "div": ["style"]},
+        protocols=["http", "https", "mailto"], strip=True,
+    )
+
+    # ── Optional attachments (multipart "attachments" files) ──────────────────
+    import uuid as _uuid
+    from app.newsletter_assets import (
+        NEWSLETTER_ATTACH_DIR, ALLOWED_ATTACH_MIMES,
+        MAX_ATTACH_BYTES, MAX_TOTAL_ATTACH_BYTES,
+    )
+    staged_atts: list[tuple[str, str, str]] = []  # (disk_path, orig_name, mime)
+    total_bytes = 0
+    for up in form.getlist("attachments"):
+        if not getattr(up, "filename", None):
+            continue
+        fdata = await up.read()
+        fmime = up.content_type or "application/octet-stream"
+        if fmime not in ALLOWED_ATTACH_MIMES:
+            return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">Unsupported attachment type: {up.filename}</div>')
+        if len(fdata) > MAX_ATTACH_BYTES:
+            return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">{up.filename} exceeds {MAX_ATTACH_BYTES // (1024*1024)}MB.</div>')
+        total_bytes += len(fdata)
+        if total_bytes > MAX_TOTAL_ATTACH_BYTES:
+            return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">Attachments exceed {MAX_TOTAL_ATTACH_BYTES // (1024*1024)}MB total (Proton limit).</div>')
+        NEWSLETTER_ATTACH_DIR.mkdir(parents=True, exist_ok=True)
+        _ext = os.path.splitext(up.filename)[1].lower()
+        _stored = f"blast_{_uuid.uuid4().hex}{_ext}"
+        with open(NEWSLETTER_ATTACH_DIR / _stored, "wb") as _fh:
+            _fh.write(fdata)
+        staged_atts.append((str(NEWSLETTER_ATTACH_DIR / _stored), up.filename, fmime))
+
     # Shared resolver — real NC-group/billet/leadership filtering.
     recipient_emails = await resolve_recipients(db, selected_groups)
 
@@ -2626,9 +2666,8 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
 
     # Send in background to avoid timeout
     def _send_blast():
-        import smtplib as _smtplib
-        from email.mime.multipart import MIMEMultipart as _MMP
-        from email.mime.text import MIMEText as _MMT
+        import re as _re
+        from app.newsletter_send import send_email_sync
 
         html_body = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -2666,36 +2705,31 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
 </div>
 </body></html>"""
 
-        sent = 0
-        failed = 0
-        try:
-            with _smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.starttls()
-                server.login(SMTP_USER, SMTP_PASS)
-                for email_addr, display_name in recipient_emails:
-                    try:
-                        msg = _MMP("alternative")
-                        msg["Subject"] = subject
-                        msg["From"] = SMTP_FROM
-                        msg["To"] = email_addr
-                        import re as _re
-                        _plain = _re.sub(r'<br\s*/?>', '\n', body)
-                        _plain = _re.sub(r'</p>\s*<p[^>]*>', '\n\n', _plain)
-                        _plain = _re.sub(r'<[^>]+>', '', _plain)
-                        msg.attach(_MMT(_plain, "plain"))
-                        msg.attach(_MMT(html_body, "html"))
-                        server.send_message(msg)
-                        sent += 1
-                    except Exception:
-                        failed += 1
-        except Exception as e:
-            logger.error(f"Email blast SMTP connection failed: {e}")
+        _plain = _re.sub(r'<br\s*/?>', '\n', body)
+        _plain = _re.sub(r'</p>\s*<p[^>]*>', '\n\n', _plain)
+        _plain = _re.sub(r'<[^>]+>', '', _plain)
 
+        sent, failed, err = send_email_sync(
+            subject=subject,
+            html_body=html_body,
+            plain_body=_plain,
+            sender_from=SMTP_FROM,
+            recipients=recipient_emails,
+            attachment_files=staged_atts,
+        )
         logger.info(f"Email blast complete: {sent} sent, {failed} failed — subject: {subject}")
+
+        # Clean up staged attachment files.
+        for _path, _n, _m in staged_atts:
+            try:
+                os.remove(_path)
+            except Exception:
+                pass
 
     background_tasks.add_task(_send_blast)
 
     group_labels = ", ".join(EMAIL_BLAST_GROUPS[g]["label"] for g in selected_groups if g in EMAIL_BLAST_GROUPS)
+    att_line = f"<br><strong>Attachments:</strong> {len(staged_atts)}" if staged_atts else ""
 
     return HTMLResponse(f'''
         <div style="padding:16px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);border-radius:6px;">
@@ -2703,7 +2737,7 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
             <div style="font-size:13px;color:#ccc;">
                 <strong>To:</strong> {group_labels} ({recipient_count} recipients)<br>
                 <strong>Subject:</strong> {subject}<br>
-                <strong>Sent by:</strong> {sender_name}
+                <strong>Sent by:</strong> {sender_name}{att_line}
             </div>
         </div>
     ''')
