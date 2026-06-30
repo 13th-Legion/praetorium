@@ -295,13 +295,39 @@ async def tradoc_page(request: Request):
             "description": blk.description or "",
             "sort_order": blk.sort_order,
             "archived": blk.archived,
+            "tier": (blk.tier or "initial"),
             "subjects": subjects,
         })
+
+    # ── Group blocks into ordered tiers ──
+    # Tier 1 = Initial Entry Training (patching pipeline), Tier 2 = Advanced
+    # Qualifications & Tabs (above-and-beyond courses/tabs).
+    TIER_META = [
+        {"key": "initial", "label": "Initial Entry Training",
+         "subtitle": "The patching pipeline — what every Legionary completes to earn the patch."},
+        {"key": "advanced", "label": "Advanced Qualifications & Tabs",
+         "subtitle": "Earned above and beyond patching — statewide courses and the 13th Legion's own tabs."},
+    ]
+    tier_order = {m["key"]: i for i, m in enumerate(TIER_META)}
+    tiers = []
+    for meta in TIER_META:
+        tier_blocks = [b for b in blocks if b["tier"] == meta["key"]]
+        if tier_blocks:
+            tiers.append({**meta, "blocks": tier_blocks})
+    # Any unknown/legacy tier value falls back into the initial tier bucket.
+    known = set(tier_order)
+    orphan_blocks = [b for b in blocks if b["tier"] not in known]
+    if orphan_blocks:
+        if tiers and tiers[0]["key"] == "initial":
+            tiers[0]["blocks"].extend(orphan_blocks)
+        else:
+            tiers.insert(0, {**TIER_META[0], "blocks": orphan_blocks})
 
     return templates.TemplateResponse("pages/tradoc.html", {
         "request": request,
         "user": user,
         "blocks": blocks,
+        "tiers": tiers,
         "doc_count": doc_count,
         "total_subjects": total_subjects,
         "can_manage": can_manage,

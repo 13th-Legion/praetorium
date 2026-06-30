@@ -19,6 +19,7 @@ router = APIRouter(prefix="/training/tradoc/manage", tags=["tradoc-admin"])
 
 TRADOC_MANAGE_ROLES = ("command", "s3", "admin")
 VALID_DOC_TYPES = {"none", "markdown", "pdf", "external", "page"}
+VALID_TIERS = {"initial", "advanced"}
 
 
 def _form_int(form, key, default=0):
@@ -38,6 +39,9 @@ async def block_create(request: Request):
     name = (form.get("name") or "").strip()
     description = (form.get("description") or "").strip()
     sort_order = _form_int(form, "sort_order", 0)
+    tier = (form.get("tier") or "initial").strip()
+    if tier not in VALID_TIERS:
+        tier = "initial"
     if number is None:
         raise HTTPException(status_code=400, detail="Block number required")
     if not name:
@@ -52,6 +56,7 @@ async def block_create(request: Request):
             number=number, name=name,
             description=description or None,
             sort_order=sort_order if sort_order else (99 if number == 0 else number),
+            tier=tier,
         ))
         await db.commit()
     log.info(f"TRADOC block created: {number} '{name}'")
@@ -65,6 +70,7 @@ async def block_edit(request: Request, block_id: int):
     name = (form.get("name") or "").strip()
     description = (form.get("description") or "").strip()
     sort_order = _form_int(form, "sort_order", 0)
+    tier = (form.get("tier") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Block name required")
     async with async_session() as db:
@@ -77,6 +83,8 @@ async def block_edit(request: Request, block_id: int):
         blk.description = description or None
         if sort_order:
             blk.sort_order = sort_order
+        if tier in VALID_TIERS:
+            blk.tier = tier
         # keep denormalized block_name on items in sync
         items = (await db.execute(
             select(TradocItem).where(TradocItem.block == blk.number)
