@@ -23,6 +23,9 @@ class TradocBlock(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Tier: 'initial' = Initial Entry Training (patching pipeline),
+    #       'advanced' = Advanced Qualifications & Tabs (above-and-beyond)
+    tier: Mapped[str] = mapped_column(String(16), default="initial", server_default="initial")
 
     def __repr__(self):
         return f"<TradocBlock {self.number}: {self.name}>"
