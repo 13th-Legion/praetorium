@@ -36,7 +36,14 @@ Choose **one** cardio event:
 Plus **both** strength events:
 
 - **Farmer's carry — 140 lbs** (50 lb hex bar with 2×45 lb plates, or homemade equivalent) over **50 m/yd (2×25)**. Time limit **1:30**.
+
+![Farmer's carry equipment — loaded hex/trap bar with 45 lb plates](/static/tradoc/images/equites-farmers-carry.jpg)
+*Example farmer's carry setup: hex/trap bar loaded with 45 lb plates. Your evidence video must show visible proof of weight like this.*
+
 - **Casualty drag — 200 lbs** (50–60 lb sled with 2×45 lb and 2×25 lb plates, or homemade equivalent) over **50 m/yd (2×25)**. Time limit **2:00**. If using a sled it **cannot be wheeled**.
+
+![Casualty drag equipment — non-wheeled sled with plates and pull strap](/static/tradoc/images/equites-casualty-drag.jpg)
+*Example casualty drag setup: a non-wheeled sled loaded with plates and a pull strap. The sled cannot be wheeled.*
 
 **Uniform:** normal gym clothes — athletic shoes, shorts, shirt.
 
