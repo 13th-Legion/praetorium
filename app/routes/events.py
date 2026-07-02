@@ -11,7 +11,7 @@ from typing import Optional
 
 import httpx
 from dateutil.rrule import rrulestr
-from fastapi import APIRouter, Request, Form, BackgroundTasks
+from fastapi import APIRouter, Request, Form, BackgroundTasks, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, or_, case, update
@@ -1057,11 +1057,19 @@ async def event_detail(request: Request, event_id: int):
 
     rsvp_locked = bool(event.rsvp_deadline and _now_ct() > event.rsvp_deadline)
 
+    _uname = (user or {}).get("username")
+    _is_instr = bool(
+        event.instructor and event.instructor.nc_username
+        and event.instructor.nc_username == _uname
+    )
+    _can_edit = _is_admin(user) or _is_instr
     return templates.TemplateResponse("pages/event_detail.html", {
         "members": members,
         "request": request,
         "user": user,
         "is_admin": _is_admin(user),
+        "is_instructor": _is_instr,
+        "can_edit": _can_edit,
         "event": event,
         "icon": _get_icon(event.category),
         "category_label": CATEGORY_LABELS.get(event.category, event.category),
@@ -1580,9 +1588,15 @@ async def create_event(request: Request):
 # ─── Event Edit ──────────────────────────────────────────────────────────────
 
 @router.post("/api/events/{event_id}/edit", response_class=HTMLResponse)
-@require_role("command", "s3", "s1", "admin")
+@require_auth
 async def edit_event(request: Request, event_id: int):
-    """Edit event details."""
+    """Edit event details.
+
+    Admins (command/s3/s1/admin) may edit all fields. The member assigned as the
+    event instructor may edit ONLY the description (so they can post the topics
+    they intend to cover). Anyone else gets 403.
+    """
+    _user = get_current_user(request)
     form = await request.form()
 
     import logging
@@ -1596,17 +1610,33 @@ async def edit_event(request: Request, event_id: int):
         if not event:
             return HTMLResponse("Event not found", status_code=404)
 
+        # ── Authorization: admin (full) vs assigned instructor (description-only)
+        _admin = _is_admin(_user)
+        _instructor_only = False
+        if not _admin:
+            _instr_username = None
+            if event.instructor_id:
+                _im = (await db.execute(
+                    select(Member.nc_username).where(Member.id == event.instructor_id)
+                )).scalar_one_or_none()
+                _instr_username = _im
+            if _instr_username and _instr_username == (_user or {}).get("username"):
+                _instructor_only = True
+            else:
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+
         logger.warning(f"BEFORE: date_start={event.date_start}, date_end={event.date_end}")
 
-        if form.get("title"):
+        if _admin and form.get("title"):
             event.title = form["title"].strip()
-        if form.get("category") and form["category"] in VALID_CATEGORIES:
+        if _admin and form.get("category") and form["category"] in VALID_CATEGORIES:
             event.category = form["category"]
-        if form.get("location") is not None:
+        if _admin and form.get("location") is not None:
             event.location = form["location"].strip() or None
+        # Description is editable by admins AND the assigned instructor.
         if form.get("description") is not None:
             event.description = form["description"].strip() or None
-        if form.get("date_start_date"):
+        if _admin and form.get("date_start_date"):
             try:
                 event.date_start = _parse_mil_datetime(
                     form["date_start_date"].strip(),
@@ -1614,7 +1644,7 @@ async def edit_event(request: Request, event_id: int):
                 )
             except ValueError:
                 pass
-        if form.get("date_end_date"):
+        if _admin and form.get("date_end_date"):
             try:
                 event.date_end = _parse_mil_datetime(
                     form["date_end_date"].strip(),
@@ -1624,18 +1654,18 @@ async def edit_event(request: Request, event_id: int):
                 pass
         # PP-225: multi-select TRADOC blocks. Only touch if the form carries
         # block fields (training_blocks[] multi-value or legacy training_block).
-        if ("training_blocks" in form.keys()) or ("training_block" in form.keys()):
+        if _admin and (("training_blocks" in form.keys()) or ("training_block" in form.keys())):
             tblocks = _parse_blocks_form(form)
             event.training_blocks = ",".join(str(b) for b in tblocks) if tblocks else None
             event.training_block = tblocks[0] if tblocks else None
-        if form.get("instructor_id") is not None:
+        if _admin and form.get("instructor_id") is not None:
             iid = form["instructor_id"].strip()
             event.instructor_id = int(iid) if iid else None
 
         # RSVP controls
-        if "rsvp_enabled" in form.keys():
+        if _admin and "rsvp_enabled" in form.keys():
             event.rsvp_enabled = form.get("rsvp_enabled") == "on"
-        if form.get("rsvp_deadline_date"):
+        if _admin and form.get("rsvp_deadline_date"):
             try:
                 event.rsvp_deadline = _parse_mil_datetime(
                     form["rsvp_deadline_date"].strip(),
@@ -1643,12 +1673,12 @@ async def edit_event(request: Request, event_id: int):
                 )
             except ValueError:
                 pass
-        elif "rsvp_deadline_date" in form.keys():
+        elif _admin and "rsvp_deadline_date" in form.keys():
             # Explicitly cleared
             event.rsvp_deadline = None
 
         # invite_groups
-        if "invite_groups" in form.keys():
+        if _admin and "invite_groups" in form.keys():
             groups = form.getlist("invite_groups")
             event.invite_groups = ",".join(groups) if groups else None
 
@@ -1659,6 +1689,8 @@ async def edit_event(request: Request, event_id: int):
         # future occurrences in the same series. Date/time stays per-occurrence
         # (changing the recurrence pattern is a separate operation).
         scope = (form.get("series_scope") or "this").strip()
+        if not _admin:
+            scope = "this"  # instructors edit only this occurrence
         propagated = 0
         if scope == "future" and event.series_id:
             future = (await db.execute(
