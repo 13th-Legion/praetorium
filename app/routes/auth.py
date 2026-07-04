@@ -33,9 +33,26 @@ def _build_authorize_url(request: "Request") -> str:
     import time
     from urllib.parse import urlencode
 
-    # Clear stale session so the OAuth2 state token is written to a fresh
-    # cookie — prevents "State token does not match" after session expiry.
-    request.session.clear()
+    # Do NOT clear the whole session here. Clearing rotates the session cookie
+    # mid-flow; the browser (esp. a pre-existing tab with an older cookie) may
+    # then send back a STALE cookie on the /auth/callback redirect, so the
+    # freshly-minted state isn't found -> authlib raises "mismatching_state"
+    # -> "State token does not match". Instead, keep the session stable and only
+    # prune stale/expired OAuth2 state entries so they don't accumulate. Writing
+    # the new state into the SAME session cookie means the browser returns it.
+    now = time.time()
+    stale_state_keys = [
+        k for k, v in list(request.session.items())
+        if k.startswith("_state_nextcloud_")
+        and (not isinstance(v, dict) or v.get("exp", 0) < now)
+    ]
+    for k in stale_state_keys:
+        request.session.pop(k, None)
+    # Hard cap: never keep more than a handful of pending states.
+    pending = [k for k in request.session if k.startswith("_state_nextcloud_")]
+    if len(pending) > 4:
+        for k in pending[:-4]:
+            request.session.pop(k, None)
 
     state = secrets.token_urlsafe(32)
     redirect_uri = f"{settings.app_url}/auth/callback"
@@ -83,10 +100,12 @@ async def login(request: Request):
 
     authorize_url = _build_authorize_url(request)
 
-    # _build_authorize_url() cleared the session (wiping any _seed_retry marker).
-    # Arm it so the callback's loop guard can surface a real error instead of
-    # looping forever if even the seeded attempt fails.
-    request.session["_seed_retry"] = True
+    # Loop guard: track how many times we've bounced through login for the
+    # CURRENT flow. _build_authorize_url no longer clears the session, so this
+    # counter now survives the redirect (the old boolean got wiped every time).
+    # The callback increments/checks this to surface a real error instead of
+    # looping forever on a persistent state mismatch.
+    request.session["_login_attempts"] = request.session.get("_login_attempts", 0) + 1
 
     # redirect_url must be an INTERNAL NC path (LoginController only honors
     # internal redirect targets); strip the origin from authorize_url.
@@ -108,19 +127,21 @@ async def callback(request: Request):
         # seeded path (NC first-party /login) which establishes the SameSite
         # cookies same-site and reliably completes the grant.
         #
-        # Guard against loops: only auto-retry if we haven't already seeded.
-        if not request.session.get("_seed_retry"):
-            request.session["_seed_retry"] = True
+        # Guard against loops: allow a bounded number of retries through the
+        # seeded path, then surface the error for real. _login_attempts is
+        # incremented in /auth/login and now persists across the redirect
+        # (session is no longer cleared), so this counter is reliable.
+        if request.session.get("_login_attempts", 0) < 2:
             return RedirectResponse(url="/auth/login?seed=1", status_code=302)
-        # Already retried via the seeded path — show the error for real.
-        request.session.pop("_seed_retry", None)
+        # Exhausted retries — clear the counter and show the error for real.
+        request.session.pop("_login_attempts", None)
         return templates.TemplateResponse("pages/login.html", {
             "request": request,
             "error": f"OAuth error: {str(e)}",
         })
 
-    # Success — clear any retry marker.
-    request.session.pop("_seed_retry", None)
+    # Success — clear the retry counter.
+    request.session.pop("_login_attempts", None)
 
     # Fetch user info using the access token
     resp = await oauth.nextcloud.get(
