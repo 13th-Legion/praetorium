@@ -154,7 +154,19 @@ async def callback(request: Request):
     username = userdata.get("id", "")
     display_name = userdata.get("displayname", username)
     email = userdata.get("email", "")
-    nc_groups = userdata.get("groups", [])
+
+    # IMPORTANT: the self-scoped OCS endpoint (/cloud/user) returns only a
+    # partial group list for non-privileged users, so shop groups like
+    # "[S-1] Admin" get dropped -> wrong portal roles -> nav menu hides shops
+    # even though direct links work (routes 403-gate on the same roles, but the
+    # 15-min DisplayRefresh middleware heals them mid-session, masking the bug).
+    # Fetch the authoritative group list via the admin provisioning API instead
+    # (same call the refresh middleware uses). Fall back to token groups if it
+    # fails so login never breaks on an NC hiccup.
+    try:
+        nc_groups = await fetch_nc_groups(username)
+    except Exception:
+        nc_groups = userdata.get("groups", [])
 
     # Map NC groups to portal roles
     roles = map_groups_to_roles(nc_groups)
