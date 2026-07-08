@@ -1,6 +1,7 @@
 """Member profile editing — Command/S1 can edit any member's profile."""
 
 import logging
+import re
 from datetime import datetime, date
 from typing import Optional
 
@@ -76,7 +77,7 @@ RANK_GROUPS = {
 ALL_RANK_NC_GROUPS = {"Rank - Recruit", "Rank - Enlisted", "Rank - NCO", "Rank - Officer"}
 
 
-async def _sync_leadership_groups(username: str, leadership_title: str | None, team: str | None):
+async def _sync_leadership_groups(username: str, leadership_title: str | None, team: str | None, billets: str | None = None):
     """Sync NC group membership based on leadership title.
 
     - Add to 'Leaders' group if TL/ATL/CO/XO/1SG/PltSGT, remove if cleared.
@@ -91,7 +92,7 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
 
     leader_titles = {"Team Leader", "Assistant Team Leader", "Commanding Officer",
                      "Executive Officer", "First Sergeant", "Platoon Sergeant, Training NCO"}
-    is_leader = leadership_title in leader_titles
+    is_leader = (leadership_title in leader_titles) or (bool(billets) and "(Lead)" in billets)
 
     async with httpx.AsyncClient() as client:
         try:
@@ -118,7 +119,8 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
                 log.error(f"Failed to add {username} to Leaders: {e}")
         elif not is_leader and "Leaders" in current_groups:
             try:
-                await client.delete(
+                await client.request(
+                        "DELETE",
                     f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
                     auth=auth, headers=headers,
                     data={"groupid": "Leaders"}, timeout=10,
@@ -135,7 +137,8 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
         for g in all_team_groups:
             if g != target_team_group:
                 try:
-                    await client.delete(
+                    await client.request(
+                        "DELETE",
                         f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
                         auth=auth, headers=headers,
                         data={"groupid": g}, timeout=10,
@@ -155,6 +158,128 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
                 log.info(f"Added {username} to {target_team_group}")
             except Exception as e:
                 log.error(f"Failed to add {username} to {target_team_group}: {e}")
+
+
+
+def _shop_numbers_from_billets(billets: str | None) -> set[str]:
+    """Extract shop numbers (as strings) from a billet string like
+    'S1: Administration, S3: Training' -> {'1', '3'}."""
+    if not billets:
+        return set()
+    return set(re.findall(r"S(\d)\s*:", billets))
+
+
+def _is_shop_lead(billets: str | None, shop_num: str) -> bool:
+    """True if the billets grant a Lead role for the given shop number.
+    e.g. 'S1: Administration (Lead)' -> lead of shop 1."""
+    if not billets:
+        return False
+    for part in billets.split(","):
+        part = part.strip()
+        m = re.match(r"S(\d)\s*:", part)
+        if m and m.group(1) == shop_num and "(Lead)" in part:
+            return True
+    return False
+
+
+async def _sync_shop_groups(username: str, old_billets: str | None, new_billets: str | None):
+    """Sync NC [S-n] shop group membership from a member's billets.
+
+    Single source of truth = the portal billet assignment. On save we add the
+    member to the [S-n] group for every shop they hold and remove them from
+    shops they dropped. [S-n] Lead subgroups are granted only when the billet
+    carries '(Lead)' for that shop. Non-shop groups are never touched.
+
+    Queries the live NC group list so no static billet->group map is needed.
+    """
+    if not username:
+        return
+
+    nc_url = settings.nc_url
+    auth = (settings.nc_api_user, settings.nc_api_password)
+    headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
+
+    new_shops = _shop_numbers_from_billets(new_billets)
+    old_shops = _shop_numbers_from_billets(old_billets)
+
+    async with httpx.AsyncClient() as client:
+        # Live NC group list -> map shop number to actual group names.
+        try:
+            gr = await client.get(
+                f"{nc_url}/ocs/v2.php/cloud/groups",
+                auth=auth, headers=headers, timeout=10,
+            )
+            gr.raise_for_status()
+            all_groups = gr.json().get("ocs", {}).get("data", {}).get("groups", [])
+        except Exception as e:
+            log.error(f"Failed to fetch NC group list for shop sync ({username}): {e}")
+            return
+
+        # e.g. {'1': {'base': '[S-1] Admin', 'lead': '[S-1] Lead'}, ...}
+        shop_map: dict[str, dict[str, str]] = {}
+        for g in all_groups:
+            m = re.match(r"\[S-(\d)\]", g)
+            if not m:
+                continue
+            num = m.group(1)
+            entry = shop_map.setdefault(num, {})
+            if g.rstrip().endswith("Lead"):
+                entry["lead"] = g
+            else:
+                entry["base"] = g
+
+        # Member's current groups.
+        try:
+            r = await client.get(
+                f"{nc_url}/ocs/v2.php/cloud/users/{username}",
+                auth=auth, headers=headers, timeout=10,
+            )
+            r.raise_for_status()
+            current_groups = set(r.json().get("ocs", {}).get("data", {}).get("groups", []))
+        except Exception as e:
+            log.error(f"Failed to fetch NC groups for shop sync ({username}): {e}")
+            return
+
+        async def _add(group: str):
+            if group and group not in current_groups:
+                try:
+                    await client.post(
+                        f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
+                        auth=auth, headers=headers,
+                        data={"groupid": group}, timeout=10,
+                    )
+                    log.info(f"Shop sync: added {username} to {group}")
+                except Exception as e:
+                    log.error(f"Shop sync: failed to add {username} to {group}: {e}")
+
+        async def _remove(group: str):
+            if group and group in current_groups:
+                try:
+                    # httpx .delete() cannot carry a body; use .request("DELETE").
+                    await client.request(
+                        "DELETE",
+                        f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
+                        auth=auth, headers=headers,
+                        data={"groupid": group}, timeout=10,
+                    )
+                    log.info(f"Shop sync: removed {username} from {group}")
+                except Exception as e:
+                    log.error(f"Shop sync: failed to remove {username} from {group}: {e}")
+
+        # Add held shops (+ lead subgroup where applicable).
+        for num in new_shops:
+            entry = shop_map.get(num, {})
+            await _add(entry.get("base"))
+            if _is_shop_lead(new_billets, num):
+                await _add(entry.get("lead"))
+            else:
+                await _remove(entry.get("lead"))
+
+        # Remove dropped shops (base + lead).
+        for num in old_shops - new_shops:
+            entry = shop_map.get(num, {})
+            await _remove(entry.get("base"))
+            await _remove(entry.get("lead"))
 
 
 async def _sync_rank_group(username: str, new_rank: str):
@@ -184,7 +309,8 @@ async def _sync_rank_group(username: str, new_rank: str):
         for group in ALL_RANK_NC_GROUPS - {target_group}:
             if group in current_groups:
                 try:
-                    await client.delete(
+                    await client.request(
+                        "DELETE",
                         f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
                         auth=auth, headers=headers,
                         data={"groupid": group}, timeout=10,
@@ -292,6 +418,7 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 
     # Assignment — track old rank for promotion logic
     old_rank = member.rank_grade
+    old_billets = member.primary_billet
     member.rank_grade = form.get("rank_grade", member.rank_grade)
     member.status = form.get("status", member.status)
     member.team = form.get("team", "").strip() or None
@@ -448,7 +575,8 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 
     # Sync current member's leadership + team groups in NC
     if member.nc_username:
-        await _sync_leadership_groups(member.nc_username, member.leadership_title, member.team)
+        await _sync_leadership_groups(member.nc_username, member.leadership_title, member.team, member.primary_billet)
+        await _sync_shop_groups(member.nc_username, old_billets, member.primary_billet)
 
     member.updated_at = datetime.utcnow()
     await db.commit()

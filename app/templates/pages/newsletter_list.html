@@ -40,6 +40,8 @@
                 {% if nl.status in ['draft', 'scheduled', 'failed'] %}
                 <a href="/api/s1/newsletter/{{ nl.id }}/edit"
                    style="padding:6px 14px;background:rgba(212,165,55,0.15);border:1px solid #d4a537;border-radius:4px;color:#d4a537;font-size:12px;text-decoration:none;">Edit</a>
+                <button type="button" onclick="deleteNewsletter({{ nl.id }}, this)"
+                   style="padding:6px 14px;background:rgba(239,83,80,0.12);border:1px solid #ef5350;border-radius:4px;color:#ef5350;font-size:12px;cursor:pointer;">Delete</button>
                 {% else %}
                 <a href="/api/s1/newsletter/{{ nl.id }}/edit"
                    style="padding:6px 14px;background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:4px;color:#aaa;font-size:12px;text-decoration:none;">View</a>
@@ -50,4 +52,18 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+function deleteNewsletter(id, btn) {
+    if (!confirm(String.fromCharCode(68)+"elete this newsletter draft? This cannot be undone.")) return;
+    btn.disabled = true; btn.textContent = "Deleting...";
+    fetch("/api/s1/newsletter/" + id + "/delete", { method: "POST" })
+        .then(function(r){ return r.json().catch(function(){ return {}; }); })
+        .then(function(res){
+            if (res && res.error) { alert(res.error); btn.disabled=false; btn.textContent="Delete"; return; }
+            window.location.reload();
+        })
+        .catch(function(){ alert("Delete failed."); btn.disabled=false; btn.textContent="Delete"; });
+}
+</script>
 {% endblock %}

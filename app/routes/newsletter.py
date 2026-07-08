@@ -101,7 +101,7 @@ async def newsletter_new(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/{nl_id}/edit", response_class=HTMLResponse)
 @require_auth
-async def newsletter_edit(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_edit(request: Request, nl_id: int, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
     nl = await db.get(Newsletter, nl_id)
@@ -153,7 +153,7 @@ async def newsletter_image_upload(request: Request, db: AsyncSession = Depends(g
 # ─── Attachment upload ───────────────────────────────────────────────────────
 @router.post("/{nl_id}/attachment", response_class=HTMLResponse, response_model=None)
 @require_auth
-async def newsletter_attachment_add(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_attachment_add(request: Request, nl_id: int, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
     nl = await db.get(Newsletter, nl_id)
@@ -198,7 +198,7 @@ async def newsletter_attachment_add(nl_id: int, request: Request, db: AsyncSessi
 @router.post("/{nl_id}/attachment/{att_id}/delete", response_class=HTMLResponse, response_model=None)
 @require_auth
 async def newsletter_attachment_delete(
-    nl_id: int, att_id: int, request: Request, db: AsyncSession = Depends(get_db)
+    request: Request, nl_id: int, att_id: int, db: AsyncSession = Depends(get_db)
 ):
     user = _user(request)
     _require_s1(user)
@@ -347,7 +347,7 @@ async def newsletter_send_now(
 # ─── Cancel a scheduled send ─────────────────────────────────────────────────
 @router.post("/{nl_id}/cancel", response_class=JSONResponse, response_model=None)
 @require_auth
-async def newsletter_cancel(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_cancel(request: Request, nl_id: int, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
     nl = await db.get(Newsletter, nl_id)
@@ -360,7 +360,7 @@ async def newsletter_cancel(nl_id: int, request: Request, db: AsyncSession = Dep
 
 @router.post("/{nl_id}/delete", response_class=JSONResponse, response_model=None)
 @require_auth
-async def newsletter_delete(nl_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_delete(request: Request, nl_id: int, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
     nl = await db.get(Newsletter, nl_id)
@@ -429,7 +429,7 @@ async def newsletter_sections_list(request: Request, db: AsyncSession = Depends(
 
 @router.get("/sections/{key}/render", response_class=JSONResponse, response_model=None)
 @require_auth
-async def newsletter_section_render(key: str, request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_section_render(request: Request, key: str, db: AsyncSession = Depends(get_db)):
     """Return a single section as composer-ready HTML (header + body), resolving
     dynamic sections (e.g. live training calendar)."""
     user = _user(request)
