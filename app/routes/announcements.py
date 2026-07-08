@@ -41,6 +41,7 @@ ALLOWED_ATTRS = {
     "span": ["style", "class"],
     "p": ["style", "class"],
     "div": ["style", "class"],
+    "li": ["class"],  # preserve Quill ql-indent-N for nested-list rendering
 }
 
 
@@ -318,6 +319,17 @@ async def get_announcements(request: Request):
             .ann-body blockquote {{ border-left:3px solid #d4a537; padding-left:10px; color:#aaa; margin:8px 0; }}
             .ann-body h1,.ann-body h2,.ann-body h3 {{ color:#eee; margin:8px 0 4px; }}
             .ann-body ul,.ann-body ol {{ padding-left:20px; }}
+            /* Render Quill flattened ql-indent-N lists as real a/b/c sub-lists */
+            .ann-body ol {{ list-style:none; counter-reset:l0; padding-left:1.4em; }}
+            .ann-body ol > li {{ counter-increment:l0; position:relative; }}
+            .ann-body ol > li:not([class*="ql-indent"])::before {{ content:counter(l0,decimal) ". "; position:absolute; left:-1.4em; width:1.3em; text-align:right; }}
+            .ann-body ol > li:not([class*="ql-indent"]) {{ counter-reset:l1; }}
+            .ann-body ol > li.ql-indent-1 {{ counter-increment:l1; margin-left:1.6em; counter-reset:l2; }}
+            .ann-body ol > li.ql-indent-1::before {{ content:counter(l1,lower-alpha) ". "; position:absolute; left:-1.4em; width:1.3em; text-align:right; }}
+            .ann-body ol > li.ql-indent-2 {{ counter-increment:l2; margin-left:3.2em; }}
+            .ann-body ol > li.ql-indent-2::before {{ content:counter(l2,lower-roman) ". "; position:absolute; left:-1.6em; width:1.5em; text-align:right; }}
+            .ann-body ul li.ql-indent-1 {{ margin-left:1.6em; }}
+            .ann-body ul li.ql-indent-2 {{ margin-left:3.2em; }}
             </style>
             <script>
             function startEdit(id) {{
