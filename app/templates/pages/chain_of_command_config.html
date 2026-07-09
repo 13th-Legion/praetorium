@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Chain of Command — Reporting Map{% endblock %}
+{% block content %}
+<style>
+  .cocfg{max-width:760px; margin:0 auto; color:#e6e6ee;}
+  .cocfg h1{color:#d4a537; font-size:1.5rem; letter-spacing:1px; margin-bottom:2px;}
+  .cocfg .sub{color:#b6b6c8; font-size:.9rem; margin-bottom:18px;}
+  .cocfg .saved{background:rgba(58,125,68,.2); border:1px solid #3a7d44; color:#8fe0a0;
+    border-radius:6px; padding:8px 12px; margin-bottom:16px; font-size:.9rem;}
+  .cocfg .row{background:#1a1a2e; border:1px solid #3a3a55; border-radius:10px; padding:14px 16px; margin-bottom:12px;}
+  .cocfg .row h3{margin:0 0 10px; color:#d4a537; font-size:1rem;}
+  .cocfg .fld{display:flex; align-items:center; gap:10px; margin:8px 0; flex-wrap:wrap;}
+  .cocfg label{font-size:.82rem; color:#b6b6c8; min-width:120px;}
+  .cocfg select, .cocfg input[type=text]{background:#12121c; color:#e6e6ee; border:1px solid #3a3a55;
+    border-radius:5px; padding:6px 10px; font-size:.88rem; min-width:280px;}
+  .cocfg input[type=text]{min-width:320px;}
+  .cocfg .chk{display:flex; align-items:center; gap:8px; min-width:0;}
+  .cocfg .chk input{width:16px; height:16px;}
+  .cocfg .hint{font-size:.75rem; color:#8a8aa0; margin-top:2px;}
+  .cocfg .actions{margin-top:18px; display:flex; gap:12px; align-items:center;}
+  .cocfg button{background:#d4a537; color:#1a1a2e; border:none; border-radius:6px; padding:9px 22px;
+    font-weight:700; font-size:.9rem; cursor:pointer;}
+  .cocfg button:hover{background:#e0b54a;}
+  .cocfg a.back{color:#b6b6c8; text-decoration:none; font-size:.85rem;}
+  .cocfg a.back:hover{color:#d4a537;}
+  .cocfg .cmd-note{color:#8a8aa0; font-size:.78rem;}
+</style>
+
+<div class="cocfg">
+  <h1>⚙ Chain of Command — Reporting Map</h1>
+  <div class="sub">Set who each S-shop reports to in command. Shop membership and leads come from member
+    profiles automatically — this only controls the reporting lines shown on the chart.</div>
+
+  {% if request.query_params.get('saved') %}<div class="saved">✓ Reporting map saved.</div>{% endif %}
+
+  <form method="post" action="/chain-of-command/config">
+    {% for row in rows %}
+    <div class="row">
+      <h3>{{ row.emoji }} {{ row.name }}</h3>
+      <div class="fld chk">
+        <input type="checkbox" id="{{ row.prefix }}_command_led" name="{{ row.prefix }}_command_led"
+          {% if row.command_led %}checked{% endif %}
+          onchange="document.getElementById('{{ row.prefix }}_rt').disabled = this.checked;">
+        <label for="{{ row.prefix }}_command_led" style="min-width:0;">Command-led (top of chain — no separate report)</label>
+      </div>
+      <div class="fld">
+        <label for="{{ row.prefix }}_rt">Reports to</label>
+        <select id="{{ row.prefix }}_rt" name="{{ row.prefix }}_reports_to" {% if row.command_led %}disabled{% endif %}>
+          <option value="">— none —</option>
+          {% for c in command_choices %}
+          <option value="{{ c.id }}" {% if row.reports_to_id == c.id %}selected{% endif %}>{{ c.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fld">
+        <label for="{{ row.prefix }}_note">Command-led note</label>
+        <input type="text" id="{{ row.prefix }}_note" name="{{ row.prefix }}_note"
+          value="{{ row.note or '' }}" placeholder="e.g. CO is S3 Lead — top of chain" maxlength="120">
+      </div>
+      <div class="hint">Note text only shows on the chart when “Command-led” is checked.</div>
+    </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button type="submit">Save reporting map</button>
+      <a class="back" href="/chain-of-command">← Back to chart</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

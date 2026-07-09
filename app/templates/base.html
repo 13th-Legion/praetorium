@@ -40,7 +40,17 @@
                     </div>
                 </div>
             </div>
-            <a href="/roster" class="nav-link">📋 Roster</a>
+            <div class="nav-dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">📋 Personnel ▾</a>
+                <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 220px; z-index: 100; top: 100%; left: 0;">
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/roster" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">📋 Roster</a>
+                    </div>
+                    <div>
+                        <a href="/chain-of-command" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">🏛️ Chain of Command</a>
+                    </div>
+                </div>
+            </div>
             <a href="/events" class="nav-link">📅 Events</a>
             <a href="https://cloud.13thlegion.org/apps/spreed" target="_blank" class="nav-link">💬 Talk ↗</a>
             {% set shop_roles = namespace(shops=[]) %}
