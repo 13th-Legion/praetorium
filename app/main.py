@@ -165,6 +165,15 @@ app.add_middleware(
     secret_key=settings.secret_key,
     max_age=settings.session_max_age,
     https_only=not settings.debug,
+    # OAuth login uses a cross-context redirect chain (Praetorium -> NC grant ->
+    # password -> grant -> /auth/callback). With the Starlette default
+    # same_site="lax", the session cookie carrying the authlib OAuth `state` can
+    # be dropped on those cross-site POST->redirect hops (notably on mobile with a
+    # stale token requiring a second grant), producing "State token does not
+    # match" (PP-246). "none" keeps the cookie on the redirect; it requires the
+    # Secure attribute, which https_only provides in production (debug=False).
+    # Falls back to "lax" in local debug where https_only is off (Secure absent).
+    same_site="none" if not settings.debug else "lax",
 )
 
 # Favicon at root (browsers always request /favicon.ico)
