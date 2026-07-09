@@ -175,10 +175,14 @@
                     <span class="text-accent">✓ {{ member.mos or '' }}</span>
                 </div>
                 {% endif %}
-                {% if nc_last_login %}
+                {% if member.nc_username %}
                 <div class="detail-row">
                     <span class="detail-label">Last Login</span>
+                    {% if nc_last_login %}
                     <span class="text-muted">{{ nc_last_login.strftime('%b %d, %Y') }}</span>
+                    {% else %}
+                    <span style="color:#dc3545;font-weight:700;">⚠ Never logged in</span>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
