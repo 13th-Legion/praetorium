@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
-from app.models.training import TradocItem, MemberTradoc, Certification, MemberCertification
+from app.models.training import TradocBlock, TradocItem, MemberTradoc, Certification, MemberCertification
 from app.models.weapons_qual import MemberWeaponsQual
 from app.models.events import Event
 from app.models.awards import MemberAward
@@ -93,19 +93,26 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     result = await db.execute(select(TradocItem).order_by(TradocItem.sort_order))
     all_items = result.scalars().all()
 
+    # Block tier map (initial = Basic Training / counts toward patching;
+    # advanced = Advanced Training / above-and-beyond, does NOT count).
+    bres = await db.execute(select(TradocBlock))
+    block_tier = {b.number: (b.tier or "initial") for b in bres.scalars().all()}
+
     # Member's completed items
     result = await db.execute(
         select(MemberTradoc).where(MemberTradoc.member_id == member_id)
     )
     completed = {mt.item_id: mt for mt in result.scalars().all()}
 
-    # Group by block. Optional items (e.g. Advanced/Expert Land Nav) are still
-    # listed in their block but do NOT count toward TRADOC progress (they're extra,
-    # not required to get patched).
+    # Group by block, carrying each block's tier.
     blocks = {}
     for item in all_items:
         if item.block not in blocks:
-            blocks[item.block] = {"name": item.block_name, "items": []}
+            blocks[item.block] = {
+                "name": item.block_name,
+                "tier": block_tier.get(item.block, "initial"),
+                "items": [],
+            }
         blocks[item.block]["items"].append({
             "id": item.id,
             "name": item.name,
@@ -114,8 +121,12 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
             "optional": item.optional,
         })
 
-    # Progress = required items only
-    required_items = [i for i in all_items if not i.optional]
+    # Patching progress = required (non-optional) items in INITIAL-tier blocks only.
+    # Advanced Training blocks (e.g. Block 100) never affect the patched % meter.
+    required_items = [
+        i for i in all_items
+        if not i.optional and block_tier.get(i.block, "initial") == "initial"
+    ]
     total = len(required_items)
     done = len([i for i in required_items if i.id in completed])
 
