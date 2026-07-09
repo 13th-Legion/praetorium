@@ -86,25 +86,26 @@ async def dashboard(request: Request):
                 if winner:
                     election_winner_name = winner.display_name
 
-    # Latest published AAR (PP-XXX) for dashboard card
-    latest_aar = None
+    # Latest published AARs for dashboard card (PP-245).
+    # Order by EVENT date_start desc (not publish time) so a late-published AAR
+    # for an old event does not jump ahead of newer events' AARs.
+    latest_aars = []
     async with async_session() as db2:
         _r = await db2.execute(
             select(Event)
             .where(Event.aar_published_at.is_not(None))
-            .order_by(Event.aar_published_at.desc())
-            .limit(1)
+            .order_by(Event.date_start.desc())
+            .limit(3)
         )
-        _ev = _r.scalar_one_or_none()
-        if _ev:
+        for _ev in _r.scalars().all():
             _intent = (_ev.aar_commander_intent or "").strip()
-            latest_aar = {
+            latest_aars.append({
                 "id": _ev.id,
                 "title": _ev.title,
                 "date_start": _ev.date_start,
                 "published_at": _ev.aar_published_at,
                 "snippet": _intent[:120] + ("\u2026" if len(_intent) > 120 else ""),
-            }
+            })
 
     return templates.TemplateResponse("pages/dashboard.html", {
         "request": request,
@@ -113,5 +114,5 @@ async def dashboard(request: Request):
         "is_s1_lead": "s1_lead" in roles or bool(roles & {"command", "admin"}),
         "active_election": active_election,
         "election_winner_name": election_winner_name,
-        "latest_aar": latest_aar,
+        "latest_aars": latest_aars,
     })
