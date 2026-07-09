@@ -586,9 +586,11 @@
     </script>
 
     <!-- TRADOC Progress -->
+    {% set basic_blocks = training.blocks.items()|selectattr('1.tier', 'equalto', 'initial')|list %}
+    {% set adv_blocks = training.blocks.items()|rejectattr('1.tier', 'equalto', 'initial')|list %}
     <div class="profile-section">
         <h2 class="section-title">
-            TRADOC Progress
+            Basic Training <span style="font-size:12px;color:#888;font-weight:400;">— required to patch</span>
             <span class="tradoc-summary">{{ training.done }}/{{ training.total }} — {{ training.pct }}%</span>
         </h2>
 
@@ -597,11 +599,11 @@
         </div>
 
         {% if training.pct == 100 %}
-        <p class="tradoc-complete">✅ All training complete</p>
+        <p class="tradoc-complete">✅ All basic training complete — patch-eligible</p>
         {% endif %}
 
         <div class="tradoc-blocks">
-            {% for block_num, block in training.blocks.items() %}
+            {% for block_num, block in basic_blocks %}
             <div class="card tradoc-block">
                 <h3 class="card-title">
                     {% if block_num == 0 %}Every FTX{% else %}Block {{ block_num }}: {{ block['name'] }}{% endif %}
@@ -628,6 +630,41 @@
             {% endfor %}
         </div>
     </div>
+
+    {% if adv_blocks %}
+    <!-- Advanced Training (above-and-beyond; does not affect patching) -->
+    <div class="profile-section">
+        <h2 class="section-title">
+            Advanced Training <span style="font-size:12px;color:#888;font-weight:400;">— above and beyond; not required to patch</span>
+        </h2>
+        <div class="tradoc-blocks">
+            {% for block_num, block in adv_blocks %}
+            <div class="card tradoc-block">
+                <h3 class="card-title">
+                    {{ block['name'] }}
+                    <span class="tradoc-block-count">
+                        {{ block['items']|selectattr('done')|list|length }}/{{ block['items']|length }}
+                    </span>
+                </h3>
+                <div class="card-body">
+                    {% for item in block['items'] %}
+                    <div class="tradoc-item {% if item.done %}tradoc-done{% endif %}">
+                        <span class="tradoc-check">{% if item.done %}☑{% else %}☐{% endif %}</span>
+                        <span class="tradoc-name">{{ item.name }}</span>
+                        {% if item.done and item.signoff %}
+                        <span class="tradoc-signoff text-muted">
+                            — {{ item.signoff.signed_off_by or '' }}
+                            {% if item.signoff.ftx_date %}({{ item.signoff.ftx_date.strftime('%b %Y') }}){% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 
     {% if member and my_documents %}
