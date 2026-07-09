@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Chain of Command — 13th Legion{% endblock %}
+{% block content %}
+{% set INSIG = "/static/img/ranks/" %}
+<style>
+  .coc{--panel:#1a1a2e; --panel2:#20203a; --gold:#d4a537; --gold-dim:#8a6d24;
+    --line:#3a3a55; --text:#e6e6ee; --muted:#b6b6c8;
+    --co:#c0392b; --xo:#2e6da4; --nco:#3a7d44; --enl:#555a72;
+    max-width:1200px; margin:0 auto; color:var(--text);}
+  .coc *{box-sizing:border-box;}
+  .coc .doc-head{text-align:center; margin-bottom:8px;}
+  .coc .doc-head h1{margin:0; font-size:1.8rem; letter-spacing:1px; color:var(--gold);}
+  .coc .doc-head .sub{color:var(--muted); font-size:.95rem; margin-top:4px;}
+  .coc .doc-head .rule{height:2px;width:120px;background:var(--gold);margin:14px auto;border-radius:2px;}
+  .coc .edit-link{display:inline-block; margin-top:6px; font-size:.8rem; color:var(--gold); text-decoration:none;
+    border:1px solid var(--gold-dim); border-radius:5px; padding:3px 10px;}
+  .coc .edit-link:hover{background:var(--gold); color:var(--panel);}
+
+  .coc .tier-label{text-transform:uppercase; letter-spacing:2px; font-size:.72rem;
+    color:var(--gold-dim); font-weight:700; margin:26px 0 10px; text-align:center;}
+  .coc .bn{background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+    display:flex; gap:16px; justify-content:center; flex-wrap:wrap;}
+  .coc .bn .node-note{max-width:520px; font-size:.82rem; color:var(--text); align-self:center; line-height:1.5;}
+  .coc .connector{width:2px; height:26px; background:var(--line); margin:0 auto;}
+
+  .coc .card{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; display:flex; align-items:center; gap:12px; min-width:250px;
+    text-decoration:none; color:var(--text); transition:.15s;}
+  .coc .card:hover{border-color:var(--gold); transform:translateY(-1px);}
+  .coc .insig{width:78px; height:50px; display:flex; align-items:center; justify-content:center; flex:0 0 78px;
+    background:#eef2f5; border-radius:6px; padding:5px;}
+  .coc .insig img{max-width:100%; max-height:100%;}
+  .coc .insig.blank{background:#2a2a44; color:var(--gold); font-weight:700; font-size:.62rem; text-align:center; line-height:1.1; border:1px solid var(--gold-dim);}
+  .coc .insig.rct{background:#2a2a44; color:var(--muted); font-weight:700; font-size:.6rem; border:1px dashed var(--line);}
+  .coc .who{display:flex; flex-direction:column; gap:1px; min-width:0;}
+  .coc .role{font-size:.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold); font-weight:700;}
+  .coc .name{font-size:.98rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .coc .name .cs{color:var(--muted); font-weight:400; font-size:.85rem;}
+  .coc .rk{font-size:.72rem; color:var(--muted);}
+  .coc .card.co{border-left:4px solid var(--co);}
+  .coc .card.xo{border-left:4px solid var(--xo);}
+  .coc .card.top1sg{border-left:4px solid var(--gold);}
+  .coc .card.pl{border-left:4px solid var(--nco);}
+  .coc .command-row{display:flex; gap:24px; justify-content:center; align-items:flex-start; flex-wrap:wrap;}
+  .coc .command-col{display:flex; flex-direction:column; align-items:center; gap:10px;}
+
+  .coc .shops{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px;}
+  .coc .shop{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px;}
+  .coc .shop h4{margin:0 0 8px; font-size:.82rem; color:var(--gold); letter-spacing:1px; text-transform:uppercase;
+    border-bottom:1px solid var(--line); padding-bottom:6px;}
+  .coc .reports-to{display:flex; align-items:center; gap:6px; font-size:.72rem; margin:0 0 10px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); border-left:3px solid var(--muted);
+    border-radius:5px; padding:5px 8px;}
+  .coc .reports-to .lbl{color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; font-size:.62rem;}
+  .coc .reports-to a{color:var(--text); text-decoration:none; font-weight:600;}
+  .coc .reports-to a:hover{color:var(--gold); text-decoration:underline;}
+  .coc .reports-to .arrow{color:var(--muted); font-weight:700;}
+  .coc .cmd-led{display:flex; align-items:center; gap:6px; font-size:.72rem; margin:0 0 10px;
+    background:rgba(212,165,55,.1); border:1px solid var(--gold-dim); border-left:4px solid var(--gold);
+    border-radius:5px; padding:5px 8px; color:var(--muted);}
+  .coc .cmd-led .lbl{color:var(--gold); text-transform:uppercase; letter-spacing:.5px; font-weight:700; font-size:.62rem; white-space:nowrap;}
+  .coc .shop .m{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:.86rem;}
+  .coc .shop .m a{color:var(--text); text-decoration:none;}
+  .coc .shop .m a:hover{color:var(--gold); text-decoration:underline;}
+  .coc .shop .m .lead{color:var(--gold); font-size:.66rem; border:1px solid var(--gold-dim); border-radius:3px; padding:0 4px; margin-left:auto;}
+  .coc .insig-mini{width:52px;height:32px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 52px;
+    background:#eef2f5;border-radius:5px;padding:3px;}
+  .coc .insig-mini img{max-width:100%;max-height:100%;}
+  .coc .insig-mini.rct{background:#2a2a44;color:var(--muted);font-size:.55rem;font-weight:700;border:1px dashed var(--line);}
+  .coc .shop .detail{color:var(--muted); font-size:.75rem;}
+
+  .coc .teams{display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:14px;}
+  .coc .team{background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
+  .coc .team h3{margin:0 0 4px; font-size:1rem; color:var(--gold); display:flex; align-items:center; gap:8px;}
+  .coc .team .zone{font-size:.72rem; color:var(--muted); font-weight:400;}
+  .coc .team .ldr{display:flex; gap:10px; margin:10px 0; flex-wrap:wrap;}
+  .coc .team .members{border-top:1px dashed var(--line); padding-top:8px; margin-top:4px;}
+  .coc .team .members .m{display:flex; align-items:center; gap:8px; padding:3px 0; font-size:.85rem;}
+  .coc .team .members .m a{color:var(--text); text-decoration:none;}
+  .coc .team .members .m a:hover{color:var(--gold); text-decoration:underline;}
+  .coc .team .members .m .rk{color:var(--muted); font-size:.72rem; min-width:34px;}
+  .coc .team .empty{color:var(--muted); font-style:italic; font-size:.85rem; padding:6px 0;}
+  .coc .badge-tl{background:var(--nco); color:#fff; font-size:.6rem; padding:1px 5px; border-radius:3px; letter-spacing:.5px;}
+  .coc .badge-atl{background:var(--enl); color:#fff; font-size:.6rem; padding:1px 5px; border-radius:3px; letter-spacing:.5px;}
+  .coc .recruit-dot{color:var(--muted); font-size:.7rem;}
+  .coc .legend{margin-top:34px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px;
+    display:flex; gap:26px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); justify-content:center;}
+  .coc .legend .item{display:flex; align-items:center; gap:8px;}
+  .coc .legend .sw{width:14px;height:14px;border-radius:3px;}
+  .coc .footnote{margin-top:18px; text-align:center; color:var(--muted); font-size:.75rem; line-height:1.5;}
+</style>
+
+{% macro node_card(m, role, cls, subtitle) %}
+  <a class="card {{ cls }}" href="/profile/{{ m.id }}">
+    <div class="insig {% if m.is_recruit %}rct{% endif %}">
+      {% if m.insignia %}<img src="{{ INSIG }}{{ m.insignia }}" alt="{{ m.rank_abbr }}">{% else %}RCT{% endif %}
+    </div>
+    <div class="who">
+      <span class="role">{{ role }}</span>
+      <span class="name">{{ m.last }}, {{ m.first }}{% if m.callsign %} <span class="cs">"{{ m.callsign }}"</span>{% endif %}</span>
+      <span class="rk">{{ m.rank_abbr }}{% if subtitle %} · {{ subtitle }}{% endif %}</span>
+    </div>
+  </a>
+{% endmacro %}
+
+{% macro insig_mini(m) %}
+  <span class="insig-mini {% if m.is_recruit %}rct{% endif %}">
+    {% if m.insignia %}<img src="{{ INSIG }}{{ m.insignia }}" alt="{{ m.rank_abbr }}">{% else %}RCT{% endif %}
+  </span>
+{% endmacro %}
+
+<div class="coc">
+  <div class="doc-head">
+    <h1>Chain of Command</h1>
+    <div class="sub">13th Legion · Texas State Militia · As of {{ now.strftime('%B %d, %Y') if now else '' }}</div>
+    <div class="rule"></div>
+    {% if can_edit %}<a class="edit-link" href="/chain-of-command/config">⚙ Edit reporting map</a>{% endif %}
+  </div>
+
+  <!-- BATTALION / TSM -->
+  <div class="tier-label">Texas State Militia — State Structure</div>
+  <div class="bn">
+    <div class="card top1sg" style="cursor:default;">
+      <div class="insig"><img src="{{ INSIG }}enl_command_sergeant_major.svg" alt="CSM"></div>
+      <div class="who">
+        <span class="role">Command Sergeant Major</span>
+        <span class="name">Senior Enlisted Advisor</span>
+        <span class="rk">CSM · TSM-wide</span>
+      </div>
+    </div>
+    <div class="card" style="cursor:default; border-left:4px solid var(--gold);">
+      <div class="insig blank">CO<br>BOARD</div>
+      <div class="who">
+        <span class="role">CO Board (Governing)</span>
+        <span class="name">All Company Commanders</span>
+        <span class="rk">Parallel with RCO Board</span>
+      </div>
+    </div>
+    <div class="node-note">
+      Each unit is a <b>company</b> commanded by a Captain. In normal operations there is no single overall
+      commander — the <b>CO Board</b> (all Company Commanders) governs in parallel with the <b>RCO Board</b>
+      as checks-and-balances, and the <b>CSM</b> serves as senior enlisted advisor.
+      <br><br>
+      <b>As TSM grows,</b> companies are grouped into <b>Regions</b> (recommended ~3 companies each; always an
+      odd number of regions, minimum 3), each led by a <b>Regional Commander (Major)</b>. The Majors form the
+      <b>RCO Board</b>.
+      <br><br>
+      <b>In an emergency,</b> if the CO Board deems it necessary to have an overall Officer in Charge, the
+      Regional Commanders elect a temporary <b>State Commander</b> from among themselves — honorary rank of
+      <b>Colonel</b> — to singularly lead TSM. <span style="color:var(--muted);">(Bylaws §2.1.2–§2.1.3)</span>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- COMPANY COMMAND -->
+  <div class="tier-label">13th Legion — Company Command</div>
+  <div class="command-row">
+    <div class="command-col">
+      {% if org.command.co %}{{ node_card(org.command.co, "Commanding Officer", "co", "Company Commander") }}{% endif %}
+      {% if org.command.xo %}<div class="connector" style="height:18px;"></div>{{ node_card(org.command.xo, "Executive Officer", "xo", "2IC") }}{% endif %}
+    </div>
+    <div class="command-col">
+      {% if org.command.first_sergeant %}{{ node_card(org.command.first_sergeant, "First Sergeant", "top1sg", "Senior Enlisted") }}{% endif %}
+      {% if org.command.platoon_leader %}<div class="connector" style="height:18px;"></div>{{ node_card(org.command.platoon_leader, "Platoon Leader", "pl", "HQ Element") }}{% endif %}
+      {% if org.command.platoon_sergeant %}<div class="connector" style="height:18px;"></div>{{ node_card(org.command.platoon_sergeant, "Platoon Sergeant", "pl", "Element Chain") }}{% endif %}
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- STAFF SHOPS -->
+  <div class="tier-label">Staff Sections (S-Shops)</div>
+  <div class="shops">
+    {% for shop in org.shops %}
+    <div class="shop">
+      <h4>{{ shop.name }}</h4>
+      {% if shop.command_led %}
+        <div class="cmd-led"><span class="lbl">Command-led</span><span>{{ shop.note or "Led by command — top of chain" }}</span></div>
+      {% elif shop.reports_to %}
+        <div class="reports-to"><span class="lbl">Reports to</span><span class="arrow">⤴</span><a href="/profile/{{ shop.reports_to.id }}">{{ shop.reports_to.rank_abbr }} {{ shop.reports_to.last }}{% if shop.reports_to.callsign %} "{{ shop.reports_to.callsign }}"{% endif %}</a></div>
+      {% endif %}
+      {% if shop.lead %}
+      <div class="m">{{ insig_mini(shop.lead) }}<a href="/profile/{{ shop.lead.id }}">{{ shop.lead.rank_abbr }} {{ shop.lead.last }}, {{ shop.lead.first }}{% if shop.lead.callsign %} "{{ shop.lead.callsign }}"{% endif %}</a><span class="lead">LEAD</span></div>
+      {% endif %}
+      {% for m in shop.members %}
+      <div class="m">{{ insig_mini(m) }}<a href="/profile/{{ m.id }}">{{ m.rank_abbr }} {{ m.last }}, {{ m.first }}{% if m.callsign %} "{{ m.callsign }}"{% endif %}</a>{% if m.shop_detail and m.shop_detail not in shop.name %}<span class="detail">&nbsp;({{ m.shop_detail }})</span>{% endif %}</div>
+      {% endfor %}
+      {% if not shop.lead and not shop.members %}<div class="detail">No members assigned</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- LINE ELEMENTS -->
+  <div class="tier-label">Line Elements — Geographic Fireteams</div>
+  <div class="teams">
+    {% for team in org.teams %}
+    <div class="team">
+      <h3>{{ team.key }} <span class="zone">· {{ team.zone }}</span></h3>
+      {% if team.tl or team.atl %}
+      <div class="ldr">
+        {% if team.tl %}<a class="card" href="/profile/{{ team.tl.id }}" style="min-width:0;">
+          <div class="insig {% if team.tl.is_recruit %}rct{% endif %}">{% if team.tl.insignia %}<img src="{{ INSIG }}{{ team.tl.insignia }}">{% else %}RCT{% endif %}</div>
+          <div class="who"><span class="role">Team Leader <span class="badge-tl">TL</span></span><span class="name">{{ team.tl.last }}, {{ team.tl.first }}{% if team.tl.callsign %} <span class="cs">"{{ team.tl.callsign }}"</span>{% endif %}</span></div>
+        </a>{% endif %}
+        {% if team.atl %}<a class="card" href="/profile/{{ team.atl.id }}" style="min-width:0;">
+          <div class="insig {% if team.atl.is_recruit %}rct{% endif %}">{% if team.atl.insignia %}<img src="{{ INSIG }}{{ team.atl.insignia }}">{% else %}RCT{% endif %}</div>
+          <div class="who"><span class="role">Asst Team Leader <span class="badge-atl">ATL</span></span><span class="name">{{ team.atl.last }}, {{ team.atl.first }}{% if team.atl.callsign %} <span class="cs">"{{ team.atl.callsign }}"</span>{% endif %}</span></div>
+        </a>{% endif %}
+      </div>
+      {% endif %}
+      <div class="members">
+        {% for m in team.members %}
+        <div class="m"><span class="rk">{{ m.rank_abbr or 'RCT' }}</span><a href="/profile/{{ m.id }}">{{ m.last }}, {{ m.first }}{% if m.callsign %} "{{ m.callsign }}"{% endif %}</a>{% if m.is_recruit %} <span class="recruit-dot">●</span>{% endif %}</div>
+        {% endfor %}
+        {% if team.count == 0 %}<div class="empty">Unmanned — no members currently in zone</div>{% elif not team.members and (team.tl or team.atl) %}<div class="empty">Leadership only</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="sw" style="background:var(--co);"></span> Commanding Officer</div>
+    <div class="item"><span class="sw" style="background:var(--xo);"></span> Executive Officer</div>
+    <div class="item"><span class="sw" style="background:var(--gold);"></span> Senior Enlisted / Lead</div>
+    <div class="item"><span class="sw" style="background:var(--nco);"></span> Team Leader</div>
+    <div class="item"><span class="sw" style="background:var(--enl);"></span> Asst Team Leader</div>
+    <div class="item"><span class="recruit-dot">●</span> Recruit (unpatched)</div>
+  </div>
+
+  <div class="footnote">
+    Insignia: U.S. Army rank badges (army.mil/ranks). Names link to member service records.<br>
+    Shop membership, leads, and fireteams update live from member profiles. Reporting map editable by Command.
+  </div>
+</div>
+{% endblock %}

@@ -29,3 +29,4 @@ from app.models.newsletter import (  # noqa: F401
     Newsletter, NewsletterImage, NewsletterAttachment,
 )
 from app.models.newsletter_section import NewsletterSectionTemplate  # noqa: F401
+from app.models.org import ShopReporting  # noqa: F401
