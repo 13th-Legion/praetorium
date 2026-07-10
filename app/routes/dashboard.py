@@ -14,6 +14,7 @@ from app.models.events import Event
 from app.models.rank_history import RankHistory
 from app.models.ribbons import MemberRibbon, RibbonCatalog
 from app.routes.elections import _auto_advance
+from app.routes.chain_of_command import RANK_INSIGNIA
 from app.constants import RANK_ABBR
 
 router = APIRouter(tags=["dashboard"])
@@ -152,15 +153,17 @@ async def activity_feed(request: Request):
         for rh, m in pr.all():
             old_abbr = RANK_ABBR.get(rh.old_rank, rh.old_rank or "")
             new_abbr = RANK_ABBR.get(rh.new_rank, rh.new_rank or "")
+            insig = RANK_INSIGNIA.get(rh.new_rank)  # None for E-1/W-1 (no insignia)
             items.append({
                 "dt": rh.effective_date,
                 "kind": "promotion",
-                "icon": "\U0001F53C",  # up-triangle
+                "icon": "\U0001F53C",  # up-triangle fallback
                 "member_id": m.id,
                 "name": _member_name(m),
                 "callsign": m.callsign,
                 "text": f"promoted {old_abbr} \u2192 {new_abbr}",
                 "img": None,
+                "rank_img": f"/static/img/ranks/{insig}" if insig else None,
             })
 
         # Ribbon / decoration grants (manual + claim only — auto isn't stored)
@@ -181,7 +184,8 @@ async def activity_feed(request: Request):
                 "name": _member_name(m),
                 "callsign": m.callsign,
                 "text": f"{verb} {cat.name}",
-                "img": cat.image,
+                "img": f"/static/img/ribbons/{cat.image}" if cat.image else None,
+                "rank_img": None,
             })
 
     # Merge, newest first, cap the stream
@@ -199,12 +203,13 @@ async def activity_feed(request: Request):
         d = _to_cdt(it["dt"])
         datestr = d.strftime("%d %b").upper().lstrip("0") if d else ""
         cs = f' <span style="color:#888;font-style:italic;">\u201c{it["callsign"]}\u201d</span>' if it["callsign"] else ""
+        thumb_src = it.get("rank_img") or it.get("img")
         thumb = (
-            f'<img src="/static/img/ribbons/{it["img"]}" alt="" '
-            f'style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" '
+            f'<img src="{thumb_src}" alt="" '
+            f'style="width:24px;height:24px;object-fit:contain;flex-shrink:0;" '
             f'onerror="this.style.display=\'none\'">'
-            if it.get("img") else
-            f'<span style="font-size:16px;width:22px;text-align:center;flex-shrink:0;">{it["icon"]}</span>'
+            if thumb_src else
+            f'<span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">{it["icon"]}</span>'
         )
         return (
             f'<a href="/profile/{it["member_id"]}" '
@@ -221,11 +226,37 @@ async def activity_feed(request: Request):
         )
 
     rows = "".join(_row(it) for it in items)
-    # Duplicate the rows once so the vertical marquee loops seamlessly.
-    # CSS (portal.css .feed-*) handles the auto-scroll + pause-on-hover.
-    scroll_body = (
-        f'<div class="feed-scroll"><div class="feed-track">{rows}{rows}</div></div>'
-        if len(items) > 4 else
-        f'<div>{rows}</div>'
+    if len(items) <= 4:
+        # Short list: no scroll needed.
+        return HTMLResponse(f'<div>{rows}</div>')
+
+    # Scrollable container. JS gently auto-scrolls until the user interacts
+    # (wheel/touch/pointer/hover), then hands full manual scroll control over.
+    # Rows duplicated once so the auto-scroll can loop seamlessly before handoff.
+    return HTMLResponse(
+        '<div class="feed-scroll" id="activity-feed-scroll">'
+        f'<div class="feed-track">{rows}{rows}</div>'
+        '</div>'
+        '<script>(function(){'
+        'var box=document.getElementById("activity-feed-scroll");'
+        'if(!box)return;'
+        'var track=box.querySelector(".feed-track");'
+        'var half=function(){return track.scrollHeight/2;};'
+        'var paused=false,manual=false,raf=null,last=null;'
+        'var SPEED=18;'  # px/sec
+        'function step(ts){'
+        'if(last==null)last=ts;var dt=(ts-last)/1000;last=ts;'
+        'if(!paused&&!manual){box.scrollTop+=SPEED*dt;'
+        'if(box.scrollTop>=half()){box.scrollTop-=half();}}'
+        'raf=requestAnimationFrame(step);}'
+        'raf=requestAnimationFrame(step);'
+        # hover pauses (resumes on leave) unless user took manual control
+        'box.addEventListener("mouseenter",function(){paused=true;});'
+        'box.addEventListener("mouseleave",function(){if(!manual)paused=false;});'
+        # any real scroll input = permanent manual handoff
+        'function takeover(){manual=true;paused=true;if(raf)cancelAnimationFrame(raf);}'
+        'box.addEventListener("wheel",takeover,{passive:true});'
+        'box.addEventListener("touchstart",takeover,{passive:true});'
+        'box.addEventListener("pointerdown",takeover);'
+        '})();</script>'
     )
-    return HTMLResponse(scroll_body)
