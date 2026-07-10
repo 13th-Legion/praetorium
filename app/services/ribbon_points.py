@@ -104,22 +104,34 @@ async def compute_member_points(
     cat_rows = (await db.execute(select(RibbonCatalog))).scalars().all()
     cat = {c.code: c for c in cat_rows}
 
-    # Member ribbons
+    # Merge stored (manual/claim) + derived (auto) ribbons. Manual wins on code.
     mrs = (await db.execute(
         select(MemberRibbon).where(MemberRibbon.member_id == member_id)
     )).scalars().all()
-
+    merged: dict[str, dict] = {}
     for mr in mrs:
-        c = cat.get(mr.ribbon_code)
+        merged[mr.ribbon_code] = {"device_count": mr.device_count, "awarded_at": mr.awarded_at}
+    # Derived (only if a Member obj is resolvable); compute lazily.
+    from app.models.member import Member as _Member
+    member_obj = (await db.execute(select(_Member).where(_Member.id == member_id))).scalar_one_or_none()
+    if member_obj is not None:
+        from app.services.ribbon_derive import derive_ribbons
+        for d in await derive_ribbons(db, member_obj):
+            if d["code"] not in merged:
+                merged[d["code"]] = {"device_count": d["device_count"], "awarded_at": d["awarded_at"]}
+
+    for code, info in merged.items():
+        c = cat.get(code)
         if not c or not c.active:
             continue
-        pts = ribbon_award_points(c, mr.device_count)
+        pts = ribbon_award_points(c, info["device_count"])
         out.lifetime += pts
         out.lifetime_ribbons += pts
-        since = bool(cutoff and mr.awarded_at and mr.awarded_at > cutoff)
+        awarded_at = info["awarded_at"]
+        since = bool(cutoff and awarded_at and awarded_at > cutoff)
         if since:
             out.since_last_promotion += pts
-        out.detail.append((c.code, c.name, pts, mr.awarded_at, since))
+        out.detail.append((c.code, c.name, pts, awarded_at, since))
 
     # Tenure (lifetime always; since-promo credits discs crossed after cutoff)
     out.lifetime_tenure = tenure_points(join_date)

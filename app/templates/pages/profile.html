@@ -25,7 +25,7 @@
   .tab-item img { height: 40px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
   /* Tenure discs */
   .tenure-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .tenure-disc { width: 40px; height: 40px; object-fit: contain;
+  .tenure-disc { width: 48px; height: 48px; object-fit: contain;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 </style>
 {% endblock %}
@@ -132,6 +132,83 @@
             <p style="font-size:12px;color:#888;margin-top:10px;">{{ rank_abbr.get(member.rank_grade, '') }} {{ member.last_name }}{% if member.callsign %} — {{ member.callsign }}{% endif %}</p>
         </div>
     </div>
+
+    <!-- Decorations & Service (moved above the top cards) -->
+    {% if ribbons and ribbons.has_any %}
+    <div class="profile-section" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <h2 class="section-title" style="margin-bottom:0;">Decorations &amp; Service</h2>
+            <div style="font-size:12px;color:#b9bcc4;">
+                <span title="Total promotion points earned across all awards + tenure">
+                    <strong style="color:#d4a537;">{{ ribbons.points.lifetime }}</strong> lifetime pts</span>
+                {% if ribbons.points.last_promotion_date %}
+                <span style="margin-left:12px;" title="Points earned since last promotion">
+                    <strong style="color:#6b8e3d;">{{ ribbons.points.since_last_promotion }}</strong> since last promotion</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Tier 1: Dona Militaria ── #}
+        {% if ribbons.dona %}
+        <div class="ribbon-tier">
+            <h3 class="ribbon-tier-title">Dona Militaria</h3>
+            <div class="dona-row">
+                {% for d in ribbons.dona %}
+                <div class="dona-medal" title="{{ d.name }}{% if d.reason %} — {{ d.reason }}{% endif %}">
+                    <img src="/static/img/ribbons/{{ d.image }}" alt="{{ d.name }}">
+                    <span class="dona-label">{{ d.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Tier 2: Ribbon Rack (4/row, partial row on top) ── #}
+        {% if ribbons.rack_rows %}
+        <div class="ribbon-tier">
+            <h3 class="ribbon-tier-title">Ribbon Rack</h3>
+            <div class="ribbon-rack">
+                {% for row in ribbons.rack_rows %}
+                <div class="rack-row">
+                    {% for r in row %}
+                    <div class="rack-ribbon" title="{{ r.name }}{% if r.device_count %} (+{{ r.device_count }} device{{ 's' if r.device_count != 1 else '' }}){% endif %}{% if r.reason %} — {{ r.reason }}{% endif %}">
+                        <img src="/static/img/ribbons/{{ r.image }}" alt="{{ r.name }}">
+                        {% if r.device_count %}<span class="rack-devices">{{ '★' * r.device_count }}</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Tier 3: Tabs ── #}
+        {% if ribbons.tabs %}
+        <div class="ribbon-tier">
+            <h3 class="ribbon-tier-title">Tabs</h3>
+            <div class="tab-row">
+                {% for t in ribbons.tabs %}
+                <div class="tab-item" title="{{ t.name }}{% if t.reason %} — {{ t.reason }}{% endif %}">
+                    <img src="/static/img/ribbons/{{ t.image }}" alt="{{ t.name }}">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Tier 4: Anni Stipendiorum (tenure discs) ── #}
+        {% if ribbons.tenure %}
+        <div class="ribbon-tier">
+            <h3 class="ribbon-tier-title">Anni Stipendiorum <span style="font-weight:400;color:#888;font-size:12px;">— {{ ribbons.tenure_years }} year{{ 's' if ribbons.tenure_years != 1 else '' }} of service</span></h3>
+            <div class="tenure-row">
+                {% for disc in ribbons.tenure %}
+                <img class="tenure-disc" src="/static/img/ribbons/{{ disc.image }}" alt="{{ disc.metal }} disc" title="{{ disc.metal|capitalize }} — {{ 5 if disc.metal=='gold' else 3 if disc.metal=='silver' else 1 }} yr">
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <div class="profile-grid">
         <!-- Assignment -->
@@ -535,82 +612,6 @@
         <a href="/api/training/claim" style="display:inline-block;padding:8px 18px;background:#d4a537;color:#1a1a2e;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none;">
             📋 Request Training Sign-off
         </a>
-    </div>
-    {% endif %}
-    <!-- Ribbons, Decorations & Service (member_ribbons) -->
-    {% if ribbons and ribbons.has_any %}
-    <div class="profile-section">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <h2 class="section-title" style="margin-bottom:0;">Decorations &amp; Service</h2>
-            <div style="font-size:12px;color:#b9bcc4;">
-                <span title="Total promotion points earned across all awards + tenure">
-                    <strong style="color:#d4a537;">{{ ribbons.points.lifetime }}</strong> lifetime pts</span>
-                {% if ribbons.points.last_promotion_date %}
-                <span style="margin-left:12px;" title="Points earned since last promotion">
-                    <strong style="color:#6b8e3d;">{{ ribbons.points.since_last_promotion }}</strong> since last promotion</span>
-                {% endif %}
-            </div>
-        </div>
-
-        {# ── Tier 1: Dona Militaria ── #}
-        {% if ribbons.dona %}
-        <div class="ribbon-tier">
-            <h3 class="ribbon-tier-title">Dona Militaria</h3>
-            <div class="dona-row">
-                {% for d in ribbons.dona %}
-                <div class="dona-medal" title="{{ d.name }}{% if d.reason %} — {{ d.reason }}{% endif %}">
-                    <img src="/static/img/ribbons/{{ d.image }}" alt="{{ d.name }}">
-                    <span class="dona-label">{{ d.name }}</span>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── Tier 2: Ribbon Rack (4/row, partial row on top) ── #}
-        {% if ribbons.rack_rows %}
-        <div class="ribbon-tier">
-            <h3 class="ribbon-tier-title">Ribbon Rack</h3>
-            <div class="ribbon-rack">
-                {% for row in ribbons.rack_rows %}
-                <div class="rack-row">
-                    {% for r in row %}
-                    <div class="rack-ribbon" title="{{ r.name }}{% if r.device_count %} (+{{ r.device_count }} device{{ 's' if r.device_count != 1 else '' }}){% endif %}{% if r.reason %} — {{ r.reason }}{% endif %}">
-                        <img src="/static/img/ribbons/{{ r.image }}" alt="{{ r.name }}">
-                        {% if r.device_count %}<span class="rack-devices">{{ '★' * r.device_count }}</span>{% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── Tier 3: Tabs ── #}
-        {% if ribbons.tabs %}
-        <div class="ribbon-tier">
-            <h3 class="ribbon-tier-title">Tabs</h3>
-            <div class="tab-row">
-                {% for t in ribbons.tabs %}
-                <div class="tab-item" title="{{ t.name }}{% if t.reason %} — {{ t.reason }}{% endif %}">
-                    <img src="/static/img/ribbons/{{ t.image }}" alt="{{ t.name }}">
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── Tier 4: Anni Stipendiorum (tenure discs) ── #}
-        {% if ribbons.tenure %}
-        <div class="ribbon-tier">
-            <h3 class="ribbon-tier-title">Anni Stipendiorum <span style="font-weight:400;color:#888;font-size:12px;">— {{ ribbons.tenure_years }} year{{ 's' if ribbons.tenure_years != 1 else '' }} of service</span></h3>
-            <div class="tenure-row">
-                {% for disc in ribbons.tenure %}
-                <img class="tenure-disc" src="/static/img/ribbons/{{ disc.image }}" alt="{{ disc.metal }} disc" title="{{ disc.metal|capitalize }} — {{ 5 if disc.metal=='gold' else 3 if disc.metal=='silver' else 1 }} yr">
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
     {% endif %}
 

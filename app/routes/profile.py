@@ -224,23 +224,36 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
     from app.services.ribbon_points import (
         compute_member_points, tenure_discs, years_of_service,
     )
+    from app.services.ribbon_derive import derive_ribbons
 
     cat_rows = (await db.execute(select(RibbonCatalog).where(RibbonCatalog.active.is_(True)))).scalars().all()
     cat = {c.code: c for c in cat_rows}
 
+    # Manual/claim awards (stored) + auto-derived awards (computed). Manual wins
+    # on conflict (e.g. a manually-set device count overrides the derived one).
     mrs = (await db.execute(
         select(MemberRibbon).where(MemberRibbon.member_id == member.id)
     )).scalars().all()
+    held = {}  # code -> {device_count, reason, awarded_at}
+    for mr in mrs:
+        held[mr.ribbon_code] = {
+            "device_count": mr.device_count, "reason": mr.reason, "awarded_at": mr.awarded_at,
+        }
+    for d in await derive_ribbons(db, member):
+        if d["code"] not in held:
+            held[d["code"]] = {
+                "device_count": d["device_count"], "reason": None, "awarded_at": d["awarded_at"],
+            }
 
     dona, rack, tabs = [], [], []
-    for mr in mrs:
-        c = cat.get(mr.ribbon_code)
+    for code, info in held.items():
+        c = cat.get(code)
         if not c:
             continue
         entry = {
             "code": c.code, "name": c.name, "image": c.image,
-            "precedence": c.precedence, "device_count": mr.device_count,
-            "reason": mr.reason, "awarded_at": mr.awarded_at,
+            "precedence": c.precedence, "device_count": info["device_count"],
+            "reason": info["reason"], "awarded_at": info["awarded_at"],
         }
         if c.section == "dona":
             dona.append(entry)
