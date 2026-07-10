@@ -16,13 +16,32 @@
   .ribbon-rack { display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
     background: #14140f; padding: 6px; border: 1px solid #2a2a20; border-radius: 3px; }
   .rack-row { display: flex; justify-content: center; gap: 2px; }
-  .rack-ribbon { position: relative; line-height: 0; }
-  .rack-ribbon img { width: 96px; height: 24px; object-fit: fill; display: block; }
+  .rack-ribbon { position: relative; line-height: 0; transition: transform .15s ease; cursor: help; }
+  .rack-ribbon img { width: 96px; height: 24px; object-fit: fill; display: block;
+    border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+  .rack-ribbon:hover { transform: scale(1.6); z-index: 60; }
   .rack-devices { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-    color: #f4d878; font-size: 10px; text-shadow: 0 0 2px #000, 0 0 2px #000; letter-spacing: 1px; }
+    color: #f4d878; font-size: 10px; text-shadow: 0 0 2px #000, 0 0 2px #000; letter-spacing: 1px;
+    pointer-events: none; }
   /* Tabs */
   .tab-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .tab-item { transition: transform .15s ease; cursor: help; }
+  .tab-item:hover { transform: scale(1.15); }
   .tab-item img { height: 40px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .dona-medal, .tenure-disc { cursor: help; }
+  .dona-medal { transition: transform .15s ease; }
+  .dona-medal:hover { transform: translateY(-3px) scale(1.06); }
+  .tenure-disc { transition: transform .15s ease; }
+  .tenure-disc:hover { transform: scale(1.15); }
+  /* Rich tooltip */
+  #ribbon-tip { position: fixed; z-index: 9999; max-width: 300px; pointer-events: none;
+    background: #14161c; color: #e8e6dc; border: 1px solid #d4a537;
+    border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+    box-shadow: 0 6px 20px rgba(0,0,0,.6); opacity: 0; transition: opacity .12s ease; }
+  #ribbon-tip.show { opacity: 1; }
+  #ribbon-tip .rt-name { color: #d4a537; font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 3px; }
+  #ribbon-tip .rt-meta { color: #9fd06b; font-size: 11.5px; margin-top: 4px; }
+  #ribbon-tip .rt-cite { color: #b9bcc4; font-style: italic; margin-top: 4px; display: block; }
   /* Tenure discs */
   .tenure-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .tenure-disc { width: 48px; height: 48px; object-fit: contain;
@@ -154,7 +173,7 @@
             <h3 class="ribbon-tier-title">Dona Militaria</h3>
             <div class="dona-row">
                 {% for d in ribbons.dona %}
-                <div class="dona-medal" title="{{ d.name }}{% if d.reason %} — {{ d.reason }}{% endif %}">
+                <div class="dona-medal ribbon-hover" data-name="{{ d.name }}" data-desc="{{ d.description or '' }}" data-meta="{{ d.device_meaning or '' }}" data-cite="{{ d.reason or '' }}">
                     <img src="/static/img/ribbons/{{ d.image }}" alt="{{ d.name }}">
                     <span class="dona-label">{{ d.name }}</span>
                 </div>
@@ -171,7 +190,7 @@
                 {% for row in ribbons.rack_rows %}
                 <div class="rack-row">
                     {% for r in row %}
-                    <div class="rack-ribbon" title="{{ r.name }}{% if r.device_count %} (+{{ r.device_count }} device{{ 's' if r.device_count != 1 else '' }}){% endif %}{% if r.reason %} — {{ r.reason }}{% endif %}">
+                    <div class="rack-ribbon ribbon-hover" data-name="{{ r.name }}" data-desc="{{ r.description or '' }}" data-meta="{{ r.device_meaning or '' }}" data-cite="{{ r.reason or '' }}">
                         <img src="/static/img/ribbons/{{ r.image }}" alt="{{ r.name }}">
                         {% if r.device_count %}<span class="rack-devices">{{ '★' * r.device_count }}</span>{% endif %}
                     </div>
@@ -188,7 +207,7 @@
             <h3 class="ribbon-tier-title">Tabs</h3>
             <div class="tab-row">
                 {% for t in ribbons.tabs %}
-                <div class="tab-item" title="{{ t.name }}{% if t.reason %} — {{ t.reason }}{% endif %}">
+                <div class="tab-item ribbon-hover" data-name="{{ t.name }}" data-desc="{{ t.description or '' }}" data-meta="" data-cite="{{ t.reason or '' }}">
                     <img src="/static/img/ribbons/{{ t.image }}" alt="{{ t.name }}">
                 </div>
                 {% endfor %}
@@ -202,7 +221,7 @@
             <h3 class="ribbon-tier-title">Anni Stipendiorum <span style="font-weight:400;color:#888;font-size:12px;">— {{ ribbons.tenure_years }} year{{ 's' if ribbons.tenure_years != 1 else '' }} of service</span></h3>
             <div class="tenure-row">
                 {% for disc in ribbons.tenure %}
-                <img class="tenure-disc" src="/static/img/ribbons/{{ disc.image }}" alt="{{ disc.metal }} disc" title="{{ disc.metal|capitalize }} — {{ 5 if disc.metal=='gold' else 3 if disc.metal=='silver' else 1 }} yr">
+                <span class="tenure-disc ribbon-hover" data-name="Anni Stipendiorum — {{ disc.metal|capitalize }}" data-desc="{{ 5 if disc.metal=='gold' else 3 if disc.metal=='silver' else 1 }} year service disc" data-meta="" data-cite="" style="display:inline-block;line-height:0;"><img src="/static/img/ribbons/{{ disc.image }}" alt="{{ disc.metal }} disc"></span>
                 {% endfor %}
             </div>
         </div>
@@ -806,5 +825,41 @@ function toggleProfileQR() {
         btn.style.color = '#ccc';
     }
 }
+
+// ── Rich ribbon tooltip (47th-style popout) ──
+(function(){
+    var tip = document.getElementById('ribbon-tip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'ribbon-tip';
+        document.body.appendChild(tip);
+    }
+    function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+    function show(el){
+        var name = el.getAttribute('data-name') || '';
+        var desc = el.getAttribute('data-desc') || '';
+        var meta = el.getAttribute('data-meta') || '';
+        var cite = el.getAttribute('data-cite') || '';
+        var html = '<span class="rt-name">' + esc(name) + '</span>';
+        if (desc) html += esc(desc);
+        if (meta) html += '<span class="rt-meta">' + esc(meta) + '</span>';
+        if (cite) html += '<span class="rt-cite">“' + esc(cite) + '”</span>';
+        tip.innerHTML = html;
+        tip.classList.add('show');
+    }
+    function move(e){
+        var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+        var x = e.clientX + pad, y = e.clientY + pad;
+        if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+        if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
+    function hide(){ tip.classList.remove('show'); }
+    document.querySelectorAll('.ribbon-hover').forEach(function(el){
+        el.addEventListener('mouseenter', function(e){ show(el); move(e); });
+        el.addEventListener('mousemove', move);
+        el.addEventListener('mouseleave', hide);
+    });
+})();
 </script>
 {% endblock %}

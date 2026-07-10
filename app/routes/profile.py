@@ -245,15 +245,48 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
                 "device_count": d["device_count"], "reason": None, "awarded_at": d["awarded_at"],
             }
 
+    def _device_meaning(code, dc):
+        """Human phrase for what a device count represents on a given ribbon."""
+        if code == "ftx":
+            th = [5, 10, 25, 50]
+            if dc <= 0: return "1–4 FTXs attended"
+            reached = th[min(dc, 4) - 1]
+            nxt = th[dc] if dc < 4 else None
+            return (f"{reached}+ FTXs attended" if not nxt else f"{reached}–{nxt - 1} FTXs attended")
+        if code == "mcftx":
+            return f"{dc + 1} multi-company FTX{'s' if dc else ''} attended"
+        if code == "ham":
+            return ["Technician", "General", "Extra"][min(dc, 2)] + " class license"
+        if code == "instructor_ftx":
+            return f"{dc + 1} FTX class{'es' if dc else ''} taught"
+        if code == "recruiter":
+            return f"{dc} recruiting device{'s' if dc != 1 else ''}"
+        if dc:
+            return f"+{dc} device{'s' if dc != 1 else ''}"
+        return ""
+
     dona, rack, tabs = [], [], []
     for code, info in held.items():
         c = cat.get(code)
         if not c:
             continue
+        dc = info["device_count"]
+        # rich tooltip: name — description (· device meaning) (· citation)
+        tip_parts = [c.name]
+        if c.description:
+            tip_parts.append(c.description)
+        dm = _device_meaning(code, dc)
+        if dm:
+            tip_parts.append(dm)
+        if info["reason"]:
+            tip_parts.append(f"“{info['reason']}”")
         entry = {
             "code": c.code, "name": c.name, "image": c.image,
-            "precedence": c.precedence, "device_count": info["device_count"],
+            "precedence": c.precedence, "device_count": dc,
             "reason": info["reason"], "awarded_at": info["awarded_at"],
+            "description": c.description,
+            "device_meaning": dm,
+            "tip": "  —  ".join(tip_parts),
         }
         if c.section == "dona":
             dona.append(entry)
