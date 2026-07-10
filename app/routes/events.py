@@ -1843,7 +1843,7 @@ async def upcoming_events(request: Request):
                     continue
                 seen_titles.add(ev.title)
                 events.append(ev)
-            if len(events) >= 10:
+            if len(events) >= 4:
                 break
 
         if events:

@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
-from app.models.training import TradocItem, MemberTradoc, Certification, MemberCertification
+from app.models.training import (
+    TradocItem, MemberTradoc, Certification, MemberCertification, TrainingClaim
+)
 from app.models.awards import MemberAward
 
 router = APIRouter(prefix="/api/profile", tags=["profile_summary"])
@@ -125,6 +127,50 @@ async def profile_summary(request: Request, db: AsyncSession = Depends(get_db)):
         .where(MemberCertification.member_id == member.id)
     )
     earned_count = earned_result.scalar() or 0
+
+    # ── Tasks (folded in from the retired Training & To-Dos card) ──
+    pending_result = await db.execute(
+        select(func.count(TrainingClaim.id))
+        .where(TrainingClaim.member_id == member.id, TrainingClaim.status == "pending")
+    )
+    pending_claims_count = pending_result.scalar() or 0
+
+    tasks = []  # (icon, html)
+    if not member.nda_signed_at:
+        tasks.append(('📝', '<a href="/api/s1/documents/sign/nda" style="color:#d4a537;text-decoration:none;">Sign NDA</a>'))
+    if not member.waiver_signed_at:
+        tasks.append(('📝', '<a href="/api/s1/documents/sign/general_waiver" style="color:#d4a537;text-decoration:none;">Sign Liability Waiver</a>'))
+    if not member.code_of_conduct_signed_at:
+        tasks.append(('📝', '<a href="/api/s1/documents/sign/code_of_conduct" style="color:#d4a537;text-decoration:none;">Sign Code of Conduct</a>'))
+    if not member.bylaws_signed_at:
+        tasks.append(('📝', '<a href="/api/s1/documents/sign/bylaws" style="color:#d4a537;text-decoration:none;">Sign TSM By-Laws</a>'))
+    if not member.activity_policy_signed_at:
+        tasks.append(('📝', '<a href="/api/s1/documents/sign/activity_policy" style="color:#d4a537;text-decoration:none;">Sign Activity Policy</a>'))
+    if member.status == "recruit" and completed_items < total_items:
+        remaining = total_items - completed_items
+        tasks.append(('🎯', f'{remaining} TRADOC item{"s" if remaining != 1 else ""} remaining'))
+    if member.status == "recruit" and completed_items > 0 and pending_claims_count == 0:
+        tasks.append(('🎓', '<a href="/api/training/claim" style="color:#d4a537;text-decoration:none;">Request training sign-off</a>'))
+    if pending_claims_count:
+        tasks.append(('⏳', f'{pending_claims_count} pending claim{"s" if pending_claims_count != 1 else ""}'))
+
+    if tasks:
+        task_items = "".join(
+            f'<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;">'
+            f'<span>{icon}</span><span>{text}</span></div>'
+            for icon, text in tasks
+        )
+        tasks_html = f"""
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:11px;font-weight:700;color:#aaa;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Tasks</div>
+            {task_items}
+        </div>"""
+    else:
+        tasks_html = """
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:11px;font-weight:700;color:#aaa;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Tasks</div>
+            <div style="font-size:12px;color:#2e7d32;">✅ All caught up — nothing pending</div>
+        </div>"""
     certs_html = ""
     if earned_count > 0:
         certs_html = f"""
@@ -167,6 +213,8 @@ async def profile_summary(request: Request, db: AsyncSession = Depends(get_db)):
             {tradoc_html}
         </div>
     </div>
+
+    {tasks_html}
 
     <div style="margin-top:12px;text-align:center;">
         <a href="/profile" style="color:#d4a537;font-size:13px;text-decoration:none;font-weight:600;">View Full Profile →</a>

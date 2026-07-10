@@ -143,6 +143,52 @@ a:hover { color: var(--accent-hover); }
     gap: 1.5rem;
 }
 
+/* Dashboard two-column: main stream + Status sidebar (top-right on desktop) */
+.dashboard-2col {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    align-items: start;
+}
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+.dashboard-side {
+    position: sticky;
+    top: 1.5rem;
+}
+/* Mobile: stack, Status FIRST (tasks front-and-center on a phone) */
+@media (max-width: 860px) {
+    .dashboard-2col { grid-template-columns: 1fr; }
+    .dashboard-side { position: static; order: -1; }
+}
+
+/* Auto-scrolling activity feed (Promotions & Awards) */
+.feed-scroll {
+    position: relative;
+    height: 190px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+            mask-image: linear-gradient(to bottom, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+.feed-track {
+    display: flex;
+    flex-direction: column;
+    animation: feed-marquee 28s linear infinite;
+}
+.feed-scroll:hover .feed-track { animation-play-state: paused; }
+@keyframes feed-marquee {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .feed-track { animation: none; }
+    .feed-scroll { height: auto; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+}
+
 /* Login */
 .login-container {
     display: flex;
