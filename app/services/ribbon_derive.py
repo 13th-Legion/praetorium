@@ -25,6 +25,7 @@ from app.models.training import MemberTradoc, MemberCertification, TradocItem
 from app.models.weapons_qual import MemberWeaponsQual
 from app.models.events import Event, EventRSVP
 from app.models.schedule import EventScheduleBlock
+from app.models.rank_history import RankHistory
 
 # ── Cert id -> tab code ──────────────────────────────────────────────────────
 CERT_TAB = {6: "sabre", 2: "marksman", 1: "sharpshooter", 8: "equites"}
@@ -40,6 +41,26 @@ TRADOC_BLOCKS = {1, 2, 3, 4}
 FTX_DEVICE_THRESHOLDS = [5, 10, 25, 50]  # devices earned at these attendance counts
 
 NCO_GRADES = {"E-5", "E-6", "E-7", "E-8M", "E-8", "E-9"}
+
+
+async def _was_ever_nco(db: AsyncSession, member: Member) -> bool:
+    """NCO ribbon = ACTUALLY HELD an NCO grade (E-5+) at some point.
+
+    Do NOT infer from officer/warrant status: a patched E-4-or-below can win the
+    CO election and jump straight to O-3 without ever being an NCO, so
+    'is officer -> was NCO' is false. The only valid source is rank history
+    (or the current grade being NCO).
+    """
+    if (member.rank_grade or "") in NCO_GRADES:
+        return True
+    rows = (await db.execute(
+        select(RankHistory.old_rank, RankHistory.new_rank)
+        .where(RankHistory.member_id == member.id)
+    )).all()
+    for old_r, new_r in rows:
+        if old_r in NCO_GRADES or new_r in NCO_GRADES:
+            return True
+    return False
 
 
 def _ftx_devices(count: int) -> int:
@@ -120,7 +141,7 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
 
     # ── Rank / flags ──
     grade = member.rank_grade or ""
-    if grade in NCO_GRADES:
+    if await _was_ever_nco(db, member):
         out.append({"code": "nco", "device_count": 0, "awarded_at": None, "source": "auto"})
     if grade.startswith("O-") or grade.startswith("W-"):
         out.append({"code": "officer", "device_count": 0, "awarded_at": None, "source": "auto"})
