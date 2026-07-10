@@ -31,8 +31,7 @@
   .dona-medal, .tenure-disc { cursor: help; }
   .dona-medal { transition: transform .15s ease; }
   .dona-medal:hover { transform: translateY(-3px) scale(1.06); }
-  .tenure-disc { transition: transform .15s ease; }
-  .tenure-disc:hover { transform: scale(1.15); }
+
   /* Rich tooltip */
   #ribbon-tip { position: fixed; z-index: 9999; max-width: 300px; pointer-events: none;
     background: #14161c; color: #e8e6dc; border: 1px solid #d4a537;
@@ -44,8 +43,10 @@
   #ribbon-tip .rt-cite { color: #b9bcc4; font-style: italic; margin-top: 4px; display: block; }
   /* Tenure discs */
   .tenure-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .tenure-disc { width: 48px; height: 48px; object-fit: contain;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .tenure-disc { display: inline-block; line-height: 0; transition: transform .15s ease; }
+  .tenure-disc img { width: 48px; height: 48px; object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); display: block; }
+  .tenure-disc:hover { transform: scale(1.15); }
 </style>
 {% endblock %}
 
