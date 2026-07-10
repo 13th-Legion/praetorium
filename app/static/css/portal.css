@@ -146,7 +146,7 @@ a:hover { color: var(--accent-hover); }
 /* Dashboard two-column: main stream + Status sidebar (top-right on desktop) */
 .dashboard-2col {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     align-items: start;
 }
