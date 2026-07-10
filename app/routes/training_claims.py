@@ -346,12 +346,28 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
     all_ftx_result = await db.execute(select(Event).where(Event.category.in_(["ftx", "mcftx"])))
     ftx_names = {e.id: e.title for e in all_ftx_result.scalars().all()}
 
+    # Claimable ribbons (historical ribbon requests). Exclude ones already held.
+    from app.models.ribbons import RibbonCatalog, MemberRibbon
+    held_result = await db.execute(
+        select(MemberRibbon.ribbon_code).where(MemberRibbon.member_id == member.id)
+    )
+    held_codes = {row[0] for row in held_result.all()}
+    ribbon_cat = (await db.execute(
+        select(RibbonCatalog).where(
+            RibbonCatalog.active.is_(True), RibbonCatalog.claimable.is_(True)
+        ).order_by(RibbonCatalog.section, RibbonCatalog.precedence)
+    )).scalars().all()
+    ribbon_names = {c.id: c.name for c in ribbon_cat}
+    claimable_ribbons = [c for c in ribbon_cat if c.code not in held_codes]
+
     pending = []
     for c in pending_raw:
         if c.claim_type == "tradoc":
             name = tradoc_names.get(c.reference_id, f"Item #{c.reference_id}")
         elif c.claim_type == "ftx_attendance":
             name = ftx_names.get(c.reference_id, f"FTX: {c.reference_id}")
+        elif c.claim_type == "ribbon":
+            name = ribbon_names.get(c.reference_id, f"Ribbon #{c.reference_id}")
         else:
             name = cert_names.get(c.reference_id, f"Cert #{c.reference_id}")
         pending.append({"claim": c, "name": name})
@@ -363,6 +379,7 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
         "tradoc_items": tradoc_items,
         "certs": certs,
         "ftx_events": ftx_events,
+        "claimable_ribbons": claimable_ribbons,
         "pending": pending,
     })
 
@@ -380,11 +397,11 @@ async def submit_claim(request: Request, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Member not found")
 
     form = await request.form()
-    claim_type = form.get("claim_type", "")  # tradoc, certification, ftx_attendance
+    claim_type = form.get("claim_type", "")  # tradoc, certification, ftx_attendance, ribbon
     description = form.get("description", "").strip()
     callsign = form.get("callsign", "").strip().upper()
 
-    if claim_type not in ("tradoc", "certification", "ftx_attendance"):
+    if claim_type not in ("tradoc", "certification", "ftx_attendance", "ribbon"):
         raise HTTPException(status_code=400, detail="Invalid claim type")
 
     # Handle file upload (shared across all claims in this submission)
@@ -411,6 +428,10 @@ async def submit_claim(request: Request, db: AsyncSession = Depends(get_db)):
         ftx_id = form.get("ftx_id", "")
         if ftx_id:
             reference_ids = [int(ftx_id)]
+    elif claim_type == "ribbon":
+        ribbon_id = form.get("ribbon_id", "")
+        if ribbon_id:
+            reference_ids = [int(ribbon_id)]
     else:
         cert_id = form.get("cert_id", "")
         if cert_id:
@@ -666,6 +687,25 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
 
         # Auto-populate comms fields on member profile for radio certs
         await _sync_radio_cert(claim, db)
+    elif claim.claim_type == "ribbon":
+        from app.models.ribbons import RibbonCatalog, MemberRibbon
+        cat = (await db.execute(select(RibbonCatalog).where(RibbonCatalog.id == claim.reference_id))).scalar_one_or_none()
+        if cat:
+            existing_mr = (await db.execute(
+                select(MemberRibbon).where(
+                    MemberRibbon.member_id == claim.member_id,
+                    MemberRibbon.ribbon_code == cat.code,
+                )
+            )).scalar_one_or_none()
+            if not existing_mr:
+                db.add(MemberRibbon(
+                    member_id=claim.member_id,
+                    ribbon_code=cat.code,
+                    device_count=0,
+                    awarded_by=reviewer,
+                    reason=(claim.description or f"Approved from claim #{claim.id}"),
+                    source="claim",
+                ))
     elif claim.claim_type == "ftx_attendance":
         from app.models.events import EventRSVP, Event
         rsvp_result = await db.execute(select(EventRSVP).where(EventRSVP.event_id == claim.reference_id, EventRSVP.member_id == claim.member_id))
@@ -725,6 +765,10 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
                 cert_result = await db.execute(select(Certification).where(Certification.id == claim.reference_id))
                 cert = cert_result.scalar_one_or_none()
                 ref_name = cert.name if cert else None
+            elif claim.claim_type == "ribbon" and claim.reference_id:
+                from app.models.ribbons import RibbonCatalog
+                rib = (await db.execute(select(RibbonCatalog).where(RibbonCatalog.id == claim.reference_id))).scalar_one_or_none()
+                ref_name = rib.name if rib else None
             claim.reference_name = ref_name  # temp attr for archive function
             try:
                 await _archive_training_doc(member, claim)

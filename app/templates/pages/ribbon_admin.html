@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Award Ribbons &amp; Decorations{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+    <h1>🎖️ Award Ribbons &amp; Decorations</h1>
+    <p style="color:#aaa;margin-bottom:20px;">Grant decorations, ribbons, and tabs to members. Tenure discs (Anni Stipendiorum) are computed automatically from join date and are not granted here.</p>
+
+    <!-- Member selector -->
+    <div class="card" style="margin-bottom:20px;">
+        <h3 class="card-title">Select Member</h3>
+        <div class="card-body">
+            <select id="member-select" class="edit-input" style="max-width:420px;" onchange="onMember(this.value)">
+                <option value="">— Select member —</option>
+                {% for m in members %}
+                <option value="{{ m.id }}">{{ m.rank_display }} {{ m.last_name }}{% if m.callsign %} ({{ m.callsign }}){% endif %} — {{ m.team or 'Unassigned' }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <!-- Grant form -->
+        <div class="card">
+            <h3 class="card-title">Grant</h3>
+            <div class="card-body">
+                <form hx-post="/api/ribbons/grant" hx-target="#grant-result" hx-swap="innerHTML"
+                      hx-on::after-request="if(event.detail.successful){refreshCurrent();}">
+                    <input type="hidden" name="member_id" id="grant-member-id">
+
+                    <label style="font-size:12px;color:#aaa;">Ribbon / Decoration / Tab</label>
+                    <select name="code" id="code-select" class="edit-input" style="width:100%;margin-bottom:10px;"
+                            onchange="onCode(this)">
+                        <option value="">— Select —</option>
+                        {% for sec in section_order %}
+                        {% if grouped[sec] and sec != 'tenure' %}
+                        <optgroup label="{{ section_labels[sec] }}">
+                            {% for c in grouped[sec] %}
+                            <option value="{{ c.code }}" data-dev="{{ c.device_increment }}" data-max="{{ c.max_devices }}"
+                                    data-base="{{ c.base_points }}">
+                                {{ c.name }} ({{ c.base_points }} pts{% if c.device_increment %} +{{ c.device_increment }}/dev{% endif %})
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+
+                    <div id="device-wrap" style="display:none;margin-bottom:10px;">
+                        <label style="font-size:12px;color:#aaa;">Devices <span id="device-hint" style="color:#666;"></span></label>
+                        <input type="number" name="device_count" id="device-count" min="0" value="0"
+                               class="edit-input" style="width:100%;">
+                    </div>
+
+                    <label style="font-size:12px;color:#aaa;">Reason / Citation</label>
+                    <textarea name="reason" class="edit-input" rows="3" style="width:100%;margin-bottom:10px;"
+                              placeholder="Optional citation for the award record"></textarea>
+
+                    <button type="submit" class="btn-primary"
+                            style="width:100%;padding:8px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;">
+                        Grant Award
+                    </button>
+                </form>
+                <div id="grant-result" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- Current ribbons -->
+        <div class="card">
+            <h3 class="card-title">Current Awards</h3>
+            <div class="card-body">
+                <div id="current-ribbons"><p style="color:#888;font-size:13px;">Select a member to view their awards.</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function onMember(id){
+    document.getElementById('grant-member-id').value = id;
+    refreshCurrent();
+}
+function refreshCurrent(){
+    var id = document.getElementById('grant-member-id').value;
+    var box = document.getElementById('current-ribbons');
+    if(!id){ box.innerHTML = '<p style="color:#888;font-size:13px;">Select a member to view their awards.</p>'; return; }
+    htmx.ajax('GET', '/api/ribbons/member/'+id+'/current', {target:'#current-ribbons', swap:'innerHTML'});
+}
+function onCode(sel){
+    var opt = sel.options[sel.selectedIndex];
+    var dev = parseInt(opt.getAttribute('data-dev')||'0',10);
+    var mx = parseInt(opt.getAttribute('data-max')||'0',10);
+    var wrap = document.getElementById('device-wrap');
+    var hint = document.getElementById('device-hint');
+    var inp = document.getElementById('device-count');
+    if(dev>0){
+        wrap.style.display='block';
+        inp.value=0;
+        if(mx>0){ inp.max=mx; hint.textContent='(max '+mx+')'; } else { inp.removeAttribute('max'); hint.textContent=''; }
+    } else {
+        wrap.style.display='none'; inp.value=0;
+    }
+}
+</script>
+{% endblock %}

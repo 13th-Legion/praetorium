@@ -131,6 +131,16 @@ async def promotions_dashboard(request: Request):
         staged_objs = stage_result.scalars().all()
         member_lookup = {m.id: m for m in members}
 
+        # Promotion-point totals per member (lifetime + since last promotion)
+        from app.services.ribbon_points import compute_member_points
+        points_by_member: dict[int, tuple[int, int]] = {}
+        for m in members:
+            try:
+                pb = await compute_member_points(db, m.id, m.join_date)
+                points_by_member[m.id] = (pb.lifetime, pb.since_last_promotion)
+            except Exception:
+                points_by_member[m.id] = (0, 0)
+
     # Build lookup: member_id → most recent promotion date
     last_promo: dict[int, date] = {}
     for rh in all_history:
@@ -172,6 +182,8 @@ async def promotions_dashboard(request: Request):
             "non_promotable": non_promotable,
             "np_reason": np_reason,
             "allowed_ranks": _allowed_rank_changes(m.rank_grade),
+            "points_lifetime": points_by_member.get(m.id, (0, 0))[0],
+            "points_since_promo": points_by_member.get(m.id, (0, 0))[1],
         })
 
     # Default sort: highest TIG first

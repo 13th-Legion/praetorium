@@ -173,6 +173,7 @@
             <th data-col="callsign" onclick="sortTable('callsign')">Callsign <span class="sort-arrow">▲▼</span></th>
             <th data-col="promo_date" onclick="sortTable('promo_date')">Last Promotion <span class="sort-arrow">▲▼</span></th>
             <th data-col="tig" class="sorted" onclick="sortTable('tig')">Time in Grade <span class="sort-arrow">▼</span></th>
+            <th data-col="points" onclick="sortTable('points')" title="Promotion points — lifetime (since last promotion)">Points <span class="sort-arrow">▲▼</span></th>
             <th>Promote To</th>
             <th></th>
         </tr>
@@ -185,6 +186,7 @@
             data-first="{{ row.first_name|lower }}"
             data-callsign="{{ row.callsign|lower }}"
             data-tig="{{ row.tig_days }}"
+            data-points="{{ row.points_lifetime }}"
             data-promo-date="{{ row.promo_date_str }}"
             data-rank-idx="{{ row.rank_index }}"
             data-np="{{ '1' if row.non_promotable else '0' }}">
@@ -212,6 +214,10 @@
                 {% else %}
                     <span class="tig-badge tig-green">{{ row.tig_display }}</span>
                 {% endif %}
+            </td>
+            <td style="white-space:nowrap;" title="Lifetime promotion points (points earned since last promotion)">
+                <strong style="color:#d4a537;">{{ row.points_lifetime }}</strong>
+                <span style="color:#6b8e3d;font-size:12px;">({{ row.points_since_promo }})</span>
             </td>
             <td>
                 {% if row.non_promotable %}

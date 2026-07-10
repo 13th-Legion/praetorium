@@ -210,6 +210,88 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     }
 
 
+async def _get_ribbon_data(member, db: AsyncSession) -> dict:
+    """Assemble the member's ribbon display (4 tiers) + promotion-point totals.
+
+    Tiers:
+      dona   — decorations, precedence-ordered
+      rack   — ribbon rack, precedence-ordered, arranged 4-per-row with the
+               partial row on TOP (highest precedence top-center)
+      tabs   — qualification tabs
+      tenure — Anni Stipendiorum discs computed from join_date (not stored)
+    """
+    from app.models.ribbons import RibbonCatalog, MemberRibbon
+    from app.services.ribbon_points import (
+        compute_member_points, tenure_discs, years_of_service,
+    )
+
+    cat_rows = (await db.execute(select(RibbonCatalog).where(RibbonCatalog.active.is_(True)))).scalars().all()
+    cat = {c.code: c for c in cat_rows}
+
+    mrs = (await db.execute(
+        select(MemberRibbon).where(MemberRibbon.member_id == member.id)
+    )).scalars().all()
+
+    dona, rack, tabs = [], [], []
+    for mr in mrs:
+        c = cat.get(mr.ribbon_code)
+        if not c:
+            continue
+        entry = {
+            "code": c.code, "name": c.name, "image": c.image,
+            "precedence": c.precedence, "device_count": mr.device_count,
+            "reason": mr.reason, "awarded_at": mr.awarded_at,
+        }
+        if c.section == "dona":
+            dona.append(entry)
+        elif c.section == "rack":
+            rack.append(entry)
+        elif c.section == "tab":
+            tabs.append(entry)
+
+    dona.sort(key=lambda e: e["precedence"])
+    rack.sort(key=lambda e: e["precedence"])
+    tabs.sort(key=lambda e: e["precedence"])
+
+    # Rack rows: 4 per row, partial row on top. With N ribbons, top row holds
+    # N % 4 (or 4 if evenly divisible); highest precedence centered on top.
+    rack_rows = []
+    if rack:
+        per = 4
+        first = len(rack) % per or per
+        idx = 0
+        rack_rows.append(rack[idx:idx + first]); idx += first
+        while idx < len(rack):
+            rack_rows.append(rack[idx:idx + per]); idx += per
+
+    # Tenure discs from join_date
+    yos = years_of_service(getattr(member, "join_date", None))
+    discs = tenure_discs(yos)
+    tenure = []
+    for metal in ("gold", "silver", "bronze"):
+        for _ in range(discs[metal]):
+            tenure.append({"metal": metal, "image": f"discs/anni_{metal}.png"})
+
+    points = await compute_member_points(db, member.id, getattr(member, "join_date", None))
+
+    return {
+        "dona": dona,
+        "rack": rack,
+        "rack_rows": rack_rows,
+        "tabs": tabs,
+        "tenure": tenure,
+        "tenure_years": yos,
+        "has_any": bool(dona or rack or tabs or tenure),
+        "points": {
+            "lifetime": points.lifetime,
+            "since_last_promotion": points.since_last_promotion,
+            "lifetime_tenure": points.lifetime_tenure,
+            "lifetime_ribbons": points.lifetime_ribbons,
+            "last_promotion_date": points.last_promotion_date,
+        },
+    }
+
+
 @router.get("")
 @require_auth
 async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
@@ -257,6 +339,8 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         except Exception:
             pass
 
+    ribbons = await _get_ribbon_data(member, db)
+
     return templates.TemplateResponse("pages/profile.html", {
         "request": request,
         "user": user,
@@ -271,6 +355,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
         "my_documents": my_documents,
+        "ribbons": ribbons,
         "now": datetime.utcnow(),
     })
 
@@ -315,6 +400,8 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         except Exception:
             pass
 
+    ribbons = await _get_ribbon_data(member, db)
+
     return templates.TemplateResponse("pages/profile.html", {
         "request": request,
         "user": user,
@@ -329,6 +416,7 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         "conduct_violations": conduct_violations,
         "nc_last_login": nc_last_login,
         "my_documents": my_documents,
+        "ribbons": ribbons,
         "now": datetime.utcnow(),
     })
 

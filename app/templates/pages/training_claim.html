@@ -52,6 +52,11 @@
                         <div style="font-size:24px;">🏅</div>
                         <div style="font-weight:600;font-size:13px;margin-top:4px;">Certification / Tab</div>
                     </label>
+                    <label style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:6px;cursor:pointer;text-align:center;" id="type-ribbon-label">
+                        <input type="radio" name="claim_type" value="ribbon" onclick="toggleClaimType('ribbon')" style="display:none;">
+                        <div style="font-size:24px;">🎖️</div>
+                        <div style="font-weight:600;font-size:13px;margin-top:4px;">Ribbon (Historical)</div>
+                    </label>
                 </div>
 
                 <!-- TRADOC items (multi-select checkboxes) -->
@@ -90,6 +95,21 @@
                     {% if not ftx_events %}
                     <p style="color:#2e7d32;font-size:13px;">✅ You have attended all past FTXs!</p>
                     {% endif %}
+                </div>
+
+                <!-- Ribbon dropdown (historical ribbon request) -->
+                <div id="ribbon-section" style="display:none;">
+                    <label class="edit-label">Ribbon / Decoration / Tab <span style="color:#888;font-weight:400;">(request a historical award for review)</span></label>
+                    <select name="ribbon_id" id="ribbon-select" class="edit-input" style="margin-bottom:12px;" disabled>
+                        <option value="">— Select ribbon —</option>
+                        {% for rib in claimable_ribbons %}
+                        <option value="{{ rib.id }}">{{ rib.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not claimable_ribbons %}
+                    <p style="color:#2e7d32;font-size:13px;">✅ You already hold all claimable ribbons!</p>
+                    {% endif %}
+                    <p style="color:#888;font-size:12px;margin-bottom:12px;">Attach documentation/evidence below. Command/S1 will review before the award posts to your rack.</p>
                 </div>
 
                 <!-- Cert dropdown (usually fewer, single select is fine) -->
@@ -210,6 +230,9 @@ document.querySelector('form').addEventListener('submit', function(e) {
     } else if (claimType && claimType.value === 'certification') {
         var certSel = document.getElementById('cert-select');
         hasSelection = certSel && certSel.value;
+    } else if (claimType && claimType.value === 'ribbon') {
+        var ribSel = document.getElementById('ribbon-select');
+        hasSelection = ribSel && ribSel.value;
     }
     if (!hasSelection) {
         e.preventDefault();
@@ -239,23 +262,29 @@ function toggleClaimType(type) {
     var tradocSec = document.getElementById('tradoc-section');
     var certSec = document.getElementById('cert-section');
     var ftxSec = document.getElementById('ftx-section');
+    var ribbonSec = document.getElementById('ribbon-section');
     var certSel = document.getElementById('cert-select');
     var ftxSel = document.getElementById('ftx-select');
+    var ribbonSel = document.getElementById('ribbon-select');
     var tradocLabel = document.getElementById('type-tradoc-label');
     var certLabel = document.getElementById('type-cert-label');
     var ftxLabel = document.getElementById('type-ftx-label');
+    var ribbonLabel = document.getElementById('type-ribbon-label');
 
     var callsignSec = document.getElementById('callsign-section');
 
     tradocSec.style.display = 'none';
     certSec.style.display = 'none';
     ftxSec.style.display = 'none';
+    if (ribbonSec) ribbonSec.style.display = 'none';
     certSel.disabled = true;
     ftxSel.disabled = true;
+    if (ribbonSel) ribbonSel.disabled = true;
     callsignSec.style.display = 'none';
     tradocLabel.style.borderColor = 'transparent';
     certLabel.style.borderColor = 'transparent';
     ftxLabel.style.borderColor = 'transparent';
+    if (ribbonLabel) ribbonLabel.style.borderColor = 'transparent';
 
     if (type === 'tradoc') {
         tradocSec.style.display = 'block';
@@ -264,6 +293,10 @@ function toggleClaimType(type) {
         ftxSec.style.display = 'block';
         ftxSel.disabled = false;
         ftxLabel.style.borderColor = '#d4a537';
+    } else if (type === 'ribbon') {
+        ribbonSec.style.display = 'block';
+        ribbonSel.disabled = false;
+        ribbonLabel.style.borderColor = '#d4a537';
     } else {
         certSec.style.display = 'block';
         certSel.disabled = false;
