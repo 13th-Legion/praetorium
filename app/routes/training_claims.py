@@ -547,6 +547,7 @@ async def claims_review(request: Request, db: AsyncSession = Depends(get_db)):
     # Build claim display data with item names
     tradoc_cache = {}
     cert_cache = {}
+    ribbon_cache = {}
 
     ftx_cache = {}
     async def get_item_name(claim):
@@ -563,6 +564,13 @@ async def claims_review(request: Request, db: AsyncSession = Depends(get_db)):
                 event = r.scalar_one_or_none()
                 ftx_cache[claim.reference_id] = f"FTX: {event.title}" if event else f"FTX #{claim.reference_id}"
             return ftx_cache[claim.reference_id]
+        elif claim.claim_type == "ribbon":
+            if claim.reference_id not in ribbon_cache:
+                from app.models.ribbons import RibbonCatalog
+                r = await db.execute(select(RibbonCatalog).where(RibbonCatalog.id == claim.reference_id))
+                rib = r.scalar_one_or_none()
+                ribbon_cache[claim.reference_id] = f"🎖️ {rib.name}" if rib else f"Ribbon #{claim.reference_id}"
+            return ribbon_cache[claim.reference_id]
         else:
             if claim.reference_id not in cert_cache:
                 r = await db.execute(select(Certification).where(Certification.id == claim.reference_id))

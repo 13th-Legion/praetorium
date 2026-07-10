@@ -168,8 +168,7 @@
         <tr>
             <th style="width: 36px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" title="Select all"></th>
             <th data-col="rank" onclick="sortTable('rank')">RNK <span class="sort-arrow">▲▼</span></th>
-            <th data-col="last" onclick="sortTable('last')">Last Name <span class="sort-arrow">▲▼</span></th>
-            <th data-col="first" onclick="sortTable('first')">First Name <span class="sort-arrow">▲▼</span></th>
+            <th data-col="last" onclick="sortTable('last')">Name <span class="sort-arrow">▲▼</span></th>
             <th data-col="callsign" onclick="sortTable('callsign')">Callsign <span class="sort-arrow">▲▼</span></th>
             <th data-col="promo_date" onclick="sortTable('promo_date')">Last Promotion <span class="sort-arrow">▲▼</span></th>
             <th data-col="tig" class="sorted" onclick="sortTable('tig')">Time in Grade <span class="sort-arrow">▼</span></th>
@@ -197,7 +196,6 @@
             </td>
             <td><strong>{{ row.rank_abbr }}</strong></td>
             <td><a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a></td>
-            <td>{{ row.first_name }}</td>
             <td>{{ row.callsign }}</td>
             <td>{{ row.promo_date_str }}</td>
             <td>
