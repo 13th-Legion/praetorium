@@ -363,7 +363,7 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
     pending = []
     for c in pending_raw:
         if c.claim_type == "tradoc":
-            name = tradoc_names.get(c.reference_id, f"Item #{c.reference_id}")
+            name = tradoc_names.get(c.reference_id, "(deleted TRADOC item)")
         elif c.claim_type == "ftx_attendance":
             name = ftx_names.get(c.reference_id, f"FTX: {c.reference_id}")
         elif c.claim_type == "ribbon":
@@ -555,7 +555,7 @@ async def claims_review(request: Request, db: AsyncSession = Depends(get_db)):
             if claim.reference_id not in tradoc_cache:
                 r = await db.execute(select(TradocItem).where(TradocItem.id == claim.reference_id))
                 item = r.scalar_one_or_none()
-                tradoc_cache[claim.reference_id] = item.name if item else f"Item #{claim.reference_id}"
+                tradoc_cache[claim.reference_id] = item.name if item else "(deleted TRADOC item)"
             return tradoc_cache[claim.reference_id]
         elif claim.claim_type == "ftx_attendance":
             if claim.reference_id not in ftx_cache:
