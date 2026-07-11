@@ -182,8 +182,12 @@ async def _build_org(db: AsyncSession) -> dict:
     teams = []
     for team_key, zone in TEAM_DEFS:
         tmembers = [m for m in members if (m.team or "") == team_key]
-        tl = next((m for m in tmembers if (m.leadership_title or "") == "Team Leader"), None)
-        atl = next((m for m in tmembers if (m.leadership_title or "") == "Assistant Team Leader"), None)
+        # HQ-element members keep their geo team as a zone assignment but must not
+        # hold a geo fireteam TL/ATL slot (their leadership_title reflects the HQ
+        # element, not this fireteam). Exclude them from TL/ATL selection only;
+        # they still render as rank-and-file in the team.
+        tl = next((m for m in tmembers if (m.leadership_title or "") == "Team Leader" and not getattr(m, "is_hq", False)), None)
+        atl = next((m for m in tmembers if (m.leadership_title or "") == "Assistant Team Leader" and not getattr(m, "is_hq", False)), None)
         rank_file = [m for m in tmembers if m not in (tl, atl)]
         rank_file.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
         teams.append({
