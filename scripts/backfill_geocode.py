@@ -19,7 +19,7 @@ from sqlalchemy import select, and_, or_
 
 from app.database import async_session
 from app.models.member import Member
-from app.geo import geocode_member_fields, assign_zone
+from app.geo import geocode_member_fields, assign_zone, split_oneline_into_fields
 
 
 async def main(regeocode_all: bool = False):
@@ -38,8 +38,16 @@ async def main(regeocode_all: bool = False):
         members = (await db.execute(stmt)).scalars().all()
         print(f"Members to geocode: {len(members)}")
 
-        ok = fail = moved = 0
+        ok = fail = moved = split = 0
         for i, m in enumerate(members, 1):
+            # First, split any crammed one-line address into city/state/zip.
+            _s = split_oneline_into_fields(m.address, m.city, m.state, m.zip_code)
+            if _s:
+                m.address = _s["address"]
+                m.city = _s["city"]
+                m.state = _s["state"]
+                m.zip_code = _s["zip_code"]
+                split += 1
             lat, lon = geocode_member_fields(m.address, m.city, m.state, m.zip_code)
             if lat is not None:
                 m.latitude = lat
@@ -60,7 +68,7 @@ async def main(regeocode_all: bool = False):
             # Politeness: Nominatim asks for <=1 req/sec; Census is fine but this is safe.
             time.sleep(1.1)
 
-        print(f"\nDone. geocoded={ok} missed={fail} team_reassigned={moved}")
+        print(f"\nDone. address_split={split} geocoded={ok} missed={fail} team_reassigned={moved}")
 
 
 if __name__ == "__main__":

@@ -134,6 +134,17 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
     member.emergency_contact = form.get("emergency_contact", "").strip() or None
     member.emergency_phone = form.get("emergency_phone", "").strip() or None
 
+    # --- Auto-parse a full one-line address into city/state/zip ---
+    from app.geo import split_oneline_into_fields
+    _split = split_oneline_into_fields(
+        member.address, member.city, member.state, member.zip_code
+    )
+    if _split:
+        member.address = _split["address"]
+        member.city = _split["city"]
+        member.state = _split["state"]
+        member.zip_code = _split["zip_code"]
+
     # Re-geocode if address changed
     from app.geo import geocode_member_fields, assign_zone
     import logging

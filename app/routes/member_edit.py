@@ -468,6 +468,17 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     member.emergency_contact = form.get("emergency_contact", "").strip() or None
     member.emergency_phone = form.get("emergency_phone", "").strip() or None
 
+    # --- Auto-parse a full one-line address into city/state/zip ---
+    from app.geo import split_oneline_into_fields
+    _split = split_oneline_into_fields(
+        member.address, member.city, member.state, member.zip_code
+    )
+    if _split:
+        member.address = _split["address"]
+        member.city = _split["city"]
+        member.state = _split["state"]
+        member.zip_code = _split["zip_code"]
+
     # Radio
     member.ham_callsign = form.get("ham_callsign", "").strip() or None
     member.ham_license_class = form.get("ham_license_class", "").strip() or None
