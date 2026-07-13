@@ -46,9 +46,14 @@
                     <div style="border-bottom: 1px solid #333;">
                         <a href="/chain-of-command" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">🏛️ Chain of Command</a>
                     </div>
-                    <div>
+                    <div{% if "command" in user.roles or "admin" in user.roles or "s1" in user.roles or "s1_lead" in user.roles or "leader" in user.roles %} style="border-bottom: 1px solid #333;"{% endif %}>
                         <a href="/roster" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">📋 Roster</a>
                     </div>
+                    {% if "command" in user.roles or "admin" in user.roles or "s1" in user.roles or "s1_lead" in user.roles or "leader" in user.roles %}
+                    <div>
+                        <a href="/roster/map" style="display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px;">🗺️ Personnel Map</a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <a href="/events" class="nav-link">📅 Events</a>

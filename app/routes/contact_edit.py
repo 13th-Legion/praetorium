@@ -135,26 +135,26 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
     member.emergency_phone = form.get("emergency_phone", "").strip() or None
 
     # Re-geocode if address changed
-    from app.geo import geocode_address, geocode_zip, assign_zone
-    new_addr = f"{member.address}, {member.city}, {member.state} {member.zip_code}".strip()
-    try:
-        lat, lon = None, None
-        if member.address and member.city and member.state:
-            lat, lon = geocode_address(new_addr)
-        if lat is None and member.zip_code:
-            lat, lon = geocode_zip(member.zip_code)
-            
-        if lat is not None:
-            member.latitude = lat
-            member.longitude = lon
-            geo_team, bearing = assign_zone(lat, lon)
-            if geo_team != member.team and geo_team:
-                member.team = geo_team
-                import logging
-                log = logging.getLogger(__name__)
-                log.info(f"Contact edit: Geo-reassigned {member.first_name} {member.last_name} to {geo_team} (bearing {bearing:.1f}°)")
-    except Exception:
-        pass
+    from app.geo import geocode_member_fields, assign_zone
+    import logging
+    log = logging.getLogger(__name__)
+    if member.address or member.zip_code:
+        try:
+            lat, lon = geocode_member_fields(
+                member.address, member.city, member.state, member.zip_code
+            )
+            if lat is not None:
+                member.latitude = lat
+                member.longitude = lon
+                geo_team, bearing = assign_zone(lat, lon)
+                if geo_team != member.team and geo_team:
+                    member.team = geo_team
+                    log.info(f"Contact edit: Geo-reassigned {member.first_name} {member.last_name} to {geo_team} (bearing {bearing:.1f}°)")
+            else:
+                log.warning(f"Contact edit: geocode no match for {member.last_name} "
+                            f"(address={member.address!r} zip={member.zip_code!r})")
+        except Exception as e:
+            log.warning(f"Contact edit geocode failed for {member.last_name}: {e}")
 
     # Mark verified
     member.contact_verified_at = datetime.utcnow()

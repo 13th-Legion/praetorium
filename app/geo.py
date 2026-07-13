@@ -40,29 +40,36 @@ def assign_zone(lat: float, lon: float) -> tuple[str, float]:
     return bearing_to_zone(b), b
 
 
+import logging
+
+import httpx
+
+log = logging.getLogger(__name__)
+
+_UA = "13thLegion-Praetorium/1.0 (portal.13thlegion.org)"
+
+
 def geocode_zip(zip_code: str) -> tuple[float | None, float | None]:
     """Geocode a US zip code via Nominatim. Returns (lat, lon) or (None, None)."""
-    import requests
     try:
-        r = requests.get(
+        r = httpx.get(
             "https://nominatim.openstreetmap.org/search",
             params={"postalcode": zip_code, "country": "US", "format": "json", "limit": 1},
-            headers={"User-Agent": "13thLegion-Praetorium/1.0"},
+            headers={"User-Agent": _UA},
             timeout=10,
         )
         results = r.json()
         if results:
             return float(results[0]["lat"]), float(results[0]["lon"])
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("geocode_zip(%r) failed: %s", zip_code, e)
     return None, None
 
 
 def _census_geocode(address: str) -> tuple[float | None, float | None]:
     """Geocode via US Census Bureau (most accurate for US addresses)."""
-    import requests
     try:
-        r = requests.get(
+        r = httpx.get(
             "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress",
             params={"address": address, "benchmark": "Public_AR_Current", "format": "json"},
             timeout=10,
@@ -71,26 +78,25 @@ def _census_geocode(address: str) -> tuple[float | None, float | None]:
         if matches:
             c = matches[0]["coordinates"]
             return float(c["y"]), float(c["x"])
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("_census_geocode(%r) failed: %s", address, e)
     return None, None
 
 
 def _nominatim_geocode(address: str) -> tuple[float | None, float | None]:
     """Geocode via Nominatim/OpenStreetMap (fallback)."""
-    import requests
     try:
-        r = requests.get(
+        r = httpx.get(
             "https://nominatim.openstreetmap.org/search",
             params={"q": address, "format": "json", "limit": 1, "countrycodes": "us"},
-            headers={"User-Agent": "13thLegion-Praetorium/1.0"},
+            headers={"User-Agent": _UA},
             timeout=10,
         )
         results = r.json()
         if results:
             return float(results[0]["lat"]), float(results[0]["lon"])
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("_nominatim_geocode(%r) failed: %s", address, e)
     return None, None
 
 
@@ -100,3 +106,31 @@ def geocode_address(address: str) -> tuple[float | None, float | None]:
     if lat is not None:
         return lat, lon
     return _nominatim_geocode(address)
+
+
+def geocode_member_fields(
+    address: str | None,
+    city: str | None,
+    state: str | None,
+    zip_code: str | None,
+) -> tuple[float | None, float | None]:
+    """Best-effort geocode from whatever address parts a member has.
+
+    Handles the common case where the entire address (incl. city/zip) was
+    entered into the `address` field and city/zip are NULL. Tries, in order:
+      1. Full composed 'address, city, state zip' (whatever parts exist)
+      2. The raw address field on its own (often already a one-line address)
+      3. Zip code alone
+    Returns (lat, lon) or (None, None).
+    """
+    parts = [p.strip() for p in (address, city, f"{(state or '').strip()} {(zip_code or '').strip()}".strip()) if p and p.strip()]
+    composed = ", ".join(parts).strip(" ,")
+
+    for candidate in (composed, (address or "").strip()):
+        if candidate:
+            lat, lon = geocode_address(candidate)
+            if lat is not None:
+                return lat, lon
+    if zip_code and zip_code.strip():
+        return geocode_zip(zip_code.strip())
+    return None, None
