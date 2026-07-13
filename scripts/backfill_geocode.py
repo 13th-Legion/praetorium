@@ -54,7 +54,9 @@ async def main(regeocode_all: bool = False):
                 m.longitude = lon
                 new_team, bearing = assign_zone(lat, lon)
                 old_team = m.team
-                if new_team and new_team != old_team:
+                if getattr(m, "team_locked", False):
+                    pass  # manual override — update coords only, never touch team
+                elif new_team and new_team != old_team:
                     m.team = new_team
                     moved += 1
                 ok += 1

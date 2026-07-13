@@ -30,6 +30,9 @@ class Member(Base):
     rank_grade: Mapped[Optional[str]] = mapped_column(String(4))  # E-1 through O-4, W-1
     status: Mapped[str] = mapped_column(String(16), default=MemberStatus.RECRUIT)
     team: Mapped[Optional[str]] = mapped_column(String(32))
+    # When True, the team was manually set (override) and must NOT be
+    # overwritten by geo-zone auto-assignment on address edits/backfills.
+    team_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     company: Mapped[str] = mapped_column(String(64), default="13th Legion")
 
     # Position & Billets

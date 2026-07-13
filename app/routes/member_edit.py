@@ -419,9 +419,20 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     # Assignment — track old rank for promotion logic
     old_rank = member.rank_grade
     old_billets = member.primary_billet
+    prev_team = member.team  # team stored before this save (for override detection)
     member.rank_grade = form.get("rank_grade", member.rank_grade)
     member.status = form.get("status", member.status)
     member.team = form.get("team", "").strip() or None
+
+    # Manual team override lock. The team is locked (protected from geo
+    # auto-reassignment) if EITHER the admin ticked the "Lock team" checkbox,
+    # OR they changed the team dropdown to a different value than was stored
+    # (a deliberate manual override). Unchecking the box while leaving the team
+    # unchanged clears the lock and hands control back to geo.
+    _tl_vals = form.getlist("team_locked")
+    checkbox_locked = any(v in ("1", "true", "on", "yes") for v in _tl_vals)
+    team_changed = member.team != prev_team
+    member.team_locked = checkbox_locked or team_changed
     member.leadership_title = form.get("leadership_title", "").strip() or None
     selected_billets = form.getlist("billets")
     member.primary_billet = ", ".join(selected_billets) if selected_billets else None
@@ -497,7 +508,10 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
                 member.latitude = lat
                 member.longitude = lon
                 geo_team, bearing = assign_zone(lat, lon)
-                if geo_team != old_team:
+                if member.team_locked:
+                    log.info(f"Geo: {member.first_name} {member.last_name} team LOCKED to "
+                             f"{member.team} — coords updated, geo suggests {geo_team} (bearing {bearing:.1f}°) but not applied")
+                elif geo_team != old_team:
                     log.info(f"Geo-reassigned {member.first_name} {member.last_name}: "
                              f"{old_team} → {geo_team} (bearing {bearing:.1f}°)")
                     member.team = geo_team

@@ -63,6 +63,11 @@
                         <option value="{{ t }}" {% if member.team == t %}selected{% endif %}>{{ t }}</option>
                         {% endfor %}
                     </select>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#bbb;margin-top:6px;cursor:pointer;">
+                        <input type="hidden" name="team_locked" value="0">
+                        <input type="checkbox" name="team_locked" value="1" {% if member.team_locked %}checked{% endif %}>
+                        🔒 Lock team (manual override — don&rsquo;t auto-reassign by address)
+                    </label>
                 </div>
                 <div>
                     <label class="edit-label">Leadership Title</label>

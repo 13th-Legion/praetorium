@@ -158,7 +158,9 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
                 member.latitude = lat
                 member.longitude = lon
                 geo_team, bearing = assign_zone(lat, lon)
-                if geo_team != member.team and geo_team:
+                if member.team_locked:
+                    log.info(f"Contact edit: {member.first_name} {member.last_name} team LOCKED to {member.team} — coords updated, geo suggests {geo_team} but not applied")
+                elif geo_team != member.team and geo_team:
                     member.team = geo_team
                     log.info(f"Contact edit: Geo-reassigned {member.first_name} {member.last_name} to {geo_team} (bearing {bearing:.1f}°)")
             else:
