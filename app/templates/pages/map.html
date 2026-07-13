@@ -7,9 +7,7 @@
 <style>
   /* Map page fills the viewport below the nav; kill the default content padding. */
   main.content.map-page { padding: 0; max-width: none; width: 100%; }
-  .map-header { background: #1a1a2e; padding: 12px 20px; border-bottom: 2px solid #d4a537; display: flex; align-items: baseline; gap: 15px; flex-wrap: wrap; }
-  .map-header h1 { color: #d4a537; font-size: 20px; font-family: 'Oswald', sans-serif; margin: 0; }
-  .map-header .subtitle { color: #999; font-size: 13px; }
+  .map-subtitle { background: #16213e; color: #999; font-size: 12px; padding: 6px 20px; border-bottom: 1px solid #333; }
   .map-stats { background: #16213e; padding: 10px 20px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; border-bottom: 1px solid #333; }
   .stat-group { display: flex; align-items: center; gap: 6px; }
   .stat-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
@@ -18,8 +16,8 @@
   .map-controls { background: #16213e; padding: 8px 20px; display: flex; gap: 15px; font-size: 13px; border-bottom: 1px solid #333; flex-wrap: wrap; }
   .map-controls label { color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 4px; }
   .map-controls input[type="checkbox"] { accent-color: #d4a537; }
-  /* nav (~56px) + header + stats + controls + footer; fill the rest. */
-  #map { height: calc(100vh - 260px); min-height: 420px; width: 100%; }
+  /* nav (~56px) + subtitle + stats + controls + footer; fill the rest. */
+  #map { height: calc(100vh - 245px); min-height: 420px; width: 100%; }
   .legend { position: absolute; bottom: 30px; right: 10px; background: rgba(26,26,46,0.95); padding: 12px; border-radius: 6px; z-index: 1000; font-size: 12px; border: 1px solid #d4a537; }
   .legend h4 { color: #d4a537; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .legend h4 .toggle { font-size: 10px; color: #999; }
@@ -32,7 +30,7 @@
     .legend-body.expanded { display: block; }
     .map-controls { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; gap: 10px; }
     .map-stats { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; }
-    #map { height: calc(100vh - 240px); }
+    #map { height: calc(100vh - 230px); }
   }
   .leaflet-popup-content-wrapper { background: #1a1a2e; color: #eee; border: 1px solid #d4a537; }
   .leaflet-popup-tip { background: #1a1a2e; }
@@ -42,10 +40,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="map-header">
-  <h1>⚔️ Personnel Map</h1>
-  <span class="subtitle">Geographic Team Zones — 6 equal 60° zones from I-30 &amp; N Great Southwest Pkwy</span>
-</div>
+<div class="map-subtitle">📍 Geographic Team Zones — 6 equal 60° zones from I-30 &amp; N Great Southwest Pkwy</div>
 
 <div class="map-stats" id="stats"></div>
 
