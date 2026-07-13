@@ -368,7 +368,10 @@ async def member_map(request: Request, db: AsyncSession = Depends(get_db)):
             "zip": m.zip_code or "",
             "bearing": round(bearing, 1),
             "hq": is_hq,
-            "team": m.team or "None"
+            "team": m.team or "None",
+            "patched": bool(m.patch_date),
+            "patch_date": m.patch_date.strftime("%b %Y") if m.patch_date else None,
+            "separation_date": m.separation_date.strftime("%b %d, %Y") if m.separation_date else None,
         }
         
         if m.status in ("active", "recruit", "Active", "Recruit"):

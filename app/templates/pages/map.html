@@ -1,25 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>13th Legion — DFW Team Zone Map</title>
+{% extends "base.html" %}
+{% block title %}Personnel Map{% endblock %}
+{% block content_class %}map-page{% endblock %}
+
+{% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; }
-  #map { height: calc(100vh - 180px); width: 100%; }
-  .header { background: #1a1a2e; padding: 12px 20px; border-bottom: 2px solid #d4a537; display: flex; align-items: center; gap: 15px; }
-  .header h1 { color: #d4a537; font-size: 20px; }
-  .header .subtitle { color: #999; font-size: 13px; }
-  .stats { background: #16213e; padding: 10px 20px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; border-bottom: 1px solid #333; }
+  /* Map page fills the viewport below the nav; kill the default content padding. */
+  main.content.map-page { padding: 0; max-width: none; width: 100%; }
+  .map-header { background: #1a1a2e; padding: 12px 20px; border-bottom: 2px solid #d4a537; display: flex; align-items: baseline; gap: 15px; flex-wrap: wrap; }
+  .map-header h1 { color: #d4a537; font-size: 20px; font-family: 'Oswald', sans-serif; margin: 0; }
+  .map-header .subtitle { color: #999; font-size: 13px; }
+  .map-stats { background: #16213e; padding: 10px 20px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; border-bottom: 1px solid #333; }
   .stat-group { display: flex; align-items: center; gap: 6px; }
   .stat-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
   .stat-label { color: #ccc; }
   .stat-count { color: #fff; font-weight: bold; }
-  .controls { background: #16213e; padding: 8px 20px; display: flex; gap: 15px; font-size: 13px; border-bottom: 1px solid #333; flex-wrap: wrap; }
-  .controls label { color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-  .controls input[type="checkbox"] { accent-color: #d4a537; }
+  .map-controls { background: #16213e; padding: 8px 20px; display: flex; gap: 15px; font-size: 13px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  .map-controls label { color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .map-controls input[type="checkbox"] { accent-color: #d4a537; }
+  /* nav (~56px) + header + stats + controls + footer; fill the rest. */
+  #map { height: calc(100vh - 260px); min-height: 420px; width: 100%; }
   .legend { position: absolute; bottom: 30px; right: 10px; background: rgba(26,26,46,0.95); padding: 12px; border-radius: 6px; z-index: 1000; font-size: 12px; border: 1px solid #d4a537; }
   .legend h4 { color: #d4a537; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .legend h4 .toggle { font-size: 10px; color: #999; }
@@ -30,27 +30,27 @@
     .legend { bottom: 10px; right: 10px; left: 10px; max-width: none; padding: 8px 12px; }
     .legend-body { display: none; }
     .legend-body.expanded { display: block; }
-    .controls { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; gap: 10px; }
-    .stats { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; }
-    #map { height: calc(100vh - 140px); }
+    .map-controls { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; gap: 10px; }
+    .map-stats { overflow-x: auto; flex-wrap: nowrap; padding: 6px 10px; }
+    #map { height: calc(100vh - 240px); }
   }
   .leaflet-popup-content-wrapper { background: #1a1a2e; color: #eee; border: 1px solid #d4a537; }
   .leaflet-popup-tip { background: #1a1a2e; }
   .member-popup { font-size: 13px; }
   .member-popup strong { color: #d4a537; }
 </style>
-</head>
-<body>
+{% endblock %}
 
-<div class="header">
-  <h1>⚔️ 13th Legion — Geographic Team Zone Map</h1>
-  <span class="subtitle">6 equal 60° zones from I-30 & N Great Southwest Pkwy</span>
+{% block content %}
+<div class="map-header">
+  <h1>⚔️ Personnel Map</h1>
+  <span class="subtitle">Geographic Team Zones — 6 equal 60° zones from I-30 &amp; N Great Southwest Pkwy</span>
 </div>
 
-<div class="stats" id="stats"></div>
+<div class="map-stats" id="stats"></div>
 
-<div class="controls">
-  <label><input type="checkbox" id="toggleZones" checked> Zone Boundaries</label>
+<div class="map-controls">
+  <label><input type="checkbox" id="toggleZones" checked> Team Boundaries</label>
   <span style="color:#555; margin: 0 5px;">|</span>
   <label><input type="checkbox" id="toggleLabels" checked> Names</label>
   <label><input type="checkbox" id="toggleInactive"> Inactive</label>
@@ -65,7 +65,25 @@
   <label><input type="checkbox" class="team-toggle" data-team="Foxtrot" checked> <span style="color:#8b5cf6">● Foxtrot</span></label>
 </div>
 
-<div id="map"></div>
+<div style="position: relative;">
+  <div id="map"></div>
+
+  <div class="legend">
+    <h4 onclick="document.getElementById('legendBody').classList.toggle('collapsed'); document.getElementById('legendBody').classList.toggle('expanded'); this.querySelector('.toggle').textContent = document.getElementById('legendBody').classList.contains('collapsed') ? '▶' : '▼';">Legend <span class="toggle">▼</span></h4>
+    <div id="legendBody" class="legend-body">
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Alpha (N) — 330°–30°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Bravo (NE) — 30°–90°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Charlie (E/SE) — 90°–150°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Delta (S) — 150°–210°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Echo (SW/W) — 210°–270°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Foxtrot (NW) — 270°–330°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#666"></div> Inactive</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d4a537"></div> Center Point</div>
+      <div class="legend-item" style="margin-top:6px; color:#d4a537; font-size:11px;">◌ Gold ring = HQ element</div>
+      <div class="legend-item" style="color:#999; font-size:11px;">● Large = Active &nbsp; ● Medium = Recruit &nbsp; ● Small = Inactive</div>
+    </div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -174,6 +192,13 @@ function renderMembers() {
 
     if (!enabledTeams.has(t.name)) return;
 
+    // Bearing line first so it sits under the marker.
+    if (showBearing) {
+      L.polyline([[MAP_DATA.center.lat, MAP_DATA.center.lon], [m.lat, m.lon]], {
+        color: t.color, weight: 2, opacity: 0.7
+      }).addTo(bearingLineLayer);
+    }
+
     const radius = m.status === 'active' ? 8 : 6;
     const marker = L.circleMarker([m.lat, m.lon], {
       radius: radius, color: '#fff', weight: 2, fillColor: t.color, fillOpacity: 1,
@@ -187,15 +212,11 @@ function renderMembers() {
 
     const statusIcon = m.status === 'active' ? '🟢' : '🟡';
     const hqBadge = m.hq ? '<br><span style="color:#d4a537">⭐ HQ Element</span>' : '';
-    marker.bindPopup('<div class="member-popup"><strong><a href="/profile/' + m.id + '" style="color:#d4a537; text-decoration:none;">' + m.name + ' ↗</a></strong><br>' + statusIcon + ' ' + m.status.charAt(0).toUpperCase() + m.status.slice(1) + '<br>Team: <span style="color:' + t.color + '">' + t.name + '</span> (' + t.dir + ')' + hqBadge + '<br>ZIP: ' + m.zip + '<br>Bearing: ' + m.bearing + '°</div>');
+    const patchLine = '<br>Patched: ' + (m.patched ? ('✅ Yes' + (m.patch_date ? ' (' + m.patch_date + ')' : '')) : '❌ No');
+    marker.bindPopup('<div class="member-popup"><strong><a href="/profile/' + m.id + '" style="color:#d4a537; text-decoration:none;">' + m.name + ' ↗</a></strong><br>' + statusIcon + ' ' + m.status.charAt(0).toUpperCase() + m.status.slice(1) + '<br>Team: <span style="color:' + t.color + '">' + t.name + '</span> (' + t.dir + ')' + hqBadge + patchLine + '<br>Bearing: ' + m.bearing + '°</div>');
 
     if (showLabels) {
       marker.bindTooltip(m.name.split(' ')[1] || m.name, {permanent: true, direction: 'right', offset: [10, 0], className: 'name-label'});
-    }
-    if (showBearing) {
-      L.polyline([[MAP_DATA.center.lat, MAP_DATA.center.lon], [m.lat, m.lon]], {
-        color: t.color, weight: 1, opacity: 0.3, dashArray: '3,6'
-      }).addTo(bearingLineLayer);
     }
   });
 
@@ -215,9 +236,11 @@ function renderMembers() {
 
 // Inactive (static)
 INACTIVE.forEach(function(m) {
+  const sepLine = m.separation_date ? ('<br>Separated: ' + m.separation_date) : '';
+  const patchLine = '<br>Patched: ' + (m.patched ? ('✅ Yes' + (m.patch_date ? ' (' + m.patch_date + ')' : '')) : '❌ No');
   L.circleMarker([m.lat, m.lon], {
     radius: 5, color: '#fff', weight: 1, fillColor: '#666', fillOpacity: 0.4,
-  }).addTo(inactiveLayer).bindPopup('<div class="member-popup"><strong><a href="/profile/' + m.id + '" style="color:#d4a537; text-decoration:none;">' + m.name + ' ↗</a></strong><br>Inactive<br>ZIP: ' + m.zip + '</div>');
+  }).addTo(inactiveLayer).bindPopup('<div class="member-popup"><strong><a href="/profile/' + m.id + '" style="color:#d4a537; text-decoration:none;">' + m.name + ' ↗</a></strong><br>Inactive' + patchLine + sepLine + '</div>');
 });
 
 renderMembers();
@@ -240,23 +263,8 @@ document.getElementById('toggleHQRings').addEventListener('change', function() {
 document.querySelectorAll('.team-toggle').forEach(cb => {
   cb.addEventListener('change', function() { renderMembers(); });
 });
+
+// Leaflet needs a size recalc once it's laid out inside the flex content area.
+setTimeout(function(){ map.invalidateSize(); }, 100);
 </script>
-
-<div class="legend">
-  <h4 onclick="document.getElementById('legendBody').classList.toggle('collapsed'); document.getElementById('legendBody').classList.toggle('expanded'); this.querySelector('.toggle').textContent = document.getElementById('legendBody').classList.contains('collapsed') ? '▶' : '▼';">Legend <span class="toggle">▼</span></h4>
-  <div id="legendBody" class="legend-body">
-    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Alpha (N) — 330°–30°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Bravo (NE) — 30°–90°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Charlie (E/SE) — 90°–150°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Delta (S) — 150°–210°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Echo (SW/W) — 210°–270°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Foxtrot (NW) — 270°–330°</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#666"></div> Inactive</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#d4a537"></div> Center Point</div>
-    <div class="legend-item" style="margin-top:6px; color:#d4a537; font-size:11px;">◌ Gold ring = HQ element</div>
-    <div class="legend-item" style="color:#999; font-size:11px;">● Large = Active &nbsp; ● Medium = Recruit &nbsp; ● Small = Inactive</div>
-  </div>
-</div>
-
-</body>
-</html>
+{% endblock %}
