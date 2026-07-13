@@ -47,6 +47,7 @@ class Event(Base):
     rally_point_url: Mapped[Optional[str]] = mapped_column(Text)  # Optional Google Maps link
 
     # Radio frequencies (S6 assigns, manual for now)
+    fob_callsign: Mapped[Optional[str]] = mapped_column(String(32))            # FOB / base station callsign
     freq_convoy_primary: Mapped[Optional[str]] = mapped_column(String(16))     # Primary convoy HAM freq
     freq_convoy_alternate: Mapped[Optional[str]] = mapped_column(String(16))   # Alternate convoy HAM freq
     freq_fob_primary: Mapped[Optional[str]] = mapped_column(String(16))        # Primary FOB check-in freq

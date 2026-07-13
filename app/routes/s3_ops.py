@@ -602,6 +602,7 @@ async def set_frequencies(
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+        event.fob_callsign = form.get("fob_callsign", "").strip() or None
         event.freq_convoy_primary = form.get("freq_convoy_primary", "").strip() or None
         event.freq_convoy_alternate = form.get("freq_convoy_alternate", "").strip() or None
         event.freq_fob_primary = form.get("freq_fob_primary", "").strip() or None
