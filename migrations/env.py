@@ -1,9 +1,16 @@
 """Alembic environment configuration."""
 
 import os
+import sys
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool, create_engine
 from alembic import context
+
+# Ensure the project root (parent of migrations/, containing the `app` package)
+# is importable even when alembic is invoked without PYTHONPATH set.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 # Import models so Alembic detects them
 from app.database import Base
