@@ -40,7 +40,7 @@ for _d in (NEWSLETTER_IMG_DIR, NEWSLETTER_ATTACH_DIR):
 # Seasonal crest catalog. `file` is relative to CREST_DIR. `standard` is always
 # present; seasonal entries fall back to standard until their PNG is uploaded.
 SEASONAL_CRESTS: dict[str, dict] = {
-    "standard":      {"label": "Standard (Legio Fulminata)", "file": "standard.png",     "emoji": "🛡️"},
+    "standard":      {"label": "Standard", "file": "standard.png",     "emoji": "🛡️"},
     "christmas":     {"label": "Christmas",                   "file": "christmas.png",    "emoji": "🎄"},
     "halloween":     {"label": "Halloween",                   "file": "halloween.png",    "emoji": "🎃"},
     "easter":        {"label": "Easter",                      "file": "easter.png",       "emoji": "🐣"},
