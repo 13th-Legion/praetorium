@@ -247,14 +247,29 @@ def geocode_member_fields(
     Handles the common case where the entire address (incl. city/zip) was
     entered into the `address` field and city/zip are NULL. Tries, in order:
       1. Full composed 'address, city, state zip' (whatever parts exist)
-      2. The raw address field on its own (often already a one-line address)
-      3. Zip code alone
+      2. The raw address field on its own — ONLY if it carries its own
+         locality (a state abbr or a 5-digit zip). A bare street with no
+         city/state (e.g. rural 'County Road 499') is skipped here because
+         geocoding it alone matches same-named roads in other states
+         (produced an Alabama hit for a Hico, TX member — 2026-07-15).
+      3. Zip code alone (reliable region anchor).
     Returns (lat, lon) or (None, None).
     """
     parts = [p.strip() for p in (address, city, f"{(state or '').strip()} {(zip_code or '').strip()}".strip()) if p and p.strip()]
     composed = ", ".join(parts).strip(" ,")
 
-    for candidate in (composed, (address or "").strip()):
+    raw = (address or "").strip()
+    # Only trust the raw address alone if it self-anchors to a locality:
+    # contains a 5-digit zip or a state token. Otherwise it's a bare street
+    # and must not override the zip-centroid fallback.
+    raw_self_anchored = bool(
+        raw and (re.search(r"\b\d{5}\b", raw) or re.search(r",\s*[A-Za-z]{2}\b", raw))
+    )
+
+    candidates = [composed]
+    if raw_self_anchored:
+        candidates.append(raw)
+    for candidate in candidates:
         if candidate:
             lat, lon = geocode_address(candidate)
             if lat is not None:
