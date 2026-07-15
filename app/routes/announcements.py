@@ -137,7 +137,7 @@ def _html_to_markdown(html: str) -> str:
                 out.append(f"{counter}. {body}")
             else:
                 out.append(f"- {body}")
-        return "\n" + "\n".join(out) + "\n"
+        return "\n\n" + "\n".join(out) + "\n\n"
     text = re.sub(r'<(ul|ol)[^>]*>(.*?)</\1>', _list, text, flags=re.I | re.S)
 
     # Blockquotes.
