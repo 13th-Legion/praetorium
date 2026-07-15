@@ -56,3 +56,6 @@ IDENTITY.md
 *.bak-*
 # Local SQLite scratch DB (app uses Postgres)
 praetorium.db
+
+# Local-only Deck card-creation scripts — never pushed (contain PP-XXX board automation)
+projects/praetorium-fix/
