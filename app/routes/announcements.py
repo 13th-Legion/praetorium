@@ -118,15 +118,25 @@ def _html_to_markdown(html: str) -> str:
         return f"[{label}]({href})" if label else href
     text = re.sub(r'<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', _link, text, flags=re.I | re.S)
 
-    # Ordered vs unordered lists: mark <li> per parent list type.
+    # Ordered vs unordered lists. Quill quirk: bullet lists are emitted as
+    # <ol> with <li data-list="bullet">, so the true type lives on each <li>,
+    # not the parent. Honour the per-<li> data-list when present; otherwise
+    # fall back to the parent tag.
     def _list(m):
-        tag = m.group(1).lower()
+        parent = m.group(1).lower()
         inner = m.group(2)
-        items = re.findall(r'<li[^>]*>(.*?)</li>', inner, flags=re.I | re.S)
+        li_re = re.compile(r'<li([^>]*)>(.*?)</li>', flags=re.I | re.S)
         out = []
-        for i, it in enumerate(items, 1):
-            it = re.sub(r'<[^>]+>', '', it).strip()
-            out.append(f"{i}. {it}" if tag == "ol" else f"- {it}")
+        counter = 0
+        for attrs, body in li_re.findall(inner):
+            dl = re.search(r'data-list=["\'](\w+)["\']', attrs, flags=re.I)
+            kind = dl.group(1).lower() if dl else ("ordered" if parent == "ol" else "bullet")
+            body = re.sub(r'<[^>]+>', '', body).strip()
+            if kind == "ordered":
+                counter += 1
+                out.append(f"{counter}. {body}")
+            else:
+                out.append(f"- {body}")
         return "\n" + "\n".join(out) + "\n"
     text = re.sub(r'<(ul|ol)[^>]*>(.*?)</\1>', _list, text, flags=re.I | re.S)
 
