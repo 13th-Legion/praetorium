@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/announcements", tags=["announcements"])
 
 # NC creds for posting (spooky has admin rights on NC)
 from app.settings import NC_SVC_USER as NC_POST_USER, NC_SVC_PASS as NC_POST_PASS
+from app.settings import NC_TALK_USER, NC_TALK_PASS
 
 from app.constants import S1_ROLES as POSTER_ROLES
 
@@ -500,7 +501,7 @@ async def post_announcement(request: Request):
                 await client.post(
                     f"{nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/atnd3vgf",
                     headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                    auth=(NC_POST_USER, NC_POST_PASS),
+                    auth=(NC_TALK_USER, NC_TALK_PASS),
                     data={"message": talk_msg},
                 )
         except Exception:

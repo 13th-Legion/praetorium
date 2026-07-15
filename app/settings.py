@@ -6,6 +6,11 @@ import os
 NC_SVC_USER = os.getenv("NC_SVC_USER", "spooky")
 NC_SVC_PASS = os.getenv("NC_SVC_PASS", "")
 
+# Nextcloud Talk poster account (automated chat posts: WARNO/OPORD/AAR/announcements).
+# Separate from NC_SVC so backend admin ops stay on the admin account.
+NC_TALK_USER = os.getenv("NC_TALK_USER", "tesserarius")
+NC_TALK_PASS = os.getenv("NC_TALK_PASS", "")
+
 # Nextcloud portal service account (S1 admin operations — user provisioning, group management)
 NC_PORTAL_SVC_USER = os.getenv("NC_PORTAL_SVC_USER", "portal-svc")
 NC_PORTAL_SVC_PASS = os.getenv("NC_PORTAL_SVC_PASS", "")

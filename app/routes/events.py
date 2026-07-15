@@ -48,6 +48,7 @@ templates.env.filters["cdt"] = _to_cdt
 
 CALENDAR_PATH = "/remote.php/dav/calendars/spooky/13th-legion/"
 from app.settings import NC_SVC_USER as CALENDAR_USER, NC_SVC_PASS as CALENDAR_PASS
+from app.settings import NC_TALK_USER, NC_TALK_PASS
 from app.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 
 REPORT_BODY = """<?xml version="1.0"?>
@@ -96,6 +97,38 @@ WARNO_LEAD_DAYS = {
 
 # Rooms for WARNO cross-post
 WARNO_TALK_ROOM = "atnd3vgf"  # T1 · Announcements
+
+
+def _subject_date_suffix(date_start, date_end=None):
+    """Return an email-subject date suffix like ": 10-12 JUL 26" or ": 10 JUL 26".
+    Uses local (CDT) event dates. Returns "" if no start date."""
+    if not date_start:
+        return ""
+    try:
+        s = _to_cdt(date_start)
+    except Exception:
+        s = date_start
+    mon = s.strftime("%b").upper()
+    yr = s.strftime("%y")
+    d1 = str(int(s.strftime("%d")))
+    e = None
+    if date_end:
+        try:
+            e = _to_cdt(date_end)
+        except Exception:
+            e = date_end
+    if e and (e.year, e.month, e.day) != (s.year, s.month, s.day):
+        emon = e.strftime("%b").upper()
+        eyr = e.strftime("%y")
+        d2 = str(int(e.strftime("%d")))
+        if emon == mon and eyr == yr:
+            return f": {d1}-{d2} {mon} {yr}"
+        if eyr == yr:
+            return f": {d1} {mon}-{d2} {emon} {yr}"
+        return f": {d1} {mon} {yr}-{d2} {emon} {eyr}"
+    return f": {d1} {mon} {yr}"
+
+
 
 
 def _calc_warno_schedule(category: str, date_start) -> "datetime | None":
@@ -243,7 +276,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
             await client.post(
                 f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
                 headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                auth=(CALENDAR_USER, CALENDAR_PASS),
+                auth=(NC_TALK_USER, NC_TALK_PASS),
                 data={"message": talk_msg},
             )
     except Exception:
@@ -308,7 +341,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
                 for member in warno_recipients:
                     try:
                         msg = MIMEMultipart("alternative")
-                        msg["Subject"] = f"⚡ WARNO — {event.title}"
+                        msg["Subject"] = f"⚡ WARNO — {event.title}{_subject_date_suffix(event.date_start, event.date_end)}"
                         msg["From"] = SMTP_FROM
                         msg["To"] = member.email
                         msg.attach(MIMEText(html_body, "html"))
@@ -1250,7 +1283,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 </div>
 </body></html>"""
 
-            opord_subject = f"OPORD - {evt_title}"
+            opord_subject = f"OPORD - {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
 
         # Notification for the member
         if send_opord_catchup:
@@ -1349,7 +1382,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                     server.starttls()
                     server.login(SMTP_USER, SMTP_PASS)
                     msg = MIMEMultipart("alternative")
-                    msg["Subject"] = f"WARNO - {evt_title}"
+                    msg["Subject"] = f"WARNO - {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
                     msg["From"] = SMTP_FROM
                     msg["To"] = catchup_email
                     msg.attach(MIMEText(warno_html_body, "html"))
@@ -2429,7 +2462,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
                 await client.post(
                     f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
                     headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                    auth=(CALENDAR_USER, CALENDAR_PASS),
+                    auth=(NC_TALK_USER, NC_TALK_PASS),
                     data={"message": talk_msg},
                 )
         except Exception:
@@ -2465,7 +2498,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
                 for addr in recipient_emails:
                     try:
                         msg = MIMEMultipart("alternative")
-                        msg["Subject"] = f"\U0001f4cb OPORD \u2014 {event_title}"
+                        msg["Subject"] = f"\U0001f4cb OPORD \u2014 {event_title}{_subject_date_suffix(event.date_start, event.date_end)}"
                         msg["From"] = SMTP_FROM
                         msg["To"] = addr
                         msg.attach(MIMEText(html_body, "html"))
@@ -3004,7 +3037,7 @@ async def save_aar(request: Request, event_id: int):
                     from email.mime.multipart import MIMEMultipart as _MMP
                     from email.mime.text import MIMEText as _MT
                     msg = _MMP("alternative")
-                    msg["Subject"] = f"\U0001f4cb AAR \u2014 {_evt_title}"
+                    msg["Subject"] = f"\U0001f4cb AAR \u2014 {_evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
                     msg["From"] = SMTP_FROM
                     msg["To"] = email
                     msg.attach(_MT(html_body, "html"))
@@ -3031,7 +3064,7 @@ async def save_aar(request: Request, event_id: int):
                     await client.post(
                         f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
                         headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                        auth=(CALENDAR_USER, CALENDAR_PASS),
+                        auth=(NC_TALK_USER, NC_TALK_PASS),
                         data={"message": talk_msg},
                     )
             except Exception:
