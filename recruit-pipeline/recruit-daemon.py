@@ -28,6 +28,12 @@ import urllib.parse
 KUMA_PUSH_URL = os.environ.get("KUMA_PUSH_URL", "")
 from datetime import datetime
 from email.mime.base import MIMEBase
+
+# Systemd watchdog
+try:
+    from systemd.daemon import notify as sd_notify
+except ImportError:
+    sd_notify = lambda *a, **kw: None
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
@@ -82,7 +88,26 @@ COMPANY_ROUTING = {
 STATE_S1_FALLBACK = "admin@texasstatemilitia.org"
 
 # Praetorium portal DB (for creating member records)
-PORTAL_DB_HOST = "172.21.0.2"  # praetorium-db Docker container IP
+def _resolve_portal_db_host():
+    """Resolve praetorium-db container IP at runtime (Docker IPs are dynamic).
+
+    Falls back to the last-known IP if docker inspect is unavailable."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["docker", "inspect", "-f",
+             "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+             "praetorium-db"],
+            capture_output=True, text=True, timeout=10,
+        )
+        ip = out.stdout.strip()
+        if ip:
+            return ip
+    except Exception:
+        pass
+    return "172.21.0.2"
+
+PORTAL_DB_HOST = _resolve_portal_db_host()  # praetorium-db container IP (dynamic)
 PORTAL_DB_PORT = 5432
 PORTAL_DB_NAME = "praetorium"
 PORTAL_DB_USER = "praetorium"
@@ -160,8 +185,22 @@ log = setup_logging()
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
+# Transient HTTP statuses worth retrying: 5xx + Cloudflare-origin errors
+# (520 unknown, 521 origin down, 522 conn timed out, 523 origin unreachable,
+#  524 a timeout occurred), plus 429 rate-limit.
+_RETRY_STATUSES = {429, 500, 502, 503, 504, 520, 521, 522, 523, 524}
+_NC_API_MAX_ATTEMPTS = 4          # 1 try + 3 retries
+_NC_API_BACKOFF_BASE = 2.0        # seconds: 2, 4, 8 between attempts
+
+
 def nc_api(method, endpoint, data=None, json_data=None, user=None, passwd=None):
-    """Make a Nextcloud API call."""
+    """Make a Nextcloud API call with retry + exponential backoff.
+
+    Retries transient failures (connection errors, read timeouts, 5xx, and
+    Cloudflare 52x origin errors, plus 429) up to 3 times with 2s/4s/8s
+    backoff. Non-transient HTTP errors (e.g. 401/403/404) fail fast. The
+    final failure is re-raised so genuine outages still surface to the caller.
+    """
     url = f"{NC_URL}{endpoint}"
     headers = {
         "OCS-APIRequest": "true",
@@ -170,14 +209,43 @@ def nc_api(method, endpoint, data=None, json_data=None, user=None, passwd=None):
     if json_data is not None:
         headers["Content-Type"] = "application/json"
 
-    resp = requests.request(
-        method, url,
-        auth=(user or NC_USER, passwd or NC_PASS),
-        headers=headers, data=data, json=json_data,
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    last_exc = None
+    for attempt in range(1, _NC_API_MAX_ATTEMPTS + 1):
+        try:
+            resp = requests.request(
+                method, url,
+                auth=(user or NC_USER, passwd or NC_PASS),
+                headers=headers, data=data, json=json_data,
+                timeout=30,
+            )
+            # Retry transient server/Cloudflare statuses; raise others normally.
+            if resp.status_code in _RETRY_STATUSES and attempt < _NC_API_MAX_ATTEMPTS:
+                wait = _NC_API_BACKOFF_BASE ** attempt
+                log.warning(
+                    "nc_api %s %s -> HTTP %s (transient), retry %d/%d in %.0fs",
+                    method, endpoint, resp.status_code,
+                    attempt, _NC_API_MAX_ATTEMPTS - 1, wait,
+                )
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError) as e:
+            last_exc = e
+            if attempt < _NC_API_MAX_ATTEMPTS:
+                wait = _NC_API_BACKOFF_BASE ** attempt
+                log.warning(
+                    "nc_api %s %s -> %s (transient), retry %d/%d in %.0fs",
+                    method, endpoint, type(e).__name__,
+                    attempt, _NC_API_MAX_ATTEMPTS - 1, wait,
+                )
+                time.sleep(wait)
+                continue
+            raise
+    # Exhausted retries on a connection/timeout error.
+    if last_exc is not None:
+        raise last_exc
 
 
 def load_state():
@@ -249,7 +317,7 @@ def check_blacklist(name, email):
         import psycopg2
 
         conn = psycopg2.connect(
-            host=PORTAL_DB_HOST, port=PORTAL_DB_PORT,
+            host=_resolve_portal_db_host(), port=PORTAL_DB_PORT,
             dbname=PORTAL_DB_NAME, user=PORTAL_DB_USER, password=PORTAL_DB_PASS,
         )
         cur = conn.cursor()
@@ -462,11 +530,17 @@ def create_deck_card(submission):
     geo_note = f"county: {county}"
     raw_addr = parse_answer(answers, 6)  # Address field id
     addr_for_geo = raw_addr or city or ""
+    glat, glon = None, None
     if addr_for_geo:
         glat, glon = geocode_address(addr_for_geo)
-        if glat is not None:
-            suggested_team, bearing = geo_assign_team(glat, glon)
-            geo_note = f"bearing: {bearing:.1f}°"
+    # Fallback: try city + zip if full address didn't resolve
+    if glat is None and city:
+        glat, glon = geocode_address(f"{city}, TX")
+    if glat is not None:
+        suggested_team, bearing = geo_assign_team(glat, glon)
+        geo_note = f"bearing: {bearing:.1f}°"
+    else:
+        log.warning(f"Geocoding failed for all address variants, defaulting to {DEFAULT_TEAM}")
     desc_lines.append("")
     desc_lines.append("---")
     desc_lines.append(f"*Suggested Team:* **{suggested_team}** ({geo_note})")
@@ -704,11 +778,12 @@ S1 — Personnel & Recruiting
         return False
 
 
-def send_generic_application_received_email(recipient_email, name, company):
+def send_generic_application_received_email(recipient_email, name, company, company_email=None):
     """Send generic TSM-branded application received confirmation for non-13th applicants."""
 
     first_name = name.split()[0] if name.split() else name
     company_display = company or "your local unit"
+    contact_email = company_email or STATE_S1_FALLBACK
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -761,13 +836,14 @@ def send_generic_application_received_email(recipient_email, name, company):
         <li>The free tier is all you need.</li>
         <li>Pick a professional address (e.g., <em>firstname.lastname@proton.me</em>).</li>
         <li>Download the Proton Mail app: <a href="https://apps.apple.com/app/proton-mail/id979659905">iOS</a> / <a href="https://play.google.com/store/apps/details?id=ch.protonmail.android">Android</a></li>
-        <li>Once created, <strong>reply to this email from your new Proton Mail address</strong> so we have it on file. <strong>Please include your First and Last name in the subject line</strong> so we know who you are.</li>
+        <li>Once created, <strong>email your new Proton Mail address to {contact_email}</strong> so your unit has it on file. <strong>Please include your first and last name in the subject line</strong> so they know who you are.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         Questions?
     </h3>
-    <p>Reply to this email and we will make sure it gets to the right person.</p>
+    <p style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; font-size: 13px;">&#9888; <strong>Do not reply to this email</strong> &mdash; this inbox is not monitored by your unit.</p>
+    <p>To reach <strong>{company_display}</strong>, email: <a href="mailto:{contact_email}" style="color: #d4a537; font-weight: bold;">{contact_email}</a></p>
 
     <p>We look forward to having you with us.</p>
 
@@ -810,12 +886,13 @@ Tips:
   - The free tier is all you need.
   - Pick a professional address (e.g., firstname.lastname@proton.me).
   - Download the Proton Mail app on your phone.
-  - Once created, REPLY TO THIS EMAIL from your new Proton Mail address.
-    Please include your First and Last name in the subject line so we know
-    who you are.
+  - Once created, EMAIL YOUR NEW PROTON MAIL ADDRESS to {contact_email}
+    so your unit has it on file. Include your first and last name in the
+    subject line so they know who you are.
 
 QUESTIONS?
-Reply to this email and we will make sure it gets to the right person.
+** Do not reply to this email -- this inbox is not monitored by your unit. **
+To reach {company_display}, email: {contact_email}
 
 We look forward to having you with us.
 
@@ -828,6 +905,7 @@ texasstatemilitia.org
     msg["Subject"] = "Application Received \u2014 Texas State Militia"
     msg["From"] = SMTP_FROM
     msg["To"] = recipient_email
+    msg["Reply-To"] = contact_email
     msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
 
@@ -1012,7 +1090,8 @@ def check_new_submissions(state, dry_run=False):
                 if route == "deck":
                     send_application_received_email(email, name)
                 else:
-                    send_generic_application_received_email(email, name, company)
+                    company_email = route if route else STATE_S1_FALLBACK
+                    send_generic_application_received_email(email, name, company, company_email=company_email)
             else:
                 log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
 
@@ -1099,22 +1178,8 @@ def add_to_nc_groups(username, groups):
             log.warning(f"Failed to add {username} to group {group}: {e}")
 
 
-def _card_has_payment_annotation(description):
-    """Check if a Deck card description contains a payment verified annotation.
-
-    Returns (True, method) if found, (False, None) otherwise.
-    """
-    if "💰 Payment Verified" in description:
-        return True, "paypal"
-    return False, None
-
-
-def create_portal_member(info, nc_username, team, card_description=""):
-    """Insert a member record into the Praetorium portal database.
-
-    If card_description contains a payment annotation (from the PayPal webhook),
-    the member record will be created with app_fee_status='paid'.
-    """
+def create_portal_member(info, nc_username, team):
+    """Insert a member record into the Praetorium portal database."""
     try:
         import psycopg2
 
@@ -1125,7 +1190,7 @@ def create_portal_member(info, nc_username, team, card_description=""):
         last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
 
         conn = psycopg2.connect(
-            host=PORTAL_DB_HOST,
+            host=_resolve_portal_db_host(),
             port=PORTAL_DB_PORT,
             dbname=PORTAL_DB_NAME,
             user=PORTAL_DB_USER,
@@ -1148,32 +1213,38 @@ def create_portal_member(info, nc_username, team, card_description=""):
         zip_code = state_zip.split()[1] if len(state_zip.split()) > 1 else ""
 
         is_vet = info.get("Veteran", "").lower() in ("yes", "true")
+
+        # Geocode address for portal map
+        geo_addr = f"{street}, {city}, TX {zip_code}" if street else (f"{city}, TX {zip_code}" if city else "")
+        geo_lat, geo_lon = geocode_address(geo_addr) if geo_addr else (None, None)
+        if geo_lat is None and city:
+            # Fallback: geocode just city + zip
+            geo_lat, geo_lon = geocode_address(f"{city}, TX {zip_code}")
+        if geo_lat:
+            log.info(f"Geocoded {first_name} {last_name}: {geo_lat:.4f}, {geo_lon:.4f}")
+        else:
+            log.warning(f"Could not geocode address for {first_name} {last_name}, map pin will be missing")
         has_ltc = info.get("LTC", "").lower() in ("yes", "true")
 
         # Proton email (unit comms) vs personal email (application email / fallback)
         proton_email = info.get("📧 Proton Mail", "").strip()
         application_email = info.get("Email", "")
 
-        # Check if PayPal payment was already verified on the Deck card
-        fee_paid, fee_method = _card_has_payment_annotation(card_description)
-        fee_status = "paid" if fee_paid else "pending"
-        fee_paid_at = datetime.now() if fee_paid else None
-
         cur.execute("""
             INSERT INTO members (
                 first_name, last_name, email, personal_email, phone,
                 address, city, state, zip_code,
+                latitude, longitude,
                 rank_grade, status, team, company,
                 nc_username, join_date, is_veteran, mos,
                 has_ltc, serial_seq, serial_number,
-                app_fee_status, app_fee_method, app_fee_paid_at,
                 created_at, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
+                %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s, %s,
-                %s, %s, %s,
                 %s, %s, %s,
                 NOW(), NOW()
             )
@@ -1185,6 +1256,7 @@ def create_portal_member(info, nc_username, team, card_description=""):
             application_email,
             info.get("Phone", ""),
             street, city, state_code, zip_code,
+            geo_lat, geo_lon,
             "E-1",  # Recruit
             "recruit",
             team,
@@ -1196,9 +1268,6 @@ def create_portal_member(info, nc_username, team, card_description=""):
             has_ltc,
             next_seq,
             serial_number,
-            fee_status,
-            fee_method,
-            fee_paid_at,
         ))
 
         result = cur.fetchone()
@@ -1221,8 +1290,46 @@ def create_portal_member(info, nc_username, team, card_description=""):
         return False
 
 
-def geocode_address(address):
-    """Geocode an address using Nominatim (OpenStreetMap)."""
+PORTAL_CONTAINER = os.environ.get("PORTAL_CONTAINER", "praetorium-app")
+
+
+def _portal_geocode(address, city=None, state=None, zip_code=None):
+    """Geocode by delegating to the PORTAL geocoder inside the app container.
+
+    This is the single source of truth: it runs the portal's
+    app.geo.geocode_member_fields (US Census Bureau primary, Nominatim +
+    zip-centroid fallbacks), so the daemon and the portal always agree on
+    placement. We shell into the container because the host's Python TLS
+    fingerprint gets rejected by the Census WAF, while the container's does
+    not (same egress IP). Handles apartment/unit addresses the old
+    Nominatim-only daemon path failed on (see RCT Cook, 2026-07-15).
+    Returns (lat, lon) or (None, None).
+    """
+    payload = json.dumps({"address": address, "city": city, "state": state, "zip": zip_code})
+    code = (
+        "import sys, json;"
+        "from app.geo import geocode_member_fields;"
+        "d=json.load(sys.stdin);"
+        "lat,lon=geocode_member_fields(d.get('address'),d.get('city'),d.get('state'),d.get('zip'));"
+        "print(json.dumps({'lat':lat,'lon':lon}))"
+    )
+    try:
+        r = subprocess.run(
+            ["docker", "exec", "-i", "-e", "PYTHONPATH=/app", PORTAL_CONTAINER, "python3", "-c", code],
+            input=payload, capture_output=True, text=True, timeout=30,
+        )
+        if r.returncode != 0:
+            log.warning(f"Portal geocode container call failed (rc={r.returncode}): {r.stderr.strip()[:200]}")
+            return None, None
+        out = json.loads(r.stdout.strip().splitlines()[-1])
+        return out.get("lat"), out.get("lon")
+    except Exception as e:
+        log.warning(f"Portal geocode delegation error for {address!r}: {e}")
+        return None, None
+
+
+def _nominatim_geocode(address):
+    """Host-side Nominatim fallback (used only if the portal container is unreachable)."""
     try:
         import requests as req
         r = req.get(
@@ -1235,12 +1342,28 @@ def geocode_address(address):
         if results:
             return float(results[0]["lat"]), float(results[0]["lon"])
     except Exception as e:
-        log.warning(f"Geocoding failed for '{address}': {e}")
+        log.warning(f"Nominatim fallback failed for '{address}': {e}")
     return None, None
 
 
+def geocode_address(address):
+    """Geocode a US address using the portal geocoder (Census-first), with a
+    host-side Nominatim fallback only if the container is unreachable.
+
+    Matches the portal so daemon and portal agree on team placement.
+    """
+    lat, lon = _portal_geocode(address)
+    if lat is not None:
+        return lat, lon
+    return _nominatim_geocode(address)
+
+
 def add_map_pin(name, team, address):
-    """Add a member pin to Nextcloud Maps (favorites API)."""
+    """DEPRECATED no-op. We use the bespoke portal map (/roster/map), NOT the
+    Nextcloud Maps app (which is disabled). Member lat/lon is stored on the
+    roster row by create_portal_member and rendered by the portal map.
+    Kept as a no-op so callers don't break. Gated off 2026-07-02."""
+    return True
     lat, lng = geocode_address(address)
     if lat is None:
         log.warning(f"Could not geocode address for {name}, skipping map pin")
@@ -1257,7 +1380,9 @@ def add_map_pin(name, team, address):
 
 
 def remove_map_pin(name):
-    """Remove a member's pin from Nextcloud Maps by name."""
+    """DEPRECATED no-op. NC Maps app is disabled; portal map is authoritative.
+    Gated off 2026-07-02."""
+    return True
     try:
         import requests as req
         r = req.get(
@@ -1668,19 +1793,24 @@ def onboard_member(card, state, dry_run=False):
 
     nc_password = generate_password()
 
-    # Determine team from geographic zone (bearing-based)
-    team = DEFAULT_TEAM
+    # Determine team from geographic zone (bearing-based).
+    # If geocoding fails, leave team UNSET (None = geo pending) rather than
+    # silently defaulting to Alpha. The portal re-geocodes (Census Bureau) on
+    # its next pass and assign_zone places them correctly (team_locked stays f).
+    team = None
     raw_addr = info.get("Address", "")
     if raw_addr:
         glat, glon = geocode_address(raw_addr)
         if glat is not None:
             team, bearing = geo_assign_team(glat, glon)
             log.info(f"Geo-assigned {name} to {team} (bearing {bearing:.1f}°)")
+    if team is None:
+        log.warning(f"Geocode failed for {name}; leaving team UNSET (geo pending), portal will assign on re-geocode")
 
-    # Build group list
+    # Build group list (only add Team-<X> group when team is known)
     groups = list(RECRUIT_GROUPS)
-    team_group = f"Team-{team}"
-    groups.append(team_group)
+    if team:
+        groups.append(f"Team-{team}")
 
     if dry_run:
         log.info(f"[DRY RUN] Would onboard: {name}")
@@ -1700,12 +1830,12 @@ def onboard_member(card, state, dry_run=False):
         log.error(f"Onboarding aborted for {name} — NC account creation failed")
         return False
 
-    # 2. Create portal DB record (pass card description so payment annotations carry over)
-    create_portal_member(info, nc_username, team, card_description=card.get("description", ""))
+    # 2. Create portal DB record
+    create_portal_member(info, nc_username, team)
 
     # 3. Add to NC Maps
     raw_addr = info.get("Address", "")
-    if raw_addr:
+    if raw_addr and team:
         # Build full address string for geocoding
         city = info.get("City", "")
         map_addr = f"{raw_addr}, {city}, TX" if city else raw_addr
@@ -1875,6 +2005,7 @@ def main():
     log.info("Recruit Pipeline Daemon starting")
     log.info(f"Poll interval: {args.poll_interval}s | Dry run: {args.dry_run}")
     log.info("=" * 60)
+    sd_notify("READY=1")
 
     state = load_state()
 
@@ -1905,6 +2036,9 @@ def main():
                 urllib.request.urlopen(kuma_req, timeout=10)
             except Exception:
                 pass  # non-fatal
+
+            # Systemd watchdog ping
+            sd_notify("WATCHDOG=1")
 
         except Exception as e:
             log.error(f"Error in main loop: {e}", exc_info=True)
