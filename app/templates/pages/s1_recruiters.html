@@ -39,6 +39,7 @@
                 <th style="text-align: center; padding: 8px;">Max</th>
                 <th style="text-align: center; padding: 8px;">Total Recruited</th>
                 <th style="text-align: center; padding: 8px;">Status</th>
+                <th style="text-align: center; padding: 8px;"></th>
             </tr>
         </thead>
         <tbody>
@@ -57,6 +58,14 @@
                 <td style="padding: 8px; text-align: center;">{{ r.total_recruited }}</td>
                 <td style="padding: 8px; text-align: center;">
                     {% if r.is_active %}🟢 Active{% else %}🔴 Inactive{% endif %}
+                </td>
+                <td style="padding: 8px; text-align: center;">
+                    <button hx-post="/api/s1/recruiters/remove/{{ r.id }}"
+                            hx-confirm="Remove {{ r.rank_display or r.display_name }} {{ r.member_name or '' }} as a recruiter? Their existing pipeline card assignments are kept."
+                            hx-target="closest tr" hx-swap="outerHTML"
+                            hx-disabled-elt="this"
+                            title="Remove recruiter"
+                            style="padding: 3px 10px; background:#5a1e1e; color:#f5c6c6; border:1px solid #7a2a2a; border-radius:4px; font-size:12px; cursor:pointer;">Remove</button>
                 </td>
             </tr>
             {% endfor %}

@@ -628,34 +628,48 @@ async def _release_recruiter_load(db, member) -> None:
 
 
 async def recompute_recruiter_loads(db) -> dict:
-    """One-time / on-demand backfill: set every recruiter's current_load to the
-    true count of ACTIVE pipeline assignments = members with status='recruit'
-    whose assigned_recruiter == that recruiter's nc_username. Clears the garbage
-    counters (Moreno 23/5, Wall 10/5, Boyd 8/5, etc.). Does NOT touch
-    total_recruited. Commits and returns {nc_username: new_load}.
+    """Set every recruiter's current_load to the true count of ACTIVE APPLICANTS
+    (Deck pipeline cards in DECK_ACTIVE_STACKS) assigned to that recruiter.
 
-    Parent invocation (run once after deploy) — see the report for the exact
-    `docker compose exec app python -c "..."` one-liner that wraps this in an
-    async_session and asyncio.run().
+    Load = applicants only (Deck cards). DB recruit/active members do NOT count —
+    they are past the recruiter's pipeline job. Single source of truth; kills the
+    drifting += 1 counters. Does NOT touch total_recruited. Commits + returns
+    {nc_username: new_load}.
     """
     from sqlalchemy import select as _select
     recruiters = (await db.execute(_select(Recruiter))).scalars().all()
-    recruits = (await db.execute(
-        _select(Member).where(Member.status == "recruit")
-    )).scalars().all()
-    load_by_user = {}
-    for m in recruits:
-        u = (m.assigned_recruiter or "").strip()
-        if u:
-            load_by_user[u] = load_by_user.get(u, 0) + 1
+
+    # Count Deck card assignments per recruiter nc_username across active stacks.
+    load_by_user: dict[str, int] = {}
+    try:
+        url = f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks"
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                url,
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+            for stack in resp.json():
+                if stack.get("id") not in DECK_ACTIVE_STACKS:
+                    continue
+                for card in stack.get("cards", []):
+                    if card.get("archived"):
+                        continue
+                    for au in card.get("assignedUsers", []):
+                        uid = (au.get("participant", {}) or {}).get("uid", "").strip()
+                        if uid:
+                            load_by_user[uid] = load_by_user.get(uid, 0) + 1
+    except Exception as e:
+        logger.error(f"recompute_recruiter_loads: Deck fetch failed: {e}")
+
     result = {}
     for r in recruiters:
         r.current_load = load_by_user.get(r.nc_username, 0)
         result[r.nc_username] = r.current_load
     await db.commit()
-    logger.info(f"recompute_recruiter_loads: {result}")
+    logger.info(f"recompute_recruiter_loads (applicants): {result}")
     return result
-
 
 async def _fetch_pipeline_applicants() -> list[dict]:
     """Fetch applicants from the S1 Recruit Pipeline Deck board."""
@@ -956,6 +970,27 @@ async def add_recruiter(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     return HTMLResponse(f'<p style="color: #2e7d32; font-weight: 600;">✅ {display} added as recruiter</p>')
+
+
+@router.post("/recruiters/remove/{recruiter_id}")
+@require_auth
+async def remove_recruiter(request: Request, recruiter_id: int, db: AsyncSession = Depends(get_db)):
+    """Remove a recruiter from the roster. Does NOT unassign their existing
+    Deck cards — those keep the Nextcloud user assignment; this just drops the
+    recruiter record so they no longer appear in the assign dropdown / roster."""
+    user = request.session.get("user", {})
+    require_s1(user)
+
+    result = await db.execute(select(Recruiter).where(Recruiter.id == recruiter_id))
+    recruiter = result.scalar_one_or_none()
+    if not recruiter:
+        raise HTTPException(status_code=404, detail="Recruiter not found")
+
+    await db.delete(recruiter)
+    await db.commit()
+
+    # Return empty so HTMX removes the row.
+    return HTMLResponse("")
 
 
 @router.post("/recruiters/assign/{member_id}")
@@ -2193,14 +2228,8 @@ async def assign_recruiter_to_card(request: Request, card_id: int, db: AsyncSess
                 json={"message": f"👤 Recruiter assigned: **{recruiter_username}** by {by}"},
             )
 
-        # Update recruiter load in DB
-        result = await db.execute(
-            select(Recruiter).where(Recruiter.nc_username == recruiter_username)
-        )
-        recruiter = result.scalar_one_or_none()
-        if recruiter:
-            recruiter.current_load += 1
-            await db.commit()
+        # Recompute recruiter loads from Deck (single source of truth).
+        await recompute_recruiter_loads(db)
 
         return HTMLResponse(f'<span style="color:#2e7d32;font-size:12px;">✅ Assigned to {recruiter_username}</span>')
 
