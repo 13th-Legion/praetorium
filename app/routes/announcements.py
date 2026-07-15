@@ -88,6 +88,68 @@ def _strip_html(html: str) -> str:
     return text.strip()
 
 
+def _html_to_markdown(html: str) -> str:
+    """Convert Quill announcement HTML to Nextcloud-Talk-flavoured Markdown.
+
+    NC Talk renders Markdown (bold, italic, strike, links, headings, ordered/
+    unordered lists, blockquotes, code). Stripping to bare text (the old
+    behaviour) lost all of that and even collapsed some line breaks. This
+    keeps the structure so cross-posts look like the on-portal announcement.
+    """
+    if not html:
+        return ""
+    text = html
+
+    # Headings -> bold line (Talk renders # headings large; bold reads better
+    # inline in a chat feed and keeps them on their own line).
+    text = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', lambda m: f"\n**{m.group(1).strip()}**\n", text, flags=re.I | re.S)
+
+    # Inline emphasis.
+    text = re.sub(r'<(strong|b)[^>]*>(.*?)</\1>', r'**\2**', text, flags=re.I | re.S)
+    text = re.sub(r'<(em|i)[^>]*>(.*?)</\1>', r'*\2*', text, flags=re.I | re.S)
+    text = re.sub(r'<(s|strike|del)[^>]*>(.*?)</\1>', r'~~\2~~', text, flags=re.I | re.S)
+    text = re.sub(r'<(u)[^>]*>(.*?)</\1>', r'\2', text, flags=re.I | re.S)  # Talk has no underline
+    text = re.sub(r'<code[^>]*>(.*?)</code>', r'`\1`', text, flags=re.I | re.S)
+
+    # Links -> [text](href)
+    def _link(m):
+        href = m.group(1).strip()
+        label = re.sub(r'<[^>]+>', '', m.group(2)).strip()
+        return f"[{label}]({href})" if label else href
+    text = re.sub(r'<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', _link, text, flags=re.I | re.S)
+
+    # Ordered vs unordered lists: mark <li> per parent list type.
+    def _list(m):
+        tag = m.group(1).lower()
+        inner = m.group(2)
+        items = re.findall(r'<li[^>]*>(.*?)</li>', inner, flags=re.I | re.S)
+        out = []
+        for i, it in enumerate(items, 1):
+            it = re.sub(r'<[^>]+>', '', it).strip()
+            out.append(f"{i}. {it}" if tag == "ol" else f"- {it}")
+        return "\n" + "\n".join(out) + "\n"
+    text = re.sub(r'<(ul|ol)[^>]*>(.*?)</\1>', _list, text, flags=re.I | re.S)
+
+    # Blockquotes.
+    text = re.sub(r'<blockquote[^>]*>(.*?)</blockquote>',
+                  lambda m: "\n" + "\n".join("> " + ln for ln in re.sub(r'<[^>]+>', '', m.group(1)).strip().splitlines()) + "\n",
+                  text, flags=re.I | re.S)
+
+    # Block structure -> newlines.
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.I)
+    text = re.sub(r'</p>\s*<p[^>]*>', '\n\n', text, flags=re.I)
+    text = re.sub(r'</?p[^>]*>', '', text, flags=re.I)
+
+    # Drop any remaining tags, decode entities.
+    text = re.sub(r'<[^>]+>', '', text)
+    text = (text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+                .replace('&quot;', '"').replace('&#x27;', "'").replace('&nbsp;', ' '))
+
+    # Collapse 3+ blank lines to a max of 2.
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def _can_post(user: dict) -> bool:
     """Command, admin, and S1 can post announcements."""
     roles = set(user.get("roles", []))
@@ -491,11 +553,12 @@ async def post_announcement(request: Request):
             )
             resp.raise_for_status()
 
-        # Cross-post to NC Talk Announcements channel
+        # Cross-post to NC Talk Announcements channel (Markdown-formatted).
         try:
+            talk_body = _html_to_markdown(message)
             talk_msg = f"📢 **{subject}**"
-            if plain_message:
-                talk_msg += f"\n\n{plain_message}"
+            if talk_body:
+                talk_msg += f"\n\n{talk_body}"
             talk_msg += f"\n\n— {poster_name}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
