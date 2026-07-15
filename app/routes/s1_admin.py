@@ -745,7 +745,7 @@ async def recruiter_dashboard(request: Request, db: AsyncSession = Depends(get_d
 
 # ─── PP-051: Pipeline Kanban Dashboard ───────────────────────────────────────
 
-async def _fetch_full_pipeline() -> dict:
+async def _fetch_full_pipeline(db=None) -> dict:
     """Fetch all pipeline stacks with cards, including metadata."""
     url = f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks"
     columns = {}
@@ -848,6 +848,32 @@ async def _fetch_full_pipeline() -> dict:
                 }
     except Exception:
         pass
+    # Enrich cards with the recruiter of record (member.assigned_recruiter),
+    # resolved to a display name. Falls back to Deck card assignedUsers.
+    if db is not None:
+        try:
+            from app.models.member import Member as _M
+            from app.models.recruiting import Recruiter as _R
+            from sqlalchemy import select as _sel
+            mres = await db.execute(_sel(_M.first_name, _M.last_name, _M.assigned_recruiter))
+            by_name = {}
+            for fn, ln, rec in mres.all():
+                if rec:
+                    by_name[((fn or "").strip().lower(), (ln or "").strip().lower())] = rec.strip()
+            rres = await db.execute(_sel(_R.nc_username, _R.display_name))
+            disp = {(u or "").strip(): (d or u) for u, d in rres.all()}
+            for col in columns.values():
+                for c in col.get("cards", []):
+                    parts = (c.get("name") or "").split()
+                    rec = None
+                    if len(parts) >= 2:
+                        rec = by_name.get((parts[0].strip().lower(), parts[-1].strip().lower()))
+                    if rec:
+                        c["assigned"] = [disp.get(rec, rec)]
+        except Exception as _e:
+            import logging as _lg
+            _lg.getLogger(__name__).warning(f"pipeline recruiter enrich failed: {_e}")
+
     return columns
 
 
@@ -858,7 +884,7 @@ async def pipeline_dashboard(request: Request, db: AsyncSession = Depends(get_db
     user = request.session.get("user", {})
     require_pipeline(user)
 
-    columns = await _fetch_full_pipeline()
+    columns = await _fetch_full_pipeline(db)
 
     result = await db.execute(select(Recruiter).where(Recruiter.is_active == True).order_by(Recruiter.display_name))
     recruiters = result.scalars().all()
@@ -879,7 +905,7 @@ async def pipeline_board_partial(request: Request, db: AsyncSession = Depends(ge
     user = request.session.get("user", {})
     require_pipeline(user)
 
-    columns = await _fetch_full_pipeline()
+    columns = await _fetch_full_pipeline(db)
 
     result = await db.execute(select(Recruiter).where(Recruiter.is_active == True).order_by(Recruiter.display_name))
     recruiters = result.scalars().all()
