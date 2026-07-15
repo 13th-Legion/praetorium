@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Shop Sign-Up{% endblock %}
+
+{% block content %}
+<style>
+  .su-wrap { max-width: 880px; margin: 32px auto; padding: 0 16px; }
+  .su-head { font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 28px; margin-bottom: 4px; }
+  .su-sub { color: #aaa; font-size: 14px; margin-bottom: 20px; }
+  .su-banner { border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; }
+  .su-banner.warn { background: #3a2a00; border: 1px solid #d4a537; color: #ffe6a0; }
+  .su-banner.info { background: #0f2a3a; border: 1px solid #2f6f8f; color: #bfe4f5; }
+  .su-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .su-grid { grid-template-columns: 1fr; } }
+  .su-card { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; }
+  .su-card h3 { font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 17px; margin: 0 0 8px; }
+  .su-card .icon { font-size: 20px; margin-right: 6px; }
+  .su-card p.desc { color: #cfcfcf; font-size: 13px; line-height: 1.5; flex: 1; }
+  .su-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .su-badge.member { background: #1e4620; color: #9be89e; }
+  .su-badge.pending { background: #3a3000; color: #f0d675; }
+  .su-btn { margin-top: 10px; background: #d4a537; color: #1a1a2e; border: none; border-radius: 5px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .su-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+  .su-note { width: 100%; margin-top: 8px; background: #0f0f1e; border: 1px solid #333; border-radius: 4px; color: #eee; padding: 6px 8px; font-size: 12px; box-sizing: border-box; resize: vertical; }
+  .su-flash { border-radius: 5px; padding: 8px 12px; font-size: 13px; margin-top: 8px; }
+  .su-flash.su-ok { background: #1e4620; color: #9be89e; }
+  .su-flash.su-err { background: #4a1414; color: #f3a6a6; }
+  .su-review-link { color: #d4a537; font-size: 13px; }
+</style>
+
+<div class="su-wrap">
+  <div class="su-head">🏛️ Shop Sign-Up</div>
+  <div class="su-sub">
+    Interested in contributing to the staff? Request to join one of the S-shops below.
+    Requests are routed to the shop lead, who accepts or declines.
+    {% if can_review %}
+      &nbsp;·&nbsp;<a class="su-review-link" href="/shops/signup/review">Review requests →</a>
+    {% endif %}
+  </div>
+
+  {% if not patched %}
+    <div class="su-banner warn">
+      🔒 Shop sign-up is open to <strong>patched members</strong> only. Recruits complete
+      TRADOC and get patched first — then you can request a shop.
+    </div>
+  {% elif at_max %}
+    <div class="su-banner info">
+      You currently hold the maximum of <strong>{{ max_shops }} shops</strong>. To join a
+      different shop, drop one first (see your shop lead or Command).
+    </div>
+  {% else %}
+    <div class="su-banner info">
+      You may hold up to <strong>{{ max_shops }} shops</strong> at once.
+    </div>
+  {% endif %}
+
+  <div class="su-grid">
+    {% for s in shops %}
+    <div class="su-card">
+      <h3><span class="icon">{{ s.icon }}</span>{{ s.name }}
+        {% if s.key in held %}<span class="su-badge member">Member</span>
+        {% elif s.key in pending_keys %}<span class="su-badge pending">Pending</span>{% endif %}
+      </h3>
+      <p class="desc">{{ s.desc }}</p>
+
+      {% if patched and s.key not in held and s.key not in pending_keys and not at_max %}
+      <form hx-post="/shops/signup" hx-target="this" hx-swap="afterend" hx-disabled-elt="find button">
+        <input type="hidden" name="shop_key" value="{{ s.key }}">
+        <textarea class="su-note" name="message" rows="2"
+          placeholder="Optional: why you'd like to join {{ s.key }} / relevant experience"></textarea>
+        <button class="su-btn" type="submit">Request to Join {{ s.key }}</button>
+      </form>
+      {% elif s.key in held %}
+        <button class="su-btn" disabled>Already a Member</button>
+      {% elif s.key in pending_keys %}
+        <button class="su-btn" disabled>Request Pending</button>
+      {% elif patched and at_max %}
+        <button class="su-btn" disabled>At Shop Limit</button>
+      {% else %}
+        <button class="su-btn" disabled>Patched Members Only</button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

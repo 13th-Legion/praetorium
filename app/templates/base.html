@@ -79,10 +79,15 @@
             {% if "s6" in user.roles or "command" in user.roles or "admin" in user.roles %}
                 {% set _ = shop_roles.shops.append("s6") %}
             {% endif %}
-            {% if shop_roles.shops %}
+            {% set is_recruit = "recruit" in user.roles %}
+            {% set show_shops = shop_roles.shops or not is_recruit %}
+            {% if show_shops %}
             <div class="nav-dropdown" style="position: relative; display: inline-block;">
                 <a href="#" class="nav-link" onclick="this.nextElementSibling.classList.toggle('show'); return false;">🏛️ Shops ▾</a>
                 <div class="dropdown-menu" style="display: none; position: absolute; background: #1a1a2e; border: 1px solid #333; border-radius: 4px; min-width: 200px; z-index: 100; top: 100%; left: 0;">
+                    <div style="border-bottom: 1px solid #333;">
+                        <a href="/shops/signup" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">✍️ Sign-Up</a>
+                    </div>
                     {% if "s1" in shop_roles.shops %}
                     <div style="border-bottom: 1px solid #333;">
                         <a href="/shops/s1" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📋 S1 — Personnel</a>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Shop Requests — Review{% endblock %}
+
+{% block content %}
+<style>
+  .rv-wrap { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+  .rv-head { font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 26px; margin-bottom: 4px; }
+  .rv-sub { color: #aaa; font-size: 13px; margin-bottom: 20px; }
+  .rv-sect { font-family: 'Oswald', sans-serif; color: #d4a537; font-size: 16px; margin: 24px 0 10px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .rv-card { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .rv-top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .rv-shop { color: #d4a537; font-weight: 700; font-size: 14px; }
+  .rv-member { color: #eee; font-size: 15px; font-weight: 600; }
+  .rv-cs { color: #8fb7d4; font-size: 12px; }
+  .rv-when { color: #777; font-size: 11px; }
+  .rv-msg { color: #cfcfcf; font-size: 13px; margin: 8px 0; font-style: italic; border-left: 2px solid #444; padding-left: 10px; }
+  .rv-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .rv-notes { flex: 1; min-width: 160px; background: #0f0f1e; border: 1px solid #333; border-radius: 4px; color: #eee; padding: 6px 8px; font-size: 12px; }
+  .rv-btn { border: none; border-radius: 5px; padding: 7px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .rv-accept { background: #1e7d32; color: #fff; }
+  .rv-decline { background: #7d1e1e; color: #fff; }
+  .su-decided { border-radius: 5px; padding: 8px 12px; font-size: 13px; }
+  .su-decided.su-ok { background: #1e4620; color: #9be89e; }
+  .su-decided.su-err { background: #4a1414; color: #f3a6a6; }
+  .rv-empty { color: #888; font-size: 14px; padding: 12px 0; }
+  .rv-recent { color: #aaa; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #2a2a2a; }
+  .rv-recent .st-accepted { color: #9be89e; }
+  .rv-recent .st-declined { color: #f3a6a6; }
+</style>
+
+<div class="rv-wrap">
+  <div class="rv-head">🏛️ Shop Join Requests</div>
+  <div class="rv-sub">Accept or decline requests from members to join your shop.
+    <a href="/shops/signup" style="color:#d4a537;">← Shop Sign-Up</a></div>
+
+  <div class="rv-sect">Pending ({{ pending|length }})</div>
+  {% if not pending %}
+    <div class="rv-empty">No pending requests. 🎉</div>
+  {% endif %}
+  {% for r in pending %}
+  <div class="rv-card" id="req-{{ r.id }}">
+    <div class="rv-top">
+      <div>
+        <span class="rv-shop">{{ r.shop_key }}</span> —
+        <span class="rv-member">{{ r.member }}</span>
+        {% if r.callsign %}<span class="rv-cs">({{ r.callsign }})</span>{% endif %}
+      </div>
+      <span class="rv-when">{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}</span>
+    </div>
+    {% if r.message %}<div class="rv-msg">“{{ r.message }}”</div>{% endif %}
+    <form class="rv-actions" hx-target="#req-{{ r.id }}" hx-swap="innerHTML">
+      <input class="rv-notes" type="text" name="notes" placeholder="Optional note to the member…">
+      <button class="rv-btn rv-accept" hx-post="/shops/signup/{{ r.id }}/accept">Accept</button>
+      <button class="rv-btn rv-decline" hx-post="/shops/signup/{{ r.id }}/decline">Decline</button>
+    </form>
+  </div>
+  {% endfor %}
+
+  {% if recent %}
+  <div class="rv-sect">Recently decided</div>
+  {% for r in recent %}
+  <div class="rv-recent">
+    <span class="rv-shop">{{ r.shop_key }}</span> · {{ r.member }} ·
+    <span class="st-{{ r.status }}">{{ r.status }}</span>
+    {% if r.reviewed_by %} by {{ r.reviewed_by }}{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}
