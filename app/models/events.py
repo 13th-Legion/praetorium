@@ -147,6 +147,9 @@ class EventRSVP(Base):
     responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     auto_declined: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Self-reported guest count (e.g. Family Day headcount) — PP guests-in-rsvp
+    guest_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # Check-in (event day)
     checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
     checked_in_at: Mapped[Optional[datetime]] = mapped_column(DateTime)

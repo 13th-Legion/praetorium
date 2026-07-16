@@ -1023,14 +1023,17 @@ async def event_detail(request: Request, event_id: int):
 
         # My RSVP
         my_rsvp = None
+        my_guest_count = 0
         if member_id:
             rsvp_result = await db.execute(
-                select(EventRSVP.status).where(
+                select(EventRSVP.status, EventRSVP.guest_count).where(
                     and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
                 )
             )
             row = rsvp_result.first()
-            my_rsvp = row[0] if row else None
+            if row:
+                my_rsvp = row[0]
+                my_guest_count = row[1] or 0
 
         # Maintain roster: add new members, prune separated
         await _maintain_event_roster(db, event_id, event)
@@ -1046,6 +1049,12 @@ async def event_detail(request: Request, event_id: int):
         attending = [(r, m) for r, m in roster_rows if r.status == "attending"]
         declined = [(r, m) for r, m in roster_rows if r.status == "declined"]
         pending = [(r, m) for r, m in roster_rows if r.status == "pending"]
+
+        # Headcount rollup (only meaningful for social/family events)
+        guests_allowed = event.category in ("family_day", "social")
+        hc_members = len(attending)
+        hc_guests = sum((r.guest_count or 0) for r, _ in attending)
+        hc_total = hc_members + hc_guests
 
         all_day = (event.date_start.hour == 0 and event.date_start.minute == 0
                    and (not event.date_end or (event.date_end.hour == 0 and event.date_end.minute == 0)))
@@ -1108,6 +1117,11 @@ async def event_detail(request: Request, event_id: int):
         "category_label": CATEGORY_LABELS.get(event.category, event.category),
         "date_display": _format_range(event.date_start, event.date_end, all_day),
         "my_rsvp": my_rsvp,
+        "my_guest_count": my_guest_count,
+        "guests_allowed": guests_allowed,
+        "hc_members": hc_members,
+        "hc_guests": hc_guests,
+        "hc_total": hc_total,
         "rsvp_locked": rsvp_locked,
         "attending": attending,
         "rank_abbr": RANK_ABBR,
@@ -1136,6 +1150,15 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 
     if new_status not in ("attending", "declined"):
         return HTMLResponse("Invalid status", status_code=400)
+
+    # Parse optional guest count (self-reported headcount, e.g. Family Day)
+    raw_guests = (form.get("guest_count") or "").strip()
+    guest_count = None
+    if raw_guests != "":
+        try:
+            guest_count = max(0, min(50, int(raw_guests)))
+        except ValueError:
+            guest_count = None
 
     async with async_session() as db:
         # Check event exists and RSVP is enabled/open
@@ -1170,16 +1193,25 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         rsvp = rsvp_result.scalar_one_or_none()
         old_status = rsvp.status if rsvp else None
 
+        # Only honor guest count when it makes sense (social/family events)
+        guests_allowed = event.category in ("family_day", "social")
+        event_category = event.category  # capture before session closes
+
         if rsvp:
             rsvp.status = new_status
             rsvp.responded_at = datetime.utcnow()
             rsvp.updated_at = datetime.utcnow()
+            if guests_allowed and guest_count is not None:
+                rsvp.guest_count = guest_count
+            if new_status == "declined":
+                rsvp.guest_count = 0
         else:
             rsvp = EventRSVP(
                 event_id=event_id,
                 member_id=member_id,
                 status=new_status,
                 responded_at=datetime.utcnow(),
+                guest_count=(guest_count or 0) if (guests_allowed and new_status == "attending") else 0,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
@@ -1310,6 +1342,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                 pass
 
         await db.commit()
+        rsvp_guest_count = rsvp.guest_count  # capture after commit, before session closes
 
     # Background: send catch-up email
     if send_opord_catchup and catchup_email:
@@ -1394,13 +1427,39 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         background_tasks.add_task(_send_warno_catchup_email)
 
     # Return updated RSVP controls
-    return _render_rsvp_controls(event_id, new_status)
+    return _render_rsvp_controls(
+        event_id, new_status,
+        guests_allowed=(event_category in ("family_day", "social")),
+        guest_count=(rsvp_guest_count if new_status == "attending" else 0),
+    )
 
 
-def _render_rsvp_controls(event_id: int, current_status: str) -> HTMLResponse:
-    """Render inline RSVP buttons."""
+def _render_rsvp_controls(
+    event_id: int,
+    current_status: str,
+    guests_allowed: bool = False,
+    guest_count: int = 0,
+) -> HTMLResponse:
+    """Render inline RSVP buttons (+ optional guest-count stepper for social events)."""
     attending_cls = "rsvp-btn-active" if current_status == "attending" else ""
     declined_cls = "rsvp-btn-active-danger" if current_status == "declined" else ""
+
+    guest_html = ""
+    if guests_allowed:
+        show = "block" if current_status == "attending" else "none"
+        guest_html = f"""
+        <div id="guest-count-wrap-{event_id}" style="display:{show};margin-top:10px;">
+            <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML">
+                <input type="hidden" name="status" value="attending">
+                <label style="font-size:12px;color:#bbb;display:block;margin-bottom:4px;">Guests you're bringing</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="number" name="guest_count" value="{guest_count}" min="0" max="50"
+                           style="width:70px;padding:6px;border-radius:6px;border:1px solid #444;background:#1a1a2e;color:#fff;font-size:14px;">
+                    <button type="submit" class="rsvp-btn" style="padding:6px 12px;font-size:13px;">Update</button>
+                </div>
+                <div style="font-size:11px;color:#888;margin-top:4px;">Count only your guests (not yourself). Helps the host with the headcount.</div>
+            </form>
+        </div>"""
 
     html = f"""
     <div class="rsvp-controls" id="rsvp-controls-{event_id}">
@@ -1416,6 +1475,7 @@ def _render_rsvp_controls(event_id: int, current_status: str) -> HTMLResponse:
                 ❌ Declined
             </button>
         </form>
+        {guest_html}
     </div>"""
     return HTMLResponse(html)
 

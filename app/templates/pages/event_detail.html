@@ -236,11 +236,37 @@ function insertTradocAgenda() {
                     ❌ Declined
                 </button>
             </form>
+            {% if guests_allowed %}
+            <div id="guest-count-wrap-{{ event.id }}" style="display:{% if my_rsvp == 'attending' %}block{% else %}none{% endif %};margin-top:10px;">
+                <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML">
+                    <input type="hidden" name="status" value="attending">
+                    <label style="font-size:12px;color:#bbb;display:block;margin-bottom:4px;">Guests you're bringing</label>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="number" name="guest_count" value="{{ my_guest_count }}" min="0" max="50"
+                               style="width:70px;padding:6px;border-radius:6px;border:1px solid #444;background:#1a1a2e;color:#fff;font-size:14px;">
+                        <button hx-disabled-elt="this" type="submit" class="rsvp-btn" style="padding:6px 12px;font-size:13px;">Update</button>
+                    </div>
+                    <div style="font-size:11px;color:#888;margin-top:4px;">Count only your guests (not yourself). Helps the host with the headcount.</div>
+                </form>
+            </div>
+            {% endif %}
             {% if event.rsvp_deadline %}
             <div style="font-size:11px;color:#888;margin-top:6px;">Deadline: {{ event.rsvp_deadline.strftime('%d %b %Y · %H%M CT') }}</div>
             {% endif %}
         </div>
         {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Headcount (social/family events) -->
+    {% if guests_allowed %}
+    <div class="card" style="margin-bottom:16px;">
+        <h2 class="card-title" style="font-size:0.9rem;">Headcount</h2>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:baseline;">
+            <div><span style="font-size:1.6rem;font-weight:700;color:#d4a537;">{{ hc_total }}</span> <span style="font-size:12px;color:#888;">total</span></div>
+            <div><span style="font-size:1.2rem;font-weight:600;">{{ hc_members }}</span> <span style="font-size:12px;color:#888;">members</span></div>
+            <div><span style="font-size:1.2rem;font-weight:600;">{{ hc_guests }}</span> <span style="font-size:12px;color:#888;">guests</span></div>
+        </div>
     </div>
     {% endif %}
 
