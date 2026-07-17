@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -93,6 +93,56 @@ class ContactVerifyMiddleware(BaseHTTPMiddleware):
         return RedirectResponse(url="/verify-contact", status_code=302)
 
 
+# ─── Guest Read-Only Middleware ───────────────────────────────────────────────
+
+# Methods that mutate state. Guests are blocked from all of these.
+GUEST_WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Paths a guest is still allowed to POST to (auth/session lifecycle only).
+GUEST_WRITE_ALLOW = ("/auth/", "/logout")
+
+
+class GuestReadOnlyMiddleware(BaseHTTPMiddleware):
+    """Read-only enforcement for guest accounts (other-unit visitors).
+
+    Guests (portal role == 'guest') can view every page and every editing
+    interface, but any write request (POST/PUT/PATCH/DELETE) is rejected with a
+    friendly 403 instead of persisting. This is the single server-side safety
+    net so we don't have to audit every write endpoint individually.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in GUEST_WRITE_METHODS:
+            user = request.session.get("user")
+            if user and "guest" in set(user.get("roles", [])):
+                path = request.url.path
+                if not any(path.startswith(p) for p in GUEST_WRITE_ALLOW):
+                    msg = ("Guest accounts are read-only. You can look around every "
+                           "part of the portal, but changes can't be saved from a "
+                           "guest account.")
+                    # HTMX requests get a plain-text 403 the UI can surface inline;
+                    # everything else gets a simple styled page.
+                    if request.headers.get("HX-Request") == "true":
+                        return HTMLResponse(msg, status_code=403)
+                    accept = request.headers.get("accept", "")
+                    if "application/json" in accept:
+                        return JSONResponse({"detail": msg}, status_code=403)
+                    return HTMLResponse(
+                        f"<!doctype html><html><head><title>Read-only</title>"
+                        f"<style>body{{font-family:system-ui,sans-serif;background:#1a1a1a;"
+                        f"color:#ddd;display:flex;align-items:center;justify-content:center;"
+                        f"height:100vh;margin:0;text-align:center;}}"
+                        f".box{{max-width:460px;padding:32px;border:1px solid #333;"
+                        f"border-radius:10px;background:#222;}}h1{{font-size:20px;"
+                        f"margin:0 0 12px;}}p{{color:#aaa;line-height:1.5;}}"
+                        f"a{{color:#8ab4f8;}}</style></head><body><div class='box'>"
+                        f"<h1>👁️ Read-only guest account</h1><p>{msg}</p>"
+                        f"<p><a href='javascript:history.back()'>← Go back</a></p>"
+                        f"</div></body></html>",
+                        status_code=403,
+                    )
+        return await call_next(request)
+
+
 # ─── Display Name & Role Refresh Middleware ───────────────────────────────────
 
 DISPLAY_REFRESH_INTERVAL = 15 * 60  # 15 minutes in seconds
@@ -159,6 +209,7 @@ app = FastAPI(
 # ContactVerifyMiddleware added first → inner (has session access)
 # SessionMiddleware added last → outermost (provides session to everything inside)
 app.add_middleware(ContactVerifyMiddleware)
+app.add_middleware(GuestReadOnlyMiddleware)
 app.add_middleware(DisplayRefreshMiddleware)
 app.add_middleware(
     SessionMiddleware,

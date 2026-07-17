@@ -80,13 +80,39 @@ GROUP_ROLE_MAP = {
     "Team - Delta": "team_delta",
     "Recruiters": "recruiter",
     "[S-1] Lead": "s1_lead",
+    # Read-only visitors from other units (per-person accounts). Members of the
+    # NC "Guests" group get the `guest` role, which the GuestReadOnlyMiddleware
+    # uses to block all writes (POST/PUT/PATCH/DELETE) while allowing full
+    # read access to every page/interface.
+    "Guests": "guest",
 }
 
 
+# Roles granted to guests so every page / editing interface RENDERS for them.
+# Writes are still blocked globally by GuestReadOnlyMiddleware (method-based),
+# so these only unlock read/visibility of role-gated views — never persistence.
+GUEST_VIEW_ROLES = [
+    "command", "leader", "officer", "nco", "enlisted",
+    "s1", "s1_lead", "s2", "s3", "s4", "s5", "s6",
+    "recruiter", "admin",
+]
+
+
 def map_groups_to_roles(nc_groups: list[str]) -> list[str]:
-    """Convert NC group names to portal role strings."""
+    """Convert NC group names to portal role strings.
+
+    A member of the NC "Guests" group is a read-only visitor: they get the
+    `guest` marker role (checked by GuestReadOnlyMiddleware to block writes)
+    PLUS a broad bundle of view roles so every page and editing interface is
+    visible to them. Guests never depend on other real NC group memberships.
+    """
     roles = []
     for group in nc_groups:
         if group in GROUP_ROLE_MAP:
             roles.append(GROUP_ROLE_MAP[group])
+    if "guest" in roles:
+        # Guest = read-only tour of the whole portal. Give the view roles but
+        # dedupe and keep the `guest` marker for the write-block middleware.
+        merged = list(dict.fromkeys(["guest", *GUEST_VIEW_ROLES]))
+        return merged
     return roles
