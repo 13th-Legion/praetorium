@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
-from app.models.training import TradocBlock, TradocItem
+from app.models.training import TradocBlock, TradocItem, TradocTier
 from app.models.library import LibraryDocument
 
 # ── Markdown rendering (TRADOC docs) ─────────────────────────────────────────
@@ -254,6 +254,9 @@ async def tradoc_page(request: Request):
         item_rows = (await db.execute(
             select(TradocItem).order_by(TradocItem.block, TradocItem.sort_order)
         )).scalars().all()
+        tier_rows = (await db.execute(
+            select(TradocTier).order_by(TradocTier.sort_order, TradocTier.id)
+        )).scalars().all()
 
     # Group items by block number
     items_by_block = {}
@@ -299,35 +302,50 @@ async def tradoc_page(request: Request):
             "subjects": subjects,
         })
 
-    # ── Group blocks into ordered tiers ──
-    # Tier 1 = Initial Entry Training (patching pipeline), Tier 2 = Advanced
-    # Qualifications & Tabs (above-and-beyond courses/tabs).
-    TIER_META = [
-        {"key": "initial", "label": "Initial Entry Training",
-         "subtitle": "The patching pipeline — what every Legionary completes to earn the patch."},
-        {"key": "advanced", "label": "Advanced Qualifications & Tabs",
-         "subtitle": "Earned above and beyond patching — statewide courses and the 13th Legion's own tabs."},
+    # ── Group blocks into ordered tiers (categories) ──
+    # Tiers now come from the DB (tradoc_tiers) and are fully manageable.
+    # `all_tiers` = every tier (incl. archived) for the manage UI dropdown/modal.
+    all_tiers = [
+        {"id": t.id, "key": t.key, "label": t.label,
+         "subtitle": t.subtitle or "", "sort_order": t.sort_order,
+         "archived": t.archived}
+        for t in tier_rows
     ]
-    tier_order = {m["key"]: i for i, m in enumerate(TIER_META)}
+    # Fallback if the tiers table is somehow empty (fresh DB / migration not run).
+    if not all_tiers:
+        all_tiers = [
+            {"id": None, "key": "initial", "label": "Initial Entry Training",
+             "subtitle": "The patching pipeline — what every Legionary completes to earn the patch.",
+             "sort_order": 0, "archived": False},
+            {"id": None, "key": "advanced", "label": "Advanced Qualifications & Tabs",
+             "subtitle": "Earned above and beyond patching — statewide courses and the 13th Legion's own tabs.",
+             "sort_order": 1, "archived": False},
+        ]
+
+    known = {t["key"] for t in all_tiers}
     tiers = []
-    for meta in TIER_META:
+    for meta in all_tiers:
+        if meta["archived"]:
+            continue
         tier_blocks = [b for b in blocks if b["tier"] == meta["key"]]
         if tier_blocks:
             tiers.append({**meta, "blocks": tier_blocks})
-    # Any unknown/legacy tier value falls back into the initial tier bucket.
-    known = set(tier_order)
+    # Any block pointing at an unknown/removed tier falls into the first tier bucket
+    # so it never silently disappears.
     orphan_blocks = [b for b in blocks if b["tier"] not in known]
     if orphan_blocks:
-        if tiers and tiers[0]["key"] == "initial":
+        if tiers:
             tiers[0]["blocks"].extend(orphan_blocks)
         else:
-            tiers.insert(0, {**TIER_META[0], "blocks": orphan_blocks})
+            first = next((t for t in all_tiers if not t["archived"]), all_tiers[0])
+            tiers.append({**first, "blocks": orphan_blocks})
 
     return templates.TemplateResponse("pages/tradoc.html", {
         "request": request,
         "user": user,
         "blocks": blocks,
         "tiers": tiers,
+        "all_tiers": all_tiers,
         "doc_count": doc_count,
         "total_subjects": total_subjects,
         "can_manage": can_manage,

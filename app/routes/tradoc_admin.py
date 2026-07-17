@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 
 from app.auth import require_role, get_current_user
 from app.database import async_session
-from app.models.training import TradocBlock, TradocItem
+from app.models.training import TradocBlock, TradocItem, TradocTier
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,8 @@ router = APIRouter(prefix="/training/tradoc/manage", tags=["tradoc-admin"])
 
 TRADOC_MANAGE_ROLES = ("command", "s3", "admin")
 VALID_DOC_TYPES = {"none", "markdown", "pdf", "external", "page"}
-VALID_TIERS = {"initial", "advanced"}
+# Fallback tier key used when a block references an unknown/removed tier.
+DEFAULT_TIER_KEY = "initial"
 
 
 def _form_int(form, key, default=0):
@@ -27,6 +28,19 @@ def _form_int(form, key, default=0):
         return int((form.get(key) or "").strip())
     except (ValueError, AttributeError):
         return default
+
+
+def _slugify_tier_key(label: str) -> str:
+    """Derive a stable, url-safe tier key from a label."""
+    import re
+    key = re.sub(r"[^a-z0-9]+", "_", (label or "").lower()).strip("_")
+    return (key or "tier")[:32]
+
+
+async def _valid_tier_keys(db) -> set:
+    """Live set of tier keys from the DB (used to validate block.tier)."""
+    rows = (await db.execute(select(TradocTier.key))).scalars().all()
+    return set(rows) or {DEFAULT_TIER_KEY}
 
 
 # ─── Blocks ──────────────────────────────────────────────────────────────────
@@ -39,14 +53,14 @@ async def block_create(request: Request):
     name = (form.get("name") or "").strip()
     description = (form.get("description") or "").strip()
     sort_order = _form_int(form, "sort_order", 0)
-    tier = (form.get("tier") or "initial").strip()
-    if tier not in VALID_TIERS:
-        tier = "initial"
+    tier = (form.get("tier") or DEFAULT_TIER_KEY).strip()
     if number is None:
         raise HTTPException(status_code=400, detail="Block number required")
     if not name:
         raise HTTPException(status_code=400, detail="Block name required")
     async with async_session() as db:
+        if tier not in await _valid_tier_keys(db):
+            tier = DEFAULT_TIER_KEY
         existing = (await db.execute(
             select(TradocBlock).where(TradocBlock.number == number)
         )).scalar_one_or_none()
@@ -83,7 +97,7 @@ async def block_edit(request: Request, block_id: int):
         blk.description = description or None
         if sort_order:
             blk.sort_order = sort_order
-        if tier in VALID_TIERS:
+        if tier and tier in await _valid_tier_keys(db):
             blk.tier = tier
         # keep denormalized block_name on items in sync
         items = (await db.execute(
@@ -111,6 +125,97 @@ async def block_archive(request: Request, block_id: int):
         blk.archived = not unarchive
         await db.commit()
     log.info(f"TRADOC block {block_id} archived={blk.archived}")
+    return RedirectResponse(url="/training/tradoc", status_code=303)
+
+
+# ─── Tiers / Categories (TradocTier) ─────────────────────────────────────────
+
+@router.post("/tier/create")
+@require_role(*TRADOC_MANAGE_ROLES)
+async def tier_create(request: Request):
+    form = await request.form()
+    label = (form.get("label") or "").strip()
+    subtitle = (form.get("subtitle") or "").strip()
+    sort_order = _form_int(form, "sort_order", 0)
+    key = (form.get("key") or "").strip() or _slugify_tier_key(label)
+    key = _slugify_tier_key(key)
+    if not label:
+        raise HTTPException(status_code=400, detail="Category label required")
+    async with async_session() as db:
+        existing = (await db.execute(
+            select(TradocTier).where(TradocTier.key == key)
+        )).scalar_one_or_none()
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Category key '{key}' already exists")
+        if not sort_order:
+            max_order = (await db.execute(select(func.max(TradocTier.sort_order)))).scalar() or 0
+            sort_order = max_order + 1
+        db.add(TradocTier(
+            key=key, label=label,
+            subtitle=subtitle or None,
+            sort_order=sort_order,
+        ))
+        await db.commit()
+    log.info(f"TRADOC tier created: {key} '{label}'")
+    return RedirectResponse(url="/training/tradoc", status_code=303)
+
+
+@router.post("/tier/{tier_id}/edit")
+@require_role(*TRADOC_MANAGE_ROLES)
+async def tier_edit(request: Request, tier_id: int):
+    form = await request.form()
+    label = (form.get("label") or "").strip()
+    subtitle = (form.get("subtitle") or "").strip()
+    sort_order = _form_int(form, "sort_order", 0)
+    if not label:
+        raise HTTPException(status_code=400, detail="Category label required")
+    async with async_session() as db:
+        tier = (await db.execute(
+            select(TradocTier).where(TradocTier.id == tier_id)
+        )).scalar_one_or_none()
+        if not tier:
+            raise HTTPException(status_code=404, detail="Category not found")
+        tier.label = label
+        tier.subtitle = subtitle or None
+        if sort_order:
+            tier.sort_order = sort_order
+        await db.commit()
+    log.info(f"TRADOC tier {tier_id} edited -> '{label}'")
+    return RedirectResponse(url="/training/tradoc", status_code=303)
+
+
+@router.post("/tier/{tier_id}/archive")
+@require_role(*TRADOC_MANAGE_ROLES)
+async def tier_archive(request: Request, tier_id: int):
+    """Archive (soft-delete) or restore a category.
+
+    Archiving is refused if any non-archived block still references this tier —
+    move those blocks first so nothing silently disappears from the page.
+    """
+    form = await request.form()
+    unarchive = bool((form.get("unarchive") or "").strip())
+    async with async_session() as db:
+        tier = (await db.execute(
+            select(TradocTier).where(TradocTier.id == tier_id)
+        )).scalar_one_or_none()
+        if not tier:
+            raise HTTPException(status_code=404, detail="Category not found")
+        if not unarchive:
+            in_use = (await db.execute(
+                select(func.count()).select_from(TradocBlock).where(
+                    TradocBlock.tier == tier.key,
+                    TradocBlock.archived == False,  # noqa: E712
+                )
+            )).scalar() or 0
+            if in_use:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{in_use} active block(s) still use this category. "
+                           "Move or archive them first.",
+                )
+        tier.archived = not unarchive
+        await db.commit()
+    log.info(f"TRADOC tier {tier_id} archived={tier.archived}")
     return RedirectResponse(url="/training/tradoc", status_code=303)
 
 

@@ -12,6 +12,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+class TradocTier(Base):
+    """A TRADOC category/tier that groups blocks (e.g., 'Initial Entry Training').
+
+    Blocks reference a tier by its stable `key` (TradocBlock.tier == TradocTier.key).
+    Fully manageable: add/edit/archive/reorder from the TRADOC manage UI.
+    """
+
+    __tablename__ = "tradoc_tiers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(32), unique=True)  # stable slug, referenced by blocks
+    label: Mapped[str] = mapped_column(String(96))
+    subtitle: Mapped[Optional[str]] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    def __repr__(self):
+        return f"<TradocTier {self.key}: {self.label}>"
+
+
 class TradocBlock(Base):
     """A TRADOC training block (e.g., 'Theory & Medical'). Groups TradocItems."""
 
