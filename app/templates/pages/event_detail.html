@@ -48,21 +48,30 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         eventQuill = quill;
 
-        // Seed the editor from the hidden input rather than from server-rendered
-        // markup inside #editor-container. Use the SINGLE-ARG form of
-        // dangerouslyPasteHTML, which REPLACES the whole document. The two-arg
-        // (index, html) form inserts *after* Quill's initial empty paragraph,
-        // leaving a stray blank line at the top of the editor on every load.
-        var seedHtml = (document.getElementById('hidden-desc').value || '').trim();
+        // Normalize the description so blank lines can't compound across edits.
+        // Quill can leave/insert empty paragraphs (<p><br></p>) on load; without
+        // this, one extra blank line accumulated on every edit/save round-trip.
+        //  - collapse any run of >=2 consecutive empty paragraphs to a single one
+        //  - strip empty paragraphs at the very start and very end
+        function normalizeDesc(html) {
+            var s = html || '';
+            var EMPTY = '<p>(?:<br\\s*/?>|\\s|&nbsp;)*</p>';
+            s = s.replace(new RegExp('(?:' + EMPTY + '\\s*){2,}', 'gi'), '<p><br></p>');
+            s = s.replace(new RegExp('^(?:' + EMPTY + '\\s*)+', 'i'), '');
+            s = s.replace(new RegExp('(?:' + EMPTY + '\\s*)+$', 'i'), '');
+            return s;
+        }
+
+        // Seed the editor from the hidden input (already normalized) rather than
+        // from server-rendered markup inside #editor-container. Use the
+        // SINGLE-ARG form of dangerouslyPasteHTML, which REPLACES the document.
+        var seedHtml = normalizeDesc((document.getElementById('hidden-desc').value || '').trim());
         if (seedHtml) {
             quill.clipboard.dangerouslyPasteHTML(seedHtml);
         }
-
-        // Strip trailing empty paragraphs Quill leaves at the end of the doc so
-        // they don't compound across edits.
-        function normalizeDesc(html) {
-            return (html || '').replace(/(?:<p>(?:<br\s*\/?>|\s|&nbsp;)*<\/p>\s*)+$/i, '');
-        }
+        // Keep the hidden field in sync with the (normalized) rendered editor so
+        // an immediate save without edits doesn't drift.
+        document.getElementById('hidden-desc').value = normalizeDesc(quill.root.innerHTML);
 
         var catSelect = document.querySelector('select[name="category"]');
         if (catSelect) {
@@ -81,7 +90,6 @@ document.addEventListener("DOMContentLoaded", function() {
         quill.on('text-change', function() {
             document.getElementById('hidden-desc').value = normalizeDesc(quill.root.innerHTML);
         });
-        document.getElementById('hidden-desc').value = normalizeDesc(quill.root.innerHTML);
     }
 });
 

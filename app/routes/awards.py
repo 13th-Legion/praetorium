@@ -25,6 +25,16 @@ def _can_award(user: dict) -> bool:
     return bool(roles & AWARD_ROLES)
 
 
+def _can_award_gladius(user: dict) -> bool:
+    """Gladii / Dona Militaria are decorations — Command (or admin) only.
+
+    S1 and leaders can still grant certs / TRADOC sign-offs via _can_award,
+    but unit decorations are a command prerogative.
+    """
+    roles = set(user.get("roles", []))
+    return bool(roles & {"command", "admin"})
+
+
 def _get_awarder_name(user: dict, member=None) -> str:
     """Get display name for the person granting the award."""
     if member:
@@ -219,10 +229,10 @@ async def grant_cert(request: Request, db: AsyncSession = Depends(get_db)):
 @router.post("/gladius")
 @require_auth
 async def grant_gladius(request: Request, db: AsyncSession = Depends(get_db)):
-    """Award a Gladius (or other unit award) to a member."""
+    """Award a Gladius (or other unit award) to a member. Command only."""
     user = get_current_user(request)
-    if not _can_award(user):
-        raise HTTPException(status_code=403)
+    if not _can_award_gladius(user):
+        raise HTTPException(status_code=403, detail="Gladii are awarded by Command only")
 
     form = await request.form()
     member_id = int(form.get("member_id", 0))

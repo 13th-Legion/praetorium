@@ -4,7 +4,7 @@
 {% block content %}
 <div style="max-width:800px;margin:0 auto;">
     <h1>🏅 Award & Sign-off Dashboard</h1>
-    <p style="color:#aaa;margin-bottom:20px;">Directly award certifications, TRADOC sign-offs, and gladii to members.</p>
+    <p style="color:#aaa;margin-bottom:20px;">Directly award certifications and TRADOC sign-offs to members. Decorations (gladii, coronae, phalerae) are managed by Command under the Command menu.</p>
 
     <!-- Member Selector -->
     <div class="card" style="margin-bottom:20px;">
@@ -75,35 +75,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Gladius Award — full width -->
-    <div class="card" style="margin-bottom:24px;">
-        <h3 class="card-title">⚔️ Award Gladius</h3>
-        <div class="card-body">
-            <form hx-post="/api/awards/gladius" hx-target="#gladius-result" hx-swap="innerHTML">
-                <input type="hidden" name="member_id" id="gladius-member-id">
-                <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
-                    <div>
-                        <label class="edit-label">Award Type</label>
-                        <select name="award_name" class="edit-input">
-                            <option value="Gladius">⚔️ Gladius</option>
-                            <option value="Gladius Aurum">🥇 Gladius Aurum (Gold)</option>
-                            <option value="Gladius Argentum">🥈 Gladius Argentum (Silver)</option>
-                            <option value="Gladius Aes">🥉 Gladius Aes (Bronze)</option>
-                            <option value="Corona Civica">🌿 Corona Civica</option>
-                            <option value="Phalerae">🎖️ Phalerae</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="edit-label">Citation / Reason <span style="color:#c62828;">*</span></label>
-                        <input type="text" name="reason" class="edit-input" required placeholder="For exceptional performance at FTX...">
-                    </div>
-                </div>
-                <button hx-disabled-elt="this" type="submit" class="btn-award" style="background:#d4a537;">Award</button>
-                <div id="gladius-result" style="margin-top:8px;"></div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <style>
@@ -131,7 +102,6 @@ function updateMemberStatus(memberId) {
     // Set member ID on all forms
     document.getElementById('tradoc-member-id').value = memberId;
     document.getElementById('cert-member-id').value = memberId;
-    document.getElementById('gladius-member-id').value = memberId;
 
     // Fetch member status
     htmx.ajax('GET', '/api/awards/member/' + memberId + '/status', {target: '#member-status', swap: 'innerHTML'}).then(function() {

@@ -626,19 +626,30 @@ def _parse_blocks_form(form) -> list[int]:
     return sorted(out)
 
 
-_TRAILING_EMPTY_P = re.compile(r"(?:<p>(?:<br\s*/?>|\s|&nbsp;)*</p>\s*)+$", re.IGNORECASE)
+_EMPTY_P = r"<p>(?:<br\s*/?>|\s|&nbsp;)*</p>"
+_CONSECUTIVE_EMPTY_P = re.compile(r"(?:%s\s*){2,}" % _EMPTY_P, re.IGNORECASE)
+_LEADING_EMPTY_P = re.compile(r"^(?:%s\s*)+" % _EMPTY_P, re.IGNORECASE)
+_TRAILING_EMPTY_P = re.compile(r"(?:%s\s*)+$" % _EMPTY_P, re.IGNORECASE)
 
 
 def _clean_description(html: str) -> str:
     """Normalize a rich-text description before storing.
 
-    Strips trailing empty paragraphs (``<p><br></p>``) that the Quill editor
-    tends to leave at the end of the document. Without this, an extra blank
-    line accumulated on every edit/save round-trip.
+    The Quill editor can leave or insert empty paragraphs (``<p><br></p>``),
+    and without normalization one extra blank line accumulated on every
+    edit/save round-trip. This:
+      - collapses any run of >=2 consecutive empty paragraphs to a single one
+      - strips empty paragraphs at the very start and very end
+    Blank lines the user intentionally put *between* content are preserved
+    (a single empty paragraph is left alone).
     """
     if not html:
         return ""
-    return _TRAILING_EMPTY_P.sub("", html.strip()).strip()
+    s = html.strip()
+    s = _CONSECUTIVE_EMPTY_P.sub("<p><br></p>", s)
+    s = _LEADING_EMPTY_P.sub("", s)
+    s = _TRAILING_EMPTY_P.sub("", s)
+    return s.strip()
 
 
 def _parse_mil_datetime(date_str: str, time_str: str = "") -> datetime:
