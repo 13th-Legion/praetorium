@@ -49,13 +49,13 @@ document.addEventListener("DOMContentLoaded", function() {
         eventQuill = quill;
 
         // Seed the editor from the hidden input rather than from server-rendered
-        // markup inside #editor-container. Rendering the description directly in
-        // the div meant Quill parsed the template's surrounding indentation
-        // whitespace as text nodes and converted them into empty <p><br></p>
-        // paragraphs — one extra blank line accumulated on every save/reload.
+        // markup inside #editor-container. Use the SINGLE-ARG form of
+        // dangerouslyPasteHTML, which REPLACES the whole document. The two-arg
+        // (index, html) form inserts *after* Quill's initial empty paragraph,
+        // leaving a stray blank line at the top of the editor on every load.
         var seedHtml = (document.getElementById('hidden-desc').value || '').trim();
         if (seedHtml) {
-            quill.clipboard.dangerouslyPasteHTML(0, seedHtml);
+            quill.clipboard.dangerouslyPasteHTML(seedHtml);
         }
 
         // Strip trailing empty paragraphs Quill leaves at the end of the doc so
