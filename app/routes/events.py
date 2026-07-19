@@ -626,6 +626,21 @@ def _parse_blocks_form(form) -> list[int]:
     return sorted(out)
 
 
+_TRAILING_EMPTY_P = re.compile(r"(?:<p>(?:<br\s*/?>|\s|&nbsp;)*</p>\s*)+$", re.IGNORECASE)
+
+
+def _clean_description(html: str) -> str:
+    """Normalize a rich-text description before storing.
+
+    Strips trailing empty paragraphs (``<p><br></p>``) that the Quill editor
+    tends to leave at the end of the document. Without this, an extra blank
+    line accumulated on every edit/save round-trip.
+    """
+    if not html:
+        return ""
+    return _TRAILING_EMPTY_P.sub("", html.strip()).strip()
+
+
 def _parse_mil_datetime(date_str: str, time_str: str = "") -> datetime:
     """Parse a date string + optional HHMM military time into a naive CT datetime.
 
@@ -1557,7 +1572,7 @@ async def create_event(request: Request):
     title = form.get("title", "").strip()
     category = form.get("category", "other")
     location = form.get("location", "").strip() or None
-    description = form.get("description", "").strip() or None
+    description = _clean_description(form.get("description", "")) or None
     # PP-225: multi-select TRADOC blocks. Accept the new multi-value
     # training_blocks[] (preferred) and fall back to the legacy single field.
     training_blocks = _parse_blocks_form(form)
@@ -1694,7 +1709,9 @@ async def edit_event(request: Request, event_id: int):
 
     import logging
     logger = logging.getLogger("events.edit")
-    form_dict = {k: form[k] for k in form}
+    # Log field keys + truncated values (descriptions can be huge, e.g. pasted
+    # base64 images) so the log stays readable.
+    form_dict = {k: (str(form[k])[:120] + "…" if len(str(form[k])) > 120 else form[k]) for k in form}
     logger.warning(f"EDIT event_id={event_id} form={form_dict}")
 
     async with async_session() as db:
@@ -1728,7 +1745,7 @@ async def edit_event(request: Request, event_id: int):
             event.location = form["location"].strip() or None
         # Description is editable by admins AND the assigned instructor.
         if form.get("description") is not None:
-            event.description = form["description"].strip() or None
+            event.description = _clean_description(form["description"]) or None
         if _admin and form.get("date_start_date"):
             try:
                 event.date_start = _parse_mil_datetime(
@@ -1760,9 +1777,13 @@ async def edit_event(request: Request, event_id: int):
             event.rsvp_enabled = form.get("rsvp_enabled") == "on"
         if _admin and form.get("rsvp_deadline_date"):
             try:
+                # A deadline is an end-of-window: if no time is given, default
+                # to 2359 (end of that day) rather than 0000 (start of day),
+                # which is what users intuitively expect from a "deadline date".
+                _dl_time = form.get("rsvp_deadline_time", "").strip() or "2359"
                 event.rsvp_deadline = _parse_mil_datetime(
                     form["rsvp_deadline_date"].strip(),
-                    form.get("rsvp_deadline_time", "").strip()
+                    _dl_time
                 )
             except ValueError:
                 pass

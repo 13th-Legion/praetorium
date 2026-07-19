@@ -47,7 +47,23 @@ document.addEventListener("DOMContentLoaded", function() {
             modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
         });
         eventQuill = quill;
-        
+
+        // Seed the editor from the hidden input rather than from server-rendered
+        // markup inside #editor-container. Rendering the description directly in
+        // the div meant Quill parsed the template's surrounding indentation
+        // whitespace as text nodes and converted them into empty <p><br></p>
+        // paragraphs — one extra blank line accumulated on every save/reload.
+        var seedHtml = (document.getElementById('hidden-desc').value || '').trim();
+        if (seedHtml) {
+            quill.clipboard.dangerouslyPasteHTML(0, seedHtml);
+        }
+
+        // Strip trailing empty paragraphs Quill leaves at the end of the doc so
+        // they don't compound across edits.
+        function normalizeDesc(html) {
+            return (html || '').replace(/(?:<p>(?:<br\s*\/?>|\s|&nbsp;)*<\/p>\s*)+$/i, '');
+        }
+
         var catSelect = document.querySelector('select[name="category"]');
         if (catSelect) {
             catSelect.addEventListener('change', function(e) {
@@ -63,9 +79,9 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         quill.on('text-change', function() {
-            document.getElementById('hidden-desc').value = quill.root.innerHTML;
+            document.getElementById('hidden-desc').value = normalizeDesc(quill.root.innerHTML);
         });
-        document.getElementById('hidden-desc').value = quill.root.innerHTML;
+        document.getElementById('hidden-desc').value = normalizeDesc(quill.root.innerHTML);
     }
 });
 
@@ -618,9 +634,7 @@ function insertTradocAgenda() {
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Description</label>
                 <input type="hidden" name="description" id="hidden-desc" value="{{ event.description or '' }}">
-                <div id="editor-container" style="background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;min-height:100px;">
-                    {{ event.description | safe if event.description else '' }}
-                </div>
+                <div id="editor-container" style="background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;min-height:100px;"></div>
             </div>
             {% if is_admin %}
             <div style="margin-bottom:16px;">
