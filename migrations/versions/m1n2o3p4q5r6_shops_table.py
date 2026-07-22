@@ -52,7 +52,7 @@ def upgrade():
         ("S2", "S2 — Intelligence & Security", "S2 — Intel & Security", "🔍", "s2", "s2", False, 2,
          "Area studies, threat analysis, OPSEC, and security. Produces the intel products "
          "that inform planning and keep the unit sharp."),
-        ("S3", "S3 — Operations & Training", "S3 — Ops & Training", "⚔️", "s3", "s3,leader", True, 3,
+        ("S3", "S3 — Operations & Training", "S3 — Operations & Training", "⚔️", "s3", "s3,leader", True, 3,
          "Plans and runs FTXs and training: event building, TRADOC blocks, weapons "
          "qualification, land nav, and attendance tracking. Where the training schedule "
          "comes to life."),
