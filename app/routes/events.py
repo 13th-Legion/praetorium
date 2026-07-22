@@ -272,10 +272,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
     when the caller has already atomically set warno_issued_at in the same txn.
     """
     import httpx as _httpx
-    import smtplib
     import logging
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
     from datetime import datetime as _dt
     from sqlalchemy import update as _sa_update
 
@@ -408,39 +405,18 @@ async def _activate_warno(db, event, *, already_claimed=False):
 </div>
 </body></html>"""
 
-            # Reuse ONE SMTP connection for every recipient. Opening a fresh
-            # starttls+login per member (the old behavior) meant ~40 sequential
-            # TLS handshakes inside the request — that's what hammered the droplet
-            # and triggered the gateway timeout on manual WARNO pushes.
-            _sent = 0
-            _smtp = None
-            try:
-                _smtp = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
-                _smtp.starttls()
-                if SMTP_PASS:
-                    _smtp.login(SMTP_USER, SMTP_PASS)
-                for member in warno_recipients:
-                    try:
-                        msg = MIMEMultipart("alternative")
-                        msg["Subject"] = f"⚡ WARNO — {event.title}{_subject_date_suffix(event.date_start, event.date_end)}"
-                        msg["From"] = SMTP_FROM
-                        msg["To"] = member.email
-                        msg.attach(MIMEText(html_body, "html"))
-                        _smtp.sendmail(SMTP_USER, [member.email], msg.as_string())
-                        _sent += 1
-                    except Exception as _warno_err:
-                        _warno_log.warning(
-                            f"WARNO email failed for {getattr(member, 'email', '?')} "
-                            f"(member {getattr(member, 'id', '?')}, {getattr(member, 'status', '?')}): {_warno_err}"
-                        )
-            finally:
-                if _smtp is not None:
-                    try:
-                        _smtp.quit()
-                    except Exception:
-                        pass
+            # Reuse ONE SMTP connection for every recipient (~40 members) via the
+            # shared email service's send_bulk — avoids the ~40 sequential TLS
+            # handshakes that used to hammer the droplet + time out the gateway.
+            from app.integrations import email as email_service
+            _warno_subj = f"⚡ WARNO — {event.title}{_subject_date_suffix(event.date_start, event.date_end)}"
+            _sent, _failed = email_service.send_bulk([
+                email_service.EmailMessage(to=m.email, subject=_warno_subj, html=html_body)
+                for m in warno_recipients if getattr(m, "email", None)
+            ])
             _warno_log.info(
                 f"WARNO '{event.title}': emailed {_sent}/{len(warno_recipients)} active+recruit members"
+                + (f" ({_failed} failed)" if _failed else "")
             )
     except Exception:
         pass  # Don't fail WARNO if email blast fails
@@ -1485,24 +1461,8 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
     # Background: send catch-up email
     if send_opord_catchup and catchup_email:
         def _send_opord_catchup_email():
-            import smtplib
-            from email.mime.multipart import MIMEMultipart
-            from email.mime.text import MIMEText
-            import logging
-            logger = logging.getLogger(__name__)
-            try:
-                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                    server.starttls()
-                    server.login(SMTP_USER, SMTP_PASS)
-                    msg = MIMEMultipart("alternative")
-                    msg["Subject"] = opord_subject
-                    msg["From"] = SMTP_FROM
-                    msg["To"] = catchup_email
-                    msg.attach(MIMEText(opord_html_body, "html"))
-                    server.send_message(msg)
-                logger.info(f"OPORD catch-up email sent to {catchup_email} for {evt_title}")
-            except Exception as e:
-                logger.error(f"OPORD catch-up email failed for {catchup_email}: {e}")
+            from app.integrations import email as email_service
+            email_service.send_email(catchup_email, opord_subject, opord_html_body)
 
         background_tasks.add_task(_send_opord_catchup_email)
 
@@ -1542,25 +1502,11 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 </div>
 </body></html>"""
 
+        _warno_subject = f"WARNO - {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
+
         def _send_warno_catchup_email():
-            import smtplib
-            from email.mime.multipart import MIMEMultipart
-            from email.mime.text import MIMEText
-            import logging
-            logger = logging.getLogger(__name__)
-            try:
-                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                    server.starttls()
-                    server.login(SMTP_USER, SMTP_PASS)
-                    msg = MIMEMultipart("alternative")
-                    msg["Subject"] = f"WARNO - {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
-                    msg["From"] = SMTP_FROM
-                    msg["To"] = catchup_email
-                    msg.attach(MIMEText(warno_html_body, "html"))
-                    server.send_message(msg)
-                logger.info(f"WARNO catch-up email sent to {catchup_email} for {evt_title}")
-            except Exception as e:
-                logger.error(f"WARNO catch-up email failed for {catchup_email}: {e}")
+            from app.integrations import email as email_service
+            email_service.send_email(catchup_email, _warno_subject, warno_html_body)
 
         background_tasks.add_task(_send_warno_catchup_email)
 
@@ -2722,33 +2668,18 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
 
         await db.commit()
 
-    # Background task: send emails with single SMTP connection
+    # Background task: send emails over a single SMTP connection (shared service).
+    _opord_subj = f"\U0001f4cb OPORD \u2014 {event_title}{_subject_date_suffix(event.date_start, event.date_end)}"
+
     def _send_opord_emails():
-        import smtplib
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
+        from app.integrations import email as email_service
+        sent, failed = email_service.send_bulk([
+            email_service.EmailMessage(to=addr, subject=_opord_subj, html=html_body)
+            for addr in recipient_emails
+        ])
         import logging
-        logger = logging.getLogger(__name__)
-        sent = 0
-        failed = 0
-        try:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.starttls()
-                server.login(SMTP_USER, SMTP_PASS)
-                for addr in recipient_emails:
-                    try:
-                        msg = MIMEMultipart("alternative")
-                        msg["Subject"] = f"\U0001f4cb OPORD \u2014 {event_title}{_subject_date_suffix(event.date_start, event.date_end)}"
-                        msg["From"] = SMTP_FROM
-                        msg["To"] = addr
-                        msg.attach(MIMEText(html_body, "html"))
-                        server.send_message(msg)
-                        sent += 1
-                    except Exception:
-                        failed += 1
-        except Exception as e:
-            logger.error(f"OPORD email blast SMTP failed: {e}")
-        logger.info(f"OPORD email blast complete: {sent} sent, {failed} failed \u2014 {event_title}")
+        logging.getLogger(__name__).info(
+            f"OPORD email blast complete: {sent} sent, {failed} failed — {event_title}")
 
     background_tasks.add_task(_send_opord_emails)
 
@@ -3186,9 +3117,6 @@ async def _auto_credit_tradoc(db, event: Event) -> str:
 @require_role("command", "leader", "s3", "admin")
 async def save_aar(request: Request, event_id: int):
     """Save or publish the After Action Review for a finalized FTX."""
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
 
     user = get_current_user(request)
     username = user.get("username", "unknown")
@@ -3277,22 +3205,12 @@ async def save_aar(request: Request, event_id: int):
                 esc = _ms.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
                 _summary_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">WHAT ACTUALLY HAPPENED</h3><p style="color:#333;font-size:14px;line-height:1.6;">{esc}</p>'
             html_body = f'<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;line-height:1.6;max-width:650px;margin:0 auto;"><div style="background:#1a1a2e;padding:20px;text-align:center;"><table style="margin:0 auto;" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:15px;"><img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70"></td><td style="vertical-align:middle;text-align:center;"><h1 style="color:#d4a537;margin:0;font-size:28px;">13TH LEGION</h1><p style="color:#ccc;margin:5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p></td><td style="vertical-align:middle;padding-left:15px;"><img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70"></td></tr></table></div><div style="padding:20px;"><h2 style="color:#1a1a2e;">\U0001f4cb AFTER ACTION REVIEW \u2014 {_evt_title}</h2><p><strong>Date:</strong> {_date_str}<br><strong>Location:</strong> {_evt_location}</p>{_intent_html}{_summary_html}{_items_html}<p style="margin-top:20px;"><strong>Full details on the Portal:</strong><br><a href="https://portal.13thlegion.org/events/{_evt_eid}" style="color:#6fa8dc;">https://portal.13thlegion.org/events/{_evt_eid}</a></p><p style="margin-top:20px;"><em>Nunquam Non Paratus,</em><br><strong>S3 \u2014 Operations & Training</strong><br>13th Legion, Texas State Militia</p></div><div style="background:#1a1a2e;padding:10px;text-align:center;font-size:11px;color:#888;">13th Legion \u00b7 Texas State Militia \u00b7 DFW</div></body></html>'
-            for email, _, _ in _attending_emails:
-                try:
-                    from email.mime.multipart import MIMEMultipart as _MMP
-                    from email.mime.text import MIMEText as _MT
-                    msg = _MMP("alternative")
-                    msg["Subject"] = f"\U0001f4cb AAR \u2014 {_evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
-                    msg["From"] = SMTP_FROM
-                    msg["To"] = email
-                    msg.attach(_MT(html_body, "html"))
-                    import smtplib as _smtp
-                    with _smtp.SMTP(SMTP_HOST, SMTP_PORT) as s:
-                        s.starttls()
-                        s.login(SMTP_USER, SMTP_PASS)
-                        s.sendmail(SMTP_USER, [email], msg.as_string())
-                except Exception:
-                    pass
+            from app.integrations import email as _email_service
+            _aar_subj = f"\U0001f4cb AAR \u2014 {_evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
+            _email_service.send_bulk([
+                _email_service.EmailMessage(to=email, subject=_aar_subj, html=html_body)
+                for email, _, _ in _attending_emails if email
+            ])
             try:
                 settings = get_settings()
                 talk_msg = f"\U0001f4cb **AFTER ACTION REVIEW \u2014 {_evt_title}**\n\n\U0001f4c5 {_date_str}\n"

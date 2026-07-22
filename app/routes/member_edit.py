@@ -610,9 +610,7 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 # the gap where hand-provisioned / legacy accounts never got a welcome email.
 
 def _build_credentials_email(first_name: str, nc_username: str, temp_password: str, to_email: str):
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
+    """Return (subject, html_body, text_body) for the credentials email."""
     subject = "13th Legion — Your Nextcloud & Portal Access"
     html_body = f"""<div style="font-family:sans-serif;max-width:600px;">
     <h2 style="color:#d4a537;">Welcome to the 13th Legion</h2>
@@ -654,20 +652,14 @@ Questions? Contact admin@13thlegion.org
 
 V/R,
 13th Legion S6"""
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SMTP_FROM
-    msg["To"] = to_email
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
-    return msg
+    return subject, html_body, text_body
 
 
 @router.post("/{member_id}/resend-credentials")
 @require_auth
 async def resend_credentials(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
     """Reset the member's NC password and email fresh credentials. S1/Command/Admin."""
-    import secrets, string, smtplib
+    import secrets, string
 
     user = get_current_user(request)
     if not _can_edit(user):
@@ -701,17 +693,14 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
         log.error(f"Resend creds: NC reset error for {member.nc_username}: {e}")
         raise HTTPException(status_code=502, detail=f"NC reset error: {e}")
 
-    # 2. Send the credentials email via Proton Bridge
-    msg = _build_credentials_email(member.first_name, member.nc_username, temp_password, member.email)
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-            s.starttls()
-            s.login(SMTP_USER, SMTP_PASS)
-            s.sendmail(SMTP_USER, [member.email], msg.as_string())
+    # 2. Send the credentials email via the shared email service (Proton Bridge)
+    from app.integrations import email as email_service
+    subject, html_body, text_body = _build_credentials_email(
+        member.first_name, member.nc_username, temp_password, member.email)
+    if email_service.send_email(member.email, subject, html_body, text=text_body):
         log.info(f"Resent credentials to {member.email} for {member.nc_username} by {user.get('username')}")
-    except Exception as e:
-        log.error(f"Resend creds: NC reset OK but email failed for {member.email}: {e}")
-        raise HTTPException(status_code=502, detail=f"Password was reset but email failed: {e}")
+    else:
+        raise HTTPException(status_code=502, detail="Password was reset but email failed to send")
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"/api/members/{member_id}/edit?creds_sent=1", status_code=303)
