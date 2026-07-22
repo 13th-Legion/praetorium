@@ -37,18 +37,25 @@ echo
 #    code/schema drift). Fail the deploy if the migration fails.
 echo "→ Backing up database before migration..."
 # pg_dump needs PGPASSWORD (sourced from the container's own env) — without it
-# the dump silently produces an empty file. Verify the gzip is non-trivial
-# (>1KB) and ABORT the deploy if the backup looks empty, so we never migrate
-# without a real restore point.
-BK="/root/praetorium-predeploy-\$(date +%Y%m%d-%H%M%S).sql.gz"
-ssh "$SERVER" "PW=\$(docker exec praetorium-db printenv POSTGRES_PASSWORD); \
-    docker exec -e PGPASSWORD=\"\$PW\" praetorium-db pg_dump -U praetorium praetorium | gzip > $BK; \
-    SZ=\$(stat -c%s $BK 2>/dev/null || echo 0); \
-    echo \"backup size: \$SZ bytes\"; \
-    ls -t /root/praetorium-predeploy-*.sql.gz | tail -n +6 | xargs -r rm; \
-    [ \"\$SZ\" -gt 1024 ]" \
-    && echo "   DB backup OK ($BK, keeps last 5)" \
-    || { echo "❌ DB backup empty/failed — aborting deploy before migration."; exit 1; }
+# the dump silently produces an empty file. Run the whole thing remotely via a
+# heredoc (no fragile nested SSH quoting), verify the gzip is >1KB, and ABORT
+# the deploy if the backup looks empty so we never migrate without a restore
+# point.
+if ssh "$SERVER" 'bash -s' <<'REMOTE_BACKUP'
+set -e
+BK="/root/praetorium-predeploy-$(date +%Y%m%d-%H%M%S).sql.gz"
+PW=$(docker exec praetorium-db printenv POSTGRES_PASSWORD)
+docker exec -e PGPASSWORD="$PW" praetorium-db pg_dump -U praetorium praetorium | gzip > "$BK"
+SZ=$(stat -c%s "$BK" 2>/dev/null || echo 0)
+echo "   backup: $BK ($SZ bytes)"
+ls -t /root/praetorium-predeploy-*.sql.gz | tail -n +6 | xargs -r rm
+[ "$SZ" -gt 1024 ]
+REMOTE_BACKUP
+then
+    echo "   DB backup OK (keeps last 5)"
+else
+    echo "❌ DB backup empty/failed — aborting deploy before migration."; exit 1
+fi
 echo
 
 echo "→ Applying Alembic migrations (alembic upgrade head)..."
