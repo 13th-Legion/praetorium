@@ -229,7 +229,10 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
             if not teams[team_name]:
                 del teams[team_name]
 
-    sorted_teams = sorted(teams.items(), key=lambda t: TEAM_ORDER.get(t[0], 99))
+    from app.services import teams as _teams
+    _all_team_meta = await _teams.all_teams(include_archived=True)
+    _team_order = {t.name: t.sort_order for t in _all_team_meta}
+    sorted_teams = sorted(teams.items(), key=lambda t: _team_order.get(t[0], 99))
 
     for team_name, team_members in sorted_teams:
         team_members.sort(key=lambda m, tn=team_name: _sort_key(m, tn))
@@ -315,10 +318,12 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
             if tl_row:
                 renameable_teams = {tl_row}
 
+    team_emojis = {t.name: (t.emoji or "⚔️") for t in _all_team_meta}
     return templates.TemplateResponse("pages/roster.html", {
         "request": request,
         "user": user,
         "teams": sorted_teams,
+        "team_emojis": team_emojis,
         "hq_members": hq_members,
         "view_mode": view_mode,
         "rank_abbr": RANK_ABBR,
@@ -384,9 +389,22 @@ async def member_map(request: Request, db: AsyncSession = Depends(get_db)):
         "members": active_data,
         "inactive": inactive_data
     }
-        
+
+    # DB-backed team display config (colors + ordered geo list) so the map
+    # honors renames without a code edit.
+    from app.services import teams as _teams
+    _all = await _teams.all_teams()
+    team_colors = {t.name: (t.color or "#666") for t in _all}
+    team_colors["None"] = "#666"
+    geo_list = [t.name for t in sorted(
+        [x for x in _all if x.geo_zone_index is not None],
+        key=lambda x: x.geo_zone_index,
+    )]
+
     return templates.TemplateResponse("pages/map.html", {
         "request": request, 
         "user": user,
-        "map_data": map_data
+        "map_data": map_data,
+        "team_colors": team_colors,
+        "geo_list": geo_list,
     })

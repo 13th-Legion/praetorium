@@ -52,12 +52,9 @@
   <label><input type="checkbox" id="toggleBearingLines"> Bearing Lines</label>
   <label><input type="checkbox" id="toggleHQRings" checked> HQ Rings</label>
   <span style="color:#555; margin: 0 5px;">|</span>
-  <label><input type="checkbox" class="team-toggle" data-team="Aquila" checked> <span style="color:#22c55e">● Aquila</span></label>
-  <label><input type="checkbox" class="team-toggle" data-team="Bravo" checked> <span style="color:#3b82f6">● Bravo</span></label>
-  <label><input type="checkbox" class="team-toggle" data-team="Charlie" checked> <span style="color:#ef4444">● Charlie</span></label>
-  <label><input type="checkbox" class="team-toggle" data-team="Delta" checked> <span style="color:#eab308">● Delta</span></label>
-  <label><input type="checkbox" class="team-toggle" data-team="Echo" checked> <span style="color:#f97316">● Echo</span></label>
-  <label><input type="checkbox" class="team-toggle" data-team="Foxtrot" checked> <span style="color:#8b5cf6">● Foxtrot</span></label>
+  {% for tname in geo_list %}
+  <label><input type="checkbox" class="team-toggle" data-team="{{ tname }}" checked> <span style="color:{{ team_colors.get(tname, '#666') }}">● {{ tname }}</span></label>
+  {% endfor %}
 </div>
 
 <div style="position: relative;">
@@ -66,12 +63,11 @@
   <div class="legend">
     <h4 onclick="document.getElementById('legendBody').classList.toggle('collapsed'); document.getElementById('legendBody').classList.toggle('expanded'); this.querySelector('.toggle').textContent = document.getElementById('legendBody').classList.contains('collapsed') ? '▶' : '▼';">Legend <span class="toggle">▼</span></h4>
     <div id="legendBody" class="legend-body">
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Aquila (N) — 330°–30°</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Bravo (NE) — 30°–90°</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Charlie (E/SE) — 90°–150°</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Delta (S) — 150°–210°</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Echo (SW/W) — 210°–270°</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Foxtrot (NW) — 270°–330°</div>
+      {% set _dirs = ["N", "NE", "E/SE", "S", "SW/W", "NW"] %}
+      {% set _ranges = ["330°–30°", "30°–90°", "90°–150°", "150°–210°", "210°–270°", "270°–330°"] %}
+      {% for tname in geo_list %}
+      <div class="legend-item"><div class="legend-dot" style="background:{{ team_colors.get(tname, '#666') }}"></div> {{ tname }} ({{ _dirs[loop.index0] }}) — {{ _ranges[loop.index0] }}</div>
+      {% endfor %}
       <div class="legend-item"><div class="legend-dot" style="background:#666"></div> Inactive</div>
       <div class="legend-item"><div class="legend-dot" style="background:#d4a537"></div> Center Point</div>
       <div class="legend-item" style="margin-top:6px; color:#d4a537; font-size:11px;">◌ Gold ring = HQ element</div>
@@ -86,17 +82,9 @@ const MAP_DATA = {{ map_data | tojson }};
 
 const INACTIVE = MAP_DATA.inactive;
 
-const TEAM_COLORS = {
-  "Aquila": "#22c55e",
-  "Bravo": "#3b82f6",
-  "Charlie": "#ef4444",
-  "Delta": "#eab308",
-  "Echo": "#f97316",
-  "Foxtrot": "#8b5cf6",
-  "None": "#666",
-};
+const TEAM_COLORS = {{ team_colors | tojson }};
 
-const TEAM_LIST = ["Aquila", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"];
+const TEAM_LIST = {{ geo_list | tojson }};
 const TEAM_DIRS = ["N", "NE", "E/SE", "S", "SW/W", "NW"];
 
 // Zone config: 6 equal 60° slices, Alpha starts at 330° (i.e. 330°–30° = North)

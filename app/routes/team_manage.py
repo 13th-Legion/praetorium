@@ -15,6 +15,8 @@ from app.constants import (
     TEAM_DESIGNATION, TEAM_TALK_TOKENS, TEAM_ORDER,
     COMMAND_ROLES, S1_ROLES,
 )
+from app.models.team import Team
+from app.services import teams as teams_svc
 from config import get_settings
 
 log = logging.getLogger(__name__)
@@ -139,12 +141,13 @@ async def rename_team_submit(request: Request, db: AsyncSession = Depends(get_db
     await db.execute(
         update(Member).where(Member.team == old_name).values(team=new_name)
     )
+    # 2. Persist the rename in the teams table (single source of truth). This
+    #    survives restarts — no more in-memory constant mutation.
+    await db.execute(
+        update(Team).where(Team.name == old_name).values(name=new_name)
+    )
     await db.commit()
-
-    # 2. Update TEAM_ORDER at runtime
-    if old_name in TEAM_ORDER:
-        order_val = TEAM_ORDER.pop(old_name)
-        TEAM_ORDER[new_name] = order_val
+    teams_svc.invalidate()  # drop cache so the new name shows immediately
 
     # 3. Rename NC Talk channel
     talk_token = TEAM_TALK_TOKENS.get(old_name)
@@ -160,7 +163,6 @@ async def rename_team_submit(request: Request, db: AsyncSession = Depends(get_db
                 )
                 if r.status_code == 200:
                     log.info(f"Renamed NC Talk room {talk_token} → T1 · {new_name}")
-                    TEAM_TALK_TOKENS[new_name] = TEAM_TALK_TOKENS.pop(old_name)
                 else:
                     log.warning(f"NC Talk rename failed: {r.status_code}")
         except Exception as e:

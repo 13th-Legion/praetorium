@@ -133,16 +133,7 @@
                 {% for team_name, members in teams %}
                 <tr class="team-header-row">
                     <td colspan="6">
-                        <span class="team-icon">
-                            {% if team_name == "Headquarters" %}🏛️
-                            {% elif team_name == "Aquila" %}🦅
-                            {% elif team_name == "Bravo" %}🅱️
-                            {% elif team_name == "Charlie" %}©️
-                            {% elif team_name == "Delta" %}🔺
-                            {% elif team_name == "Echo" %}📢
-                            {% elif team_name == "Foxtrot" %}🦊
-                            {% else %}⚔️{% endif %}
-                        </span>
+                        <span class="team-icon">{{ team_emojis.get(team_name, "⚔️") }}</span>
                         {{ team_name }}
                         <span class="team-count">({{ members|length }})</span>
                         {% if team_name in renameable_teams %}<a href="/team/rename" title="Rename team" style="color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem; text-decoration: none; opacity: 0.5; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✏️</a>{% endif %}

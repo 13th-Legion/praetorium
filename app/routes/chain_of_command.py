@@ -179,8 +179,21 @@ async def _build_org(db: AsyncSession) -> dict:
         })
 
     # ── Fireteams (geographic) ──
+    # DB-backed team list (single source of truth) so renames persist. Zone
+    # direction labels are positional by geo_zone_index.
+    from app.services import teams as _teams
+    _zone_labels = [
+        "North (330°–30°)", "Northeast (30°–90°)", "East/SE (90°–150°)",
+        "South (150°–210°)", "SW/West (210°–270°)", "Northwest (270°–330°)",
+    ]
+    _geo = [t for t in await _teams.all_teams() if t.geo_zone_index is not None]
+    _geo.sort(key=lambda t: t.geo_zone_index)
+    _team_defs = [
+        (t.name, _zone_labels[t.geo_zone_index] if t.geo_zone_index < len(_zone_labels) else "")
+        for t in _geo
+    ] or TEAM_DEFS
     teams = []
-    for team_key, zone in TEAM_DEFS:
+    for team_key, zone in _team_defs:
         tmembers = [m for m in members if (m.team or "") == team_key]
         # HQ-element members keep their geo team as a zone assignment but must not
         # hold a geo fireteam TL/ATL slot (their leadership_title reflects the HQ

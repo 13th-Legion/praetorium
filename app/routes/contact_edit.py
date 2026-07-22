@@ -157,7 +157,8 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
             if lat is not None:
                 member.latitude = lat
                 member.longitude = lon
-                geo_team, bearing = assign_zone(lat, lon)
+                from app.services import teams as _teams
+                geo_team, bearing = assign_zone(lat, lon, await _teams.geo_zone_teams())
                 if member.team_locked:
                     log.info(f"Contact edit: {member.first_name} {member.last_name} team LOCKED to {member.team} — coords updated, geo suggests {geo_team} but not applied")
                 elif geo_team != member.team and geo_team:

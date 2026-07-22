@@ -31,3 +31,4 @@ from app.models.newsletter import (  # noqa: F401
 from app.models.newsletter_section import NewsletterSectionTemplate  # noqa: F401
 from app.models.org import ShopReporting, ShopSignupRequest  # noqa: F401
 from app.models.ribbons import RibbonCatalog, MemberRibbon  # noqa: F401
+from app.models.team import Team  # noqa: F401

@@ -117,18 +117,24 @@ def calc_bearing(lat: float, lon: float) -> float:
     return (b + 360) % 360
 
 
-def bearing_to_zone(bearing: float) -> str:
-    """Convert a bearing to a zone team name."""
+def bearing_to_zone(bearing: float, geo_teams: list[str] | None = None) -> str:
+    """Convert a bearing to a zone team name.
+
+    geo_teams: ordered list of geo-zone team names (index 0 = North slice at
+    330°..30°). Pass the DB-derived list from teams.geo_zone_teams() so renames
+    are honored; falls back to the constants seed when omitted.
+    """
+    teams = geo_teams or GEO_ZONE_TEAMS
     idx = int(((bearing - GEO_ZONE_START + 360) % 360) / GEO_ZONE_SIZE)
-    return GEO_ZONE_TEAMS[idx]
+    return teams[idx]
 
 
-def assign_zone(lat: float, lon: float) -> tuple[str, float]:
+def assign_zone(lat: float, lon: float, geo_teams: list[str] | None = None) -> tuple[str, float]:
     """Assign a geographic zone based on coordinates.
-    Returns (team_name, bearing).
+    Returns (team_name, bearing). Pass geo_teams (DB-derived) to honor renames.
     """
     b = calc_bearing(lat, lon)
-    return bearing_to_zone(b), b
+    return bearing_to_zone(b, geo_teams), b
 
 
 import logging
