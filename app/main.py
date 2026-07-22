@@ -28,9 +28,11 @@ async def lifespan(app: FastAPI):
     try:
         from app.services import ranks as _ranks_warm
         _ranks_warm.warm()
+        from app.services import shops as _shops_warm
+        _shops_warm.warm()
     except Exception as _e:
         import logging as _lg
-        _lg.getLogger("uvicorn.error").warning(f"ranks warm skipped: {_e}")
+        _lg.getLogger("uvicorn.error").warning(f"service warm skipped: {_e}")
     from app.newsletter_scheduler import newsletter_scheduler_loop
     # Seed newsletter section templates (idempotent insert-if-missing).
     try:

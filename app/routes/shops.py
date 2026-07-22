@@ -14,6 +14,7 @@ from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
 from app.models.org import ShopSignupRequest
+from app.services import shops as _shops
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -24,31 +25,11 @@ router = APIRouter(prefix="/shops", tags=["shops"])
 # not re-enforce).
 MAX_SHOPS = 2
 
-# Shop catalog for the sign-up page (canonical key -> display + description).
-SHOP_SIGNUP_CATALOG = [
-    {"key": "S1", "name": "S1 — Personnel & Administration", "icon": "📋",
-     "desc": "Recruiting pipeline, onboarding, roster and records, promotions, "
-             "awards and ribbons, documents, and unit communications. The admin "
-             "backbone of the company."},
-    {"key": "S2", "name": "S2 — Intelligence & Security", "icon": "🔍",
-     "desc": "Area studies, threat analysis, OPSEC, and security. Produces the "
-             "intel products that inform planning and keep the unit sharp."},
-    {"key": "S3", "name": "S3 — Operations & Training", "icon": "⚔️",
-     "desc": "Plans and runs FTXs and training: event building, TRADOC blocks, "
-             "weapons qualification, land nav, and attendance tracking. Where the "
-             "training schedule comes to life."},
-    {"key": "S4", "name": "S4 — Logistics", "icon": "📦",
-     "desc": "Supply, equipment, transport, and sustainment. Makes sure the unit "
-             "has the gear and support it needs in the field."},
-    {"key": "S5", "name": "S5 — Medical", "icon": "🩹",
-     "desc": "Combat lifesaver and medical training, aid planning, and health/"
-             "safety oversight for training events."},
-    {"key": "S6", "name": "S6 — Communications", "icon": "📡",
-     "desc": "Radio (HAM/GMRS) and digital comms, nets and frequency planning, "
-             "and the IT/portal infrastructure that ties everything together."},
-]
-
-_SHOP_NAME = {s["key"]: s["name"] for s in SHOP_SIGNUP_CATALOG}
+# Shop catalog / metadata / RBAC now come from the shops service (DB-backed
+# SSoT). Call the service accessors so edits (via AdminCP later) take effect
+# without a code change. _SHOP_NAME kept as a live helper.
+def _shop_name_map() -> dict[str, str]:
+    return _shops.name_map()
 
 
 def _held_shop_keys(billets: str | None) -> set[str]:
@@ -78,30 +59,10 @@ async def _current_member(request: Request, db: AsyncSession) -> Member | None:
     res = await db.execute(select(Member).where(Member.nc_username == uname))
     return res.scalar_one_or_none()
 
-# Shop RBAC: which roles can access which shop
-SHOP_ACCESS = {
-    "s1": {"s1", "command", "admin"},
-    "s2": {"s2", "command", "admin"},
-    "s3": {"s3", "command", "admin", "leader"},
-    "s4": {"s4", "command", "admin"},
-    "s5": {"s5", "command", "admin"},
-    "s6": {"s6", "command", "admin"},
-}
-
-SHOP_META = {
-    "s1": {"name": "S1 — Personnel", "icon": "📋", "has_dashboard": True},
-    "s2": {"name": "S2 — Intelligence & Security", "icon": "🔍", "has_dashboard": False},
-    "s3": {"name": "S3 — Operations & Training", "icon": "⚔️", "has_dashboard": True},
-    "s4": {"name": "S4 — Logistics", "icon": "📦", "has_dashboard": False},
-    "s5": {"name": "S5 — Medical", "icon": "🩹", "has_dashboard": False},
-    "s6": {"name": "S6 — Comms", "icon": "📡", "has_dashboard": False},
-}
-
-
 def _check_shop_access(user: dict, shop: str) -> bool:
-    """Check if user has access to the given shop."""
+    """Check if user has access to the given shop (by role key, e.g. 's3')."""
     user_roles = set(user.get("roles", []))
-    required = SHOP_ACCESS.get(shop, set())
+    required = _shops.access_roles(shop)
     return bool(user_roles & required)
 
 
@@ -131,7 +92,11 @@ async def shop_s3(request: Request, db: AsyncSession = Depends(get_db)):
 # ─── Shop sign-up (patched members request to join a shop) ──────────────────
 
 REVIEWER_ROLES = {"command", "admin"}
-SHOP_ROLE = {"S1": "s1", "S2": "s2", "S3": "s3", "S4": "s4", "S5": "s5", "S6": "s6"}
+
+
+def _shop_role_map() -> dict[str, str]:
+    """{'S1': 's1', ...} from the shops service."""
+    return _shops.role_map()
 
 
 def _can_review_shop(user: dict, shop_key: str) -> bool:
@@ -139,7 +104,7 @@ def _can_review_shop(user: dict, shop_key: str) -> bool:
     roles = set(user.get("roles", []))
     if roles & REVIEWER_ROLES:
         return True
-    return SHOP_ROLE.get(shop_key) in roles
+    return _shop_role_map().get(shop_key) in roles
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -168,13 +133,13 @@ async def shop_signup_page(request: Request, db: AsyncSession = Depends(get_db))
     return templates.TemplateResponse("pages/shop_signup.html", {
         "request": request,
         "user": user,
-        "shops": SHOP_SIGNUP_CATALOG,
+        "shops": _shops.signup_catalog(),
         "patched": patched,
         "held": held,
         "pending_keys": pending_keys,
         "at_max": at_max,
         "max_shops": MAX_SHOPS,
-        "can_review": bool(member and set(user.get("roles", [])) & (REVIEWER_ROLES | set(SHOP_ROLE.values()))),
+        "can_review": bool(member and set(user.get("roles", [])) & (REVIEWER_ROLES | set(_shop_role_map().values()))),
     })
 
 
@@ -192,12 +157,12 @@ async def submit_shop_signup(request: Request, db: AsyncSession = Depends(get_db
 
     if not _is_patched(member):
         return _err("Shop sign-up is limited to patched members.")
-    if shop_key not in _SHOP_NAME:
+    if shop_key not in _shop_name_map():
         return _err("Unknown shop.")
 
     held = _held_shop_keys(member.primary_billet)
     if shop_key in held:
-        return _err(f"You are already a member of {_SHOP_NAME[shop_key]}.")
+        return _err(f"You are already a member of {_shop_name_map()[shop_key]}.")
     if len(held) >= MAX_SHOPS:
         return _err(f"You already hold the maximum of {MAX_SHOPS} shops. "
                     "Drop one before requesting another (see your shop lead or Command).")
@@ -211,7 +176,7 @@ async def submit_shop_signup(request: Request, db: AsyncSession = Depends(get_db
         ).limit(1)
     )
     if dup.first():
-        return _err(f"You already have a pending request for {_SHOP_NAME[shop_key]}.")
+        return _err(f"You already have a pending request for {_shop_name_map()[shop_key]}.")
 
     req = ShopSignupRequest(
         member_id=member.id, shop_key=shop_key, message=message, status="pending",
@@ -244,7 +209,7 @@ async def submit_shop_signup(request: Request, db: AsyncSession = Depends(get_db
             await create_notification(
                 db, m.id, "shop",
                 f"🏛️ Shop join request — {shop_key}",
-                body=f"{applicant} requested to join {_SHOP_NAME[shop_key]}.",
+                body=f"{applicant} requested to join {_shop_name_map()[shop_key]}.",
                 link="/shops/signup/review", icon="🏛️",
             )
     await db.commit()
@@ -263,8 +228,8 @@ async def shop_signup_review(request: Request, db: AsyncSession = Depends(get_db
     roles = set(user.get("roles", []))
     is_cmd = bool(roles & REVIEWER_ROLES)
     # Which shops may this user review?
-    reviewable = set(SHOP_ROLE.keys()) if is_cmd else {
-        k for k, r in SHOP_ROLE.items() if r in roles
+    reviewable = set(_shop_role_map().keys()) if is_cmd else {
+        k for k, r in _shop_role_map().items() if r in roles
     }
     if not reviewable:
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
@@ -289,7 +254,7 @@ async def shop_signup_review(request: Request, db: AsyncSession = Depends(get_db
     def _row(req, m):
         return {
             "id": req.id, "shop_key": req.shop_key,
-            "shop_name": _SHOP_NAME.get(req.shop_key, req.shop_key),
+            "shop_name": _shop_name_map().get(req.shop_key, req.shop_key),
             "member": f"{_ranks.abbr_map().get(m.rank_grade, '')} {m.last_name}, {m.first_name}".strip(),
             "callsign": m.callsign or "",
             "message": req.message or "",
@@ -353,7 +318,7 @@ async def _decide_shop_signup(request: Request, req_id: int, db: AsyncSession, a
         # Add the shop to the member's billets, then sync NC shop groups.
         held = _held_shop_keys(member.primary_billet)
         if req.shop_key not in held:
-            shop_name = _SHOP_NAME[req.shop_key]
+            shop_name = _shop_name_map()[req.shop_key]
             new_billet = f"{req.shop_key}: {shop_name.split('—',1)[-1].strip()}"
             old_billets = member.primary_billet
             billet_list = [b.strip() for b in (member.primary_billet or "").split(",") if b.strip()]
@@ -371,11 +336,11 @@ async def _decide_shop_signup(request: Request, req_id: int, db: AsyncSession, a
         await create_notification(
             db, req.member_id, "shop",
             "✅ Shop request accepted",
-            body=f"You\u2019ve been added to {_SHOP_NAME[req.shop_key]} by {reviewer}.",
+            body=f"You\u2019ve been added to {_shop_name_map()[req.shop_key]} by {reviewer}.",
             link="/profile", icon="✅",
         )
         await db.commit()
-        return HTMLResponse(f'<div class="su-decided su-ok">Accepted — {_SHOP_NAME[req.shop_key]} added.</div>')
+        return HTMLResponse(f'<div class="su-decided su-ok">Accepted — {_shop_name_map()[req.shop_key]} added.</div>')
     else:
         req.status = "declined"
         await db.commit()
@@ -383,7 +348,7 @@ async def _decide_shop_signup(request: Request, req_id: int, db: AsyncSession, a
             await create_notification(
                 db, req.member_id, "shop",
                 "Shop request declined",
-                body=f"Your request to join {_SHOP_NAME[req.shop_key]} was declined by {reviewer}."
+                body=f"Your request to join {_shop_name_map()[req.shop_key]} was declined by {reviewer}."
                      + (f" Note: {notes}" if notes else ""),
                 link="/shops/signup", icon="🚫",
             )
@@ -396,11 +361,11 @@ async def _decide_shop_signup(request: Request, req_id: int, db: AsyncSession, a
 async def shop_placeholder(request: Request, shop: str):
     """Placeholder for shops not yet built."""
     user = get_current_user(request)
-    if shop not in SHOP_META:
+    if shop not in _shops.meta_map():
         return HTMLResponse("<h2>Not Found</h2>", status_code=404)
     if not _check_shop_access(user, shop):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
-    meta = SHOP_META[shop]
+    meta = _shops.meta_map()[shop]
     return templates.TemplateResponse("pages/shop_placeholder.html", {
         "request": request,
         "user": user,

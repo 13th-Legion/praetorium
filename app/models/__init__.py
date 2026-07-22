@@ -34,3 +34,4 @@ from app.models.ribbons import RibbonCatalog, MemberRibbon  # noqa: F401
 from app.models.team import Team  # noqa: F401
 from app.models.webhook_event import WebhookEvent  # noqa: F401
 from app.models.rank import Rank  # noqa: F401
+from app.models.shop import Shop  # noqa: F401

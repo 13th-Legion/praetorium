@@ -21,6 +21,7 @@ from app.database import get_db, async_session
 from app.models.member import Member
 from app.models.org import ShopReporting
 from app.services import ranks as _ranks
+from app.services import shops as _shops
 
 log = logging.getLogger(__name__)
 
@@ -33,14 +34,10 @@ CONFIG_ROLES = ("command", "admin")
 # RANK_INSIGNIA / RANK_ORDER now come from the ranks service (DB-backed SSoT).
 # Kept as module-level names via functions so existing call sites read live data.
 
-SHOP_DEFS = [
-    ("S1", "S1 — Administration", "📋"),
-    ("S2", "S2 — Intelligence & Security", "🔍"),
-    ("S3", "S3 — Operations & Training", "⚔️"),
-    ("S4", "S4 — Logistics", "📦"),
-    ("S5", "S5 — Medical", "🏥"),
-    ("S6", "S6 — Communications", "📡"),
-]
+# SHOP_DEFS now comes from the shops service (DB-backed SSoT). Shape:
+# (key, canonical name, icon). Call _shop_defs() for the live list.
+def _shop_defs():
+    return [(s.key, s.name, s.icon) for s in _shops.all_shops()]
 
 TEAM_DEFS = [
     ("Aquila", "North (330°–30°)"),
@@ -104,7 +101,7 @@ async def _build_org(db: AsyncSession) -> dict:
 
     # ── Shops (parsed live from billets) ──
     shops = []
-    for prefix, name, emoji in SHOP_DEFS:
+    for prefix, name, emoji in _shop_defs():
         lead = None
         shop_members = []
         for m in members:
@@ -230,7 +227,7 @@ async def config_page(request: Request, db: AsyncSession = Depends(get_db)):
     reporting = {r.shop_key: r for r in rres.scalars().all()}
 
     rows = []
-    for prefix, name, emoji in SHOP_DEFS:
+    for prefix, name, emoji in _shop_defs():
         rep = reporting.get(prefix)
         rows.append({
             "prefix": prefix,
@@ -263,7 +260,7 @@ async def config_save(request: Request):
         rres = await db.execute(select(ShopReporting))
         reporting = {r.shop_key: r for r in rres.scalars().all()}
 
-        for prefix, _name, _emoji in SHOP_DEFS:
+        for prefix, _name, _emoji in _shop_defs():
             command_led = form.get(f"{prefix}_command_led") == "on"
             raw_rid = (form.get(f"{prefix}_reports_to") or "").strip()
             note = (form.get(f"{prefix}_note") or "").strip() or None
