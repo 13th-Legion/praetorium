@@ -21,22 +21,65 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.member import Member
-from app.models.training import MemberTradoc, MemberCertification, TradocItem
+from app.models.training import MemberTradoc, MemberCertification, TradocItem, Certification
 from app.models.weapons_qual import MemberWeaponsQual
 from app.models.events import Event, EventRSVP
 from app.models.schedule import EventScheduleBlock
 from app.models.rank_history import RankHistory
 
-# ── Cert id -> tab code ──────────────────────────────────────────────────────
-CERT_TAB = {6: "sabre", 2: "marksman", 1: "sharpshooter", 8: "equites"}
-# HAM cert ids in ascending class order -> device tier
-HAM_CERTS = [14, 15, 16]  # Technician, General, Extra
+import logging
+_log = logging.getLogger(__name__)
+
+# Auto-ribbon triggers are defined by STABLE NAMES, not row IDs. The
+# certifications/tradoc_items tables are admin-editable (add/edit/archive/
+# reorder), so a reseed or fresh environment reassigns auto-increment ids —
+# hardcoding ids (the old CERT_TAB={6:..}, LANDNAV_ITEMS={12,57}) silently
+# awarded the wrong tab or nothing. We resolve names -> current ids at derive
+# time and warn loudly if a name goes missing.
+CERT_TAB_NAMES = {
+    "Sabre": "sabre",
+    "Marksman": "marksman",
+    "Sharpshooter": "sharpshooter",
+    "Equites": "equites",
+}
+# HAM cert names in ascending class order -> device tier
+HAM_CERT_NAMES = ["HAM Technician", "HAM General", "HAM Extra"]
 # TRADOC item groups for supplemental quals (all required in group => qual)
-LANDNAV_ITEMS = {12, 57}          # Basic + Intermediate Land Navigation
-COMMS_ITEMS = {10, 53, 54}        # Radio Familiarity + Net Etiquette + Reports
-MEDICAL_ITEMS = {4}               # Block 1 Medical
+LANDNAV_ITEM_NAMES = {"Basic Land Navigation", "Intermediate Land Navigation"}
+COMMS_ITEM_NAMES = {"Radio Familiarity", "Net Etiquette", "Reports"}
+MEDICAL_ITEM_NAMES = {"Medical"}
 # TRADOC completion = all non-optional items in blocks 1-4 signed off.
 TRADOC_BLOCKS = {1, 2, 3, 4}
+
+
+async def _resolve_cert_ids(db: AsyncSession, names) -> dict:
+    """Map certification name -> id for the given names (case-insensitive)."""
+    rows = (await db.execute(select(Certification.id, Certification.name))).all()
+    by_name = {(n or "").strip().lower(): i for i, n in rows}
+    out = {}
+    for nm in names:
+        cid = by_name.get(nm.strip().lower())
+        if cid is None:
+            _log.warning("ribbon_derive: certification '%s' not found — "
+                         "auto-award for it is disabled until it exists.", nm)
+        else:
+            out[nm] = cid
+    return out
+
+
+async def _resolve_item_ids(db: AsyncSession, names) -> set:
+    """Resolve TRADOC item names -> id set (case-insensitive). Warns on misses."""
+    rows = (await db.execute(select(TradocItem.id, TradocItem.name))).all()
+    by_name = {(n or "").strip().lower(): i for i, n in rows}
+    out = set()
+    for nm in names:
+        iid = by_name.get(nm.strip().lower())
+        if iid is None:
+            _log.warning("ribbon_derive: TRADOC item '%s' not found — "
+                         "qual dependent on it cannot be earned.", nm)
+        else:
+            out.add(iid)
+    return out
 
 FTX_DEVICE_THRESHOLDS = [5, 10, 25, 50]  # devices earned at these attendance counts
 
@@ -77,11 +120,16 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
         select(MemberCertification.certification_id).where(MemberCertification.member_id == mid)
     )).scalars().all())
 
-    for cid, code in CERT_TAB.items():
-        if cid in cert_ids:
+    # Resolve trigger names -> current ids (reseed-proof).
+    cert_tab_by_name = await _resolve_cert_ids(db, CERT_TAB_NAMES.keys())
+    for nm, code in CERT_TAB_NAMES.items():
+        cid = cert_tab_by_name.get(nm)
+        if cid is not None and cid in cert_ids:
             out.append({"code": code, "device_count": 0, "awarded_at": None, "source": "auto"})
 
-    ham_devices = sum(1 for c in HAM_CERTS if c in cert_ids)
+    ham_by_name = await _resolve_cert_ids(db, HAM_CERT_NAMES)
+    ham_ids_ordered = [ham_by_name[n] for n in HAM_CERT_NAMES if n in ham_by_name]
+    ham_devices = sum(1 for c in ham_ids_ordered if c in cert_ids)
     if ham_devices:
         # base ribbon + (ham_devices-1) additional devices (Tech=base, Gen=+1, Extra=+2)
         out.append({"code": "ham", "device_count": ham_devices - 1, "awarded_at": None, "source": "auto"})
@@ -99,11 +147,14 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
         select(MemberTradoc.item_id).where(MemberTradoc.member_id == mid)
     )).scalars().all())
 
-    if LANDNAV_ITEMS.issubset(done_items):
+    landnav_ids = await _resolve_item_ids(db, LANDNAV_ITEM_NAMES)
+    comms_ids = await _resolve_item_ids(db, COMMS_ITEM_NAMES)
+    medical_ids = await _resolve_item_ids(db, MEDICAL_ITEM_NAMES)
+    if landnav_ids and landnav_ids.issubset(done_items):
         out.append({"code": "qual_landnav", "device_count": 0, "awarded_at": None, "source": "auto"})
-    if COMMS_ITEMS.issubset(done_items):
+    if comms_ids and comms_ids.issubset(done_items):
         out.append({"code": "qual_comms", "device_count": 0, "awarded_at": None, "source": "auto"})
-    if MEDICAL_ITEMS.issubset(done_items):
+    if medical_ids and medical_ids.issubset(done_items):
         out.append({"code": "qual_medical", "device_count": 0, "awarded_at": None, "source": "auto"})
 
     # TRADOC Completion: every non-optional item in blocks 1-4 signed off

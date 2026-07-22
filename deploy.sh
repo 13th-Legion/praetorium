@@ -28,19 +28,37 @@ fi
 echo "   .env OK ($ENVCHECK password vars found)"
 echo
 
-# 3. Rebuild and restart app container
+# 3. Rebuild app container
 echo "→ Rebuilding app container..."
 ssh "$SERVER" "cd $REMOTE_DIR && docker compose up -d --build app 2>&1 | tail -5"
 echo
 
-# 4. Wait and health check
+# 4. Back up the DB, then apply migrations (deploy used to skip this, causing
+#    code/schema drift). Fail the deploy if the migration fails.
+echo "→ Backing up database before migration..."
+ssh "$SERVER" "cd $REMOTE_DIR && docker compose exec -T db pg_dump -U praetorium praetorium 2>/dev/null | gzip > /root/praetorium-predeploy-\$(date +%Y%m%d-%H%M%S).sql.gz && ls -t /root/praetorium-predeploy-*.sql.gz | tail -n +6 | xargs -r rm" \
+    && echo "   DB backup written to /root/praetorium-predeploy-*.sql.gz (keeps last 5)" \
+    || echo "   ⚠️  DB backup step reported an issue — review before proceeding"
+echo
+
+echo "→ Applying Alembic migrations (alembic upgrade head)..."
+if ssh "$SERVER" "cd $REMOTE_DIR && docker exec praetorium-app alembic upgrade head 2>&1 | tail -8"; then
+    echo "   Migrations applied."
+else
+    echo "❌ Migration FAILED — aborting deploy. DB backup is in /root/praetorium-predeploy-*.sql.gz"
+    echo "   Check: ssh $SERVER 'docker logs praetorium-app --tail 30'"
+    exit 1
+fi
+echo
+
+# 5. Wait and readiness check (hits the DB, not a static string)
 echo "→ Waiting for app to start..."
 sleep 5
-HTTP_CODE=$(ssh "$SERVER" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/health")
+HTTP_CODE=$(ssh "$SERVER" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/health/ready")
 if [ "$HTTP_CODE" = "200" ]; then
-    echo "✅ Deploy complete — health check passed (HTTP $HTTP_CODE)"
+    echo "✅ Deploy complete — readiness check passed (HTTP $HTTP_CODE)"
 else
-    echo "❌ Health check FAILED (HTTP $HTTP_CODE)"
+    echo "❌ Readiness check FAILED (HTTP $HTTP_CODE)"
     echo "   Check: ssh $SERVER 'docker logs praetorium-app --tail 20'"
     exit 1
 fi

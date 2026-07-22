@@ -1,0 +1,9 @@
+# Test / dev dependencies (not installed in the production image).
+-r requirements.txt
+
+pytest==8.*
+pytest-asyncio==0.24.*
+pytest-cov==6.*
+aiosqlite==0.20.*          # in-memory async DB for the transactional test fixture
+ruff==0.7.*                # lint (correctness rules only, see pyproject.toml)
+pip-audit==2.*             # dependency CVE scan in CI

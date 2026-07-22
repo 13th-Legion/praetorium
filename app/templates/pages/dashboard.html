@@ -87,7 +87,7 @@
                     {% for aar in latest_aars %}
                     <div style="padding:8px 0;{% if not loop.last %}border-bottom:1px solid rgba(255,255,255,0.08);{% endif %}">
                         <a href="/events/{{ aar.id }}#aar" style="font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;color:#d4a537;font-size:0.9rem;text-decoration:none;">{{ aar.title }}</a>
-                        <span style="color:#888;font-size:12px;margin-left:6px;">{{ aar.date_start | cdt and (aar.date_start | cdt).strftime('%d %b %Y')|upper }}</span>
+                        <span style="color:#888;font-size:12px;margin-left:6px;">{{ aar.date_start | cdt_stored and (aar.date_start | cdt_stored).strftime('%d %b %Y')|upper }}</span>
                         {% if aar.snippet %}<div style="color:#aaa;font-size:12px;line-height:1.4;margin-top:3px;white-space:pre-wrap;">{{ aar.snippet }}</div>{% endif %}
                     </div>
                     {% endfor %}

@@ -334,6 +334,11 @@ async def batch_promote(request: Request):
     errors = []
     today = date.today()
     username = user.get("username", "unknown")
+    # Defer NC OCS writes until AFTER the DB commit. Doing them inside the loop
+    # (before the single commit) meant a mid-loop failure rolled back every DB
+    # rank change while NC already reflected the new rank for earlier members
+    # — NC/DB drift. Accumulate here, sync post-commit (idempotent + retryable).
+    nc_syncs = []  # list of (nc_username, new_rank, display_name)
 
     async with async_session() as db:
         for p in pairs:
@@ -378,14 +383,23 @@ async def batch_promote(request: Request):
             ))
 
             if member.nc_username:
-                from app.routes.member_edit import _sync_rank_group, _sync_nc_displayname
-                await _sync_rank_group(member.nc_username, new_rank)
-                await _sync_nc_displayname(member.nc_username, member.display_name)
+                nc_syncs.append((member.nc_username, new_rank, member.display_name))
 
             results.append(f"{RANK_ABBR.get(old_rank, old_rank)} {member.last_name} → {RANK_ABBR.get(new_rank, new_rank)}")
             log.info(f"Batch {action_word.lower()} {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {username}")
 
         await db.commit()
+
+    # DB is durably committed — now push NC group/display-name changes. A
+    # failure here logs but no longer corrupts the committed DB state.
+    if nc_syncs:
+        from app.routes.member_edit import _sync_rank_group, _sync_nc_displayname
+        for nc_username, new_rank, display_name in nc_syncs:
+            try:
+                await _sync_rank_group(nc_username, new_rank)
+                await _sync_nc_displayname(nc_username, display_name)
+            except Exception as e:
+                log.error(f"Post-commit NC sync failed for {nc_username}: {e}")
 
     parts = []
     if results:

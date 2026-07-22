@@ -32,3 +32,4 @@ from app.models.newsletter_section import NewsletterSectionTemplate  # noqa: F40
 from app.models.org import ShopReporting, ShopSignupRequest  # noqa: F401
 from app.models.ribbons import RibbonCatalog, MemberRibbon  # noqa: F401
 from app.models.team import Team  # noqa: F401
+from app.models.webhook_event import WebhookEvent  # noqa: F401

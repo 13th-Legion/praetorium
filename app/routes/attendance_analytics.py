@@ -16,12 +16,11 @@ from app.models.member import Member
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-RANK_ABBR = {
-    "e1": "PV2", "e2": "PV2", "e3": "PFC", "e4": "SPC", "e5": "SGT",
-    "e6": "SSG", "e7": "SFC", "e8": "1SG", "e9": "SGM",
-    "o1": "2LT", "o2": "1LT", "o3": "CPT", "o4": "MAJ",
-    "w1": "WO1", "w2": "CW2", "w3": "CW3",
-}
+# Use the canonical rank map (single source of truth). The previous local copy
+# was keyed "e4" (lowercase, no dash) while Member.rank_grade is "E-4", so the
+# lookups silently returned "" — AND the values had drifted (E-1=PV2 not RCT,
+# E-4=SPC not CPL, missing E-8M). Importing fixes both bugs at once.
+from app.constants import RANK_ABBR
 
 TEAM_LABELS = {
     "alpha": "Aquila", "aquila": "Aquila", "bravo": "Bravo", "charlie": "Charlie",

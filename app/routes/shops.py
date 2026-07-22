@@ -90,8 +90,8 @@ SHOP_ACCESS = {
 
 SHOP_META = {
     "s1": {"name": "S1 — Personnel", "icon": "📋", "has_dashboard": True},
-    "s2": {"name": "S2 — Intel & Security", "icon": "🔍", "has_dashboard": False},
-    "s3": {"name": "S3 — Ops & Training", "icon": "⚔️", "has_dashboard": True},
+    "s2": {"name": "S2 — Intelligence & Security", "icon": "🔍", "has_dashboard": False},
+    "s3": {"name": "S3 — Operations & Training", "icon": "⚔️", "has_dashboard": True},
     "s4": {"name": "S4 — Logistics", "icon": "📦", "has_dashboard": False},
     "s5": {"name": "S5 — Medical", "icon": "🩹", "has_dashboard": False},
     "s6": {"name": "S6 — Comms", "icon": "📡", "has_dashboard": False},

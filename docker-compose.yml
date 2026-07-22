@@ -8,7 +8,9 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://praetorium:${POSTGRES_PASSWORD}@db:5432/praetorium
       - DATABASE_URL_SYNC=postgresql+psycopg2://praetorium:${POSTGRES_PASSWORD}@db:5432/praetorium
-      - SECRET_KEY=${SECRET_KEY:-CHANGE-ME}
+      # No fallback: the app hard-fails at startup if SECRET_KEY is unset/weak
+      # (see config.py). Must be provided via .env in production.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set (strong 32+ char value)}
       - NC_URL=https://cloud.13thlegion.org
       - NC_CLIENT_ID=${NC_CLIENT_ID}
       - NC_CLIENT_SECRET=${NC_CLIENT_SECRET}
@@ -34,12 +36,21 @@ services:
       - PAYPAL_API_BASE=${PAYPAL_API_BASE:-https://api-m.paypal.com}
       - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - library_data:/app/data/library
       - newsletter_data:/app/data/newsletter
     networks:
       - praetorium
+    healthcheck:
+      # Hits the DB-backed readiness probe so a wedged-but-listening app is
+      # detected (a static /health can't catch that).
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 20s
     logging:
       driver: json-file
       options:
@@ -52,6 +63,11 @@ services:
     restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U praetorium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_DB: praetorium
       POSTGRES_USER: praetorium

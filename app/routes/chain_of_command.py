@@ -57,8 +57,8 @@ RANK_ORDER = {
 
 SHOP_DEFS = [
     ("S1", "S1 — Administration", "📋"),
-    ("S2", "S2 — Intel & Security", "🔍"),
-    ("S3", "S3 — Training & Ops", "🎯"),
+    ("S2", "S2 — Intelligence & Security", "🔍"),
+    ("S3", "S3 — Operations & Training", "⚔️"),
     ("S4", "S4 — Logistics", "📦"),
     ("S5", "S5 — Medical", "🏥"),
     ("S6", "S6 — Communications", "📡"),
