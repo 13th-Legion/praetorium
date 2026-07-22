@@ -932,6 +932,7 @@ async def events_page(request: Request):
         "request": request,
         "user": user,
         "is_admin": _is_admin(user),
+        "can_create": bool(roles & {"command", "s3", "admin", "leader"}),
         "upcoming": upcoming,
         "past": past,
         "needs_finalization": needs_finalization,
@@ -1130,12 +1131,21 @@ async def event_detail(request: Request, event_id: int):
         event.instructor and event.instructor.nc_username
         and event.instructor.nc_username == _uname
     )
-    _can_edit = _is_admin(user) or _is_instr
+    # Owning leader (created the event) gets full edit; see edit_event auth.
+    _owns_event = bool(
+        "leader" in set((user or {}).get("roles", []))
+        and event.created_by and event.created_by == _uname
+    )
+    _can_edit = _is_admin(user) or _is_instr or _owns_event
+    # full_edit = may edit ALL fields (admins + owning leaders); instructors
+    # get description-only, so they are excluded here.
+    _full_edit = _is_admin(user) or _owns_event
     return templates.TemplateResponse("pages/event_detail.html", {
         "members": members,
         "request": request,
         "user": user,
         "is_admin": _is_admin(user),
+        "full_edit": _full_edit,
         "is_instructor": _is_instr,
         "can_edit": _can_edit,
         "event": event,
@@ -1574,7 +1584,7 @@ def _render_roster_section(label: str, entries: list, color: str) -> str:
 # ─── Event Creation ──────────────────────────────────────────────────────────
 
 @router.post("/api/events/create", response_class=HTMLResponse)
-@require_role("command", "s3", "admin")
+@require_role("command", "s3", "admin", "leader")
 async def create_event(request: Request):
     """Create a new event manually."""
     user = request.session.get("user", {})
@@ -1731,8 +1741,16 @@ async def edit_event(request: Request, event_id: int):
         if not event:
             return HTMLResponse("Event not found", status_code=404)
 
-        # ── Authorization: admin (full) vs assigned instructor (description-only)
+        # ── Authorization: admin (full) vs owning leader (full) vs assigned
+        # instructor (description-only).
+        #   - command/s3/s1/admin: full edit on ALL events
+        #   - leader: full edit ONLY on events they created (created_by)
+        #   - assigned instructor: description-only on that event
+        _roles = set((_user or {}).get("roles", []))
         _admin = _is_admin(_user)
+        if not _admin and "leader" in _roles and event.created_by \
+                and event.created_by == (_user or {}).get("username"):
+            _admin = True  # owning leader gets full-edit privileges on their event
         _instructor_only = False
         if not _admin:
             _instr_username = None

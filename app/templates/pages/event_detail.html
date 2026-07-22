@@ -569,15 +569,15 @@ function insertTradocAgenda() {
 
     <!-- Edit Form (admins: full; assigned instructor: description/topics only) -->
     {% if can_edit %}
-    <details class="card" style="margin-bottom:16px;" {% if is_instructor and not is_admin %}open{% endif %}>
+    <details class="card" style="margin-bottom:16px;" {% if is_instructor and not full_edit %}open{% endif %}>
         <summary style="cursor:pointer;font-family:'Oswald',sans-serif;font-size:0.9rem;color:#d4a537;text-transform:uppercase;letter-spacing:0.05em;">
-            {% if is_admin %}✏️ Edit Event{% else %}✏️ Edit Topics / Description{% endif %}
+            {% if full_edit %}✏️ Edit Event{% else %}✏️ Edit Topics / Description{% endif %}
         </summary>
-        {% if is_instructor and not is_admin %}
+        {% if is_instructor and not full_edit %}
         <p style="font-size:12px;color:#8fb98f;margin:10px 0 0;">You’re the assigned instructor for this session. Add the topic(s) you intend to cover below, then Save.</p>
         {% endif %}
         <form id="edit-form" hx-post="/api/events/{{ event.id }}/edit" hx-target="#edit-result" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) setTimeout(()=>window.location.reload(),500)" style="margin-top:16px;">
-            {% if is_admin %}
+            {% if full_edit %}
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Title</label>
                 <input type="text" name="title" value="{{ event.title }}"
@@ -704,7 +704,7 @@ function insertTradocAgenda() {
                 </div>
                 <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Leave blank for no deadline. RSVP locks after deadline.</span>
             </div>
-            {% endif %}
+            {% endif %}{# full_edit #}
             <div id="edit-result"></div>
             <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Save Changes</button>
         </form>
