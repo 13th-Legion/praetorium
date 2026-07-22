@@ -25,6 +25,11 @@ class Event(Base):
     # categories: ftx, mcftx, online_training, meeting, external_training, family_day, social, volunteering, other
     description: Mapped[Optional[str]] = mapped_column(Text)
     location: Mapped[Optional[str]] = mapped_column(Text)
+    # 'physical' (in-person; location is free text) or 'online' (NC Talk meeting;
+    # talk_token identifies the room and the join link is derived from it).
+    meeting_mode: Mapped[str] = mapped_column(String(16), nullable=False,
+                                              default="physical", server_default="physical")
+    talk_token: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     instructor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("members.id"), nullable=True)
     instructor: Mapped[Optional["Member"]] = relationship(foreign_keys=[instructor_id])
 

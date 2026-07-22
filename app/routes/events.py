@@ -27,6 +27,7 @@ from app.models.training import TradocItem, MemberTradoc, TradocBlock
 from config import get_settings
 from app.constants import RECIPIENT_GROUPS
 from app.services import ranks as _ranks
+from app.services import nc_rooms as _nc_rooms_svc
 
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
@@ -1248,6 +1249,11 @@ async def event_detail(request: Request, event_id: int):
         "icon": _get_icon(event.category),
         "category_label": CATEGORY_LABELS().get(event.category, event.category),
         "date_display": _format_range(event.date_start, event.date_end, all_day),
+        # Online-meeting support: curated NC Talk rooms for the dropdown + the
+        # derived join link for the current event (if online).
+        "nc_rooms": _nc_rooms_svc.selectable_rooms(),
+        "talk_join_url": (_nc_rooms_svc.join_url(event.talk_token) if event.talk_token else None),
+        "is_series": bool(event.series_id),
         "my_rsvp": my_rsvp,
         "my_guest_count": my_guest_count,
         "guests_allowed": guests_allowed,
@@ -1688,7 +1694,17 @@ async def create_event(request: Request):
 
     title = form.get("title", "").strip()
     category = form.get("category", "other")
-    location = form.get("location", "").strip() or None
+    # Meeting mode: online meetings pick an NC Talk room; location becomes the
+    # room name and the join link is derived from the token at render time.
+    meeting_mode = (form.get("meeting_mode") or "physical").strip().lower()
+    meeting_mode = "online" if meeting_mode == "online" else "physical"
+    talk_token = None
+    if meeting_mode == "online":
+        talk_token = (form.get("talk_token") or "").strip() or None
+        from app.services import nc_rooms as _nc_rooms
+        location = (_nc_rooms.name_for(talk_token) if talk_token else None) or "Online (Nextcloud Talk)"
+    else:
+        location = form.get("location", "").strip() or None
     description = _clean_description(form.get("description", "")) or None
     # PP-225: multi-select TRADOC blocks. Accept the new multi-value
     # training_blocks[] (preferred) and fall back to the legacy single field.
@@ -1754,6 +1770,8 @@ async def create_event(request: Request):
                 category=category,
                 description=description,
                 location=location,
+                meeting_mode=meeting_mode,
+                talk_token=talk_token,
                 date_start=occ_start,
                 date_end=occ_end,
                 status="active",
@@ -1866,7 +1884,21 @@ async def edit_event(request: Request, event_id: int):
             event.title = form["title"].strip()
         if _admin and form.get("category") and form["category"] in VALID_CATEGORIES():
             event.category = form["category"]
-        if _admin and form.get("location") is not None:
+        # Meeting mode: physical (free-text location) vs online (NC Talk room).
+        if _admin and form.get("meeting_mode") is not None:
+            mode = form["meeting_mode"].strip().lower()
+            event.meeting_mode = "online" if mode == "online" else "physical"
+            if event.meeting_mode == "online":
+                token = (form.get("talk_token") or "").strip()
+                event.talk_token = token or None
+                # Location display = the room name (join link derived at render).
+                from app.services import nc_rooms as _nc_rooms
+                event.location = _nc_rooms.name_for(token) if token else "Online (Nextcloud Talk)"
+            else:
+                event.talk_token = None
+                if form.get("location") is not None:
+                    event.location = form["location"].strip() or None
+        elif _admin and form.get("location") is not None:
             event.location = form["location"].strip() or None
         # Description is editable by admins AND the assigned instructor.
         if form.get("description") is not None:
@@ -1924,25 +1956,27 @@ async def edit_event(request: Request, event_id: int):
         event.updated_at = datetime.utcnow()
         logger.warning(f"AFTER: date_start={event.date_start}, date_end={event.date_end}")
 
-        # Series scope (PP-224): optionally propagate CONTENT changes to this + all
-        # future occurrences in the same series. Date/time stays per-occurrence
-        # (changing the recurrence pattern is a separate operation).
+        # Series scope (PP-224 + PP-284): propagate CONTENT changes across the
+        # series. Date/time stays per-occurrence (the recurrence pattern is a
+        # separate operation). Scopes:
+        #   'this'   (default) — only this occurrence
+        #   'future' — this + all LATER occurrences in the series
+        #   'series' — EVERY occurrence in the series (incl. past)
         scope = (form.get("series_scope") or "this").strip()
         if not _admin:
             scope = "this"  # instructors edit only this occurrence
         propagated = 0
-        if scope == "future" and event.series_id:
-            future = (await db.execute(
-                select(Event).where(
-                    Event.series_id == event.series_id,
-                    Event.date_start >= event.date_start,
-                    Event.id != event.id,
-                )
-            )).scalars().all()
-            for ev in future:
+        if scope in ("future", "series") and event.series_id:
+            conds = [Event.series_id == event.series_id, Event.id != event.id]
+            if scope == "future":
+                conds.append(Event.date_start >= event.date_start)
+            siblings = (await db.execute(select(Event).where(*conds))).scalars().all()
+            for ev in siblings:
                 ev.title = event.title
                 ev.category = event.category
                 ev.location = event.location
+                ev.meeting_mode = event.meeting_mode
+                ev.talk_token = event.talk_token
                 ev.description = event.description
                 ev.training_block = event.training_block
                 ev.training_blocks = event.training_blocks

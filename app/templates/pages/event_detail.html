@@ -76,11 +76,13 @@ document.addEventListener("DOMContentLoaded", function() {
         var catSelect = document.querySelector('select[name="category"]');
         if (catSelect) {
             catSelect.addEventListener('change', function(e) {
-                var loc = document.getElementById('evt-location');
                 var inst = document.getElementById('instructor-block');
                 if (e.target.value === 'online_training') {
-                    if (!loc.value) loc.value = 'Nextcloud Talk: T2 · Training';
                     if (inst) inst.style.display = 'block';
+                    // Online training is inherently an online meeting — nudge the
+                    // meeting-mode toggle to Online so the channel dropdown shows.
+                    var mm = document.getElementById('evt-meeting-mode');
+                    if (mm && mm.value !== 'online') { mm.value = 'online'; toggleMeetingMode(); }
                 } else {
                     if (inst) inst.style.display = 'none';
                 }
@@ -92,6 +94,19 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+function toggleMeetingMode() {
+    var mode = (document.getElementById('evt-meeting-mode') || {}).value;
+    var phys = document.getElementById('physical-location-block');
+    var online = document.getElementById('online-room-block');
+    if (mode === 'online') {
+        if (phys) phys.style.display = 'none';
+        if (online) online.style.display = 'block';
+    } else {
+        if (phys) phys.style.display = 'block';
+        if (online) online.style.display = 'none';
+    }
+}
 
 function insertTradocAgenda() {
     var checked = Array.from(document.querySelectorAll('input[name="training_blocks"]:checked'))
@@ -133,7 +148,12 @@ function insertTradocAgenda() {
                     {% endif %}
                 </div>
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📅 {{ date_display }}</div>
-                {% if event.location %}
+                {% if event.meeting_mode == 'online' %}
+                <div style="font-size:14px;color:#aaa;margin-bottom:4px;">💻 Online meeting{% if event.location %} — {{ event.location }}{% endif %}</div>
+                {% if talk_join_url %}
+                <div style="margin:6px 0 4px;"><a href="{{ talk_join_url }}" target="_blank" style="display:inline-block;padding:6px 14px;background:#0082c9;color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">🎥 Join on Nextcloud Talk ↗</a></div>
+                {% endif %}
+                {% elif event.location %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">📍 {{ event.location }}</div>
                 {% endif %}
                 {% if event.rally_point and can_see_opord %}
@@ -624,9 +644,28 @@ function insertTradocAgenda() {
                 </div>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
-                <input type="text" name="location" id="evt-location" value="{{ event.location or '' }}"
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Meeting mode</label>
+                <select name="meeting_mode" id="evt-meeting-mode" onchange="toggleMeetingMode()"
                     style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="physical" {% if event.meeting_mode != 'online' %}selected{% endif %}>📍 In person (physical location)</option>
+                    <option value="online" {% if event.meeting_mode == 'online' %}selected{% endif %}>💻 Online (Nextcloud Talk)</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;" id="physical-location-block" {% if event.meeting_mode == 'online' %}style="display:none;"{% endif %}>
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
+                <input type="text" name="location" id="evt-location" value="{{ '' if event.meeting_mode == 'online' else (event.location or '') }}"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;" id="online-room-block" {% if event.meeting_mode != 'online' %}style="display:none;"{% endif %}>
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Nextcloud Talk channel</label>
+                <select name="talk_token"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="">-- Select channel --</option>
+                    {% for r in nc_rooms %}
+                    <option value="{{ r.token }}" {% if event.talk_token == r.token %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+                <span style="font-size:11px;color:#666;margin-top:2px;display:block;">A “Join on Nextcloud Talk” link is added automatically.</span>
             </div>
             <div style="margin-bottom:12px;" id="instructor-block" {% if event.category != 'online_training' %}style="display:none;"{% endif %}>
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Instructor</label>
@@ -705,6 +744,18 @@ function insertTradocAgenda() {
                 <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Leave blank for no deadline. RSVP locks after deadline.</span>
             </div>
             {% endif %}{# full_edit #}
+            {% if full_edit and is_series %}
+            <div style="margin:12px 0;padding:10px 12px;background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.3);border-radius:6px;">
+                <label style="display:block;font-size:13px;color:#d4a537;margin-bottom:6px;font-weight:600;">🔁 This is a recurring event — apply changes to:</label>
+                <select name="series_scope"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="this" selected>This event only</option>
+                    <option value="future">This and all future occurrences</option>
+                    <option value="series">Every occurrence in the series (incl. past)</option>
+                </select>
+                <span style="font-size:11px;color:#666;margin-top:2px;display:block;">Applies content (title, location, meeting mode/channel, description, category, instructor, RSVP, invites). Each occurrence keeps its own date/time.</span>
+            </div>
+            {% endif %}
             <div id="edit-result"></div>
             <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Save Changes</button>
         </form>
