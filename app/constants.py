@@ -42,8 +42,14 @@ AWARD_ROLES: set[str] = {"command", "admin", "s1", "leader"}
 
 # ─── Team / Element Constants ────────────────────────────────────────────────
 
+# NOTE: "Aquila" is the North zone (formerly "Alpha", renamed 2026-07-21). The
+# geo/zone math + designation letter treat it as the 'A' slot. The team-rename
+# feature mutates these dicts at runtime; the values here are the persisted
+# defaults so a rename survives app restarts/redeploys. If a team is renamed
+# again, update these defaults too (or move teams to a DB table — see
+# ADMINCP_SPEC single-source-of-truth audit).
 TEAM_ORDER: dict[str, int] = {
-    "Headquarters": 0, "Alpha": 1, "Bravo": 2,
+    "Headquarters": 0, "Aquila": 1, "Bravo": 2,
     "Charlie": 3, "Delta": 4, "Echo": 5,
     "Foxtrot": 6,
 }
@@ -53,19 +59,19 @@ TEAM_OPTIONS: list[str] = list(TEAM_ORDER.keys())
 # Geographic zone assignment: 6 equal 60° slices from center point
 # Center: I-30 & N Great Southwest Pkwy (32.7512, -97.0457)
 GEO_CENTER = (32.7512, -97.0457)
-GEO_ZONE_START = 330  # Alpha starts at 330°
+GEO_ZONE_START = 330  # Aquila (North) starts at 330°
 GEO_ZONE_SIZE = 60
-GEO_ZONE_TEAMS = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
+GEO_ZONE_TEAMS = ["Aquila", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
 
 # Team designation letter → default name (for rename validation)
 TEAM_DESIGNATION = {
-    "Alpha": "A", "Bravo": "B", "Charlie": "C",
+    "Aquila": "A", "Bravo": "B", "Charlie": "C",
     "Delta": "D", "Echo": "E", "Foxtrot": "F",
 }
 
 # NC Talk room tokens for team channels
 TEAM_TALK_TOKENS = {
-    "Alpha": "rjdwjoaq", "Bravo": "dazi89uv", "Charlie": "z99wo7e4",
+    "Aquila": "rjdwjoaq", "Bravo": "dazi89uv", "Charlie": "z99wo7e4",
     "Delta": "zzw2m7gq", "Echo": "s6qbnaae", "Foxtrot": "ftkdo954",
     "Headquarters": "ogeyhrzd",
 }

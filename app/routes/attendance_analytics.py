@@ -24,7 +24,7 @@ RANK_ABBR = {
 }
 
 TEAM_LABELS = {
-    "alpha": "Alpha", "bravo": "Bravo", "charlie": "Charlie",
+    "alpha": "Aquila", "aquila": "Aquila", "bravo": "Bravo", "charlie": "Charlie",
     "delta": "Delta", "echo": "Echo", "foxtrot": "Foxtrot",
 }
 

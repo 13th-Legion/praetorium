@@ -52,7 +52,7 @@
   <label><input type="checkbox" id="toggleBearingLines"> Bearing Lines</label>
   <label><input type="checkbox" id="toggleHQRings" checked> HQ Rings</label>
   <span style="color:#555; margin: 0 5px;">|</span>
-  <label><input type="checkbox" class="team-toggle" data-team="Alpha" checked> <span style="color:#22c55e">● Alpha</span></label>
+  <label><input type="checkbox" class="team-toggle" data-team="Aquila" checked> <span style="color:#22c55e">● Aquila</span></label>
   <label><input type="checkbox" class="team-toggle" data-team="Bravo" checked> <span style="color:#3b82f6">● Bravo</span></label>
   <label><input type="checkbox" class="team-toggle" data-team="Charlie" checked> <span style="color:#ef4444">● Charlie</span></label>
   <label><input type="checkbox" class="team-toggle" data-team="Delta" checked> <span style="color:#eab308">● Delta</span></label>
@@ -66,7 +66,7 @@
   <div class="legend">
     <h4 onclick="document.getElementById('legendBody').classList.toggle('collapsed'); document.getElementById('legendBody').classList.toggle('expanded'); this.querySelector('.toggle').textContent = document.getElementById('legendBody').classList.contains('collapsed') ? '▶' : '▼';">Legend <span class="toggle">▼</span></h4>
     <div id="legendBody" class="legend-body">
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Alpha (N) — 330°–30°</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Aquila (N) — 330°–30°</div>
       <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Bravo (NE) — 30°–90°</div>
       <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Charlie (E/SE) — 90°–150°</div>
       <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Delta (S) — 150°–210°</div>
@@ -87,7 +87,7 @@ const MAP_DATA = {{ map_data | tojson }};
 const INACTIVE = MAP_DATA.inactive;
 
 const TEAM_COLORS = {
-  "Alpha": "#22c55e",
+  "Aquila": "#22c55e",
   "Bravo": "#3b82f6",
   "Charlie": "#ef4444",
   "Delta": "#eab308",
@@ -96,7 +96,7 @@ const TEAM_COLORS = {
   "None": "#666",
 };
 
-const TEAM_LIST = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"];
+const TEAM_LIST = ["Aquila", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"];
 const TEAM_DIRS = ["N", "NE", "E/SE", "S", "SW/W", "NW"];
 
 // Zone config: 6 equal 60° slices, Alpha starts at 330° (i.e. 330°–30° = North)

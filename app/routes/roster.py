@@ -42,7 +42,7 @@ from app.constants import RANK_ABBR, TEAM_ORDER
 # Portal role → NC group name → team name mapping for filtering
 ROLE_TO_TEAM = {
     "team_hq": "Headquarters",
-    "team_alpha": "Alpha",
+    "team_alpha": "Aquila",  # North zone renamed Alpha→Aquila 2026-07-21 (NC group still team_alpha)
     "team_bravo": "Bravo",
     "team_charlie": "Charlie",
     "team_delta": "Delta",

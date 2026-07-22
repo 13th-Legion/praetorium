@@ -65,7 +65,7 @@ SHOP_DEFS = [
 ]
 
 TEAM_DEFS = [
-    ("Alpha", "North (330°–30°)"),
+    ("Aquila", "North (330°–30°)"),
     ("Bravo", "Northeast (30°–90°)"),
     ("Charlie", "East/SE (90°–150°)"),
     ("Delta", "South (150°–210°)"),

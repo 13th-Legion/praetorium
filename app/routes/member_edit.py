@@ -382,13 +382,28 @@ async def edit_member_page(request: Request, member_id: int, db: AsyncSession = 
     if member.primary_billet:
         current_billets = {b.strip() for b in member.primary_billet.split(", ")}
 
+    # Team dropdown: merge the constant defaults with the team names actually in
+    # use in the DB, so a renamed team (e.g. Alpha→Aquila) always appears even if
+    # a restart reverted the in-memory TEAM_ORDER mutation. Preserve canonical
+    # ordering; append any unknown live teams at the end. Also include the
+    # member's own current team so it never shows blank.
+    live_teams = {
+        r[0] for r in (await db.execute(
+            select(Member.team).where(Member.team.isnot(None)).distinct()
+        )).all() if r[0]
+    }
+    team_options = list(TEAM_OPTIONS)
+    for t in sorted(live_teams | ({member.team} if member.team else set())):
+        if t not in team_options:
+            team_options.append(t)
+
     return templates.TemplateResponse("pages/member_edit.html", {
         "request": request,
         "user": user,
         "member": member,
         "rank_options": RANK_OPTIONS,
         "status_options": STATUS_OPTIONS,
-        "team_options": TEAM_OPTIONS,
+        "team_options": team_options,
         "billet_options": BILLET_OPTIONS,
         "current_billets": current_billets,
         "leadership_titles": LEADERSHIP_TITLES,
