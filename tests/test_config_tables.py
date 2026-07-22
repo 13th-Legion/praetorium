@@ -63,3 +63,15 @@ class TestMemberStatusesFallback:
     def test_status_meta_colors(self):
         tax.invalidate()
         assert tax.status_meta()["active"]["color"] == "#4caf50"
+
+
+class TestLibraryCategoriesFallback:
+    def test_codes(self):
+        tax.invalidate()
+        assert tax.valid_library_codes() == {"13LG", "TSM", "FM", "TC", "ATP", "TM", "Other"}
+
+    def test_shape(self):
+        tax.invalidate()
+        cats = tax.library_categories()
+        assert cats[0]["code"] == "13LG"
+        assert all({"code", "category", "icon"} <= set(c) for c in cats)

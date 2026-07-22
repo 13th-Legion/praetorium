@@ -56,16 +56,17 @@ MAX_LIBRARY_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MANAGE_ROLES = ("command", "s1_lead", "s3", "admin")
 
 # Category code → display metadata for the Battle Library page
-LIBRARY_CATEGORIES = [
-    {"code": "13LG", "category": "13LG Publications", "icon": "⚔️"},
-    {"code": "TSM", "category": "TSM Publications", "icon": "🛡️"},
-    {"code": "FM", "category": "Field Manuals (FM)", "icon": "📗"},
-    {"code": "TC", "category": "Training Circulars (TC)", "icon": "📘"},
-    {"code": "ATP", "category": "Army Techniques Publications (ATP)", "icon": "📙"},
-    {"code": "TM", "category": "Technical Manuals (TM)", "icon": "📕"},
-    {"code": "Other", "category": "Other Publications", "icon": "📚"},
-]
-VALID_CATEGORY_CODES = {c["code"] for c in LIBRARY_CATEGORIES}
+# Publication categories now come from the library_categories table
+# (taxonomies service). Call the helpers for live data.
+from app.services import taxonomies as _tax
+
+
+def LIBRARY_CATEGORIES() -> list[dict]:
+    return _tax.library_categories()
+
+
+def VALID_CATEGORY_CODES() -> set[str]:
+    return _tax.valid_library_codes()
 
 log = logging.getLogger(__name__)
 
@@ -141,79 +142,6 @@ TRADOC_PAGES = {
     },
 }
 
-# ─── TRADOC subject document links ──────────────────────────────────────────
-# Maps TRADOC subject names to their document info.
-# type: "page" = internal web page, "external" = off-site link, "pdf" = direct PDF
-
-TRADOC_DOCS = {
-    # ─── Block 1: Theory & Medical ────────────────────────────────────────
-
-    "Drill & Ceremony": {
-        "url": "/training/tradoc/drill-ceremony",
-        "pdf_url": "/static/tradoc/drill-ceremony.pdf",
-        "type": "page",
-        "title": "Drill & Ceremony SOP",
-    },
-    "Gear Review": {
-        "url": "/static/tradoc/uniform-sop.pdf",
-        "type": "pdf",
-        "title": "TSM Uniform SOP",
-    },
-    # ─── Block 2: Weapons Qualification ───────────────────────────────────
-
-    "Basic Rifle Marksmanship": {
-        "url": "/training/tradoc/brm",
-        "pdf_url": "/static/tradoc/brm-training-guide.pdf",
-        "type": "page",
-        "title": "BRM Training Guide",
-    },
-    "Rifle Qualification": {
-        "url": "/training/tradoc/course-of-fire",
-        "pdf_url": "/static/tradoc/course-of-fire.pdf",
-        "type": "page",
-        "title": "Basic Course of Fire",
-    },
-    "Shooting Drills": {
-        "url": "/training/tradoc/course-of-fire",
-        "pdf_url": "/static/tradoc/course-of-fire.pdf",
-        "type": "page",
-        "title": "Basic Course of Fire",
-    },
-    "Use of Force": {
-        "url": "/training/tradoc/use-of-force",
-        "pdf_url": "/static/tradoc/use-of-force.pdf",
-        "type": "page",
-        "title": "Use of Force SOP",
-    },
-    # ─── Block 3: Supplemental Skills ─────────────────────────────────────
-    "Basic Land Navigation": {
-        "url": "/training/tradoc/landnav-basic",
-        "type": "page",
-        "title": "Basic Land Navigation",
-    },
-    "Intermediate Land Navigation": {
-        "url": "/training/tradoc/landnav-intermediate",
-        "type": "page",
-        "title": "Intermediate Land Navigation",
-    },
-    "Advanced Land Navigation": {
-        "url": "/training/tradoc/landnav-advanced",
-        "type": "page",
-        "title": "Advanced Land Navigation",
-    },
-    "Expert Land Navigation": {
-        "url": "/training/tradoc/landnav-expert",
-        "type": "page",
-        "title": "Expert Land Navigation",
-    },
-    # ─── Block 4: Combat Fundamentals ─────────────────────────────────────
-    "Recon 101": {
-        "url": "/training/tradoc/recon",
-        "pdf_url": "/static/tradoc/recon101.pdf",
-        "type": "page",
-        "title": "Field Reconnaissance (13LP 2-1)",
-    },
-}
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
@@ -425,7 +353,7 @@ async def battle_library_page(request: Request):
         docs = result.scalars().all()
 
     # Group docs into the fixed category buckets (preserve display order).
-    by_code = {c["code"]: [] for c in LIBRARY_CATEGORIES}
+    by_code = {c["code"]: [] for c in LIBRARY_CATEGORIES()}
     for d in docs:
         code = d.category if d.category in by_code else "Other"
         by_code[code].append({
@@ -441,7 +369,7 @@ async def battle_library_page(request: Request):
     categories = [
         {"category": c["category"], "code": c["code"], "icon": c["icon"],
          "pubs": by_code[c["code"]]}
-        for c in LIBRARY_CATEGORIES
+        for c in LIBRARY_CATEGORIES()
     ]
 
     return templates.TemplateResponse("pages/battle_library.html", {
@@ -450,7 +378,7 @@ async def battle_library_page(request: Request):
         "categories": categories,
         "total_pubs": len(docs),
         "can_manage": _can_manage_library(user),
-        "manage_categories": LIBRARY_CATEGORIES,
+        "manage_categories": LIBRARY_CATEGORIES(),
     })
 
 
@@ -498,7 +426,7 @@ async def battle_library_upload(request: Request):
 
     if not upload or not getattr(upload, "filename", None):
         raise HTTPException(status_code=400, detail="No file provided")
-    if category not in VALID_CATEGORY_CODES:
+    if category not in VALID_CATEGORY_CODES():
         raise HTTPException(status_code=400, detail="Invalid category")
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
@@ -555,7 +483,7 @@ async def battle_library_edit(request: Request, doc_id: int):
             raise HTTPException(status_code=404, detail="Document not found")
 
         if category:
-            if category not in VALID_CATEGORY_CODES:
+            if category not in VALID_CATEGORY_CODES():
                 raise HTTPException(status_code=400, detail="Invalid category")
             doc.category = category
         if title:

@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from app.models.event_category import EventCategory
 from app.models.member_status import MemberStatus
+from app.models.library_category import LibraryCategory
 
 log = logging.getLogger(__name__)
 _TTL = 60.0
@@ -192,13 +193,82 @@ def in_progress_statuses() -> set[str]:
     return statuses_by_lifecycle("in_progress")
 
 
+# ─── Library (publication) categories ───────────────────────────────────────
+
+_lc_cache: Optional[list["LibCatMeta"]] = None
+_lc_ts: float = 0.0
+
+
+@dataclass(frozen=True)
+class LibCatMeta:
+    code: str
+    category: str
+    icon: str
+    sort_order: int
+
+
+_LC_SEED = [
+    ("13LG", "13LG Publications", "⚔️", 1),
+    ("TSM", "TSM Publications", "🛡️", 2),
+    ("FM", "Field Manuals (FM)", "📗", 3),
+    ("TC", "Training Circulars (TC)", "📘", 4),
+    ("ATP", "Army Techniques Publications (ATP)", "📙", 5),
+    ("TM", "Technical Manuals (TM)", "📕", 6),
+    ("Other", "Other Publications", "📚", 7),
+]
+
+
+def _lc_seed() -> list[LibCatMeta]:
+    return [LibCatMeta(*r) for r in _LC_SEED]
+
+
+def _lc_load() -> list[LibCatMeta]:
+    try:
+        from sqlalchemy import create_engine
+        from config import get_settings
+        eng = create_engine(get_settings().database_url_sync)
+        try:
+            with eng.connect() as conn:
+                rows = conn.execute(
+                    select(LibraryCategory.code, LibraryCategory.category,
+                           LibraryCategory.icon, LibraryCategory.sort_order)
+                    .order_by(LibraryCategory.sort_order)
+                ).all()
+        finally:
+            eng.dispose()
+        return [LibCatMeta(*r) for r in rows] if rows else _lc_seed()
+    except Exception as e:
+        log.warning(f"library_categories falling back to seed: {e}")
+        return _lc_seed()
+
+
+def _lc_all() -> list[LibCatMeta]:
+    global _lc_cache, _lc_ts
+    now = time.time()
+    if _lc_cache is None or (now - _lc_ts) > _TTL:
+        _lc_cache = _lc_load()
+        _lc_ts = now
+    return _lc_cache
+
+
+def library_categories() -> list[dict]:
+    """Shape matching the old LIBRARY_CATEGORIES list."""
+    return [{"code": c.code, "category": c.category, "icon": c.icon} for c in _lc_all()]
+
+
+def valid_library_codes() -> set[str]:
+    return {c.code for c in _lc_all()}
+
+
 def warm() -> None:
-    global _ec_cache, _ec_ts, _ms_cache, _ms_ts
+    global _ec_cache, _ec_ts, _ms_cache, _ms_ts, _lc_cache, _lc_ts
     _ec_cache = _ec_load(); _ec_ts = time.time()
     _ms_cache = _ms_load(); _ms_ts = time.time()
+    _lc_cache = _lc_load(); _lc_ts = time.time()
 
 
 def invalidate() -> None:
-    global _ec_cache, _ec_ts, _ms_cache, _ms_ts
+    global _ec_cache, _ec_ts, _ms_cache, _ms_ts, _lc_cache, _lc_ts
     _ec_cache = None; _ec_ts = 0.0
     _ms_cache = None; _ms_ts = 0.0
+    _lc_cache = None; _lc_ts = 0.0
