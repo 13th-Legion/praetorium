@@ -36,9 +36,19 @@ echo
 # 4. Back up the DB, then apply migrations (deploy used to skip this, causing
 #    code/schema drift). Fail the deploy if the migration fails.
 echo "→ Backing up database before migration..."
-ssh "$SERVER" "cd $REMOTE_DIR && docker compose exec -T db pg_dump -U praetorium praetorium 2>/dev/null | gzip > /root/praetorium-predeploy-\$(date +%Y%m%d-%H%M%S).sql.gz && ls -t /root/praetorium-predeploy-*.sql.gz | tail -n +6 | xargs -r rm" \
-    && echo "   DB backup written to /root/praetorium-predeploy-*.sql.gz (keeps last 5)" \
-    || echo "   ⚠️  DB backup step reported an issue — review before proceeding"
+# pg_dump needs PGPASSWORD (sourced from the container's own env) — without it
+# the dump silently produces an empty file. Verify the gzip is non-trivial
+# (>1KB) and ABORT the deploy if the backup looks empty, so we never migrate
+# without a real restore point.
+BK="/root/praetorium-predeploy-\$(date +%Y%m%d-%H%M%S).sql.gz"
+ssh "$SERVER" "PW=\$(docker exec praetorium-db printenv POSTGRES_PASSWORD); \
+    docker exec -e PGPASSWORD=\"\$PW\" praetorium-db pg_dump -U praetorium praetorium | gzip > $BK; \
+    SZ=\$(stat -c%s $BK 2>/dev/null || echo 0); \
+    echo \"backup size: \$SZ bytes\"; \
+    ls -t /root/praetorium-predeploy-*.sql.gz | tail -n +6 | xargs -r rm; \
+    [ \"\$SZ\" -gt 1024 ]" \
+    && echo "   DB backup OK ($BK, keeps last 5)" \
+    || { echo "❌ DB backup empty/failed — aborting deploy before migration."; exit 1; }
 echo
 
 echo "→ Applying Alembic migrations (alembic upgrade head)..."
