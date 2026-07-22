@@ -665,8 +665,8 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
     approver_result = await db.execute(select(Member).where(Member.nc_username == nc_user))
     approver = approver_result.scalar_one_or_none()
     if approver:
-        from app.constants import RANK_ABBR
-        rank = RANK_ABBR.get(approver.rank_grade, "")
+        from app.services import ranks as _ranks
+        rank = _ranks.abbr_map().get(approver.rank_grade, "")
         reviewer = f"{rank} {approver.last_name}".strip()
     else:
         reviewer = user.get("display_name", nc_user)

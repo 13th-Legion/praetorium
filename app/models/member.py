@@ -124,10 +124,10 @@ class Member(Base):
     @property
     def display_name(self) -> str:
         """e.g., '1LT Kavadas (Cav)'"""
-        from app.constants import RANK_ABBR
+        from app.services import ranks as _ranks
         parts = []
         if self.rank_grade:
-            parts.append(RANK_ABBR.get(self.rank_grade, self.rank_grade))
+            parts.append(_ranks.abbr_map().get(self.rank_grade, self.rank_grade))
         parts.append(self.last_name)
         if self.callsign:
             parts.append(f"({self.callsign})")

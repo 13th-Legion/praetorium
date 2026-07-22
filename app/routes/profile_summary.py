@@ -18,7 +18,7 @@ from app.models.awards import MemberAward
 
 router = APIRouter(prefix="/api/profile", tags=["profile_summary"])
 
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 
 def _time_in_service(join_date: Optional[date]) -> str:
@@ -57,7 +57,7 @@ async def profile_summary(request: Request, db: AsyncSession = Depends(get_db)):
             <p class="text-muted">No personnel record found.<br>Contact S1 if this is an error.</p>
         </div>""")
 
-    rank_abbr = RANK_ABBR.get(member.rank_grade, member.rank_grade or "—")
+    rank_abbr = _ranks.abbr_map().get(member.rank_grade, member.rank_grade or "—")
     rank_display = f"{rank_abbr} {member.last_name}"
     callsign_display = f'"{member.callsign}"' if member.callsign else ""
     tis = _time_in_service(member.join_date)

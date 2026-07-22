@@ -10,7 +10,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
 from app.auth import require_auth, get_current_user
-from app.constants import RANK_ABBR, RANK_TITLE, COMMAND_ROLES, S1_ROLES
+from app.constants import COMMAND_ROLES, S1_ROLES
+from app.services import ranks as _ranks
 from app.database import async_session
 from app.models.member import Member
 from app.models.rank_history import RankHistory
@@ -22,25 +23,25 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 # ─── Rank ordering (low → high) ──────────────────────────────────────────────
+# Sourced from the ranks service (DB-backed SSoT). Accessed via functions so
+# each request reads the live table (falls back to constants if empty).
 
-RANK_ORDER = [
-    "E-1", "E-2", "E-3", "E-4", "E-5", "E-6", "E-7", "E-8M", "E-8", "E-9",
-    "W-1", "W-2", "W-3", "W-4", "W-5",
-    "O-1", "O-2", "O-3", "O-4",
-]
+def _rank_order() -> list[str]:
+    return _ranks.ordered_grades()
 
-RANK_INDEX = {r: i for i, r in enumerate(RANK_ORDER)}
+
+def _rank_index() -> dict[str, int]:
+    return _ranks.index_map()
 
 
 def _allowed_rank_changes(current_rank: str) -> list[tuple[str, str]]:
     """Return list of (grade, display_label) the member could be changed to (all ranks except current)."""
+    abbr = _ranks.abbr_map(); title = _ranks.title_map()
     choices = []
-    for r in RANK_ORDER:
+    for r in _rank_order():
         if r == current_rank:
             continue
-        abbr = RANK_ABBR.get(r, r)
-        title = RANK_TITLE.get(r, "")
-        choices.append((r, f"{abbr} — {title}"))
+        choices.append((r, f"{abbr.get(r, r)} — {title.get(r, '')}"))
     return choices
 
 
@@ -58,8 +59,8 @@ def _derive_action_type(from_rank: Optional[str], to_rank: str) -> str:
     """
     if from_rank == "E-1" and to_rank != "E-1":
         return "patch"
-    from_idx = RANK_INDEX.get(from_rank, -1)
-    to_idx = RANK_INDEX.get(to_rank, -1)
+    from_idx = _rank_index().get(from_rank, -1)
+    to_idx = _rank_index().get(to_rank, -1)
     if to_idx < from_idx:
         return "demotion"
     return "promotion"
@@ -170,8 +171,8 @@ async def promotions_dashboard(request: Request):
         rows.append({
             "id": m.id,
             "rank_grade": m.rank_grade,
-            "rank_abbr": RANK_ABBR.get(m.rank_grade, m.rank_grade or "—"),
-            "rank_index": RANK_INDEX.get(m.rank_grade, 99),
+            "rank_abbr": _ranks.abbr_map().get(m.rank_grade, m.rank_grade or "—"),
+            "rank_index": _rank_index().get(m.rank_grade, 99),
             "last_name": m.last_name or "",
             "first_name": m.first_name or "",
             "callsign": m.callsign or "—",
@@ -210,9 +211,9 @@ async def promotions_dashboard(request: Request):
             "first_name": (m.first_name if m else "") or "",
             "callsign": (m.callsign if m else None) or "—",
             "from_rank": s.from_rank,
-            "from_abbr": RANK_ABBR.get(s.from_rank, s.from_rank or "—"),
+            "from_abbr": _ranks.abbr_map().get(s.from_rank, s.from_rank or "—"),
             "to_rank": s.to_rank,
-            "to_abbr": RANK_ABBR.get(s.to_rank, s.to_rank),
+            "to_abbr": _ranks.abbr_map().get(s.to_rank, s.to_rank),
             "action_type": s.action_type,
             "action_label": _action_label(s.action_type),
             "is_officer": s.is_officer,
@@ -247,7 +248,7 @@ async def promote_member(request: Request):
     if not member_id or not new_rank:
         raise HTTPException(400, "Missing member_id or new_rank")
 
-    if new_rank not in RANK_INDEX:
+    if new_rank not in _rank_index():
         raise HTTPException(400, f"Invalid rank: {new_rank}")
 
     async with async_session() as db:
@@ -259,8 +260,8 @@ async def promote_member(request: Request):
         old_rank = member.rank_grade
 
         today = date.today()
-        old_idx = RANK_INDEX.get(old_rank, -1)
-        new_idx = RANK_INDEX.get(new_rank, -1)
+        old_idx = _rank_index().get(old_rank, -1)
+        new_idx = _rank_index().get(new_rank, -1)
         is_promotion = new_idx > old_idx
         action_word = "Promoted" if is_promotion else "Demoted"
 
@@ -298,9 +299,9 @@ async def promote_member(request: Request):
 
         log.info(f"{action_word} {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {user.get('username')}")
 
-    new_abbr = RANK_ABBR.get(new_rank, new_rank)
-    old_abbr = RANK_ABBR.get(old_rank, old_rank)
-    action_label = "promoted" if RANK_INDEX.get(new_rank, -1) > RANK_INDEX.get(old_rank, -1) else "changed"
+    new_abbr = _ranks.abbr_map().get(new_rank, new_rank)
+    old_abbr = _ranks.abbr_map().get(old_rank, old_rank)
+    action_label = "promoted" if _rank_index().get(new_rank, -1) > _rank_index().get(old_rank, -1) else "changed"
 
     return HTMLResponse(
         content=f'<div id="promo-toast" class="toast success">✅ {old_abbr} {member.last_name} {action_label} to {new_abbr}</div>',
@@ -344,7 +345,7 @@ async def batch_promote(request: Request):
         for p in pairs:
             mid = int(p.get("member_id", 0))
             new_rank = p.get("new_rank", "").strip()
-            if not mid or not new_rank or new_rank not in RANK_INDEX:
+            if not mid or not new_rank or new_rank not in _rank_index():
                 errors.append(f"Invalid entry: member {mid}")
                 continue
 
@@ -355,8 +356,8 @@ async def batch_promote(request: Request):
                 continue
 
             old_rank = member.rank_grade
-            old_idx = RANK_INDEX.get(old_rank, -1)
-            new_idx = RANK_INDEX.get(new_rank, -1)
+            old_idx = _rank_index().get(old_rank, -1)
+            new_idx = _rank_index().get(new_rank, -1)
             is_promo = new_idx > old_idx
 
             if is_promo and member.non_promotable_until and member.non_promotable_until >= today:
@@ -385,7 +386,7 @@ async def batch_promote(request: Request):
             if member.nc_username:
                 nc_syncs.append((member.nc_username, new_rank, member.display_name))
 
-            results.append(f"{RANK_ABBR.get(old_rank, old_rank)} {member.last_name} → {RANK_ABBR.get(new_rank, new_rank)}")
+            results.append(f"{_ranks.abbr_map().get(old_rank, old_rank)} {member.last_name} → {_ranks.abbr_map().get(new_rank, new_rank)}")
             log.info(f"Batch {action_word.lower()} {member.first_name} {member.last_name} from {old_rank} → {new_rank} by {username}")
 
         await db.commit()
@@ -464,7 +465,7 @@ async def stage_promotion(request: Request):
 
     if not member_id or not to_rank:
         return HTMLResponse('<div class="toast error">❌ Missing member or target rank.</div>')
-    if to_rank not in RANK_INDEX:
+    if to_rank not in _rank_index():
         return HTMLResponse(f'<div class="toast error">❌ Invalid rank: {to_rank}</div>')
 
     today = date.today()
@@ -524,8 +525,8 @@ async def stage_promotion(request: Request):
 
         await db.commit()
 
-    to_abbr = RANK_ABBR.get(to_rank, to_rank)
-    from_abbr = RANK_ABBR.get(from_rank, from_rank or "—")
+    to_abbr = _ranks.abbr_map().get(to_rank, to_rank)
+    from_abbr = _ranks.abbr_map().get(from_rank, from_rank or "—")
     label = _action_label(action_type)
     return HTMLResponse(
         content=f'<div id="promo-toast" class="toast success">📋 {label} {verb}: {from_abbr} {member.last_name} → {to_abbr}</div>',
@@ -567,7 +568,7 @@ async def edit_stage(request: Request, stage_id: int):
 
     form = await request.form()
     to_rank = form.get("to_rank", "").strip()
-    if not to_rank or to_rank not in RANK_INDEX:
+    if not to_rank or to_rank not in _rank_index():
         return HTMLResponse(f'<div class="toast error">❌ Invalid rank: {to_rank}</div>')
 
     async with async_session() as db:
@@ -585,7 +586,7 @@ async def edit_stage(request: Request, stage_id: int):
         stage.staged_at = datetime.utcnow()
         await db.commit()
 
-    to_abbr = RANK_ABBR.get(to_rank, to_rank)
+    to_abbr = _ranks.abbr_map().get(to_rank, to_rank)
     return HTMLResponse(
         content=f'<div id="promo-toast" class="toast success">✏️ Updated target → {to_abbr}</div>',
         headers={"HX-Trigger": "promotionStaged"},
@@ -649,7 +650,7 @@ async def finalize_staged(request: Request):
             stage.finalized_by = username
             stage.finalized_at = datetime.utcnow()
             successes.append(
-                f"{RANK_ABBR.get(stage.from_rank, stage.from_rank or '—')} {member.last_name} → {RANK_ABBR.get(stage.to_rank, stage.to_rank)}"
+                f"{_ranks.abbr_map().get(stage.from_rank, stage.from_rank or '—')} {member.last_name} → {_ranks.abbr_map().get(stage.to_rank, stage.to_rank)}"
             )
             log.info("Finalized stage %s: %s %s -> %s by %s",
                      stage.id, member.last_name, stage.from_rank, stage.to_rank, username)
@@ -705,9 +706,9 @@ async def export_formation(request: Request):
             "last_name": (m.last_name if m else "") or "",
             "first_name": (m.first_name if m else "") or "",
             "callsign": (m.callsign if m else None) or "—",
-            "from_abbr": RANK_ABBR.get(s.from_rank, s.from_rank or "—"),
-            "to_abbr": RANK_ABBR.get(s.to_rank, s.to_rank),
-            "to_title": RANK_TITLE.get(s.to_rank, ""),
+            "from_abbr": _ranks.abbr_map().get(s.from_rank, s.from_rank or "—"),
+            "to_abbr": _ranks.abbr_map().get(s.to_rank, s.to_rank),
+            "to_title": _ranks.title_map().get(s.to_rank, ""),
             "action_label": _action_label(s.action_type),
             "action_type": s.action_type,
             "is_officer": s.is_officer,

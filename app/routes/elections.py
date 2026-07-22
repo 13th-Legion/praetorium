@@ -22,7 +22,7 @@ from app.models.elections import (
     ElectionBallot, ElectionVoterRoll,
 )
 from app.models.member import Member
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 router = APIRouter(tags=["elections"])
 templates = Jinja2Templates(directory="app/templates")
@@ -109,7 +109,7 @@ async def _auto_advance(db, election) -> bool:
                 select(func.count(Member.id)).where(
                     and_(
                         Member.status == "active",
-                        Member.rank_grade.in_(ELIGIBLE_RANK_GRADES),
+                        Member.rank_grade.in_(_eligible_rank_grades()),
                     )
                 )
             )
@@ -134,18 +134,18 @@ def _round_to_hour(dt: datetime) -> datetime:
 
 
 # Eligible voter: status = active, rank_grade E-2 or above
-ELIGIBLE_RANK_GRADES = {
-    "E-2", "E-3", "E-4", "E-5", "E-6", "E-7", "E-8", "E-9",
-    "W-1", "W-2", "W-3", "W-4", "W-5",
-    "O-1", "O-2", "O-3", "O-4", "O-5", "O-6",
-}
+# Election eligibility now comes from the ranks service (election_eligible flag).
+# The old hardcoded set was drifted: it omitted E-8M and included nonexistent
+# O-5/O-6 grades. Call _eligible_rank_grades() for the live set.
+def _eligible_rank_grades() -> set[str]:
+    return _ranks.eligible_grades()
 
 
 def _is_eligible(member: Member) -> bool:
     """Is this member eligible to vote/nominate?"""
     return (
         (member.status or "").lower() == "active"
-        and member.rank_grade in ELIGIBLE_RANK_GRADES
+        and member.rank_grade in _eligible_rank_grades()
     )
 
 
@@ -178,7 +178,7 @@ async def election_admin(request: Request):
             select(func.count(Member.id)).where(
                 and_(
                     Member.status == "active",
-                    Member.rank_grade.in_(ELIGIBLE_RANK_GRADES),
+                    Member.rank_grade.in_(_eligible_rank_grades()),
                 )
             )
         )
@@ -291,7 +291,7 @@ async def advance_phase(request: Request, election_id: int):
                 select(func.count(Member.id)).where(
                     and_(
                         Member.status == "active",
-                        Member.rank_grade.in_(ELIGIBLE_RANK_GRADES),
+                        Member.rank_grade.in_(_eligible_rank_grades()),
                     )
                 )
             )
@@ -427,7 +427,7 @@ async def election_page(request: Request, election_id: int):
             select(Member).where(
                 and_(
                     Member.status == "active",
-                    Member.rank_grade.in_(ELIGIBLE_RANK_GRADES),
+                    Member.rank_grade.in_(_eligible_rank_grades()),
                 )
             ).order_by(Member.last_name)
         )
@@ -478,7 +478,7 @@ async def election_page(request: Request, election_id: int):
         "winner": winner,
         "quorum_met": quorum_met,
         "voter_roll_members": voter_roll_members,
-        "rank_abbr": RANK_ABBR,
+        "rank_abbr": _ranks.abbr_map(),
         "now_utc": _now,
         "noms_closed": election.nominations_close and _now >= election.nominations_close,
     })

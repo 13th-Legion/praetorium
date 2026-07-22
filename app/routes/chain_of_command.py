@@ -20,7 +20,7 @@ from app.auth import require_auth, require_role, get_current_user
 from app.database import get_db, async_session
 from app.models.member import Member
 from app.models.org import ShopReporting
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 log = logging.getLogger(__name__)
 
@@ -30,30 +30,8 @@ CONFIG_ROLES = ("command", "admin")
 
 # Rank grade -> army.mil insignia asset (served from /static/img/ranks/).
 # E-1 (recruit) has no insignia.
-RANK_INSIGNIA = {
-    "E-2": "enl_private.svg",
-    "E-3": "enl_private_first_class.svg",
-    "E-4": "enl_corporal.svg",
-    "E-5": "enl_sergeant.svg",
-    "E-6": "enl_staff_sergeant.svg",
-    "E-7": "enl_sergeant_first_class.svg",
-    "E-8": "enl_first_sergeant.svg",
-    "E-8M": "enl_master_sergeant.svg",
-    "E-9": "enl_sergeant_major.svg",
-    "W-2": "wo_cw2.svg",
-    "W-3": "wo_cw3.svg",
-    "O-1": "off_second_lieutenant.svg",
-    "O-2": "off_first_lieutenant.svg",
-    "O-3": "off_captain.svg",
-    "O-4": "off_major.svg",
-}
-
-RANK_ORDER = {
-    "E-1": 1, "E-2": 2, "E-3": 3, "E-4": 4, "E-5": 5,
-    "E-6": 6, "E-7": 7, "E-8": 8, "E-8M": 8, "E-9": 9,
-    "W-1": 10, "W-2": 11, "W-3": 12,
-    "O-1": 13, "O-2": 14, "O-3": 15, "O-4": 16,
-}
+# RANK_INSIGNIA / RANK_ORDER now come from the ranks service (DB-backed SSoT).
+# Kept as module-level names via functions so existing call sites read live data.
 
 SHOP_DEFS = [
     ("S1", "S1 — Administration", "📋"),
@@ -85,8 +63,8 @@ def _mini(m: Member) -> dict:
         "last": m.last_name,
         "callsign": m.callsign,
         "rank_grade": m.rank_grade,
-        "rank_abbr": RANK_ABBR.get(m.rank_grade or "", ""),
-        "insignia": RANK_INSIGNIA.get(m.rank_grade or ""),
+        "rank_abbr": _ranks.abbr_map().get(m.rank_grade or "", ""),
+        "insignia": _ranks.insignia_map().get(m.rank_grade or ""),
         "is_recruit": (m.status == "recruit") or (m.rank_grade in (None, "", "E-1")),
         "leadership_title": m.leadership_title,
     }
@@ -141,7 +119,7 @@ async def _build_org(db: AsyncSession) -> dict:
                 shop_members.append(m)
         if lead and lead in shop_members:
             shop_members.remove(lead)
-        shop_members.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
+        shop_members.sort(key=lambda m: -_ranks.order_map().get(m.rank_grade or "E-1", 0))
 
         rep = reporting.get(prefix)
         reports_to = None
@@ -202,7 +180,7 @@ async def _build_org(db: AsyncSession) -> dict:
         tl = next((m for m in tmembers if (m.leadership_title or "") == "Team Leader" and not getattr(m, "is_hq", False)), None)
         atl = next((m for m in tmembers if (m.leadership_title or "") == "Assistant Team Leader" and not getattr(m, "is_hq", False)), None)
         rank_file = [m for m in tmembers if m not in (tl, atl)]
-        rank_file.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
+        rank_file.sort(key=lambda m: -_ranks.order_map().get(m.rank_grade or "E-1", 0))
         teams.append({
             "key": team_key,
             "zone": zone,
@@ -246,7 +224,7 @@ async def config_page(request: Request, db: AsyncSession = Depends(get_db)):
             "First Sergeant", "Platoon Leader", "Platoon Sergeant",
         )
     ]
-    command_choices.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
+    command_choices.sort(key=lambda m: -_ranks.order_map().get(m.rank_grade or "E-1", 0))
 
     rres = await db.execute(select(ShopReporting))
     reporting = {r.shop_key: r for r in rres.scalars().all()}
@@ -269,7 +247,7 @@ async def config_page(request: Request, db: AsyncSession = Depends(get_db)):
         "user": user,
         "rows": rows,
         "command_choices": [
-            {"id": m.id, "label": f"{RANK_ABBR.get(m.rank_grade or '', '')} {m.last_name}"
+            {"id": m.id, "label": f"{_ranks.abbr_map().get(m.rank_grade or '', '')} {m.last_name}"
              + (f' "{m.callsign}"' if m.callsign else "")
              + (f" — {m.leadership_title}" if m.leadership_title else "")}
             for m in command_choices

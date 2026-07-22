@@ -4,6 +4,13 @@ Single source of truth. Import from here, not from route files.
 """
 
 # ─── Rank Abbreviations ──────────────────────────────────────────────────────
+#
+# These dicts are now the FALLBACK SEED only. The live source of truth is the
+# `ranks` DB table, served by app/services/ranks.py. Prefer the service
+# (ranks.abbr_map(), ranks.title_map(), ranks.choices(), ...) in new code; the
+# service falls back to exactly these values if the table is empty. Kept here so
+# the migration seed + the service fallback have a single canonical definition
+# and legacy imports keep working.
 
 RANK_ABBR: dict[str, str] = {
     "E-1": "RCT", "E-2": "PV2", "E-3": "PFC", "E-4": "CPL",
@@ -25,6 +32,7 @@ RANK_TITLE: dict[str, str] = {
 }
 
 # Dropdown choices for member edit forms: (grade, "ABBR — Title")
+# Prefer ranks.choices() in new code.
 RANK_CHOICES: list[tuple[str, str]] = [
     (grade, f"{RANK_ABBR[grade]} — {RANK_TITLE[grade]}")
     for grade in RANK_ABBR

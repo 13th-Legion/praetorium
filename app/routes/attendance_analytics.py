@@ -20,7 +20,7 @@ templates = Jinja2Templates(directory="app/templates")
 # was keyed "e4" (lowercase, no dash) while Member.rank_grade is "E-4", so the
 # lookups silently returned "" — AND the values had drifted (E-1=PV2 not RCT,
 # E-4=SPC not CPL, missing E-8M). Importing fixes both bugs at once.
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 TEAM_LABELS = {
     "alpha": "Aquila", "aquila": "Aquila", "bravo": "Bravo", "charlie": "Charlie",
@@ -190,7 +190,7 @@ async def attendance_analytics(request: Request):
                     from app.routes.events import _to_cdt
                     last_attended = _to_cdt(last_evt.date_start).strftime("%b %Y")
 
-            rank = RANK_ABBR.get(m.rank_grade, "")
+            rank = _ranks.abbr_map().get(m.rank_grade, "")
             team_normalized = _normalize_team(m.team)
             member_stats.append({
                 "id": m.id,
@@ -366,7 +366,7 @@ async def attendance_analytics(request: Request):
                     longest = max(longest, cur)
                 else:
                     cur = 0
-            rank = RANK_ABBR.get(m.rank_grade, "")
+            rank = _ranks.abbr_map().get(m.rank_grade, "")
             if longest > 0:
                 streak_board.append({
                     "id": m.id,

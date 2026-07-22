@@ -57,7 +57,7 @@ def _format_phone(value: str) -> Markup:
 
 templates.env.filters["phone"] = _format_phone
 
-from app.constants import RANK_ABBR, RANK_TITLE
+from app.services import ranks as _ranks
 
 
 async def _get_ftx_history(member_id: int, db: AsyncSession) -> list:
@@ -355,8 +355,8 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
             "request": request,
             "user": user,
             "member": None,
-            "rank_abbr": RANK_ABBR,
-            "rank_title": RANK_TITLE,
+            "rank_abbr": _ranks.abbr_map(),
+            "rank_title": _ranks.title_map(),
             "is_own": True,
             "can_see_pii": True,
             "training": None,
@@ -391,8 +391,8 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
         "request": request,
         "user": user,
         "member": member,
-        "rank_abbr": RANK_ABBR,
-        "rank_title": RANK_TITLE,
+        "rank_abbr": _ranks.abbr_map(),
+        "rank_title": _ranks.title_map(),
         "is_own": True,
         "can_see_pii": True,
         "training": training,
@@ -452,8 +452,8 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
         "request": request,
         "user": user,
         "member": member,
-        "rank_abbr": RANK_ABBR,
-        "rank_title": RANK_TITLE,
+        "rank_abbr": _ranks.abbr_map(),
+        "rank_title": _ranks.title_map(),
         "is_own": is_own,
         "can_see_pii": can_see_pii,
         "training": training,

@@ -25,7 +25,8 @@ settings = get_settings()
 router = APIRouter(prefix="/api/members", tags=["member-edit"])
 templates = Jinja2Templates(directory="app/templates")
 
-from app.constants import S1_ROLES as EDIT_ROLES, RANK_CHOICES as RANK_OPTIONS, STATUS_OPTIONS, TEAM_OPTIONS, LEADERSHIP_TITLES
+from app.constants import S1_ROLES as EDIT_ROLES, STATUS_OPTIONS, TEAM_OPTIONS, LEADERSHIP_TITLES
+from app.services import ranks as _ranks
 from app.geo import assign_zone, geocode_zip
 from app.settings import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
@@ -57,22 +58,8 @@ def _can_edit(user: dict) -> bool:
 
 
 # Rank grade → NC rank group mapping
-RANK_GROUPS = {
-    "E-1": "Rank - Recruit",
-    "E-2": "Rank - Enlisted",
-    "E-3": "Rank - Enlisted",
-    "E-4": "Rank - Enlisted",
-    "E-5": "Rank - NCO",
-    "E-6": "Rank - NCO",
-    "E-7": "Rank - NCO",
-    "E-8": "Rank - NCO",
-    "E-9": "Rank - NCO",
-    "W-1": "Rank - Officer",
-    "O-1": "Rank - Officer",
-    "O-2": "Rank - Officer",
-    "O-3": "Rank - Officer",
-    "O-4": "Rank - Officer",
-}
+# RANK_GROUPS (grade -> NC group) now comes from the ranks service. The old
+# local copy was drifted (missing E-8M, W-2..W-5). Use _ranks.nc_group_map().
 
 ALL_RANK_NC_GROUPS = {"Rank - Recruit", "Rank - Enlisted", "Rank - NCO", "Rank - Officer"}
 
@@ -284,7 +271,7 @@ async def _sync_shop_groups(username: str, old_billets: str | None, new_billets:
 
 async def _sync_rank_group(username: str, new_rank: str):
     """Move a member to the correct NC rank group based on their new rank grade."""
-    target_group = RANK_GROUPS.get(new_rank)
+    target_group = _ranks.nc_group_map().get(new_rank)
     if not target_group or not username:
         return
 
@@ -400,7 +387,7 @@ async def edit_member_page(request: Request, member_id: int, db: AsyncSession = 
         "request": request,
         "user": user,
         "member": member,
-        "rank_options": RANK_OPTIONS,
+        "rank_options": _ranks.choices(),
         "status_options": STATUS_OPTIONS,
         "team_options": team_options,
         "billet_options": BILLET_OPTIONS,

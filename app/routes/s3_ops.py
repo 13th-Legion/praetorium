@@ -16,7 +16,7 @@ from app.models.member import Member
 from app.models.training import TradocItem
 from app.training_sites import TRAINING_SITES, get_site_maps
 from fastapi.templating import Jinja2Templates
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -272,7 +272,7 @@ async def ftx_builder(request: Request, event_id: int, db: AsyncSession = Depend
         "days": days,
         "activity_types": ACTIVITY_TYPES,
         "block_labels": BLOCK_LABELS,
-        "rank_abbr": RANK_ABBR,
+        "rank_abbr": _ranks.abbr_map(),
         "training_sites": TRAINING_SITES,
         "site_maps": site_maps,
         "tradoc_items": tradoc_for_block,

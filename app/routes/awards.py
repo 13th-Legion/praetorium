@@ -17,7 +17,8 @@ from app.models.awards import MemberAward
 router = APIRouter(prefix="/api/awards", tags=["awards"])
 templates = Jinja2Templates(directory="app/templates")
 
-from app.constants import RANK_ABBR, AWARD_ROLES
+from app.constants import AWARD_ROLES
+from app.services import ranks as _ranks
 
 
 def _can_award(user: dict) -> bool:
@@ -38,7 +39,7 @@ def _can_award_gladius(user: dict) -> bool:
 def _get_awarder_name(user: dict, member=None) -> str:
     """Get display name for the person granting the award."""
     if member:
-        rank = RANK_ABBR.get(member.rank_grade, "")
+        rank = _ranks.abbr_map().get(member.rank_grade, "")
         return f"{rank} {member.last_name}".strip()
     return user.get("display_name", user.get("username", "unknown"))
 
@@ -61,7 +62,7 @@ async def award_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     )
     members = []
     for m in result.scalars().all():
-        rank = RANK_ABBR.get(m.rank_grade, "")
+        rank = _ranks.abbr_map().get(m.rank_grade, "")
         m.rank_display = rank
         members.append(m)
 
@@ -117,7 +118,7 @@ async def member_award_status(request: Request, member_id: int, db: AsyncSession
     )
     gladii = gladii_result.scalars().all()
 
-    rank = RANK_ABBR.get(member.rank_grade, "")
+    rank = _ranks.abbr_map().get(member.rank_grade, "")
     name = f"{rank} {member.last_name}".strip()
 
     html = f'<div style="margin-bottom:12px;font-weight:600;font-size:15px;">{name}</div>'

@@ -14,8 +14,7 @@ from app.models.events import Event
 from app.models.rank_history import RankHistory
 from app.models.ribbons import MemberRibbon, RibbonCatalog
 from app.routes.elections import _auto_advance
-from app.routes.chain_of_command import RANK_INSIGNIA
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory="app/templates")
@@ -134,7 +133,7 @@ async def dashboard(request: Request):
 
 def _member_name(m: Member) -> str:
     """Rank-abbr + last name (+ callsign) for feed rows."""
-    abbr = RANK_ABBR.get(m.rank_grade, m.rank_grade or "")
+    abbr = _ranks.abbr_map().get(m.rank_grade, m.rank_grade or "")
     base = f"{abbr} {m.last_name}".strip()
     return base
 
@@ -160,9 +159,9 @@ async def activity_feed(request: Request):
             .limit(25)
         )
         for rh, m in pr.all():
-            old_abbr = RANK_ABBR.get(rh.old_rank, rh.old_rank or "")
-            new_abbr = RANK_ABBR.get(rh.new_rank, rh.new_rank or "")
-            insig = RANK_INSIGNIA.get(rh.new_rank)  # None for E-1/W-1 (no insignia)
+            old_abbr = _ranks.abbr_map().get(rh.old_rank, rh.old_rank or "")
+            new_abbr = _ranks.abbr_map().get(rh.new_rank, rh.new_rank or "")
+            insig = _ranks.insignia_map().get(rh.new_rank)  # None for E-1/W-1 (no insignia)
             items.append({
                 "dt": rh.effective_date,
                 "kind": "promotion",

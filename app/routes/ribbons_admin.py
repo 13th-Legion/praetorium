@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth, get_current_user
 from app.database import get_db
-from app.constants import RANK_ABBR, AWARD_ROLES
+from app.constants import AWARD_ROLES
+from app.services import ranks as _ranks
 from app.models.member import Member
 from app.models.ribbons import RibbonCatalog, MemberRibbon
 
@@ -41,7 +42,7 @@ def _can_award(user: dict) -> bool:
 
 def _awarder_name(user: dict, member=None) -> str:
     if member:
-        rank = RANK_ABBR.get(member.rank_grade, "")
+        rank = _ranks.abbr_map().get(member.rank_grade, "")
         return f"{rank} {member.last_name}".strip()
     return user.get("display_name", user.get("username", "unknown"))
 
@@ -58,7 +59,7 @@ async def ribbon_admin_dashboard(request: Request, db: AsyncSession = Depends(ge
         select(Member).where(Member.status.in_(["active", "recruit"])).order_by(Member.last_name)
     )).scalars().all()
     for m in members:
-        m.rank_display = RANK_ABBR.get(m.rank_grade, "")
+        m.rank_display = _ranks.abbr_map().get(m.rank_grade, "")
 
     cat = (await db.execute(
         select(RibbonCatalog).where(RibbonCatalog.active.is_(True)).order_by(

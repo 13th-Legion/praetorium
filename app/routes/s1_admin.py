@@ -392,9 +392,9 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     doc_title = doc_labels_pretty.get(doc_type, "Document")
 
     from app.routes.notifications import create_notification
-    from app.constants import RANK_ABBR
+    from app.services import ranks as _ranks
     # Build display name: "SFC Eastman (Dizz)" style
-    _rank = RANK_ABBR.get(member.rank_grade, "") if member.rank_grade else ""
+    _rank = _ranks.abbr_map().get(member.rank_grade, "") if member.rank_grade else ""
     _callsign = f" ({member.callsign})" if member.callsign else ""
     _signer_display = f"{_rank} {member.last_name}{_callsign}".strip()
     doc_names = {"nda": "NDA", "general_waiver": "General Waiver", "code_of_conduct": "Code of Conduct", "bylaws": "TSM By-Laws", "activity_policy": "Activity Policy"}
@@ -731,7 +731,7 @@ async def _fetch_pipeline_applicants() -> list[dict]:
     return applicants
 
 
-from app.constants import RANK_ABBR as RANK_ABBR_S1
+from app.services import ranks as _ranks_s1
 
 
 @router.get("/recruiters")
@@ -749,7 +749,7 @@ async def recruiter_dashboard(request: Request, db: AsyncSession = Depends(get_d
     for r in recruiters_raw:
         m_result = await db.execute(select(Member).where(Member.nc_username == r.nc_username))
         m = m_result.scalar_one_or_none()
-        r.rank_display = RANK_ABBR_S1.get(m.rank_grade, "") if m else ""
+        r.rank_display = _ranks_s1.abbr_map().get(m.rank_grade, "") if m else ""
         r.member_name = m.last_name if m else r.display_name
         r.callsign = m.callsign if m else None
         recruiters.append(r)
@@ -764,7 +764,7 @@ async def recruiter_dashboard(request: Request, db: AsyncSession = Depends(get_d
     roster_members = []
     for m in roster_result.scalars().all():
         if m.nc_username not in existing_usernames:
-            m.rank_display = RANK_ABBR_S1.get(m.rank_grade, "")
+            m.rank_display = _ranks_s1.abbr_map().get(m.rank_grade, "")
             roster_members.append(m)
 
     # Fetch applicants from Deck pipeline (not portal DB recruits)
@@ -980,7 +980,7 @@ async def add_recruiter(request: Request, db: AsyncSession = Depends(get_db)):
     if existing.scalar_one_or_none():
         return HTMLResponse('<p style="color: #ef6c00; font-weight: 600;">⚠️ Already a recruiter</p>')
 
-    rank = RANK_ABBR_S1.get(member.rank_grade, "")
+    rank = _ranks_s1.abbr_map().get(member.rank_grade, "")
     display = f"{rank} {member.last_name}".strip()
 
     recruiter = Recruiter(
@@ -2287,7 +2287,7 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
     )
     on_leave_members = on_leave_result.scalars().all()
     for _m in on_leave_members:
-        _m.rank_display = RANK_ABBR_S1.get(_m.rank_grade, "")
+        _m.rank_display = _ranks_s1.abbr_map().get(_m.rank_grade, "")
 
     # Recent separations (join member for name display)
     from sqlalchemy.orm import joinedload, relationship
@@ -2302,7 +2302,7 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
     for row in result2.all():
         log, member = row[0], row[1]
         if member:
-            member.rank_display = RANK_ABBR_S1.get(member.rank_grade, "")
+            member.rank_display = _ranks_s1.abbr_map().get(member.rank_grade, "")
         recent_separations.append({"log": log, "member": member})
 
     return templates.TemplateResponse("pages/s1_offboard.html", {

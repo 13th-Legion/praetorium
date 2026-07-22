@@ -23,6 +23,14 @@ from app.routes import auth, settings as settings_route, dashboard, health, debu
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
     import asyncio
+    # Prime the ranks service sync snapshot so the first requests have live rank
+    # data (never blank) even before any async access warms it.
+    try:
+        from app.services import ranks as _ranks_warm
+        _ranks_warm.warm()
+    except Exception as _e:
+        import logging as _lg
+        _lg.getLogger("uvicorn.error").warning(f"ranks warm skipped: {_e}")
     from app.newsletter_scheduler import newsletter_scheduler_loop
     # Seed newsletter section templates (idempotent insert-if-missing).
     try:

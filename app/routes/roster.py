@@ -30,14 +30,11 @@ def _timestamp_fmt(epoch_secs):
         return "Unknown"
 templates.env.filters["timestamp_fmt"] = _timestamp_fmt
 
-RANK_ORDER = {
-    "E-1": 1, "E-2": 2, "E-3": 3, "E-4": 4, "E-5": 5,
-    "E-6": 6, "E-7": 7, "E-8": 8, "E-9": 9,
-    "W-1": 10, "W-2": 11,
-    "O-1": 12, "O-2": 13, "O-3": 14, "O-4": 15,
-}
+# RANK_ORDER now sourced from the ranks service (was a drifted local copy
+# missing E-8M, W-3..W-5). Use _ranks.order_map().
 
-from app.constants import RANK_ABBR, TEAM_ORDER
+from app.constants import TEAM_ORDER
+from app.services import ranks as _ranks
 
 # Portal role → NC group name → team name mapping for filtering
 ROLE_TO_TEAM = {
@@ -205,7 +202,7 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
 
     def _sort_key(m, team_name=""):
         title = (m.leadership_title or "").strip()
-        rank_val = RANK_ORDER.get(m.rank_grade or "E-1", 0)
+        rank_val = _ranks.order_map().get(m.rank_grade or "E-1", 0)
         is_element = view_mode == "element" and team_name == "Headquarters"
         prio = _leader_priority(title, is_element_view=is_element)
         return (prio, -rank_val)
@@ -271,7 +268,7 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
                 shop_members.remove(shop_lead)
 
             # Sort members by rank descending
-            shop_members.sort(key=lambda m: -RANK_ORDER.get(m.rank_grade or "E-1", 0))
+            shop_members.sort(key=lambda m: -_ranks.order_map().get(m.rank_grade or "E-1", 0))
 
             shops_data.append({
                 "prefix": prefix,
@@ -326,7 +323,7 @@ async def roster_list(request: Request, db: AsyncSession = Depends(get_db)):
         "team_emojis": team_emojis,
         "hq_members": hq_members,
         "view_mode": view_mode,
-        "rank_abbr": RANK_ABBR,
+        "rank_abbr": _ranks.abbr_map(),
         "can_see_pii": can_see_pii,
         "can_see_full": can_see_full,
         "total": len(members),

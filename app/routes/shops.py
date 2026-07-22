@@ -224,8 +224,8 @@ async def submit_shop_signup(request: Request, db: AsyncSession = Depends(get_db
     from app.routes.notifications import create_notification
     rank_abbr = ""
     try:
-        from app.constants import RANK_ABBR
-        rank_abbr = RANK_ABBR.get(member.rank_grade, "")
+        from app.services import ranks as _ranks
+        rank_abbr = _ranks.abbr_map().get(member.rank_grade, "")
     except Exception:
         pass
     applicant = f"{rank_abbr} {member.last_name}".strip()
@@ -285,12 +285,12 @@ async def shop_signup_review(request: Request, db: AsyncSession = Depends(get_db
         .limit(25)
     )
 
-    from app.constants import RANK_ABBR
+    from app.services import ranks as _ranks
     def _row(req, m):
         return {
             "id": req.id, "shop_key": req.shop_key,
             "shop_name": _SHOP_NAME.get(req.shop_key, req.shop_key),
-            "member": f"{RANK_ABBR.get(m.rank_grade, '')} {m.last_name}, {m.first_name}".strip(),
+            "member": f"{_ranks.abbr_map().get(m.rank_grade, '')} {m.last_name}, {m.first_name}".strip(),
             "callsign": m.callsign or "",
             "message": req.message or "",
             "status": req.status,
@@ -337,8 +337,8 @@ async def _decide_shop_signup(request: Request, req_id: int, db: AsyncSession, a
     rres = await db.execute(select(Member).where(Member.nc_username == reviewer))
     r_m = rres.scalar_one_or_none()
     if r_m:
-        from app.constants import RANK_ABBR
-        reviewer = f"{RANK_ABBR.get(r_m.rank_grade, '')} {r_m.last_name}".strip()
+        from app.services import ranks as _ranks
+        reviewer = f"{_ranks.abbr_map().get(r_m.rank_grade, '')} {r_m.last_name}".strip()
 
     mres = await db.execute(select(Member).where(Member.id == req.member_id))
     member = mres.scalar_one_or_none()

@@ -12,7 +12,7 @@ from app.auth import require_auth, get_current_user
 from app.database import async_session
 from app.models.member import Member
 from app.models.events import Event, EventRSVP
-from app.constants import RANK_ABBR
+from app.services import ranks as _ranks
 from app.models.weapons_qual import MemberWeaponsQual
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ async def weapons_qual_page(request: Request, event_id: int | None = None, saved
                 }
                 for m, _rsvp in rows:
                     rec = existing.get(m.id)
-                    rnk = RANK_ABBR.get(m.rank_grade, m.rank_grade or "")
+                    rnk = _ranks.abbr_map().get(m.rank_grade, m.rank_grade or "")
                     name = f"{rnk} {m.last_name}, {m.first_name}".strip()
                     if m.callsign:
                         name += f" ({m.callsign})"

@@ -25,7 +25,8 @@ from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
 from config import get_settings
-from app.constants import RANK_ABBR, RECIPIENT_GROUPS
+from app.constants import RECIPIENT_GROUPS
+from app.services import ranks as _ranks
 
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
@@ -1048,7 +1049,7 @@ async def events_page(request: Request):
         "categories": VALID_CATEGORIES,
         "category_labels": CATEGORY_LABELS,
         "members": members,
-        "rank_abbr": RANK_ABBR,
+        "rank_abbr": _ranks.abbr_map(),
         "recipient_groups": recipient_groups,
         "tradoc_blocks": tradoc_blocks,
     })
@@ -1225,7 +1226,7 @@ async def event_detail(request: Request, event_id: int):
                 select(Member).where(Member.id.in_(sched_instructor_ids))
             )
             for m in instr_result.scalars().all():
-                abbr = RANK_ABBR.get(m.rank_grade, "")
+                abbr = _ranks.abbr_map().get(m.rank_grade, "")
                 schedule_instructors[m.id] = f"{abbr} {m.last_name}".strip()
 
         # PP-225: selectable TRADOC blocks (single source of truth = TRADOC table)
@@ -1267,7 +1268,7 @@ async def event_detail(request: Request, event_id: int):
         "hc_total": hc_total,
         "rsvp_locked": rsvp_locked,
         "attending": attending,
-        "rank_abbr": RANK_ABBR,
+        "rank_abbr": _ranks.abbr_map(),
         "declined": declined,
         "pending": pending,
         "documents": event.documents,
@@ -3408,7 +3409,7 @@ async def export_opord_pdf(request: Request, event_id: int):
                 select(Member).where(Member.id.in_(sched_instr_ids))
             )
             for m in instr_r.scalars().all():
-                abbr = RANK_ABBR.get(m.rank_grade, "")
+                abbr = _ranks.abbr_map().get(m.rank_grade, "")
                 sched_instr_map[m.id] = f"{abbr} {m.last_name}".strip()
 
         # Copy schedule data
@@ -3427,7 +3428,7 @@ async def export_opord_pdf(request: Request, event_id: int):
         # Copy roster data
         roster_data = []
         for m in attending_members:
-            rank = RANK_ABBR.get(m.rank_grade, "")
+            rank = _ranks.abbr_map().get(m.rank_grade, "")
             roster_data.append(f"{rank} {m.last_name}, {m.first_name}".strip())
 
     # ── Build PDF ──────────────────────────────────────────────────────────

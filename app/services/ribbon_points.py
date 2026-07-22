@@ -81,10 +81,11 @@ async def _last_promotion_date(db: AsyncSession, member_id: int) -> Optional[dat
     if not rows:
         return None
     # Prefer the latest promotion (new grade higher than old); else latest row.
-    from app.routes.promotions import RANK_INDEX  # local import to avoid cycle
+    from app.services import ranks as _ranks
+    _idx = _ranks.index_map()
     for r in rows:
-        oi = RANK_INDEX.get(r.old_rank, -1)
-        ni = RANK_INDEX.get(r.new_rank, -1)
+        oi = _idx.get(r.old_rank, -1)
+        ni = _idx.get(r.new_rank, -1)
         if ni > oi:
             return r.effective_date
     return rows[0].effective_date
