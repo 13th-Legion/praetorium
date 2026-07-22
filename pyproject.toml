@@ -1,0 +1,30 @@
+[tool.pytest.ini_options]
+# Async tests run without per-test @pytest.mark.asyncio decorators.
+asyncio_mode = "auto"
+# Fail on unregistered markers so typos don't silently skip coverage.
+addopts = "--strict-markers"
+testpaths = ["tests"]
+markers = [
+    "unit: pure-function / logic tests, no DB or HTTP",
+    "integration: needs the async test DB and/or ASGI HTTP client",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/migrations/*",
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Conservative: correctness + obvious bugs, not style churn on a large legacy tree.
+select = ["E9", "F63", "F7", "F82", "F401", "F811"]
+ignore = ["E501"]

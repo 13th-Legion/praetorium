@@ -23,6 +23,14 @@ templates = Jinja2Templates(directory="app/templates")
 from zoneinfo import ZoneInfo
 _CDT = ZoneInfo("America/Chicago")
 _UTC = ZoneInfo("UTC")
+def _fmt_ct_stored(dt):
+    """Tag an already-naive-CT datetime with CT tz WITHOUT converting.
+    For event date_start/date_end (stored naive wall-clock CT)."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=_CDT) if dt.tzinfo is None else dt.astimezone(_CDT)
+
+
 def _to_cdt(dt):
     if dt is None:
         return None
@@ -30,6 +38,7 @@ def _to_cdt(dt):
         dt = dt.replace(tzinfo=_UTC)
     return dt.astimezone(_CDT)
 templates.env.filters["cdt"] = _to_cdt
+templates.env.filters["cdt_stored"] = _fmt_ct_stored
 
 def _mildate(dt):
     if dt is None:

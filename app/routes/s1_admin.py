@@ -1,6 +1,7 @@
 """S1 Admin routes — payment, NDA/waiver, recruiter assignment, offboarding."""
 
 import os
+import asyncio
 from datetime import datetime
 from urllib.parse import quote, unquote
 
@@ -553,13 +554,22 @@ async def _match_member_by_card_title(db, card_title: str):
                 _select(Member).where(
                     Member.first_name == name_parts[0],
                     Member.last_name == name_parts[1],
-                )
+                ).order_by(Member.id)
             )
         else:
             result = await db.execute(
-                _select(Member).where(Member.last_name == name)
+                _select(Member).where(Member.last_name == name).order_by(Member.id)
             )
-        return result.scalar_one_or_none()
+        # Use .first() (not scalar_one_or_none) — two members can share a name,
+        # which would raise MultipleResultsFound and silently drop the credit.
+        rows = result.scalars().all()
+        if len(rows) > 1:
+            logger.warning(
+                f"Credit — ambiguous match for '{name}': {len(rows)} members "
+                f"(ids={[m.id for m in rows]}); using lowest id {rows[0].id}. "
+                f"Verify recruiter credit manually."
+            )
+        return rows[0] if rows else None
     except Exception as e:
         logger.error(f"Credit — member lookup failed for '{name}': {e}")
         return None
@@ -581,6 +591,18 @@ async def _credit_recruiter_on_completion(card_title: str) -> str:
         async with async_session() as db:
             member = await _match_member_by_card_title(db, card_title)
             if not member:
+                return ''
+            # Idempotency guard (the docstring's promise, previously missing):
+            # only credit while the member is still a recruit. A second move
+            # into Complete (or a duplicate stack webhook) finds them already
+            # flipped/patched and skips, so the recruiter isn't double-credited
+            # and current_load isn't decremented twice.
+            if (member.status or "").lower() != "recruit":
+                logger.info(
+                    f"Recruiter credit skipped for {member.first_name} "
+                    f"{member.last_name} — status='{member.status}' (not recruit); "
+                    f"already credited."
+                )
                 return ''
             recruiter_username = (member.assigned_recruiter or "").strip()
             if not recruiter_username:
@@ -2350,8 +2372,14 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
         except Exception:
             log_entry.nc_account_disabled = False
         # Disabling the NC account does NOT evict the user from Talk rooms,
-        # so remove them from all NC Talk conversations explicitly.
-        _nc_talk_remove(member.nc_username)
+        # so remove them from all NC Talk conversations explicitly. Runs a
+        # blocking `docker exec ... occ` (up to 30s) via subprocess, so offload
+        # to a thread instead of stalling the event loop for every other
+        # in-flight request.
+        try:
+            await asyncio.to_thread(_nc_talk_remove, member.nc_username)
+        except Exception as e:
+            logger.error(f"NC Talk removal failed for {member.nc_username}: {e}")
 
     # Remove from NC groups if requested
     if remove_groups and member.nc_username:

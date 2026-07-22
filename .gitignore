@@ -15,12 +15,12 @@ projects/praetorium/portal/
 # OpenClaw internal
 .openclaw/
 
-# Temp/scratch scripts
+# Temp/scratch scripts (root-level only — the tests/ suite is tracked)
 fix_*.py
 patch_*.py
 update_*.py
 send_email.py
-test_*.py
+/test_*.py
 test_*.html
 get_cost*.py
 validate_html.py

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_
+from sqlalchemy.exc import IntegrityError
 
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
@@ -784,7 +785,19 @@ async def cast_vote(
         )
         db.add(voter_roll)
 
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            # Concurrent double-submit (double-click / two tabs): both requests
+            # passed the check-then-insert read, but the UNIQUE(election_id,
+            # member_id) constraint blocks the second voter_roll. The ballot +
+            # roll share this transaction so both roll back (no double ballot,
+            # anonymity preserved). Return the friendly message instead of 500.
+            await db.rollback()
+            return HTMLResponse(
+                '<div style="padding:8px;background:#f39c12;color:#000;border-radius:6px;">'
+                "⚠️ You have already voted in this election.</div>"
+            )
 
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'

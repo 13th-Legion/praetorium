@@ -6,6 +6,7 @@ dashboard widget, and full events pages.
 
 import re
 import uuid
+import bleach
 from datetime import datetime, date, timedelta, time as dtime
 from typing import Optional
 
@@ -35,14 +36,36 @@ _CDT = ZoneInfo("America/Chicago")
 _UTC = ZoneInfo("UTC")
 
 def _to_cdt(dt):
-    """Convert naive UTC datetime to CDT."""
+    """Convert naive **UTC** datetime to CDT.
+
+    Use ONLY for UTC-stored audit timestamps (responded_at, created_at,
+    opord_issued_at, aar_published_at). Do NOT use for event date_start/
+    date_end/rsvp_deadline/warno_scheduled_at — those are stored naive CT and
+    must use _fmt_ct_stored (applying UTC->CT conversion to a CT value shifts
+    it 5–6h early).
+    """
     if dt is None:
         return None
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=_UTC)
     return dt.astimezone(_CDT)
 
+
+def _fmt_ct_stored(dt):
+    """Attach CT tz to an already-naive-CT datetime WITHOUT converting.
+
+    Event date_start/date_end/rsvp_deadline/warno_scheduled_at are stored as
+    naive wall-clock America/Chicago (see _parse_mil_datetime). This just tags
+    them with the CT zone so %Z renders CDT/CST — no clock shift. Fixes the
+    5–6h-early times in order emails (WARNO/OPORD/FRAGORD), AAR, ops console
+    and dashboard.
+    """
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=_CDT) if dt.tzinfo is None else dt.astimezone(_CDT)
+
 templates.env.filters["cdt"] = _to_cdt
+templates.env.filters["cdt_stored"] = _fmt_ct_stored
 
 # ─── CalDAV Config ───────────────────────────────────────────────────────────
 
@@ -105,7 +128,7 @@ def _subject_date_suffix(date_start, date_end=None):
     if not date_start:
         return ""
     try:
-        s = _to_cdt(date_start)
+        s = _fmt_ct_stored(date_start)
     except Exception:
         s = date_start
     mon = s.strftime("%b").upper()
@@ -114,7 +137,7 @@ def _subject_date_suffix(date_start, date_end=None):
     e = None
     if date_end:
         try:
-            e = _to_cdt(date_end)
+            e = _fmt_ct_stored(date_end)
         except Exception:
             e = date_end
     if e and (e.year, e.month, e.day) != (s.year, s.month, s.day):
@@ -319,7 +342,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
     await db.flush()
 
     # Format event date for display
-    local_dt = _to_cdt(event.date_start)
+    local_dt = _fmt_ct_stored(event.date_start)
     date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
 
     # 2. Cross-post to T1 · Announcements NC Talk channel
@@ -691,20 +714,44 @@ _LEADING_EMPTY_P = re.compile(r"^(?:%s\s*)+" % _EMPTY_P, re.IGNORECASE)
 _TRAILING_EMPTY_P = re.compile(r"(?:%s\s*)+$" % _EMPTY_P, re.IGNORECASE)
 
 
-def _clean_description(html: str) -> str:
-    """Normalize a rich-text description before storing.
+# Rich-text sanitization allowlist for event descriptions. Mirrors
+# announcements.py so Quill output is treated consistently everywhere. The
+# template renders event.description with `| safe`, so this MUST sanitize to
+# prevent stored XSS (reachable even by the description-only instructor path).
+_DESC_ALLOWED_TAGS = [
+    "p", "br", "b", "i", "u", "s", "strong", "em",
+    "ul", "ol", "li", "a", "h1", "h2", "h3",
+    "blockquote", "pre", "code", "span", "div", "img",
+    "sub", "sup",
+]
+_DESC_ALLOWED_ATTRS = {
+    "a": ["href", "target", "rel"],
+    "img": ["src", "alt", "width", "height"],
+    "span": ["style", "class"],
+    "p": ["style", "class"],
+    "div": ["style", "class"],
+    "li": ["class"],
+}
 
-    The Quill editor can leave or insert empty paragraphs (``<p><br></p>``),
-    and without normalization one extra blank line accumulated on every
-    edit/save round-trip. This:
+
+def _clean_description(html: str) -> str:
+    """Sanitize + normalize a rich-text description before storing.
+
+    Security: runs bleach.clean first so no <script>/onerror/etc. survives to
+    the `| safe` render on event_detail.html (stored-XSS fix). Then normalizes
+    Quill's empty-paragraph churn:
       - collapses any run of >=2 consecutive empty paragraphs to a single one
       - strips empty paragraphs at the very start and very end
-    Blank lines the user intentionally put *between* content are preserved
-    (a single empty paragraph is left alone).
+    Blank lines the user intentionally put *between* content are preserved.
     """
     if not html:
         return ""
-    s = html.strip()
+    s = bleach.clean(
+        html.strip(),
+        tags=_DESC_ALLOWED_TAGS,
+        attributes=_DESC_ALLOWED_ATTRS,
+        strip=True,
+    )
     s = _CONSECUTIVE_EMPTY_P.sub("<p><br></p>", s)
     s = _LEADING_EMPTY_P.sub("", s)
     s = _TRAILING_EMPTY_P.sub("", s)
@@ -1331,7 +1378,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         # Capture data for background email before session closes
         catchup_email = None
         if send_opord_catchup or send_warno_catchup:
-            local_dt = _to_cdt(event.date_start)
+            local_dt = _fmt_ct_stored(event.date_start)
             date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
             catchup_email = member.email
             evt_title = event.title
@@ -2499,7 +2546,7 @@ async def schedule_warno(request: Request, event_id: int):
 
     return HTMLResponse(
         f'<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'📅 WARNO scheduled for {_to_cdt(scheduled).strftime("%d %b %Y · %H%M %Z")}.</div>'
+        f'📅 WARNO scheduled for {_fmt_ct_stored(scheduled).strftime("%d %b %Y · %H%M %Z")}.</div>'
         f'<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
 
@@ -2530,7 +2577,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
         attending_members = attending_result.scalars().all()
 
         # Format event date
-        local_dt = _to_cdt(event.date_start)
+        local_dt = _fmt_ct_stored(event.date_start)
         date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
 
         # Build SMEAC HTML for email
@@ -3064,41 +3111,46 @@ async def _auto_credit_tradoc(db, event: Event) -> str:
             credited += 1
             members_credited.add(mid)
 
-    # Update ftx_count and last_ftx for attendees
+    # Update ftx_count and last_ftx for attendees. Compute counts + last-dates
+    # for ALL attendees in two grouped queries instead of 3-4 queries per
+    # attendee (was ~160 round-trips for a 40-person FTX; the old loop also
+    # ran a dead, discarded select(Member) per member).
+    counts = dict((await db.execute(
+        select(EventRSVP.member_id, func.count(EventRSVP.id))
+        .join(Event)
+        .where(
+            and_(
+                EventRSVP.member_id.in_(attendee_ids),
+                EventRSVP.attended == True,
+                Event.category.in_(["ftx", "mcftx"]),
+            )
+        )
+        .group_by(EventRSVP.member_id)
+    )).all())
+
+    lasts = dict((await db.execute(
+        select(EventRSVP.member_id, func.max(Event.date_start))
+        .join(Event)
+        .where(
+            and_(
+                EventRSVP.member_id.in_(attendee_ids),
+                EventRSVP.attended == True,
+                Event.category.in_(["ftx", "mcftx"]),
+            )
+        )
+        .group_by(EventRSVP.member_id)
+    )).all())
+
+    now = datetime.utcnow()
     for mid in attendee_ids:
-        # Count all attended FTX/MCFTX
-        count_result = await db.execute(
-            select(func.count(EventRSVP.id)).join(Event).where(
-                and_(
-                    EventRSVP.member_id == mid,
-                    EventRSVP.attended == True,
-                    Event.category.in_(["ftx", "mcftx"]),
-                )
-            )
-        )
-        cnt = count_result.scalar() or 0
-
-        last_result = await db.execute(
-            select(func.max(Event.date_start)).join(EventRSVP).where(
-                and_(
-                    EventRSVP.member_id == mid,
-                    EventRSVP.attended == True,
-                    Event.category.in_(["ftx", "mcftx"]),
-                )
-            )
-        )
-        last_dt = last_result.scalar()
+        cnt = counts.get(mid, 0) or 0
+        last_dt = lasts.get(mid)
         last_date = last_dt.date() if last_dt and hasattr(last_dt, 'date') else last_dt
-
-        await db.execute(
-            select(Member).where(Member.id == mid)
-        )
-        # Update directly
         await db.execute(
             update(Member).where(Member.id == mid).values(
                 ftx_count=cnt,
                 last_ftx=last_date,
-                updated_at=datetime.utcnow(),
+                updated_at=now,
             )
         )
 
@@ -3172,7 +3224,7 @@ async def save_aar(request: Request, event_id: int):
             _evt_title = event.title
             _evt_location = event.location or 'TBD'
             _evt_eid = event.id
-            local_dt = _to_cdt(event.date_start)
+            local_dt = _fmt_ct_stored(event.date_start)
             _date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
 
         await db.commit()
@@ -3326,7 +3378,7 @@ async def export_opord_pdf(request: Request, event_id: int):
         attending_members = roster_result.scalars().all()
 
         # Format dates
-        local_dt = _to_cdt(event.date_start)
+        local_dt = _fmt_ct_stored(event.date_start)
         date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
         time_str = local_dt.strftime("%H%M %Z")
 
@@ -3587,7 +3639,7 @@ async def export_aar_pdf(request: Request, event_id: int):
         )
         aar_items = aar_result.scalars().all()
 
-        local_dt = _to_cdt(event.date_start)
+        local_dt = _fmt_ct_stored(event.date_start)
         date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0")
         pub_dt = _to_cdt(event.aar_published_at)
         pub_str = pub_dt.strftime("%d %b %Y %H%M") + " CT"

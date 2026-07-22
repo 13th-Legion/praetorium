@@ -72,7 +72,7 @@
 <div id="aar-list">
     {% for a in aars %}
     <div class="aar-card"
-         data-year="{{ a.date_start | cdt and (a.date_start | cdt).year }}"
+         data-year="{{ a.date_start | cdt_stored and (a.date_start | cdt_stored).year }}"
          data-type="{{ a.category }}"
          data-search="{{ (a.title ~ ' ' ~ a.snippet) | lower }}">
         <div class="aar-card-body">

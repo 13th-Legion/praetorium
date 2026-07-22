@@ -15,9 +15,12 @@ import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, or_, func
+from sqlalchemy.exc import IntegrityError
 
 from app.database import async_session
 from app.models.member import Member
+from app.models.webhook_event import WebhookEvent
+from config import get_settings
 from app.settings import (
     NC_SVC_USER as NC_SPOOKY_USER,
     NC_SVC_PASS as NC_SPOOKY_PASS,
@@ -30,7 +33,9 @@ PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_SECRET = os.getenv("PAYPAL_SECRET", "")
 PAYPAL_API_BASE = os.getenv("PAYPAL_API_BASE", "https://api-m.paypal.com")
 APP_FEE_AMOUNT = 50.00
-APP_FEE_MIN = 49.50   # floor — slightly under $50
+# Floor is the full fee — underpayment must NOT auto-verify (was 49.50, which
+# let a $49.50 payment clear a $50 fee). Ceiling covers $50 + PayPal fee (~$51.80).
+APP_FEE_MIN = 50.00
 APP_FEE_MAX = 53.00   # ceiling — $50 + PayPal fee covered (~$51.80) with margin
 
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
@@ -177,14 +182,19 @@ async def _find_deck_card(payer_email: str, payer_first: str, payer_last: str,
                 "match_type": "email",
             }
 
-        # Strategy 3: Name match
+        # Strategy 3: Name-only match (no email correlation).
+        # SECURITY: a payer can set any PayPal display name, so a name-only
+        # match is attacker-controllable. Do NOT auto-verify on it — flag it
+        # for manual S1 review instead. (Previously this also referenced an
+        # undefined `card_email`, raising NameError and 500-ing the handler.)
         if payer_full and card_name and card_name == payer_full:
             return {
                 "card_id": card["id"],
                 "stack_id": stack_id,
                 "name": _parse_card_name(card.get("title", "")),
-                "email": card_email,
+                "email": payer_email or next(iter(card_emails), ""),
                 "match_type": "name",
+                "needs_review": True,
             }
 
     return None
@@ -306,16 +316,51 @@ async def paypal_webhook(request: Request):
     if event_type != "PAYMENT.CAPTURE.COMPLETED":
         return JSONResponse({"status": "ignored", "event_type": event_type})
 
-    # Verify webhook signature
+    # Verify webhook signature BEFORE any side effects. A failed or
+    # unconfigured verification means we cannot trust the payload — reject it.
+    # The only bypass is an explicit local debug run (never true in prod).
     verified = await _verify_webhook(request, body)
     if not verified:
-        logger.warning("PayPal webhook signature verification failed — processing anyway with caution")
+        if get_settings().debug:
+            logger.warning(
+                "PayPal signature verification failed — processing anyway "
+                "because settings.debug=True (LOCAL/SANDBOX ONLY)"
+            )
+        else:
+            logger.error(
+                "PayPal webhook signature verification failed — REJECTED. "
+                "No payment processed."
+            )
+            return JSONResponse(
+                {"error": "signature verification failed"}, status_code=401
+            )
 
     # Extract payment details
     resource = event.get("resource", {})
     amount_value = float(resource.get("amount", {}).get("value", 0))
     currency = resource.get("amount", {}).get("currency_code", "USD")
     transaction_id = resource.get("id", "")
+
+    # Idempotency / replay guard: PayPal delivers at-least-once and retries.
+    # Record the transaction id up front; a duplicate hits the UNIQUE
+    # constraint and we short-circuit without re-processing side effects.
+    if transaction_id:
+        async with async_session() as db0:
+            db0.add(WebhookEvent(
+                provider="paypal",
+                transaction_id=transaction_id,
+                event_type=event_type,
+                outcome="processing",
+            ))
+            try:
+                await db0.commit()
+            except IntegrityError:
+                await db0.rollback()
+                logger.info(
+                    f"PayPal webhook txn={transaction_id} already processed — "
+                    f"duplicate, skipping."
+                )
+                return JSONResponse({"status": "duplicate", "transaction_id": transaction_id})
 
     # Payer info — capture webhooks often have empty resource.payer;
     # fall back to supplementary_data or fetch the linked order from PayPal API.
@@ -378,6 +423,40 @@ async def paypal_webhook(request: Request):
     deck_match = None
     if is_app_fee:
         deck_match = await _find_deck_card(payer_email, payer_first, payer_last, custom_id_email)
+
+    # Name-only matches are attacker-controllable (any PayPal display name) —
+    # never auto-verify them. Route to S1 for manual confirmation instead.
+    if deck_match and deck_match.get("needs_review"):
+        logger.warning(
+            f"⚠️ Name-only PayPal match for card #{deck_match['card_id']} "
+            f"({deck_match['name']}) — needs manual S1 review. txn={transaction_id}"
+        )
+        try:
+            async with async_session() as dbr:
+                from app.routes.notifications import create_notification_for_roles
+                await create_notification_for_roles(
+                    dbr, ["s1", "command", "admin"],
+                    "payment",
+                    f"⚠️ PayPal payment needs review — {deck_match['name']}",
+                    body=(
+                        f"${amount_value:.2f} received via PayPal. Matched a pipeline "
+                        f"card by NAME ONLY (no email correlation), so it was NOT "
+                        f"auto-verified. Confirm manually before marking the fee paid. "
+                        f"Payer: {payer_first} {payer_last} ({payer_email}). "
+                        f"Transaction: {transaction_id}"
+                    ),
+                    link="/api/s1/payments",
+                    icon="⚠️",
+                )
+        except Exception:
+            pass
+        return JSONResponse({
+            "status": "needs_review",
+            "source": "deck",
+            "card_id": deck_match["card_id"],
+            "name": deck_match["name"],
+            "match_type": "name",
+        })
 
     if deck_match:
         logger.info(

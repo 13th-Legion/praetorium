@@ -28,8 +28,6 @@ from app.routes.elections import (
     _is_window_open,
     _to_cdt,
     _mildate,
-    _now_utc,
-    _round_to_hour,
 )
 
 _CDT = ZoneInfo("America/Chicago")

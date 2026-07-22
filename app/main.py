@@ -50,6 +50,26 @@ async def lifespan(app: FastAPI):
 
 settings = get_settings()
 
+# ─── Error tracking (optional) ───────────────────────────────────────────────
+# Initializes only when SENTRY_DSN is set, so local/dev is unaffected. Captures
+# unhandled exceptions with request context (audit finding: no error tracking).
+import os as _os_sentry
+import logging as _logging_sentry
+_SENTRY_DSN = _os_sentry.getenv("SENTRY_DSN", "").strip()
+if _SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        sentry_sdk.init(
+            dsn=_SENTRY_DSN,
+            traces_sample_rate=float(_os_sentry.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+            environment="debug" if settings.debug else "production",
+            integrations=[FastApiIntegration()],
+        )
+        _logging_sentry.getLogger("uvicorn.error").info("Sentry error tracking enabled")
+    except Exception as _se:
+        _logging_sentry.getLogger("uvicorn.error").warning(f"Sentry init skipped: {_se}")
+
 
 # ─── Contact Verification Middleware ─────────────────────────────────────────
 
@@ -208,9 +228,14 @@ app = FastAPI(
 # Middleware — order matters: last added = outermost = runs first
 # ContactVerifyMiddleware added first → inner (has session access)
 # SessionMiddleware added last → outermost (provides session to everything inside)
+from app.csrf import CSRFMiddleware
 app.add_middleware(ContactVerifyMiddleware)
 app.add_middleware(GuestReadOnlyMiddleware)
 app.add_middleware(DisplayRefreshMiddleware)
+# CSRF double-submit — added before SessionMiddleware so it sits INSIDE the
+# session (session cookie is available), and runs on every request to issue /
+# validate the csrftoken cookie. Defends even with SameSite=None sessions.
+app.add_middleware(CSRFMiddleware, https_only=not settings.debug)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,
@@ -226,6 +251,22 @@ app.add_middleware(
     # Falls back to "lax" in local debug where https_only is off (Secure absent).
     same_site="none" if not settings.debug else "lax",
 )
+
+# ─── Global exception handler ────────────────────────────────────────────────
+# Unhandled exceptions were surfacing as bare 500s with no capture. Log with
+# stack + return a clean response (HTMX-aware). Sentry (if enabled) captures
+# automatically via its integration; this guarantees a log line either way.
+_exc_logger = _logging_sentry.getLogger("praetorium.errors")
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    _exc_logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    msg = "Something went wrong on our end. It's been logged."
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse(f'<div style="color:#ef5350;font-size:13px;">⚠️ {msg}</div>', status_code=500)
+    return JSONResponse({"detail": msg}, status_code=500)
+
 
 # Favicon at root (browsers always request /favicon.ico)
 from fastapi.responses import FileResponse

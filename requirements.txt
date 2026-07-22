@@ -17,6 +17,9 @@ authlib==1.4.*            # OAuth2/OIDC client
 itsdangerous==2.2.*       # session signing
 httpx==0.28.*             # async HTTP client (NC API)
 
+# Error tracking (no-op unless SENTRY_DSN is set)
+sentry-sdk[fastapi]==2.*
+
 # HTML sanitization
 bleach==6.*
 markdown==3.*            # TRADOC doc rendering

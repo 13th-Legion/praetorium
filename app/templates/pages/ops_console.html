@@ -92,7 +92,7 @@
       <h1 style="font-size:{% if display_mode == 'tv' %}1.8rem{% else %}1.3rem{% endif %};margin:0;color:#d4a537;">{{ event.title }}</h1>
       <div style="font-size:12px;color:#888;margin-top:4px;">
         {{ event.category | upper }} ·
-        {{ event.date_start | cdt | string | truncate(16, True, '') }}
+        {{ event.date_start | cdt_stored | string | truncate(16, True, '') }}
         {% if event.location %} · 📍 {{ event.location }}{% endif %}
       </div>
     </div>
