@@ -112,7 +112,11 @@ async def attendance_analytics(request: Request):
         rsvps_result = await db.execute(
             select(EventRSVP).where(EventRSVP.event_id.in_(event_ids))
         )
-        all_rsvps = [r for r in rsvps_result.scalars().all() if r.member_id in active_member_ids]
+        # Keep the raw (pre-active-filter) set too, so we can tell 'event had NO
+        # attendance recorded at all' (backfill placeholder) apart from 'event
+        # had attendance, just not from current active members'.
+        all_rsvps_raw = list(rsvps_result.scalars().all())
+        all_rsvps = [r for r in all_rsvps_raw if r.member_id in active_member_ids]
 
         # === Per-Event Stats === (13th Legion events only; Pre-13th excluded
         # so AVG HEADCOUNT / AVG RATE reflect actual 13th attendance, not
@@ -246,8 +250,19 @@ async def attendance_analytics(request: Request):
         from app.routes.events import _to_cdt
         import calendar as _cal
 
-        # Chronological 13th-era events with headcount
-        viz_events = sorted(thirteenth_events, key=lambda e: e.date_start)
+        # Chronological 13th-era events with headcount.
+        # Exclude events that have ZERO RSVP rows entirely: those are backfilled/
+        # silent-import placeholders whose attendance was never captured (e.g.
+        # the Feb 2026 'Urban Evasion' import). Plotting them as a literal 0
+        # wrongly reads as 'nobody came' and drags the trend line + average to
+        # zero. 'No attendance data' is not the same as '0 attended'. (Active-
+        # member filtering already happened when building all_rsvps; use the raw
+        # RSVP set to decide whether ANY attendance was ever recorded.)
+        evt_ids_with_rsvps = {r.event_id for r in all_rsvps_raw}
+        viz_events = sorted(
+            [e for e in thirteenth_events if e.id in evt_ids_with_rsvps],
+            key=lambda e: e.date_start,
+        )
         att_by_evt = {}
         for e in viz_events:
             att_by_evt[e.id] = len([r for r in all_rsvps if r.event_id == e.id and r.attended])
