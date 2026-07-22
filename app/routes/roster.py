@@ -376,7 +376,7 @@ async def member_map(request: Request, db: AsyncSession = Depends(get_db)):
             "separation_date": m.separation_date.strftime("%b %d, %Y") if m.separation_date else None,
         }
         
-        if m.status in ("active", "recruit", "Active", "Recruit"):
+        if m.status in ("active", "recruit"):
             active_data.append(md)
         else:
             inactive_data.append(md)

@@ -315,7 +315,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
         # Default: all active/recruit members
         ids_result = await db.execute(
             select(Member.id).where(
-                Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+                Member.status.in_(["active", "recruit"]),
                 Member.company == "13th Legion",
             )
         )
@@ -324,7 +324,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
     # Also fetch full member objects for email/notification (active only, with email)
     members_result = await db.execute(
         select(Member).where(
-            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+            Member.status.in_(["active", "recruit"]),
             Member.company == "13th Legion",
         )
     )
@@ -370,7 +370,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
         # from 2026-04-14 until this fix, even though RSVPs/notifications include them.)
         warno_recipients = [
             m for m in members
-            if m.email and m.status in ("active", "Active", "recruit", "Recruit")
+            if m.email and m.status in ("active", "recruit")
         ]
         if warno_recipients:
             html_body = f"""<!DOCTYPE html>
@@ -847,7 +847,7 @@ async def sync_calendar(request: Request):
             # Get all active + recruit members for RSVP creation
             members_result = await db.execute(
                 select(Member.id).where(
-                    Member.status.in_(["active", "recruit", "Active", "Recruit"])
+                    Member.status.in_(["active", "recruit"])
                 )
             )
             member_ids = [r[0] for r in members_result.all()]
@@ -1085,7 +1085,7 @@ async def _maintain_event_roster(db, event_id, event):
         # Default: all active/recruit
         active_result = await db.execute(
             select(Member.id).where(
-                Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+                Member.status.in_(["active", "recruit"]),
             )
         )
         active_ids = {r[0] for r in active_result.all()}
@@ -1108,7 +1108,7 @@ async def _maintain_event_roster(db, event_id, event):
     #    Manual additions outside the invite group should persist.
     all_active_result = await db.execute(
         select(Member.id).where(
-            Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+            Member.status.in_(["active", "recruit"]),
         )
     )
     all_active_ids = {r[0] for r in all_active_result.all()}
@@ -1756,7 +1756,7 @@ async def create_event(request: Request):
             else:
                 ids_result = await db.execute(
                     select(Member.id).where(
-                        Member.status.in_(["active", "recruit", "Active", "Recruit"])
+                        Member.status.in_(["active", "recruit"])
                     )
                 )
                 rsvp_member_ids = {r[0] for r in ids_result.all()}
@@ -2913,7 +2913,7 @@ async def attendance_roster(request: Request, event_id: int):
         available_result = await db.execute(
             select(Member).where(
                 and_(
-                    Member.status.in_(["active", "recruit", "Active", "Recruit"]),
+                    Member.status.in_(["active", "recruit"]),
                     ~Member.id.in_(rostered_ids) if rostered_ids else True,
                 )
             ).order_by(Member.last_name)
@@ -3235,7 +3235,7 @@ async def save_aar(request: Request, event_id: int):
             # attendees — same recipient model as WARNO (fixes the recruit-exclusion bug).
             recipients_result = await db.execute(
                 select(Member).where(
-                    Member.status.in_(["active", "recruit", "Active", "Recruit"])
+                    Member.status.in_(["active", "recruit"])
                 )
             )
             _attending_emails = [(m.email, m.first_name, m.last_name) for m in recipients_result.scalars().all() if m.email]

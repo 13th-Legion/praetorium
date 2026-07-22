@@ -53,6 +53,16 @@ def _mildate(dt):
 templates.env.filters["mildate"] = _mildate
 
 
+# ─── DATETIME CONVENTION (bug #11 / audit) ──────────────────────────────────
+# elections stores election open/close + vote timestamps as **naive UTC**
+# (datetime.utcnow()), converting to Central only at render via _to_cdt.
+# This is DIFFERENT from events.py, which stores event date_start/date_end/
+# rsvp_deadline as **naive CT** wall-clock (see events._parse_mil_datetime /
+# _fmt_ct_stored). Both use bare `DateTime` columns (no tz), so the convention
+# lives in code, not the schema. DO NOT share tz helpers across the two modules,
+# and never feed an events.py naive-CT value into elections' _to_cdt (or vice
+# versa) — they'd be off by the UTC↔CT offset. Keep each module's dates within
+# its own module.
 def _now_utc() -> datetime:
     return datetime.utcnow()
 

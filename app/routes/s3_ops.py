@@ -219,7 +219,7 @@ async def ftx_builder(request: Request, event_id: int, db: AsyncSession = Depend
     # Get active members for instructor dropdown
     members_result = await db.execute(
         select(Member)
-        .where(Member.status.in_(["active", "Active"]))
+        .where(Member.status.in_(["active"]))
         .order_by(Member.rank_grade.desc(), Member.last_name)
     )
     members = members_result.scalars().all()

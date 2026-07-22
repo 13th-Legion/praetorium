@@ -45,9 +45,6 @@ def _events_since_join(events: list, join_date) -> list:
     """Return only events whose start date is on or after the member's join date."""
     if not join_date:
         return events
-    for evt in events:
-        # date_start is datetime; join_date is date — compare as dates
-        pass
     return [e for e in events if e.date_start.date() >= join_date]
 
 

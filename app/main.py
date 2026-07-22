@@ -305,11 +305,17 @@ app.mount("/nlmedia", StaticFiles(directory=_nlmedia_dir), name="nlmedia")
 templates = Jinja2Templates(directory="app/templates")
 
 # Custom Jinja2 filters
-from datetime import datetime as _dt
+from datetime import datetime as _dt, timezone as _tz
+from zoneinfo import ZoneInfo as _ZoneInfo
+_CT = _ZoneInfo("America/Chicago")
 def _timestamp_fmt(epoch_secs):
-    """Convert Unix epoch seconds to readable date string."""
+    """Convert Unix epoch seconds to a Central-Time readable date string.
+    Interpret the epoch as UTC then convert to CT (explicit tz), rather than
+    relying on the process's local timezone — so display is stable regardless
+    of container TZ (mirrors roster.py)."""
     try:
-        return _dt.fromtimestamp(int(epoch_secs)).strftime("%b %d, %Y %I:%M %p")
+        return (_dt.fromtimestamp(int(epoch_secs), tz=_tz.utc)
+                .astimezone(_CT).strftime("%b %d, %Y %I:%M %p"))
     except Exception:
         return "Unknown"
 templates.env.filters["timestamp_fmt"] = _timestamp_fmt
