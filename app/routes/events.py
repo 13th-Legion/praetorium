@@ -139,19 +139,78 @@ def _calc_warno_schedule(category: str, date_start) -> "datetime | None":
         return date_start - timedelta(days=lead)
 
 
+async def _build_recipient_groups(db=None) -> dict:
+    """Ordered recipient-group registry = static groups from constants +
+    one "Team <Name>" group per DB team (Aquila..Foxtrot), injected after
+    "Shop Heads". Team groups use key "team:<Name>" and a `team` matcher so
+    they always track the teams table (renames included).
+    """
+    from app.services import teams as _teams
+    team_metas = [t for t in await _teams.all_teams() if not t.is_hq]
+    team_metas.sort(key=lambda t: t.sort_order)
+
+    out: dict[str, dict] = {}
+    for key, cfg in RECIPIENT_GROUPS.items():
+        if key == "s1":
+            # inject team groups right before the shops block
+            for tm in team_metas:
+                out[f"team:{tm.name}"] = {"label": f"Team {tm.name}", "team": tm.name}
+        out[key] = cfg
+    return out
+
+
 async def _resolve_invite_groups(db, group_keys: list) -> set:
     """Resolve invite group keys to member IDs. Optimized: single query per group type."""
     import json
     member_ids = set()
 
-    filter_keys = [k for k in group_keys if "filter" in RECIPIENT_GROUPS.get(k, {})]
-    role_keys = [k for k in group_keys if "roles" in RECIPIENT_GROUPS.get(k, {})]
+    groups = await _build_recipient_groups(db)
+
+    filter_keys = [k for k in group_keys if "filter" in groups.get(k, {})]
+    role_keys = [k for k in group_keys if "roles" in groups.get(k, {})]
+    leadership_keys = [k for k in group_keys if "leadership" in groups.get(k, {})]
+    billet_lead_keys = [k for k in group_keys if groups.get(k, {}).get("billet_lead")]
+    team_keys = [k for k in group_keys if "team" in groups.get(k, {})]
 
     # Resolve filter-based groups (status filter)
     for key in filter_keys:
-        config = RECIPIENT_GROUPS[key]
+        config = groups[key]
         result = await db.execute(
             select(Member.id).where(Member.status.in_(config["filter"]))
+        )
+        member_ids.update(r[0] for r in result.all())
+
+    # Resolve team-based groups (Member.team == name), active/recruit only
+    if team_keys:
+        wanted_teams = {groups[k]["team"] for k in team_keys}
+        result = await db.execute(
+            select(Member.id).where(
+                Member.status.in_(["active", "recruit"]),
+                Member.team.in_(wanted_teams),
+            )
+        )
+        member_ids.update(r[0] for r in result.all())
+
+    # Resolve leadership-title groups (Team Leaders), active/recruit only
+    if leadership_keys:
+        wanted_titles = set()
+        for k in leadership_keys:
+            wanted_titles.update(groups[k]["leadership"])
+        result = await db.execute(
+            select(Member.id).where(
+                Member.status.in_(["active", "recruit"]),
+                Member.leadership_title.in_(wanted_titles),
+            )
+        )
+        member_ids.update(r[0] for r in result.all())
+
+    # Resolve shop-head groups (any billet marked "(Lead)"), active/recruit only
+    if billet_lead_keys:
+        result = await db.execute(
+            select(Member.id).where(
+                Member.status.in_(["active", "recruit"]),
+                Member.primary_billet.ilike("%(Lead)%"),
+            )
         )
         member_ids.update(r[0] for r in result.all())
 
@@ -174,7 +233,7 @@ async def _resolve_invite_groups(db, group_keys: list) -> set:
             except Exception:
                 continue
             for key in role_keys:
-                config = RECIPIENT_GROUPS[key]
+                config = groups[key]
                 if member_role_set & set(config["roles"]):
                     member_ids.add(mid)
                     break
@@ -928,6 +987,7 @@ async def events_page(request: Request):
             and not e["event"].finalized_at
         ]
 
+    recipient_groups = await _build_recipient_groups(None)
     return templates.TemplateResponse("pages/events.html", {
         "request": request,
         "user": user,
@@ -942,7 +1002,7 @@ async def events_page(request: Request):
         "category_labels": CATEGORY_LABELS,
         "members": members,
         "rank_abbr": RANK_ABBR,
-        "recipient_groups": RECIPIENT_GROUPS,
+        "recipient_groups": recipient_groups,
         "tradoc_blocks": tradoc_blocks,
     })
 
@@ -1169,7 +1229,7 @@ async def event_detail(request: Request, event_id: int):
         "schedule_by_day": schedule_by_day,
         "schedule_instructors": schedule_instructors,
         "now": _now_ct(),
-        "recipient_groups": RECIPIENT_GROUPS,
+        "recipient_groups": await _build_recipient_groups(None),
         "tradoc_blocks": tradoc_blocks,
     })
 

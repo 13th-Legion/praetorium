@@ -92,9 +92,30 @@ STATUS_OPTIONS: list[str] = ["recruit", "active", "separated", "inactive", "blac
 
 # ─── Recipient Groups (shared between Email Blast and Events) ────────────────
 
+# Matcher types understood by _resolve_invite_groups:
+#   filter:      Member.status in [...]
+#   roles:       any of Member.portal_roles in [...]
+#   leadership:  Member.leadership_title in [...]
+#   billet_lead: Member.primary_billet contains "(Lead)"  (shop heads)
+#   team:        Member.team == <team name>   (added dynamically for each team)
+# Order here is the order rendered in the invite-groups checkbox grid. Team
+# groups (Aquila..Foxtrot) are injected after "Shop Heads" by
+# build_recipient_groups() so they track the DB teams table.
 RECIPIENT_GROUPS: dict[str, dict] = {
-    "entire_unit": {"label": "Entire Unit", "filter": ["active", "recruit"]},
+    "entire_unit": {"label": "13th Legion", "filter": ["active", "recruit"]},
     "patched": {"label": "Patched", "filter": ["active"]},
-    "leaders": {"label": "Leaders (NCOs + Officers)", "roles": ["command", "leader", "officer"]},
+    "recruits": {"label": "Recruits", "filter": ["recruit"]},
+    "leaders": {"label": "Leaders", "roles": ["command", "leader", "officer", "nco"]},
+    "officers": {"label": "Officers", "roles": ["command", "officer"]},
+    "ncos": {"label": "NCOs", "roles": ["nco"]},
+    "team_leaders": {"label": "Team Leaders", "leadership": ["Team Leader", "Assistant Team Leader"]},
+    "shop_heads": {"label": "Shop Heads", "billet_lead": True},
+    # Team groups injected here dynamically (Team Aquila .. Team Foxtrot)
+    "s1": {"label": "S1 — Administration", "roles": ["s1", "s1_lead"]},
+    "s2": {"label": "S2 — Intelligence & Security", "roles": ["s2"]},
+    "s3": {"label": "S3 — Training & Operations", "roles": ["s3"]},
+    "s4": {"label": "S4 — Logistics", "roles": ["s4"]},
+    "s5": {"label": "S5 — Medical", "roles": ["s5"]},
+    "s6": {"label": "S6 — Communications", "roles": ["s6"]},
     "command": {"label": "Command", "roles": ["command"]},
 }
