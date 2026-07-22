@@ -35,3 +35,6 @@ from app.models.team import Team  # noqa: F401
 from app.models.webhook_event import WebhookEvent  # noqa: F401
 from app.models.rank import Rank  # noqa: F401
 from app.models.shop import Shop  # noqa: F401
+from app.models.app_setting import AppSetting  # noqa: F401
+from app.models.event_category import EventCategory  # noqa: F401
+from app.models.member_status import MemberStatus  # noqa: F401

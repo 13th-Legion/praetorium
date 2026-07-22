@@ -14,7 +14,9 @@ pytestmark = pytest.mark.integration
 
 class TestFtxDeviceThresholds:
     def test_thresholds_are_5_10_25_50(self):
-        assert rd.FTX_DEVICE_THRESHOLDS == [5, 10, 25, 50]
+        # Thresholds now come from app_settings (fallback default when unseeded).
+        from app.services import settings_store
+        assert settings_store.ftx_device_thresholds() == [5, 10, 25, 50]
 
     def test_device_count_steps(self):
         assert rd._ftx_devices(0) == 0

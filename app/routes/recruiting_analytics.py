@@ -43,18 +43,17 @@ POSITIVE_RSVP = {"attending", "accepted"}
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-# Statuses that represent "did not stay" outcomes
-LEFT_STATUSES = {"inactive", "separated", "blacklisted"}
-STAYED_STATUSES = {"active"}
-IN_PROGRESS_STATUSES = {"recruit"}
+# Member statuses now come from the member_statuses table (taxonomies service).
+# lifecycle buckets replace the old hardcoded LEFT/STAYED/IN_PROGRESS sets.
+from app.services import taxonomies as _tax
 
-STATUS_META = {
-    "active":      {"label": "Active",      "color": "#4caf50"},
-    "recruit":     {"label": "Recruit",     "color": "#42a5f5"},
-    "inactive":    {"label": "Inactive",    "color": "#888888"},
-    "separated":   {"label": "Separated",   "color": "#f39c12"},
-    "blacklisted": {"label": "Blacklisted", "color": "#ef5350"},
-}
+
+def _left_statuses() -> set[str]:
+    return _tax.left_statuses()
+
+
+def _status_meta() -> dict[str, dict]:
+    return _tax.status_meta()
 
 SEP_REASON_COLOR = {
     "voluntary":   "#42a5f5",
@@ -151,7 +150,7 @@ async def recruiting_analytics(request: Request):
     status_counter = Counter(m.status for m in members)
     status_cards = []
     for st in ["active", "recruit", "inactive", "separated", "blacklisted"]:
-        meta = STATUS_META.get(st, {"label": st.title(), "color": "#888"})
+        meta = _status_meta().get(st, {"label": st.title(), "color": "#888"})
         status_cards.append({
             "key": st, "label": meta["label"], "color": meta["color"],
             "count": status_counter.get(st, 0),
@@ -160,7 +159,7 @@ async def recruiting_analytics(request: Request):
 
     active_n = status_counter.get("active", 0)
     recruit_n = status_counter.get("recruit", 0)
-    left_n = sum(status_counter.get(s, 0) for s in LEFT_STATUSES)
+    left_n = sum(status_counter.get(s, 0) for s in _left_statuses())
 
     # ---------- Roster-aligned headline (matches roster.py) ----------
     # "On the roster" = status IN ('active','recruit'). 'active' administratively
@@ -256,7 +255,7 @@ async def recruiting_analytics(request: Request):
     # ---------- Separations breakdown — 13th-era funnel only ----------
     sep_reason_counter = Counter()
     for m in funnel_members:
-        if m.separation_date or m.status in LEFT_STATUSES:
+        if m.separation_date or m.status in _left_statuses():
             reason = (m.separation_reason or "").strip().lower()
             # Normalize freeform reasons to a bucket
             if "blacklist" in reason or m.status == "blacklisted":
@@ -336,7 +335,7 @@ async def recruiting_analytics(request: Request):
         cnt = never_by_status.get(st, 0)
         if cnt == 0:
             continue
-        meta = STATUS_META.get(st, {"label": st.title(), "color": "#888"})
+        meta = _status_meta().get(st, {"label": st.title(), "color": "#888"})
         never_status_rows.append({
             "label": meta["label"], "color": meta["color"], "count": cnt,
             "pct": round(100 * cnt / never_attended_n, 1) if never_attended_n else 0,
@@ -350,7 +349,7 @@ async def recruiting_analytics(request: Request):
         if st_total == 0:
             continue
         st_attended = sum(1 for m in members if m.status == st and m.id in attended_member_ids)
-        meta = STATUS_META.get(st, {"label": st.title(), "color": "#888"})
+        meta = _status_meta().get(st, {"label": st.title(), "color": "#888"})
         attend_by_status.append({
             "label": meta["label"], "color": meta["color"],
             "attended": st_attended, "total": st_total,
@@ -410,7 +409,7 @@ async def recruiting_analytics(request: Request):
         "veterans": veterans,
         "conv_recruit_to_patch": conv_recruit_to_patch, "survival": survival,
         "data_gaps": data_gaps,
-        "status_meta": STATUS_META,
+        "status_meta": _status_meta(),
         "pre_founding_n": pre_founding_n,
         "ever_attended_n": ever_attended_n, "ever_attended_pct": ever_attended_pct,
         "never_attended_n": never_attended_n,

@@ -92,35 +92,32 @@ REPORT_BODY = """<?xml version="1.0"?>
 
 # ─── Category & Icon Mapping ────────────────────────────────────────────────
 
-VALID_CATEGORIES = [
-    "ftx", "mcftx", "online_training", "meeting", "external_training",
-    "family_day", "social", "volunteering", "other",
-]
-
-CATEGORY_LABELS = {
-    "ftx": "FTX",
-    "mcftx": "MCFTX",
-    "online_training": "Online Training",
-    "meeting": "Meeting",
-    "external_training": "External Training",
-    "family_day": "Family Day",
-    "social": "Social",
-    "volunteering": "Volunteering",
-    "other": "Other",
-}
-
-# Categories that get RSVP by default (in-person / planning-dependent)
-RSVP_CATEGORIES = {"ftx", "mcftx", "external_training", "family_day", "social", "volunteering"}
-
-# WARNO auto-schedule lead times (days before event start)
-WARNO_LEAD_DAYS = {
-    "ftx": 14,    # 2 weeks
-    "mcftx": 28,  # 4 weeks
-}
+# Event categories now come from the event_categories table (taxonomies
+# service); WARNO room from app_settings. Accessed via functions so edits take
+# effect without a code change. These names are kept as thin helpers to keep
+# call sites readable.
+from app.services import taxonomies as _tax
+from app.services import settings_store as _settings_store
 
 
-# Rooms for WARNO cross-post
-WARNO_TALK_ROOM = "atnd3vgf"  # T1 · Announcements
+def VALID_CATEGORIES() -> list[str]:
+    return _tax.valid_categories()
+
+
+def CATEGORY_LABELS() -> dict[str, str]:
+    return _tax.category_labels()
+
+
+def RSVP_CATEGORIES() -> set[str]:
+    return _tax.rsvp_categories()
+
+
+def WARNO_LEAD_DAYS() -> dict[str, int]:
+    return _tax.warno_lead_days()
+
+
+def WARNO_TALK_ROOM() -> str:
+    return _settings_store.warno_talk_room()
 
 
 def _subject_date_suffix(date_start, date_end=None):
@@ -157,7 +154,7 @@ def _subject_date_suffix(date_start, date_end=None):
 
 def _calc_warno_schedule(category: str, date_start) -> "datetime | None":
     """Calculate WARNO auto-issue date based on category defaults."""
-    lead = WARNO_LEAD_DAYS.get(category)
+    lead = WARNO_LEAD_DAYS().get(category)
     if lead and date_start:
         from datetime import timedelta
         return date_start - timedelta(days=lead)
@@ -357,7 +354,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
         )
         async with _httpx.AsyncClient(timeout=15) as client:
             await client.post(
-                f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
                 headers={"OCS-APIRequest": "true", "Accept": "application/json"},
                 auth=(NC_TALK_USER, NC_TALK_PASS),
                 data={"message": talk_msg},
@@ -460,17 +457,8 @@ async def _activate_warno(db, event, *, already_claimed=False):
         pass
     return None
 
-CATEGORY_ICONS = {
-    "ftx": "🏕️",
-    "mcftx": "⚔️",
-    "online_training": "💻",
-    "meeting": "🎖️",
-    "external_training": "🎓",
-    "family_day": "👨‍👩‍👧‍👦",
-    "social": "🤝",
-    "volunteering": "🫡",
-    "other": "📅",
-}
+def CATEGORY_ICONS() -> dict[str, str]:
+    return _tax.category_icons()
 
 # Filter tab groupings
 FILTER_TABS = {
@@ -505,7 +493,7 @@ def _guess_category(title: str) -> str:
 
 
 def _get_icon(category: str) -> str:
-    return CATEGORY_ICONS.get(category, "📅")
+    return CATEGORY_ICONS().get(category, "📅")
 
 
 # ─── iCal Parsing (reused from original) ────────────────────────────────────
@@ -887,7 +875,7 @@ async def sync_calendar(request: Request):
                     # Create new
                     category = _guess_category(ev["summary"])
                     # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
-                    rsvp_on = category in RSVP_CATEGORIES and category not in ("ftx", "mcftx")
+                    rsvp_on = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
                     warno_sched = _calc_warno_schedule(category, date_start)
                     event = Event(
                         title=ev["summary"],
@@ -1004,7 +992,7 @@ async def events_page(request: Request):
             events_data.append({
                 "event": event,
                 "icon": _get_icon(event.category),
-                "category_label": CATEGORY_LABELS.get(event.category, event.category),
+                "category_label": CATEGORY_LABELS().get(event.category, event.category),
                 "date_display": _format_range(event.date_start, event.date_end, all_day),
                 "attending": attending,
                 "declined": declined,
@@ -1046,8 +1034,8 @@ async def events_page(request: Request):
         "needs_finalization": needs_finalization,
         "current_tab": tab,
         "filter_tabs": FILTER_TABS,
-        "categories": VALID_CATEGORIES,
-        "category_labels": CATEGORY_LABELS,
+        "categories": VALID_CATEGORIES(),
+        "category_labels": CATEGORY_LABELS(),
         "members": members,
         "rank_abbr": _ranks.abbr_map(),
         "recipient_groups": recipient_groups,
@@ -1258,7 +1246,7 @@ async def event_detail(request: Request, event_id: int):
         "can_edit": _can_edit,
         "event": event,
         "icon": _get_icon(event.category),
-        "category_label": CATEGORY_LABELS.get(event.category, event.category),
+        "category_label": CATEGORY_LABELS().get(event.category, event.category),
         "date_display": _format_range(event.date_start, event.date_end, all_day),
         "my_rsvp": my_rsvp,
         "my_guest_count": my_guest_count,
@@ -1727,11 +1715,11 @@ async def create_event(request: Request):
             '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">Invalid date/time format. Use HHMM for time (e.g. 0600).</div>'
         )
 
-    if category not in VALID_CATEGORIES:
+    if category not in VALID_CATEGORIES():
         category = "other"
 
     # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
-    rsvp_on = category in RSVP_CATEGORIES and category not in ("ftx", "mcftx")
+    rsvp_on = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
 
     # Recurrence (PP-224): build RRULE + occurrence start datetimes.
     rrule_str = build_rrule_from_form(form)
@@ -1876,7 +1864,7 @@ async def edit_event(request: Request, event_id: int):
 
         if _admin and form.get("title"):
             event.title = form["title"].strip()
-        if _admin and form.get("category") and form["category"] in VALID_CATEGORIES:
+        if _admin and form.get("category") and form["category"] in VALID_CATEGORIES():
             event.category = form["category"]
         if _admin and form.get("location") is not None:
             event.location = form["location"].strip() or None
@@ -2417,7 +2405,7 @@ async def warno_banner(request: Request):
     date_display = _format_range(event.date_start, event.date_end, all_day)
 
     # Category label
-    cat_label = CATEGORY_LABELS.get(event.category, event.category)
+    cat_label = CATEGORY_LABELS().get(event.category, event.category)
     cat_icon = _get_icon(event.category)
 
     # RSVP buttons
@@ -2678,7 +2666,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
             talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event_id_val}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
-                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
                     headers={"OCS-APIRequest": "true", "Accept": "application/json"},
                     auth=(NC_TALK_USER, NC_TALK_PASS),
                     data={"message": talk_msg},
@@ -3285,7 +3273,7 @@ async def save_aar(request: Request, event_id: int):
                 talk_msg += f"\n\nFull AAR on the Portal:\n\U0001f517 https://portal.13thlegion.org/events/{_evt_eid}"
                 async with httpx.AsyncClient(timeout=15) as client:
                     await client.post(
-                        f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM}",
+                        f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
                         headers={"OCS-APIRequest": "true", "Accept": "application/json"},
                         auth=(NC_TALK_USER, NC_TALK_PASS),
                         data={"message": talk_msg},

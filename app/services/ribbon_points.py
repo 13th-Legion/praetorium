@@ -27,7 +27,7 @@ from app.models.rank_history import RankHistory
 
 
 # ── Tenure disc math ─────────────────────────────────────────────────────────
-TENURE_POINTS = {"gold": 15, "silver": 9, "bronze": 3}
+# TENURE_POINTS now from app_settings (settings_store.tenure_points())
 
 
 def tenure_discs(years: int) -> dict[str, int]:
@@ -51,7 +51,9 @@ def years_of_service(join: Optional[date], asof: Optional[date] = None) -> int:
 
 def tenure_points(join: Optional[date], asof: Optional[date] = None) -> int:
     d = tenure_discs(years_of_service(join, asof))
-    return sum(TENURE_POINTS[k] * n for k, n in d.items())
+    from app.services import settings_store as _ss
+    _tp = _ss.tenure_points()
+    return sum(_tp[k] * n for k, n in d.items())
 
 
 def ribbon_award_points(cat: RibbonCatalog, device_count: int) -> int:

@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models.member import Member
 from app.models.org import ShopSignupRequest
 from app.services import shops as _shops
+from app.services import settings_store as _settings_store
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/shops", tags=["shops"])
 # Max shops a member may sign up to hold. Enforced at the sign-up form + submit
 # only; some members are grandfathered into more and that is fine (accept does
 # not re-enforce).
-MAX_SHOPS = 2
+# MAX_SHOPS now from app_settings (settings_store.max_shops())
 
 # Shop catalog / metadata / RBAC now come from the shops service (DB-backed
 # SSoT). Call the service accessors so edits (via AdminCP later) take effect
@@ -128,7 +129,7 @@ async def shop_signup_page(request: Request, db: AsyncSession = Depends(get_db))
         )
         pending_keys = {row[0] for row in pres.all()}
 
-    at_max = len(held) >= MAX_SHOPS
+    at_max = len(held) >= _settings_store.max_shops()
 
     return templates.TemplateResponse("pages/shop_signup.html", {
         "request": request,
@@ -138,7 +139,7 @@ async def shop_signup_page(request: Request, db: AsyncSession = Depends(get_db))
         "held": held,
         "pending_keys": pending_keys,
         "at_max": at_max,
-        "max_shops": MAX_SHOPS,
+        "max_shops": _settings_store.max_shops(),
         "can_review": bool(member and set(user.get("roles", [])) & (REVIEWER_ROLES | set(_shop_role_map().values()))),
     })
 
@@ -163,8 +164,8 @@ async def submit_shop_signup(request: Request, db: AsyncSession = Depends(get_db
     held = _held_shop_keys(member.primary_billet)
     if shop_key in held:
         return _err(f"You are already a member of {_shop_name_map()[shop_key]}.")
-    if len(held) >= MAX_SHOPS:
-        return _err(f"You already hold the maximum of {MAX_SHOPS} shops. "
+    if len(held) >= _settings_store.max_shops():
+        return _err(f"You already hold the maximum of {_settings_store.max_shops()} shops. "
                     "Drop one before requesting another (see your shop lead or Command).")
 
     # No duplicate pending request for the same shop.

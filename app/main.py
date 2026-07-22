@@ -30,6 +30,10 @@ async def lifespan(app: FastAPI):
         _ranks_warm.warm()
         from app.services import shops as _shops_warm
         _shops_warm.warm()
+        from app.services import settings_store as _ss_warm
+        _ss_warm.warm()
+        from app.services import taxonomies as _tax_warm
+        _tax_warm.warm()
     except Exception as _e:
         import logging as _lg
         _lg.getLogger("uvicorn.error").warning(f"service warm skipped: {_e}")

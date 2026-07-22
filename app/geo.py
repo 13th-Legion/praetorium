@@ -12,7 +12,8 @@ Zone boundaries:
 
 import math
 import re
-from app.constants import GEO_CENTER, GEO_ZONE_START, GEO_ZONE_SIZE, GEO_ZONE_TEAMS
+from app.constants import GEO_CENTER, GEO_ZONE_START, GEO_ZONE_SIZE, GEO_ZONE_TEAMS  # noqa: F401 (fallback seeds)
+from app.services import settings_store as _ss
 
 # US state abbreviations + a few common full-name -> abbr for parsing.
 _STATE_ABBRS = {
@@ -107,7 +108,8 @@ def parse_oneline_address(raw: str) -> dict:
 
 def calc_bearing(lat: float, lon: float) -> float:
     """Calculate bearing from center point to given coordinates."""
-    lat1, lon1 = math.radians(GEO_CENTER[0]), math.radians(GEO_CENTER[1])
+    _c = _ss.geo_center()
+    lat1, lon1 = math.radians(_c[0]), math.radians(_c[1])
     lat2, lon2 = math.radians(lat), math.radians(lon)
     dlon = lon2 - lon1
     x = math.sin(dlon) * math.cos(lat2)
@@ -125,7 +127,7 @@ def bearing_to_zone(bearing: float, geo_teams: list[str] | None = None) -> str:
     are honored; falls back to the constants seed when omitted.
     """
     teams = geo_teams or GEO_ZONE_TEAMS
-    idx = int(((bearing - GEO_ZONE_START + 360) % 360) / GEO_ZONE_SIZE)
+    idx = int(((bearing - _ss.geo_zone_start() + 360) % 360) / _ss.geo_zone_size())
     return teams[idx]
 
 

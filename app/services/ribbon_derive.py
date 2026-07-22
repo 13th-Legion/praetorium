@@ -81,7 +81,7 @@ async def _resolve_item_ids(db: AsyncSession, names) -> set:
             out.add(iid)
     return out
 
-FTX_DEVICE_THRESHOLDS = [5, 10, 25, 50]  # devices earned at these attendance counts
+# FTX_DEVICE_THRESHOLDS now from app_settings (settings_store.ftx_device_thresholds())
 
 NCO_GRADES = {"E-5", "E-6", "E-7", "E-8M", "E-8", "E-9"}
 
@@ -107,7 +107,8 @@ async def _was_ever_nco(db: AsyncSession, member: Member) -> bool:
 
 
 def _ftx_devices(count: int) -> int:
-    return sum(1 for t in FTX_DEVICE_THRESHOLDS if count >= t)
+    from app.services import settings_store as _ss
+    return sum(1 for t in _ss.ftx_device_thresholds() if count >= t)
 
 
 async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
