@@ -408,7 +408,7 @@ def upgrade() -> None:
     sa.Column('full_name', sa.String(length=128), nullable=False),
     sa.Column('signature_text', sa.String(length=256), nullable=False),
     sa.Column('signed_at', sa.DateTime(), nullable=False),
-    sa.Column('ip_address', sa.String(length=45), nullable=True),
+    sa.Column('ip_address', sa.String(length=255), nullable=True),
     sa.Column('user_agent', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['member_id'], ['members.id'], ),
     sa.PrimaryKeyConstraint('id')

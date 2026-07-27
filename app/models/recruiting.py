@@ -36,7 +36,9 @@ class DocumentSignature(Base):
     full_name: Mapped[str] = mapped_column(String(128))
     signature_text: Mapped[str] = mapped_column(String(256))  # typed "I agree" signature
     signed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    # 255, not 45: prod stores IPv6 + Cloudflare-forwarded chains
+    # (e.g. "2600:1700:...:27e5, 198.41.227.38"), up to ~56 chars observed.
+    ip_address: Mapped[Optional[str]] = mapped_column(String(255))
     user_agent: Mapped[Optional[str]] = mapped_column(Text)
 
 
