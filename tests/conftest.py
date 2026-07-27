@@ -105,10 +105,21 @@ async def db_engine():
     from sqlalchemy.ext.asyncio import create_async_engine
     # For in-memory SQLite, a single shared connection must back the whole test
     # (StaticPool) so schema + queries see the same DB.
+    #
+    # For a real async DB (asyncpg in CI), the fixture builds the schema on the
+    # pytest-asyncio event loop, but Starlette's TestClient runs the ASGI app on
+    # its OWN loop. asyncpg connections are loop-bound, so a pooled connection
+    # created on the fixture loop and reused inside a request handler raises
+    # "another operation is in progress / attached to a different loop".
+    # NullPool opens a fresh connection per checkout, bound to whatever loop is
+    # actually running the query, which keeps cross-loop TestClient tests sane.
     kwargs = {}
     if TEST_DATABASE_URL.startswith("sqlite"):
         from sqlalchemy.pool import StaticPool
         kwargs = {"connect_args": {"check_same_thread": False}, "poolclass": StaticPool}
+    else:
+        from sqlalchemy.pool import NullPool
+        kwargs = {"poolclass": NullPool}
     engine = create_async_engine(TEST_DATABASE_URL, **kwargs)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
