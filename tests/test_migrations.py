@@ -3,16 +3,24 @@
 Cheap structural guarantees that don't need a live Postgres:
   * the Alembic history has exactly ONE head (no accidental branch/merge)
   * every revision defines a non-empty downgrade()
-  * the new webhook_events migration up/downgrades cleanly on a scratch DB
+  * the squashed baseline models the webhook_events dedup table + its
+    (provider, transaction_id) unique constraint
+
+NOTE: history was squashed to a single baseline revision (0001_baseline) on
+2026-07-27 because the pre-squash chain never created ~50 tables via migration
+(they were bootstrapped by create_all() on prod), so a from-scratch
+`alembic upgrade head` — exactly what CI runs — crashed at the first migration
+that indexed a non-existent table.
 """
 
-import importlib.util
 import pathlib
 
 import pytest
-from sqlalchemy import create_engine, inspect
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+
+from app.database import Base
+import app.models  # noqa: F401  (register all tables on Base.metadata)
 
 pytestmark = pytest.mark.unit
 
@@ -37,33 +45,32 @@ def test_every_revision_has_downgrade():
         assert "def downgrade" in src, f"{rev.revision} missing downgrade()"
 
 
-def test_webhook_migration_roundtrip(tmp_path):
-    spec = importlib.util.spec_from_file_location(
-        "wh_mig", REPO / "migrations/versions/k9l0m1n2o3p4_webhook_events.py"
+def test_baseline_is_single_root():
+    """The squashed baseline is the sole root (down_revision is None)."""
+    sd = _script_dir()
+    bases = list(sd.get_bases())
+    assert bases == ["0001_baseline"], f"expected single baseline root, got {bases}"
+
+
+def test_webhook_events_dedup_constraint_modeled():
+    """webhook_events must keep its (provider, transaction_id) unique constraint
+    for PayPal idempotency/replay protection. The squashed baseline reflects
+    Base.metadata, so assert the constraint at the model level.
+    """
+    tbl = Base.metadata.tables["webhook_events"]
+    unique_col_sets = [
+        tuple(c.name for c in uc.columns)
+        for uc in tbl.constraints
+        if uc.__class__.__name__ == "UniqueConstraint"
+    ]
+    # Also honor a plain unique=True on a composite index if modeled that way.
+    unique_index_sets = [
+        tuple(c.name for c in idx.columns)
+        for idx in tbl.indexes
+        if idx.unique
+    ]
+    all_unique = unique_col_sets + unique_index_sets
+    assert ("provider", "transaction_id") in all_unique, (
+        f"webhook_events missing (provider, transaction_id) unique constraint; "
+        f"found {all_unique}"
     )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-
-    from alembic.migration import MigrationContext
-    from alembic.operations import Operations
-    from unittest import mock
-
-    db = tmp_path / "m.db"
-    eng = create_engine(f"sqlite:///{db}")
-
-    with eng.begin() as conn:
-        op = Operations(MigrationContext.configure(conn))
-        with mock.patch.object(mod, "op", op):
-            mod.upgrade()
-    with eng.connect() as conn:
-        insp = inspect(conn)
-        assert "webhook_events" in insp.get_table_names()
-        uq = insp.get_unique_constraints("webhook_events")
-        assert any(u["column_names"] == ["provider", "transaction_id"] for u in uq)
-
-    with eng.begin() as conn:
-        op = Operations(MigrationContext.configure(conn))
-        with mock.patch.object(mod, "op", op):
-            mod.downgrade()
-    with eng.connect() as conn:
-        assert "webhook_events" not in inspect(conn).get_table_names()

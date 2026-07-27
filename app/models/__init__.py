@@ -40,3 +40,4 @@ from app.models.event_category import EventCategory  # noqa: F401
 from app.models.member_status import MemberStatus  # noqa: F401
 from app.models.library_category import LibraryCategory  # noqa: F401
 from app.models.nc_room import NCRoom  # noqa: F401
+from app.models.notifications import Notification  # noqa: F401
