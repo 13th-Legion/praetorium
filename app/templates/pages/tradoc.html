@@ -139,6 +139,7 @@
     .mgmt-bar { display: flex; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
     .block-actions { display: flex; gap: 6px; align-items: center; }
     .subject-actions { display: flex; gap: 6px; align-items: center; }
+    .block-actions form, .subject-actions form { display: inline-flex; align-items: center; margin: 0; }
     .archived-tag {
         font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
         background: rgba(183,28,28,0.15); color: #e57373;
@@ -225,7 +226,7 @@
                 data-id="{{ block.id }}" data-number="{{ block.number }}" data-name="{{ block.name|e }}"
                 data-desc="{{ block.description|e }}" data-sort="{{ block.sort_order }}" data-tier="{{ block.tier }}">✏️ Edit</button>
             <button type="button" class="mgmt-btn tiny" onclick="event.stopPropagation();addSubjectTo({{ block.number }})">➕ Subject</button>
-            <form method="post" action="/training/tradoc/manage/block/{{ block.id }}/archive" style="display:inline;"
+            <form method="post" action="/training/tradoc/manage/block/{{ block.id }}/archive" style="display:inline-flex;align-items:center;margin:0;"
                   onsubmit="return confirm('{{ 'Restore' if block.archived else 'Archive' }} this block?')">
                 {% if block.archived %}<input type="hidden" name="unarchive" value="1">{% endif %}
                 <button type="submit" class="mgmt-btn tiny danger" onclick="event.stopPropagation()">{{ '♻️ Restore' if block.archived else '🗄️ Archive' }}</button>
@@ -254,7 +255,7 @@
                     data-optional="{{ '1' if subject.optional else '' }}"
                     data-doctype="{{ subject.doc_type }}" data-doctitle="{{ subject.doc_title|e }}"
                     data-docurl="{{ subject.doc_url|e }}">✏️</button>
-                <form method="post" action="/training/tradoc/manage/subject/{{ subject.id }}/archive" style="display:inline;"
+                <form method="post" action="/training/tradoc/manage/subject/{{ subject.id }}/archive" style="display:inline-flex;align-items:center;margin:0;"
                       onsubmit="return confirm('{{ 'Restore' if subject.archived else 'Archive' }} this subject? Sign-off history is kept.')">
                     {% if subject.archived %}<input type="hidden" name="unarchive" value="1">{% endif %}
                     <button type="submit" class="mgmt-btn tiny danger">{{ '♻️' if subject.archived else '🗄️' }}</button>
