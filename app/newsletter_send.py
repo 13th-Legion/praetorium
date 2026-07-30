@@ -106,22 +106,23 @@ async def resolve_recipient_emails(db: AsyncSession, group_keys: list[str]) -> l
     member_ids = await _resolve_invite_groups(db, group_keys)
     if not member_ids:
         return []
-    rows = (await db.execute(
-        select(Member.email, Member.display_name).where(
+    # display_name is a Python property (not a column), so load Member objects.
+    members = (await db.execute(
+        select(Member).where(
             Member.id.in_(member_ids),
             Member.email.isnot(None),
         )
-    )).all()
+    )).scalars().all()
     seen = set()
     out: list[tuple[str, str]] = []
-    for email, name in rows:
-        if not email:
+    for m in members:
+        if not m.email:
             continue
-        key = email.lower()
+        key = m.email.lower()
         if key in seen:
             continue
         seen.add(key)
-        out.append((email, name))
+        out.append((m.email, m.display_name))
     return out
 
 
