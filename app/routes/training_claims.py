@@ -705,15 +705,33 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
                     MemberRibbon.ribbon_code == cat.code,
                 )
             )).scalar_one_or_none()
+            # Seed the stored device_count from any auto-derived value so a claim
+            # never *erases* stars the member already earned (e.g. instructor_ftx,
+            # ftx, mcftx, ham all derive a device count from source data). A stored
+            # row of device_count=0 used to win the profile merge and wipe them.
+            derived_dc = 0
+            try:
+                from app.services.ribbon_derive import derive_ribbons
+                member_obj = (await db.execute(
+                    select(Member).where(Member.id == claim.member_id)
+                )).scalar_one_or_none()
+                if member_obj:
+                    for d in await derive_ribbons(db, member_obj):
+                        if d["code"] == cat.code:
+                            derived_dc = max(derived_dc, d["device_count"])
+            except Exception as e:
+                log.error(f"ribbon derive lookup failed for claim #{claim.id}: {e}")
             if not existing_mr:
                 db.add(MemberRibbon(
                     member_id=claim.member_id,
                     ribbon_code=cat.code,
-                    device_count=0,
+                    device_count=derived_dc,
                     awarded_by=reviewer,
                     reason=(claim.description or f"Approved from claim #{claim.id}"),
                     source="claim",
                 ))
+            elif derived_dc > (existing_mr.device_count or 0):
+                existing_mr.device_count = derived_dc
     elif claim.claim_type == "ftx_attendance":
         from app.models.events import EventRSVP, Event
         rsvp_result = await db.execute(select(EventRSVP).where(EventRSVP.event_id == claim.reference_id, EventRSVP.member_id == claim.member_id))

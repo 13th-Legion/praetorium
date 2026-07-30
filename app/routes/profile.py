@@ -244,6 +244,15 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
             held[d["code"]] = {
                 "device_count": d["device_count"], "reason": None, "awarded_at": d["awarded_at"],
             }
+        else:
+            # A stored (manual/claim) row and a derived entry collide. Never let a
+            # zeroed/lower stored row wipe out devices the member actually earned:
+            # take the higher device count. This self-heals rows created by the
+            # ribbon claim flow, which historically inserted device_count=0 and
+            # thereby erased derived stars (e.g. instructor_ftx).
+            existing = held[d["code"]]
+            if d["device_count"] > (existing["device_count"] or 0):
+                existing["device_count"] = d["device_count"]
 
     def _device_meaning(code, dc):
         """Human phrase for what a device count represents on a given ribbon."""
