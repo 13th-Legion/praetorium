@@ -13,7 +13,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request, Depends, HTTPException, UploadFile, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -213,12 +213,45 @@ async def newsletter_attachment_delete(
     return HTMLResponse("")  # htmx removes the row
 
 
+@router.get("/{nl_id}/attachment/{att_id}/view", response_model=None)
+@require_auth
+async def newsletter_attachment_view(
+    request: Request, nl_id: int, att_id: int, db: AsyncSession = Depends(get_db)
+):
+    """Serve a draft attachment so S1 can preview it before sending.
+
+    PDFs and images open inline in the browser (new tab / modal); other types
+    (docx, etc.) download. Auth-gated to S1 like the rest of the newsletter tool.
+    """
+    user = _user(request)
+    _require_s1(user)
+    att = await db.get(NewsletterAttachment, att_id)
+    if not att or att.newsletter_id != nl_id:
+        raise HTTPException(404, "Attachment not found")
+    path = NEWSLETTER_ATTACH_DIR / att.filename
+    if not path.exists():
+        raise HTTPException(404, "File missing on disk")
+    mime = att.mime_type or "application/octet-stream"
+    inline = mime == "application/pdf" or mime.startswith("image/")
+    disp = "inline" if inline else "attachment"
+    # Quote the filename so odd chars don't break the header.
+    safe_name = (att.orig_name or att.filename).replace('"', "")
+    return FileResponse(
+        path, media_type=mime,
+        headers={"Content-Disposition": f'{disp}; filename="{safe_name}"'},
+    )
+
+
 def _attachment_row_html(att: NewsletterAttachment, nl_id: int) -> str:
     kb = max(1, att.size // 1024)
+    view_url = f"/api/s1/newsletter/{nl_id}/attachment/{att.id}/view"
     return f'''<div id="att-{att.id}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid #444;border-radius:4px;margin-bottom:6px;">
       <span style="font-size:13px;color:#ddd;">📎 {att.orig_name} <span style="color:#888;">({kb} KB)</span></span>
-      <button type="button" hx-post="/api/s1/newsletter/{nl_id}/attachment/{att.id}/delete" hx-target="#att-{att.id}" hx-swap="outerHTML"
-        style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:13px;">✕</button>
+      <span style="display:flex;align-items:center;gap:12px;">
+        <a href="{view_url}" target="_blank" rel="noopener" style="color:#d4a537;font-size:12px;text-decoration:none;">View</a>
+        <button type="button" hx-post="/api/s1/newsletter/{nl_id}/attachment/{att.id}/delete" hx-target="#att-{att.id}" hx-swap="outerHTML"
+          style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:13px;">✕</button>
+      </span>
     </div>'''
 
 

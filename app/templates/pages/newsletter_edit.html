@@ -95,6 +95,12 @@
             .ql-toolbar button.ql-active .ql-fill { fill:#d4a537 !important; }
             .ql-container.ql-snow { background:#2a2a3e; border:1px solid #444 !important; border-top:none !important; border-radius:0 0 4px 4px; color:#eee; font-size:14px; min-height:280px; }
             .ql-editor { min-height:280px; line-height:1.6; }
+            /* portal.css force-uppercases all h1-h6 site-wide, which made section
+               headers LOOK uppercase in the editor while the stored text (and the
+               sent email) are Title Case. Un-force it here so WYSIWYG matches the
+               actual sent newsletter (house style is Title Case, per past issues). */
+            .ql-editor h1, .ql-editor h2, .ql-editor h3,
+            .ql-editor h4, .ql-editor h5, .ql-editor h6 { text-transform:none !important; }
             .ql-editor.ql-blank::before { color:#888 !important; font-style:normal !important; }
             .ql-editor a { color:#d4a537; }
             .ql-editor img { max-width:100%; border-radius:4px; }
@@ -129,7 +135,10 @@
                 {% if attachments %}{% for a in attachments %}
                 <div id="att-{{ a.id }}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid #444;border-radius:4px;margin-bottom:6px;">
                     <span style="font-size:13px;color:#ddd;">📎 {{ a.orig_name }} <span style="color:#888;">({{ (a.size // 1024) or 1 }} KB)</span></span>
-                    <button type="button" hx-post="/api/s1/newsletter/{{ nl.id }}/attachment/{{ a.id }}/delete" hx-target="#att-{{ a.id }}" hx-swap="outerHTML" style="background:none;border:none;color:#ef5350;cursor:pointer;">✕</button>
+                    <span style="display:flex;align-items:center;gap:12px;">
+                        <a href="/api/s1/newsletter/{{ nl.id }}/attachment/{{ a.id }}/view" target="_blank" rel="noopener" style="color:#d4a537;font-size:12px;text-decoration:none;">View</a>
+                        <button type="button" hx-post="/api/s1/newsletter/{{ nl.id }}/attachment/{{ a.id }}/delete" hx-target="#att-{{ a.id }}" hx-swap="outerHTML" style="background:none;border:none;color:#ef5350;cursor:pointer;">✕</button>
+                    </span>
                 </div>
                 {% endfor %}{% endif %}
             </div>
