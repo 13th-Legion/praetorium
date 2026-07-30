@@ -89,6 +89,42 @@ async def resolve_recipients(db: AsyncSession, group_keys: list[str]) -> list[tu
     return out
 
 
+async def resolve_recipient_emails(db: AsyncSession, group_keys: list[str]) -> list[tuple[str, str]]:
+    """Resolve recipient (email, display_name) using the SAME rich, team-aware
+    group registry that events use (constants.RECIPIENT_GROUPS + dynamic
+    Team Aquila..Foxtrot). This gives Unit Comms + newsletters the full event
+    granularity: Entire Unit, Patched, Recruits, Leaders, Officers, NCOs,
+    Team Leaders, Shop Heads, each Team, each shop S1-S6, and Command.
+
+    Single source of truth: delegates membership matching to the events
+    resolver (_resolve_invite_groups -> member IDs), then maps IDs to emails.
+    """
+    # Lazy import to avoid a circular import at module load
+    # (events.py imports newsletter_send indirectly via routes).
+    from app.routes.events import _resolve_invite_groups
+
+    member_ids = await _resolve_invite_groups(db, group_keys)
+    if not member_ids:
+        return []
+    rows = (await db.execute(
+        select(Member.email, Member.display_name).where(
+            Member.id.in_(member_ids),
+            Member.email.isnot(None),
+        )
+    )).all()
+    seen = set()
+    out: list[tuple[str, str]] = []
+    for email, name in rows:
+        if not email:
+            continue
+        key = email.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((email, name))
+    return out
+
+
 def render_newsletter_html(title: str, body_html: str, crest_key: str, sender_name: str) -> str:
     """Wrap the editor body in the Legionary Dispatch masthead + footer shell.
 

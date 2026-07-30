@@ -2629,7 +2629,8 @@ document, they are waiving substantial legal rights, including the right to sue 
 
 # Recipient groups + resolver are defined once in newsletter_send so Unit Comms
 # and the Legionary Dispatch newsletter always target identical audiences.
-from app.newsletter_send import EMAIL_BLAST_GROUPS, resolve_recipients  # noqa: E402
+from app.newsletter_send import resolve_recipient_emails  # noqa: E402
+from app.routes.events import _build_recipient_groups  # noqa: E402
 
 
 @router.get("/email-blast")
@@ -2639,10 +2640,13 @@ async def email_blast_page(request: Request, db: AsyncSession = Depends(get_db))
     user = request.session.get("user", {})
     require_unit_comms(user)
 
+    # Use the SAME rich, team-aware recipient registry that events use so Unit
+    # Comms gets the full group granularity (teams, individual shops, NCOs, etc).
+    groups = await _build_recipient_groups(db)
     return templates.TemplateResponse("pages/s1_email_blast.html", {
         "request": request,
         "user": user,
-        "groups": EMAIL_BLAST_GROUPS,
+        "groups": groups,
     })
 
 
@@ -2659,8 +2663,8 @@ async def email_blast_preview(request: Request, db: AsyncSession = Depends(get_d
     if not selected_groups:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">Select at least one group.</div>')
 
-    # Shared resolver — real NC-group/billet/leadership filtering.
-    recipients = await resolve_recipients(db, selected_groups)
+    # Shared resolver — same rich group registry as events.
+    recipients = await resolve_recipient_emails(db, selected_groups)
     recipients.sort(key=lambda r: r[1].split()[-1] if r[1] else "")
 
     if not recipients:
@@ -2737,8 +2741,8 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
             _fh.write(fdata)
         staged_atts.append((str(NEWSLETTER_ATTACH_DIR / _stored), up.filename, fmime))
 
-    # Shared resolver — real NC-group/billet/leadership filtering.
-    recipient_emails = await resolve_recipients(db, selected_groups)
+    # Shared resolver — same rich group registry as events.
+    recipient_emails = await resolve_recipient_emails(db, selected_groups)
 
     if not recipient_emails:
         return HTMLResponse('<div style="color:#ef5350;padding:8px;">No recipients with email addresses.</div>')
@@ -2811,7 +2815,8 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
 
     background_tasks.add_task(_send_blast)
 
-    group_labels = ", ".join(EMAIL_BLAST_GROUPS[g]["label"] for g in selected_groups if g in EMAIL_BLAST_GROUPS)
+    _all_groups = await _build_recipient_groups(db)
+    group_labels = ", ".join(_all_groups[g]["label"] for g in selected_groups if g in _all_groups)
     att_line = f"<br><strong>Attachments:</strong> {len(staged_atts)}" if staged_atts else ""
 
     return HTMLResponse(f'''
