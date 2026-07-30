@@ -1942,13 +1942,110 @@ async def edit_event(request: Request, event_id: int):
     )
 
 
+def _resolve_series_targets(db_events, event, scope: str) -> list:
+    """Given the anchor event and a series scope, return the list of target events.
+
+    scope values:
+      - "this"   : just this occurrence (default)
+      - "future" : this occurrence + all later occurrences in the same series
+      - "entire" : every occurrence in the same series (past + future)
+    `db_events` is the list of sibling events already loaded for the series.
+    """
+    if not event.series_id or scope == "this":
+        return [event]
+    if scope == "entire":
+        return db_events or [event]
+    return [e for e in (db_events or [event]) if e.date_start >= event.date_start]
+
+
+async def _delete_caldav_event(uid: str) -> bool:
+    """Best-effort CalDAV DELETE for an event synced from the NC calendar.
+    Portal-native events (no caldav_uid) are a no-op. Returns True on success."""
+    if not uid:
+        return False
+    try:
+        settings = get_settings()
+        href = f"{settings.nc_url}{CALENDAR_PATH}{uid}.ics"
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.request(
+                "DELETE", href,
+                auth=(CALENDAR_USER, CALENDAR_PASS),
+            )
+            return r.status_code in (200, 202, 204, 404)
+    except Exception:
+        return False
+
+
+async def _post_talk(room: str, message: str) -> None:
+    """Best-effort NC Talk message post."""
+    try:
+        settings = get_settings()
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{room}",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_TALK_USER, NC_TALK_PASS),
+                data={"message": message},
+            )
+    except Exception:
+        pass
+
+
+async def _notify_affected(db, targets, *, action: str):
+    """Fan out notifications for a cancel/delete.
+
+    - Notifies every member with a non-declined RSVP on any target event.
+    - Notifies command + s3 roles (the desk that owns the change) regardless.
+    - Drops a message into the Announcements Talk room.
+    action is 'cancelled' or 'deleted'.
+    """
+    from app.routes.notifications import create_notification, create_notification_for_roles
+
+    anchor = targets[0]
+    n = len(targets)
+    verb = "Cancelled" if action == "cancelled" else "Deleted"
+    icon = "❌" if action == "cancelled" else "🗑️"
+    when = _format_range(anchor.date_start, anchor.date_end)
+    occ = f" ({n} occurrences)" if n > 1 else ""
+    title = f"{icon} Event {verb}: {anchor.title}"
+    body = f"{when}{occ} — this event has been {action}."
+    link = f"/events/{anchor.id}" if action == "cancelled" else "/events"
+
+    target_ids = [t.id for t in targets]
+    rsvp_rows = (await db.execute(
+        select(EventRSVP.member_id).where(
+            EventRSVP.event_id.in_(target_ids),
+            EventRSVP.status != "declined",
+        ).distinct()
+    )).all()
+    affected_ids = {r[0] for r in rsvp_rows}
+    for mid in affected_ids:
+        await create_notification(db, mid, "event", title, body=body, link=link, icon=icon)
+
+    await create_notification_for_roles(
+        db, ["command", "s3"], "event", title, body=body, link=link, icon=icon
+    )
+    await db.commit()
+
+    talk_msg = (
+        f"{icon} **Event {verb}** — {anchor.title}\n"
+        f"📅 {when}{occ}\n"
+        f"📍 {anchor.location or 'TBD'}\n\n"
+        + (f"See the portal for details: https://portal.13thlegion.org/events/{anchor.id}"
+           if action == "cancelled" else
+           "This event was removed from the calendar.")
+    )
+    await _post_talk(WARNO_TALK_ROOM(), talk_msg)
+
+
 @router.post("/api/events/{event_id}/cancel", response_class=HTMLResponse)
 @require_role("command", "s3", "admin")
 async def cancel_event(request: Request, event_id: int):
-    """Cancel an event (PP-224). For series, supports 'this' vs 'this and future'.
+    """Cancel an event (PP-224). For series, supports this / future / entire.
 
     Cancelling sets status='cancelled' and disables RSVP. Does not hard-delete
-    (preserves attendance history / audit).
+    (preserves attendance history / audit). Notifies affected RSVPs + command/S3,
+    posts to Talk, and removes the entry from the NC calendar for synced events.
     """
     form = await request.form()
     scope = (form.get("series_scope") or "this").strip()
@@ -1956,27 +2053,69 @@ async def cancel_event(request: Request, event_id: int):
         event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
-        targets = [event]
-        if scope == "future" and event.series_id:
-            future = (await db.execute(
-                select(Event).where(
-                    Event.series_id == event.series_id,
-                    Event.date_start >= event.date_start,
-                    Event.id != event.id,
-                )
+        siblings = []
+        if event.series_id and scope in ("future", "entire"):
+            siblings = (await db.execute(
+                select(Event).where(Event.series_id == event.series_id)
             )).scalars().all()
-            targets.extend(future)
+        targets = _resolve_series_targets(siblings, event, scope)
+        caldav_uids = [t.caldav_uid for t in targets if t.caldav_uid]
         for ev in targets:
             ev.status = "cancelled"
             ev.rsvp_enabled = False
             ev.updated_at = datetime.utcnow()
         await db.commit()
         n = len(targets)
+        await _notify_affected(db, targets, action="cancelled")
+
+    for uid in caldav_uids:
+        await _delete_caldav_event(uid)
+
     label = f"{n} occurrences cancelled" if n > 1 else "Event cancelled"
     return HTMLResponse(
         '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
-        f'✅ {label}.</div>'
-        '<script>setTimeout(()=>window.location.href="/events",900)</script>'
+        f'✅ {label}. Affected members and command/S3 have been notified.</div>'
+        '<script>setTimeout(()=>window.location.href="/events",1200)</script>'
+    )
+
+
+@router.post("/api/events/{event_id}/delete", response_class=HTMLResponse)
+@require_role("command", "s3", "admin")
+async def delete_event(request: Request, event_id: int):
+    """Hard-delete an event (PP-224). For series, supports this / future / entire.
+
+    Removes the event(s) and all attached RSVPs/documents/etc via ORM cascade,
+    removes the NC calendar entry for synced events, and notifies command/S3 plus
+    anyone who had RSVP'd. Use for mistakes/test events; prefer cancel for real
+    events you want to keep an audit trail for.
+    """
+    form = await request.form()
+    scope = (form.get("series_scope") or "this").strip()
+    async with async_session() as db:
+        event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+        if not event:
+            return HTMLResponse("Event not found", status_code=404)
+        siblings = []
+        if event.series_id and scope in ("future", "entire"):
+            siblings = (await db.execute(
+                select(Event).where(Event.series_id == event.series_id)
+            )).scalars().all()
+        targets = _resolve_series_targets(siblings, event, scope)
+        caldav_uids = [t.caldav_uid for t in targets if t.caldav_uid]
+        n = len(targets)
+        await _notify_affected(db, targets, action="deleted")
+        for ev in targets:
+            await db.delete(ev)
+        await db.commit()
+
+    for uid in caldav_uids:
+        await _delete_caldav_event(uid)
+
+    label = f"{n} occurrences deleted" if n > 1 else "Event deleted"
+    return HTMLResponse(
+        '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
+        f'✅ {label}. Affected members and command/S3 have been notified.</div>'
+        '<script>setTimeout(()=>window.location.href="/events",1200)</script>'
     )
 
 

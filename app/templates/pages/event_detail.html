@@ -759,6 +759,62 @@ function insertTradocAgenda() {
             <div id="edit-result"></div>
             <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Save Changes</button>
         </form>
+
+        {% if is_admin %}
+        <div style="margin-top:24px;padding:16px;background:rgba(183,28,28,0.08);border:1px solid rgba(183,28,28,0.4);border-radius:6px;">
+            <div style="font-size:14px;color:#ef5350;font-weight:700;margin-bottom:4px;">⚠️ Danger Zone</div>
+            <p style="font-size:12px;color:#aaa;margin:0 0 12px;">
+                <strong>Cancel</strong> keeps the record (marked CANCELLED, RSVPs locked) — use for real events that won't happen.
+                <strong>Delete</strong> permanently removes the event and its RSVPs — use for mistakes/test events.
+                Both notify affected members + command/S3, post to the Announcements room, and update the Nextcloud calendar.
+            </p>
+
+            {% if event.series_id %}
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:12px;color:#d4a537;margin-bottom:6px;font-weight:600;">This is a recurring event — apply to:</label>
+                <select id="danger-scope" style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                    <option value="this">This occurrence only</option>
+                    <option value="future">This and all future occurrences</option>
+                    <option value="entire">The entire series (all occurrences)</option>
+                </select>
+            </div>
+            {% endif %}
+
+            <div id="danger-result" style="margin-bottom:10px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" onclick="dangerAction('cancel')"
+                    style="padding:8px 16px;background:#b71c1c;border:none;border-radius:4px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+                    ❌ Cancel Event
+                </button>
+                <button type="button" onclick="dangerAction('delete')"
+                    style="padding:8px 16px;background:transparent;border:1px solid #b71c1c;border-radius:4px;color:#ef5350;font-size:13px;font-weight:600;cursor:pointer;">
+                    🗑️ Delete Event
+                </button>
+            </div>
+        </div>
+        <script>
+        function dangerAction(kind) {
+            var scopeEl = document.getElementById('danger-scope');
+            var scope = scopeEl ? scopeEl.value : 'this';
+            var scopeLabel = scopeEl ? scopeEl.options[scopeEl.selectedIndex].text : 'this event';
+            var verb = kind === 'delete' ? 'permanently DELETE' : 'CANCEL';
+            if (!confirm('Are you sure you want to ' + verb + ' — ' + (scopeEl ? scopeLabel : 'this event') + '?\n\nAffected members and command/S3 will be notified.')) return;
+            var res = document.getElementById('danger-result');
+            res.innerHTML = '<span style="color:#aaa;font-size:12px;">Working…</span>';
+            var fd = new FormData();
+            fd.append('series_scope', scope);
+            fetch('/api/events/{{ event.id }}/' + kind, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin'
+            }).then(function(r){ return r.text(); }).then(function(html){
+                res.innerHTML = html;
+            }).catch(function(e){
+                res.innerHTML = '<span style="color:#ef5350;font-size:12px;">Error: ' + e + '</span>';
+            });
+        }
+        </script>
+        {% endif %}
     </details>
     {% endif %}
 </div>
