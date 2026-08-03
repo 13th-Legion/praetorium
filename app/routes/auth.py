@@ -27,11 +27,29 @@ oauth.register(
 
 
 def _build_authorize_url(request: "Request") -> str:
-    """Clear the session, mint a fresh OAuth2 state, and return the NC
-    /authorize URL. Shared by both the direct path and the seeded path."""
+    """Mint a fresh OAuth2 state and return the NC /authorize URL. Shared by
+    both the direct path and the seeded path.
+
+    SINGLE-FLIGHT (2026-08-03): NC 33 stores exactly ONE grant stateToken per
+    NC session. Every hit to NC's /apps/oauth2/authorize OVERWRITES it. So if
+    the portal fires /authorize twice for one login (bfcache resurrecting a
+    stale flow, browser prefetch, double-nav, or our own callback retry), the
+    SECOND authorize invalidates the grant page the user is actually looking
+    at -> tapping "Grant access" 403s on a now-orphaned stateToken. To prevent
+    the double-fire we reuse an in-flight authorize URL if one was minted for
+    this session within the last IN_FLIGHT_WINDOW seconds instead of minting a
+    brand-new state (and thus a brand-new NC grant flow).
+    """
     import secrets
     import time
     from urllib.parse import urlencode
+
+    IN_FLIGHT_WINDOW = 15  # seconds
+    inflight = request.session.get("_authorize_inflight")
+    if isinstance(inflight, dict) and (time.time() - inflight.get("ts", 0)) < IN_FLIGHT_WINDOW:
+        url = inflight.get("url")
+        if url:
+            return url
 
     # Do NOT clear the whole session here. Clearing rotates the session cookie
     # mid-flow; the browser (esp. a pre-existing tab with an older cookie) may
@@ -69,7 +87,11 @@ def _build_authorize_url(request: "Request") -> str:
         "redirect_uri": redirect_uri,
         "state": state,
     })
-    return f"{settings.nc_url}/index.php/apps/oauth2/authorize?{authorize_params}"
+    authorize_url = f"{settings.nc_url}/index.php/apps/oauth2/authorize?{authorize_params}"
+    # Remember this in-flight authorize so a rapid second /auth/login (bfcache,
+    # prefetch, double-nav) reuses it instead of minting a fresh NC grant flow.
+    request.session["_authorize_inflight"] = {"url": authorize_url, "ts": time.time()}
+    return authorize_url
 
 
 @router.get("/login")
@@ -111,7 +133,13 @@ async def login(request: Request):
     # internal redirect targets); strip the origin from authorize_url.
     internal_authorize = authorize_url[len(settings.nc_url):] if authorize_url.startswith(settings.nc_url) else authorize_url
     login_url = f"{settings.nc_url}/index.php/login?redirect_url={quote(internal_authorize, safe='')}"
-    return RedirectResponse(url=login_url, status_code=302)
+    resp = RedirectResponse(url=login_url, status_code=302)
+    # no-store: keep Brave/Safari bfcache from resurrecting a spent login flow
+    # and silently re-firing /authorize (which overwrites NC's grant stateToken
+    # -> 403 on Grant). See _build_authorize_url single-flight note.
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 @router.get("/callback")
@@ -120,28 +148,28 @@ async def callback(request: Request):
     try:
         token = await oauth.nextcloud.authorize_access_token(request)
     except Exception as e:
-        # The OAuth grant failed. The most common cause is NC's intermittent
-        # SameSite 403 on `POST /login/flow` for logged-OUT users initiating the
-        # flow cross-site (see /auth/login docstring). That derails the flow and
-        # we land here with a missing/mismatched state. Retry ONCE through the
-        # seeded path (NC first-party /login) which establishes the SameSite
-        # cookies same-site and reliably completes the grant.
-        #
-        # Guard against loops: allow a bounded number of retries through the
-        # seeded path, then surface the error for real. _login_attempts is
-        # incremented in /auth/login and now persists across the redirect
-        # (session is no longer cleared), so this counter is reliable.
-        if request.session.get("_login_attempts", 0) < 2:
-            return RedirectResponse(url="/auth/login?seed=1", status_code=302)
-        # Exhausted retries — clear the counter and show the error for real.
+        # DO NOT auto-retry by bouncing back to /auth/login. That fired a SECOND
+        # /authorize which overwrote NC 33's single per-session grant stateToken,
+        # invalidating the grant page the user was looking at -> the tap on
+        # "Grant access" then 403'd (the recurring post-NC-33 Forbidden, 5th
+        # variant, 2026-08-03). One login = exactly one /authorize = one
+        # stateToken. Instead of an automatic re-authorize, clear the in-flight
+        # flow and render a login page with a manual "Sign in again" link. The
+        # user's next click mints a single clean flow.
         request.session.pop("_login_attempts", None)
-        return templates.TemplateResponse("pages/login.html", {
+        request.session.pop("_authorize_inflight", None)
+        resp = templates.TemplateResponse("pages/login.html", {
             "request": request,
-            "error": f"OAuth error: {str(e)}",
+            "error": "Your sign-in session expired or was interrupted. Please sign in again.",
+            "detail": str(e),
         })
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
 
-    # Success — clear the retry counter.
+    # Success — clear the in-flight flow + retry counter.
     request.session.pop("_login_attempts", None)
+    request.session.pop("_authorize_inflight", None)
 
     # Fetch user info using the access token
     resp = await oauth.nextcloud.get(
