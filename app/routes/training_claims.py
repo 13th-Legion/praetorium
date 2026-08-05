@@ -179,8 +179,8 @@ async def training_progress_widget(request: Request, db: AsyncSession = Depends(
     if not member:
         return HTMLResponse('<p class="text-muted">No personnel record found.</p>')
 
-    # TRADOC
-    total_result = await db.execute(select(TradocItem))
+    # TRADOC (exclude archived/retired items so they don't skew the counter)
+    total_result = await db.execute(select(TradocItem).where(TradocItem.archived.is_(False)))
     all_items = total_result.scalars().all()
     completed_result = await db.execute(
         select(MemberTradoc).where(MemberTradoc.member_id == member.id)
@@ -300,7 +300,9 @@ async def claim_form(request: Request, db: AsyncSession = Depends(get_db)):
     )
     completed_ids = {row[0] for row in completed_result.all()}
 
-    tradoc_result = await db.execute(select(TradocItem).order_by(TradocItem.sort_order))
+    tradoc_result = await db.execute(
+        select(TradocItem).where(TradocItem.archived.is_(False)).order_by(TradocItem.sort_order)
+    )
     tradoc_items = [t for t in tradoc_result.scalars().all() if t.id not in completed_ids]
 
     # Get unearned certs

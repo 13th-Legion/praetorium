@@ -89,8 +89,13 @@ async def _get_rank_history(member_id: int, db: AsyncSession) -> list:
 
 async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     """Fetch TRADOC progress and certifications for a member."""
-    # All TRADOC items
-    result = await db.execute(select(TradocItem).order_by(TradocItem.sort_order))
+    # All TRADOC items (archived items are retired duplicates — e.g. the old
+    # Block 100 'Certifications' mirror — and must not display or count).
+    result = await db.execute(
+        select(TradocItem)
+        .where(TradocItem.archived.is_(False))
+        .order_by(TradocItem.sort_order)
+    )
     all_items = result.scalars().all()
 
     # Block tier map (initial = Basic Training / counts toward patching;

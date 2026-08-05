@@ -73,7 +73,9 @@ async def award_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     )
     certs = cert_result.scalars().all()
 
-    tradoc_result = await db.execute(select(TradocItem).order_by(TradocItem.sort_order))
+    tradoc_result = await db.execute(
+        select(TradocItem).where(TradocItem.archived.is_(False)).order_by(TradocItem.sort_order)
+    )
     tradoc_items = tradoc_result.scalars().all()
 
     return templates.TemplateResponse("pages/award_dashboard.html", {
