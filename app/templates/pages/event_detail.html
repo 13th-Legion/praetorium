@@ -111,7 +111,7 @@ function toggleMeetingMode() {
 function insertTradocAgenda() {
     var checked = Array.from(document.querySelectorAll('input[name="training_blocks"]:checked'))
         .map(function(c){ return c.value; })
-        .filter(function(v){ return v !== '0'; });  // 'Every FTX' auto-included server-side
+        .filter(function(v){ return v !== '5'; });  // field-standing-tasks block auto-included server-side
     var status = document.getElementById('agenda-status');
     if (!eventQuill) { return; }
     status.style.color = '#888'; status.textContent = 'Loading agenda…';
@@ -702,7 +702,7 @@ function insertTradocAgenda() {
                         style="padding:6px 14px;background:rgba(212,165,55,0.15);border:1px solid #d4a537;border-radius:4px;color:#d4a537;font-size:12px;font-weight:600;cursor:pointer;">
                         🎓 Insert TRADOC agenda into description
                     </button>
-                    <span style="font-size:11px;color:#666;margin-left:8px;">Adds the subjects for the selected blocks (plus “Every FTX”) to the description.</span>
+                    <span style="font-size:11px;color:#666;margin-left:8px;">Adds the subjects for the selected blocks (plus Field Standing Tasks) to the description.</span>
                     <div id="agenda-status" style="font-size:11px;margin-top:4px;"></div>
                 </div>
             </div>

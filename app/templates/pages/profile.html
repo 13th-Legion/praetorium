@@ -711,7 +711,7 @@
             {% for block_num, block in basic_blocks %}
             <div class="card tradoc-block">
                 <h3 class="card-title">
-                    {% if block_num == 0 %}Every FTX{% else %}Block {{ block_num }}: {{ block['name'] }}{% endif %}
+                    Block {{ block_num }}: {{ block['name'] }}
                     <span class="tradoc-block-count">
                         {% set req_items = block['items']|rejectattr('optional')|list %}
                         {{ req_items|selectattr('done')|list|length }}/{{ req_items|length }}

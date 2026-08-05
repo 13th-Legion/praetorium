@@ -25,7 +25,7 @@ from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
 from config import get_settings
-from app.constants import RECIPIENT_GROUPS
+from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
 from app.services import ranks as _ranks
 from app.services import nc_rooms as _nc_rooms_svc
 
@@ -1021,12 +1021,12 @@ async def events_page(request: Request):
 
 
 async def _active_tradoc_blocks(db):
-    """Selectable TRADOC blocks for event forms (PP-225). Excludes Block 0
-    ("Every FTX", always credited) and archived blocks. Source of truth =
-    the TRADOC table managed at /training/tradoc."""
+    """Selectable TRADOC blocks for event forms (PP-225). Excludes the
+    field-standing-tasks block (always credited) and archived blocks. Source of
+    truth = the TRADOC table managed at /training/tradoc."""
     rows = await db.execute(
         select(TradocBlock.number, TradocBlock.name).where(
-            and_(TradocBlock.archived == False, TradocBlock.number != 0)
+            and_(TradocBlock.archived == False, TradocBlock.number != FIELD_TASKS_BLOCK)
         ).order_by(TradocBlock.sort_order, TradocBlock.number)
     )
     return [{"number": r[0], "name": r[1]} for r in rows.all()]
@@ -2126,7 +2126,7 @@ async def delete_event(request: Request, event_id: int):
 async def tradoc_agenda(request: Request):
     """Render a training agenda (TRADOC subjects) for the given block numbers, for
     one-click insertion into an FTX event description. ?blocks=1,3 (and
-    optionally &include_every=1 to prepend the 'Every FTX' block 0)."""
+    optionally &include_every=1 to append the Field Standing Tasks block)."""
     from app.settings import PUBLIC_BASE_URL
     qs = request.query_params
     raw = (qs.get("blocks") or "").strip()
@@ -2136,8 +2136,8 @@ async def tradoc_agenda(request: Request):
         if part.lstrip("-").isdigit():
             block_nums.append(int(part))
     include_every = qs.get("include_every", "1") not in ("0", "false", "")
-    # Always surface 'Every FTX' (block 0) first for FTXs unless explicitly off.
-    ordered = ([0] if (include_every and 0 not in block_nums) else []) + block_nums
+    # Always surface the field-standing-tasks block for FTXs unless explicitly off.
+    ordered = block_nums + ([FIELD_TASKS_BLOCK] if (include_every and FIELD_TASKS_BLOCK not in block_nums) else [])
     if not ordered:
         return HTMLResponse('<p style="color:#888;">Select one or more training blocks first.</p>')
 
@@ -3141,7 +3141,7 @@ async def unfinalize_event(request: Request, event_id: int):
 # ─── PP-074c / PP-225: Auto-Credit TRADOC on Finalization ───────────────────
 # Block→subject mapping is now sourced from the TRADOC table (TradocItem),
 # which is the single source of truth (managed at /training/tradoc). We always
-# credit Block 0 ("Every FTX") items plus every block selected on the event.
+# credit the field-standing-tasks block items plus every block selected on the event.
 # Only NON-archived, NON-optional (required) subjects are auto-credited; the
 # optional/advanced subjects (e.g. Advanced/Expert Land Nav) require a manual
 # sign-off.
@@ -3151,11 +3151,11 @@ async def _items_for_blocks(db, block_numbers, include_block0=True) -> list[int]
     """Return required (non-optional, non-archived) TradocItem IDs for the
     given block numbers, sourced live from the TRADOC table.
 
-    Block 0 ("Every FTX" field tasks: FOB Setup, Guard Duty, Stand-To) is
+    The field-standing-tasks block (FOB Setup, Guard Duty, Stand-To) is
     included by default for field events, but callers can opt out
     (include_block0=False) for non-field events like New Member Orientation
     where crediting field tasks would be incorrect. PP-290."""
-    wanted = {0} if include_block0 else set()
+    wanted = {FIELD_TASKS_BLOCK} if include_block0 else set()
     for b in (block_numbers or []):
         wanted.add(int(b))
     if not wanted:
@@ -3175,7 +3175,7 @@ async def _items_for_blocks(db, block_numbers, include_block0=True) -> list[int]
 async def _auto_credit_tradoc(db, event: Event) -> str:
     """Auto-credit TRADOC items for all attendees. Returns summary string."""
     # Determine items to credit — DB-driven across ALL selected blocks.
-    # Block 0 ("Every FTX" field tasks) is only credited for actual field
+    # The field-standing-tasks block is only credited for actual field
     # events (ftx/mcftx); non-field events like NMO credit only their own
     # selected block(s). PP-290.
     is_field = event.category in ("ftx", "mcftx")

@@ -14,6 +14,7 @@ from app.models.events import Event, EventRSVP
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem
+from app.constants import FIELD_TASKS_BLOCK
 from app.training_sites import TRAINING_SITES, get_site_maps
 from fastapi.templating import Jinja2Templates
 from app.services import ranks as _ranks
@@ -254,10 +255,10 @@ async def ftx_builder(request: Request, event_id: int, db: AsyncSession = Depend
     all_tradoc = tradoc_result.scalars().all()
     
     # Pre-filter tradoc items by event's training block (if set)
-    # Plus block 0 (every FTX)
+    # Plus the field-standing-tasks block (auto-credited every FTX)
     tradoc_for_block = []
     if event.training_block:
-        tradoc_for_block = [t for t in all_tradoc if t.block == event.training_block or t.block == 0]
+        tradoc_for_block = [t for t in all_tradoc if t.block == event.training_block or t.block == FIELD_TASKS_BLOCK]
     else:
         tradoc_for_block = all_tradoc
 

@@ -56,6 +56,12 @@ AWARD_ROLES: set[str] = {"command", "admin", "s1", "leader"}
 # defaults so a rename survives app restarts/redeploys. If a team is renamed
 # again, update these defaults too (or move teams to a DB table — see
 # ADMINCP_SPEC single-source-of-truth audit).
+# TRADOC: the block number for recurring "field standing tasks" (FOB Setup,
+# Guard Duty, Stand-To) that are auto-credited at every field event. This block
+# is displayed LAST but its subjects are always credited for ftx/mcftx events.
+# (Historically this was block 0; renumbered to 5 so In-Processing can be Block 0.)
+FIELD_TASKS_BLOCK: int = 5
+
 TEAM_ORDER: dict[str, int] = {
     "Headquarters": 0, "Aquila": 1, "Bravo": 2,
     "Charlie": 3, "Delta": 4, "Echo": 5,
