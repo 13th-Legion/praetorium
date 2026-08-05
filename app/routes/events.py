@@ -3074,8 +3074,15 @@ async def finalize_event(request: Request, event_id: int):
             rsvp.updated_at = now
 
         # PP-074c: Auto-credit TRADOC
+        # FTX/MCFTX always auto-credit (Block 0 + any selected blocks).
+        # online_training events auto-credit ONLY when they carry an explicit
+        # block_list (e.g. the New Member Orientation series tagged with the
+        # In-Processing block) — this lets RSVP+finalize credit NMO without
+        # crediting the general Tuesday-night training series (no blocks). PP-290.
         credit_summary = ""
         if event.category in ("ftx", "mcftx"):
+            credit_summary = await _auto_credit_tradoc(db, event)
+        elif event.category == "online_training" and event.block_list:
             credit_summary = await _auto_credit_tradoc(db, event)
 
         await db.commit()
@@ -3140,13 +3147,19 @@ async def unfinalize_event(request: Request, event_id: int):
 # sign-off.
 
 
-async def _items_for_blocks(db, block_numbers) -> list[int]:
+async def _items_for_blocks(db, block_numbers, include_block0=True) -> list[int]:
     """Return required (non-optional, non-archived) TradocItem IDs for the
-    given block numbers, sourced live from the TRADOC table. Block 0 is
-    always included ("Every FTX" items)."""
-    wanted = {0}
+    given block numbers, sourced live from the TRADOC table.
+
+    Block 0 ("Every FTX" field tasks: FOB Setup, Guard Duty, Stand-To) is
+    included by default for field events, but callers can opt out
+    (include_block0=False) for non-field events like New Member Orientation
+    where crediting field tasks would be incorrect. PP-290."""
+    wanted = {0} if include_block0 else set()
     for b in (block_numbers or []):
         wanted.add(int(b))
+    if not wanted:
+        return []
     rows = await db.execute(
         select(TradocItem.id).where(
             and_(
@@ -3161,8 +3174,14 @@ async def _items_for_blocks(db, block_numbers) -> list[int]:
 
 async def _auto_credit_tradoc(db, event: Event) -> str:
     """Auto-credit TRADOC items for all attendees. Returns summary string."""
-    # Determine items to credit — DB-driven across ALL selected blocks + Block 0
-    items_to_credit = await _items_for_blocks(db, event.block_list)
+    # Determine items to credit — DB-driven across ALL selected blocks.
+    # Block 0 ("Every FTX" field tasks) is only credited for actual field
+    # events (ftx/mcftx); non-field events like NMO credit only their own
+    # selected block(s). PP-290.
+    is_field = event.category in ("ftx", "mcftx")
+    items_to_credit = await _items_for_blocks(
+        db, event.block_list, include_block0=is_field
+    )
 
     # Get attendees
     attendees_result = await db.execute(

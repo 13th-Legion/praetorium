@@ -46,8 +46,7 @@
       // htmx/fetch, so inject the token as a hidden field at submit time.
       // Covers every current and future native POST form with zero per-form
       // template edits.
-      document.addEventListener("submit", function (evt) {
-        var form = evt.target;
+      function _csrfInjectField(form) {
         if (!form || form.tagName !== "FORM") { return; }
         var method = (form.getAttribute("method") || "get").toUpperCase();
         if (method !== "POST") { return; }
@@ -59,7 +58,22 @@
         var inp = document.createElement("input");
         inp.type = "hidden"; inp.name = "csrf_token"; inp.value = t;
         form.appendChild(inp);
+      }
+      document.addEventListener("submit", function (evt) {
+        _csrfInjectField(evt.target);
       }, true);
+      // Programmatic form.submit() does NOT fire the 'submit' event, so the
+      // listener above is bypassed (e.g. onclick="this.form.submit()", used in
+      // ~18 templates). Patch the prototype so those paths inject the token too.
+      // requestSubmit() DOES fire the event, so it's already covered — we only
+      // wrap raw submit(). PP-290.
+      (function () {
+        var _submit = HTMLFormElement.prototype.submit;
+        HTMLFormElement.prototype.submit = function () {
+          try { _csrfInjectField(this); } catch (e) {}
+          return _submit.apply(this, arguments);
+        };
+      })();
     </script>
     {% block head %}{% endblock %}
 </head>
