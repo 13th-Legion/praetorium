@@ -101,7 +101,12 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
     # Block tier map (initial = Basic Training / counts toward patching;
     # advanced = Advanced Training / above-and-beyond, does NOT count).
     bres = await db.execute(select(TradocBlock))
-    block_tier = {b.number: (b.tier or "initial") for b in bres.scalars().all()}
+    _all_blocks = bres.scalars().all()
+    block_tier = {b.number: (b.tier or "initial") for b in _all_blocks}
+    # Display order is the BLOCK's sort_order (not the items' sort_order), so
+    # cards render Block 0 (In-Processing) first … Block 5 (Field Standing Tasks)
+    # last regardless of how item sort_orders interleave across blocks.
+    block_sort = {b.number: (b.sort_order if b.sort_order is not None else b.number) for b in _all_blocks}
 
     # Member's completed items
     result = await db.execute(
@@ -125,6 +130,13 @@ async def _get_training_data(member_id: int, db: AsyncSession) -> dict:
             "signoff": completed.get(item.id),
             "optional": item.optional,
         })
+
+    # Reorder the block dict by each block's sort_order (Python dicts preserve
+    # insertion order, which the template iterates).
+    blocks = {
+        num: blocks[num]
+        for num in sorted(blocks, key=lambda n: (block_sort.get(n, n), n))
+    }
 
     # Patching progress = required (non-optional) items in INITIAL-tier blocks only.
     # Advanced Training blocks (e.g. Block 100) never affect the patched % meter.
