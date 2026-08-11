@@ -96,15 +96,39 @@ async def set_threat_level(request: Request, db: AsyncSession = Depends(get_db))
     db.add(entry)
     await db.commit()
 
-    from app.routes.notifications import create_notification_for_all
     config = TLAS_CONFIG[level]
-    await create_notification_for_all(
-        db, "tlas",
-        f"⚠️ Threat Level changed to {config['label'].upper()}",
-        body=note or f"TLAS is now {level.value.upper()} — {config['risk']}",
-        link="/dashboard",
-        icon="⚠️"
-    )
+
+    # Broadcast as a full announcement: NC Announcement Center + T1 · Announcements
+    # NC Talk room (posted by the Tesserarius bot) + in-portal notification.
+    poster_name = user.get("display_name", user.get("uid", "Command"))
+    ann_subject = f"TLAS \u2192 {config['label'].upper()}"
+    risk = config.get("risk", "")
+    checkin = config.get("checkin", "")
+    body_lines = [f"<p><strong>Threat Level is now {config['label'].upper()}.</strong> {risk}</p>"]
+    if checkin:
+        body_lines.append(f"<p><strong>Check-in:</strong> {checkin}</p>")
+    if note:
+        body_lines.append(f"<p>{note}</p>")
+    ann_body = "".join(body_lines)
+    try:
+        from app.routes.announcements import create_announcement
+        await create_announcement(ann_subject, ann_body, poster_name, talk_prefix="\u26a0\ufe0f")
+    except Exception:
+        # Never let broadcast failure block the level change; fall back to the
+        # in-portal notification alone.
+        import logging
+        logging.getLogger(__name__).warning("TLAS announcement broadcast failed", exc_info=True)
+        try:
+            from app.routes.notifications import create_notification_for_all
+            await create_notification_for_all(
+                db, "tlas",
+                f"\u26a0\ufe0f Threat Level changed to {config['label'].upper()}",
+                body=note or f"TLAS is now {level.value.upper()} \u2014 {config['risk']}",
+                link="/dashboard",
+                icon="\u26a0\ufe0f",
+            )
+        except Exception:
+            pass
 
     # Return updated banner partial (HTMX swap)
     config = TLAS_CONFIG[level]

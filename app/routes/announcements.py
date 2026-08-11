@@ -190,6 +190,80 @@ def _parse_author(message: str, fallback_author: str) -> tuple[str, str]:
     return message, fallback_author
 
 
+async def create_announcement(
+    subject: str,
+    message_html: str,
+    poster_name: str,
+    *,
+    notify: bool = True,
+    talk_prefix: str = "\ud83d\udce2",
+) -> None:
+    """Post an announcement to the NC Announcement Center, cross-post it to the
+    T1 \u00b7 Announcements NC Talk room as the Tesserarius bot, and fire an
+    in-portal notification for all members.
+
+    Reusable by any route (announcements, TLAS, etc.) that needs to broadcast.
+    Cross-post / notification failures are swallowed so the caller never breaks.
+    """
+    settings = get_settings()
+    nc_url = settings.nc_url
+
+    author_tag = f"\n<p>[Posted by {poster_name}]</p>"
+    message_with_author = f"{message_html}{author_tag}" if message_html else f"<p>[Posted by {poster_name}]</p>"
+    plain_message = _strip_html(message_html)
+    plain_with_author = (
+        f"{plain_message}\n[Posted by {poster_name}]" if plain_message else f"[Posted by {poster_name}]"
+    )
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            f"{nc_url}/ocs/v2.php/apps/announcementcenter/api/v1/announcements",
+            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+            auth=(NC_POST_USER, NC_POST_PASS),
+            data={
+                "subject": subject,
+                "message": message_with_author,
+                "plainMessage": plain_with_author,
+                "groups[]": "13th Legion",
+                "activities": "1",
+                "notifications": "1" if notify else "0",
+                "emails": "0",
+                "comments": "1",
+            },
+        )
+        resp.raise_for_status()
+
+    # Cross-post to NC Talk Announcements channel as the Tesserarius bot (Markdown).
+    try:
+        talk_body = _html_to_markdown(message_html)
+        talk_msg = f"{talk_prefix} **{subject}**"
+        if talk_body:
+            talk_msg += f"\n\n{talk_body}"
+        talk_msg += f"\n\n\u2014 {poster_name}"
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                f"{nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/atnd3vgf",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_TALK_USER, NC_TALK_PASS),
+                data={"message": talk_msg},
+            )
+    except Exception:
+        log.warning("Announcement NC Talk cross-post failed", exc_info=True)
+
+    try:
+        from app.routes.notifications import create_notification_for_all
+        from app.database import async_session as notif_session
+        async with notif_session() as ndb:
+            await create_notification_for_all(
+                ndb, "announcement", f"\ud83d\udce2 {subject}",
+                body=_strip_html(message_html)[:200] if message_html else None,
+                link="/dashboard",
+                icon="\ud83d\udce2",
+            )
+    except Exception:
+        log.warning("Announcement portal notification failed", exc_info=True)
+
+
 # ─── Quill Editor HTML ──────────────────────────────────────────────────────
 
 QUILL_CSS = """
