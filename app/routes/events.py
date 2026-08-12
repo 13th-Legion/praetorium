@@ -917,7 +917,14 @@ async def events_page(request: Request):
         member_id = member_row[0] if member_row else None
 
         # Build query
-        query = select(Event).options(selectinload(Event.instructor)).order_by(Event.date_start.desc())
+        # Exclude cancelled occurrences from the list (still viewable directly
+        # via /events/{id} with a Cancelled badge for audit purposes).
+        query = (
+            select(Event)
+            .options(selectinload(Event.instructor))
+            .where(Event.status != "cancelled")
+            .order_by(Event.date_start.desc())
+        )
 
         # Apply category filter
         tab_config = FILTER_TABS.get(tab, FILTER_TABS["all"])
@@ -2186,7 +2193,9 @@ async def upcoming_events(request: Request):
     async with async_session() as db:
         # Try DB first — deduplicate recurring events (show next occurrence only)
         result = await db.execute(
-            select(Event).where(Event.date_start >= now).order_by(Event.date_start).limit(50)
+            select(Event)
+            .where(Event.date_start >= now, Event.status != "cancelled")
+            .order_by(Event.date_start).limit(50)
         )
         all_events = result.scalars().all()
 
