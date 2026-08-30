@@ -206,7 +206,7 @@
 
         <div style="display:flex;gap:12px;justify-content:space-between;margin-bottom:32px;">
             <a href="/profile/{{ member.id }}" style="padding:8px 20px;color:#888;text-decoration:none;font-size:14px;">Cancel</a>
-            <button onclick="this.disabled=true;this.form.submit();" type="submit" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
+            <button type="submit" onclick="return guardSave(this);" style="padding:8px 24px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
                 Save Changes
             </button>
         </div>
@@ -232,6 +232,31 @@
         </form>
     </div>
 </div>
+
+<script>
+// Client-side belt-and-suspenders for the server guard: never submit a form
+// that has lost its required identity fields (autofill wipe, half-loaded DOM,
+// bfcache restore). The old inline handler set disabled+double-submitted, which
+// could race the payload; this replaces it.
+function guardSave(btn) {
+    var form = btn.form;
+    var fn = form.querySelector('[name="first_name"]');
+    var ln = form.querySelector('[name="last_name"]');
+    if (!fn || !ln || !fn.value.trim() || !ln.value.trim()) {
+        alert('The edit form did not load fully (name fields are empty). Nothing was saved. Please reload this page and try again.');
+        return false;
+    }
+    // disable AFTER validation, on next tick, so the button/payload aren't
+    // mutated mid-submit.
+    setTimeout(function () { btn.disabled = true; btn.textContent = 'Saving\u2026'; }, 0);
+    return true;  // allow native submit
+}
+// If the browser restored this page from bfcache (back/forward), force a fresh
+// server render so every field is guaranteed to hold live DB values.
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted) { window.location.reload(); }
+});
+</script>
 
 <style>
 .edit-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
