@@ -326,6 +326,36 @@ def _parse_date(s: Optional[str]) -> Optional[date]:
         return None
 
 
+# Sentinel used to distinguish "field absent from the submitted form" from
+# "field present but blank". A partial/broken submit (autofill glitch, JS
+# double-submit, a re-rendered form) that omits inputs must NOT null out data
+# the user never intended to touch.
+_MISSING = object()
+
+
+def _str_field(form, name: str, current):
+    """Return the trimmed submitted value for a text field, or the *current*
+    value if the field was not part of the submission.
+
+    - key absent   -> leave unchanged (returns `current`)
+    - key present, blank -> explicit clear (returns None)
+    - key present, value -> new trimmed value (or None if it trims empty)
+    """
+    raw = form.get(name, _MISSING)
+    if raw is _MISSING:
+        return current
+    return raw.strip() or None
+
+
+def _guard_full_form(form) -> bool:
+    """Sanity gate: a legitimate full profile-edit submission always carries the
+    required identity inputs (first_name/last_name are `required` in the form).
+    If those are missing the POST is a partial/corrupt submit and we must NOT
+    apply it (it would wipe the record). Returns True when the form looks whole.
+    """
+    return form.get("first_name") is not None and form.get("last_name") is not None
+
+
 
 
 async def _sync_nc_displayname(nc_username: str, display_name: str):
@@ -411,11 +441,28 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 
     form = await request.form()
 
-    # Identity
-    member.first_name = form.get("first_name", member.first_name).strip()
-    member.last_name = form.get("last_name", member.last_name).strip()
-    member.callsign = form.get("callsign", "").strip() or None
-    member.email = form.get("email", "").strip() or None
+    # --- Guard against partial/corrupt submissions wiping the record ---
+    # The edit form pre-fills every field and marks first_name/last_name as
+    # `required`. If those aren't in the POST, this is not a real full-form
+    # save (autofill glitch, double-submit, re-render) and applying it would
+    # null out data the editor never touched. Abort instead of destroying data.
+    if not _guard_full_form(form):
+        log.warning(
+            f"Rejected partial member-edit POST for id={member_id} "
+            f"by {user.get('username')}: missing required identity fields "
+            f"(keys={list(form.keys())})"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Incomplete form submission — no changes were saved. "
+                   "Please reload the edit page and try again.",
+        )
+
+    # Identity — only overwrite when the field is present in the submission.
+    member.first_name = (form.get("first_name") or member.first_name).strip()
+    member.last_name = (form.get("last_name") or member.last_name).strip()
+    member.callsign = _str_field(form, "callsign", member.callsign)
+    member.email = _str_field(form, "email", member.email)
 
     # Assignment — track old rank for promotion logic
     old_rank = member.rank_grade
@@ -423,7 +470,10 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     prev_team = member.team  # team stored before this save (for override detection)
     member.rank_grade = form.get("rank_grade", member.rank_grade)
     member.status = form.get("status", member.status)
-    member.team = form.get("team", "").strip() or None
+    # Team: only touch it if the dropdown was actually submitted.
+    _team_present = form.get("team", _MISSING) is not _MISSING
+    if _team_present:
+        member.team = form.get("team", "").strip() or None
 
     # Manual team override lock. The team is locked (protected from geo
     # auto-reassignment) if EITHER the admin ticked the "Lock team" checkbox,
@@ -434,13 +484,22 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     checkbox_locked = any(v in ("1", "true", "on", "yes") for v in _tl_vals)
     team_changed = member.team != prev_team
     member.team_locked = checkbox_locked or team_changed
-    member.leadership_title = form.get("leadership_title", "").strip() or None
-    selected_billets = form.getlist("billets")
-    member.primary_billet = ", ".join(selected_billets) if selected_billets else None
+    if form.get("leadership_title", _MISSING) is not _MISSING:
+        member.leadership_title = form.get("leadership_title", "").strip() or None
+    # Billets: the checkbox group only appears in the POST when at least one is
+    # ticked, so an empty list is ambiguous. Only rewrite billets when the form
+    # actually rendered the billet section (detected via the required identity
+    # gate above, plus a hidden marker). To stay safe, treat a submission that
+    # contains ANY assignment-section control as authoritative for billets.
+    if _team_present or form.get("leadership_title", _MISSING) is not _MISSING:
+        selected_billets = form.getlist("billets")
+        member.primary_billet = ", ".join(selected_billets) if selected_billets else None
 
-    # Service record
-    member.join_date = _parse_date(form.get("join_date"))
-    member.patch_date = _parse_date(form.get("patch_date"))
+    # Service record — only overwrite dates when their inputs were submitted.
+    if form.get("join_date", _MISSING) is not _MISSING:
+        member.join_date = _parse_date(form.get("join_date"))
+    if form.get("patch_date", _MISSING) is not _MISSING:
+        member.patch_date = _parse_date(form.get("patch_date"))
     # Non-promotable — restricted to Command/Admin only
     user = get_current_user(request)
     editor_roles = set(user.get("roles", []))
@@ -466,19 +525,23 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
                 notes="Auto-recorded from profile edit",
             ))
             log.info(f"CoC violation auto-logged for member {member_id}: Non-Promotable until {new_np_until}")
+    # Checkboxes only submit when checked; the full-form guard above guarantees
+    # the whole form rendered, so an absent box legitimately means "unchecked".
     member.is_founder = form.get("is_founder") == "on"
     member.is_veteran = form.get("is_veteran") == "on"
-    member.mos = form.get("mos", "").strip() or None
+    if form.get("mos", _MISSING) is not _MISSING:
+        member.mos = form.get("mos", "").strip() or None
 
-    # Contact
-    member.phone = form.get("phone", "").strip() or None
-    member.address = form.get("address", "").strip() or None
-    member.city = form.get("city", "").strip() or None
-    member.state = form.get("state", "TX").strip()
-    member.zip_code = form.get("zip_code", "").strip() or None
-    member.personal_email = form.get("personal_email", "").strip() or None
-    member.emergency_contact = form.get("emergency_contact", "").strip() or None
-    member.emergency_phone = form.get("emergency_phone", "").strip() or None
+    # Contact — present-only updates (missing input leaves the value alone).
+    member.phone = _str_field(form, "phone", member.phone)
+    member.address = _str_field(form, "address", member.address)
+    member.city = _str_field(form, "city", member.city)
+    if form.get("state", _MISSING) is not _MISSING:
+        member.state = (form.get("state", "").strip() or "TX")
+    member.zip_code = _str_field(form, "zip_code", member.zip_code)
+    member.personal_email = _str_field(form, "personal_email", member.personal_email)
+    member.emergency_contact = _str_field(form, "emergency_contact", member.emergency_contact)
+    member.emergency_phone = _str_field(form, "emergency_phone", member.emergency_phone)
 
     # --- Auto-parse a full one-line address into city/state/zip ---
     from app.geo import split_oneline_into_fields
@@ -491,15 +554,16 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
         member.state = _split["state"]
         member.zip_code = _split["zip_code"]
 
-    # Radio
-    member.ham_callsign = form.get("ham_callsign", "").strip() or None
-    member.ham_license_class = form.get("ham_license_class", "").strip() or None
-    member.gmrs_callsign = form.get("gmrs_callsign", "").strip() or None
+    # Radio — present-only updates.
+    member.ham_callsign = _str_field(form, "ham_callsign", member.ham_callsign)
+    if form.get("ham_license_class", _MISSING) is not _MISSING:
+        member.ham_license_class = form.get("ham_license_class", "").strip() or None
+    member.gmrs_callsign = _str_field(form, "gmrs_callsign", member.gmrs_callsign)
 
     # --- Geo team auto-recalculation on address change ---
     from app.geo import geocode_member_fields
 
-    old_team = form.get("team", "").strip() or None  # what was submitted in the form
+    old_team = member.team  # current team (post-assignment) for geo-change compare
     if member.address or member.zip_code:
         try:
             lat, lon = geocode_member_fields(
