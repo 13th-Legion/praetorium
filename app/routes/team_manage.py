@@ -146,11 +146,15 @@ async def rename_team_submit(request: Request, db: AsyncSession = Depends(get_db
     await db.execute(
         update(Team).where(Team.name == old_name).values(name=new_name)
     )
+    # Grab the Talk token BEFORE invalidating — prefer the DB-backed teams
+    # service (survives renames), fall back to the hardcoded constant seed.
+    talk_token = (await teams_svc.talk_tokens()).get(old_name) \
+        or TEAM_TALK_TOKENS.get(old_name)
+
     await db.commit()
     teams_svc.invalidate()  # drop cache so the new name shows immediately
 
-    # 3. Rename NC Talk channel
-    talk_token = TEAM_TALK_TOKENS.get(old_name)
+    # 3. Rename NC Talk channel (room display name).
     if talk_token:
         try:
             async with httpx.AsyncClient() as client:
@@ -167,5 +171,16 @@ async def rename_team_submit(request: Request, db: AsyncSession = Depends(get_db
                     log.warning(f"NC Talk rename failed: {r.status_code}")
         except Exception as e:
             log.error(f"NC Talk rename error: {e}")
+
+    # 4. Self-healing NC GROUP rename + Talk-room group-actor swap. NC has no
+    #    group-rename API, so this creates Team-<new>, migrates members, swaps
+    #    the room's group actor, and deletes Team-<old>. Without this the portal
+    #    would keep trying to sync into a Team-<new> group that doesn't exist
+    #    (silent 404s) and the room would keep gating on the stale group actor.
+    try:
+        from app.services.nc_groups import rename_team_group
+        await rename_team_group(old_name, new_name, talk_token=talk_token)
+    except Exception as e:
+        log.error(f"NC group rename ({old_name}→{new_name}) error: {e}")
 
     return RedirectResponse(url=f"/team/rename?success={old_name}+→+{new_name}", status_code=303)

@@ -136,6 +136,11 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
 
         # Add to target team group
         if target_team_group and target_team_group not in current_groups:
+            # Self-heal: create the Team-<name> group if NC doesn't have it yet.
+            # Without this, adding a user to a nonexistent group silently 404s
+            # (the Alpha/Aquila drift class of bug). ensure_group is idempotent.
+            from app.services.nc_groups import ensure_group
+            await ensure_group(target_team_group, client=client)
             try:
                 await client.post(
                     f"{nc_url}/ocs/v2.php/cloud/users/{username}/groups",
