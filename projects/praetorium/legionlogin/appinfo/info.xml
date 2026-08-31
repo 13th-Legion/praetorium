@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>legionlogin</id>
+    <name>Legion Login Guard</name>
+    <summary>Single-shot guard for the login / OAuth grant button</summary>
+    <description><![CDATA[
+Injects a small client-side guard on the Nextcloud login and OAuth2 grant
+pages that makes the primary submit / "Grant access" button single-shot.
+
+Why: users (esp. on mobile with password autofill) tap "Grant access"
+repeatedly while the page is still loading. Because NC 33 stores exactly one
+per-session OAuth grant stateToken, a second submit hits an already-consumed
+token and 403s ("state token does not match"). Password autofill can itself
+advance the flow, so the follow-up tap becomes an accidental double-submit.
+
+This app disables the button after the first activation and shows a
+"Signing in…" state, so a second tap can't fire. Purely additive, no core
+patching, survives NC upgrades (lives in custom_apps).
+    ]]></description>
+    <version>1.0.0</version>
+    <licence>agpl</licence>
+    <author>13th Legion IT (Spooky)</author>
+    <namespace>LegionLogin</namespace>
+    <category>security</category>
+    <bugs>https://github.com/13th-Legion/praetorium/issues</bugs>
+    <dependencies>
+        <nextcloud min-version="30" max-version="34"/>
+    </dependencies>
+</info>
