@@ -95,8 +95,12 @@ async def get_dropdown(request: Request):
                 
                 click_action = ""
                 if unread:
+                    # Mark read via HTMX, then navigate to the link once the
+                    # read POST completes (nav during an in-flight XHR would abort it).
                     click_action = f' hx-post="/api/notifications/{n.id}/read" hx-target="this" hx-swap="outerHTML"'
                     html += click_action
+                    if n.link:
+                        html += f' hx-on::after-request="window.location.href=\'{n.link}\'"'
                 else:
                     if n.link:
                         html += f' onclick="window.location.href=\'{n.link}\'"'

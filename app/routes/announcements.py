@@ -166,6 +166,34 @@ def _can_post(user: dict) -> bool:
     return bool(roles & POSTER_ROLES)
 
 
+async def _upcoming_events(limit: int = 25) -> list[dict]:
+    """Return upcoming/published events for the announcement event-link picker.
+
+    Each dict: {id, title, date_start}. Failures return [] so compose never breaks.
+    """
+    try:
+        from sqlalchemy import select
+        from app.database import async_session as ev_session
+        from app.models.events import Event
+
+        now = datetime.utcnow()
+        async with ev_session() as db:
+            result = await db.execute(
+                select(Event)
+                .where(Event.date_start >= now, Event.status != "cancelled")
+                .order_by(Event.date_start.asc())
+                .limit(limit)
+            )
+            events = result.scalars().all()
+            return [
+                {"id": e.id, "title": e.title, "date_start": e.date_start}
+                for e in events
+            ]
+    except Exception:
+        log.warning("Failed to load upcoming events for announcement picker", exc_info=True)
+        return []
+
+
 def _parse_author(message: str, fallback_author: str) -> tuple[str, str]:
     """Extract real author from '[Posted by Name]' tag at end of message.
     Returns (clean_message, author_name).
@@ -197,6 +225,7 @@ async def create_announcement(
     *,
     notify: bool = True,
     talk_prefix: str = "\ud83d\udce2",
+    link: str = "/dashboard",
 ) -> None:
     """Post an announcement to the NC Announcement Center, cross-post it to the
     T1 \u00b7 Announcements NC Talk room as the Tesserarius bot, and fire an
@@ -257,7 +286,7 @@ async def create_announcement(
             await create_notification_for_all(
                 ndb, "announcement", f"\ud83d\udce2 {subject}",
                 body=_strip_html(message_html)[:200] if message_html else None,
-                link="/dashboard",
+                link=link,
                 icon="\ud83d\udce2",
             )
     except Exception:
@@ -522,6 +551,17 @@ async def compose_form(request: Request):
     if not _can_post(user):
         return HTMLResponse("")
 
+    # Build the optional "link to event" picker from upcoming events.
+    events = await _upcoming_events()
+    event_options = '<option value="">\u2014 No event (links to dashboard) \u2014</option>'
+    for ev in events:
+        try:
+            dt_label = ev["date_start"].strftime("%b %d") if ev.get("date_start") else ""
+        except Exception:
+            dt_label = ""
+        label = escape(f"{ev['title']}" + (f"  ({dt_label})" if dt_label else ""))
+        event_options += f'<option value="{ev["id"]}">{label}</option>'
+
     return HTMLResponse(f"""
     {QUILL_CSS}
     {QUILL_JS}
@@ -529,6 +569,13 @@ async def compose_form(request: Request):
         <div style="margin-bottom:8px;">
             <input type="text" id="announce-subject" placeholder="Announcement subject" required
                 style="width:100%;padding:6px 8px;font-size:13px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:4px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:block;font-size:11px;color:#aaa;margin-bottom:4px;">Link notification to event (optional)</label>
+            <select id="announce-event"
+                style="width:100%;padding:6px 8px;font-size:13px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:4px;box-sizing:border-box;">
+                {event_options}
+            </select>
         </div>
         <div style="margin-bottom:8px;">
             {_quill_editor_html("compose-editor", "compose-toolbar")}
@@ -567,10 +614,13 @@ async def compose_form(request: Request):
         btn.disabled = true;
         btn.textContent = 'Posting...';
 
+        var eventId = document.getElementById('announce-event').value;
+
         var fd = new FormData();
         fd.append('subject', subject);
         fd.append('message', message);
         fd.append('notify', notify);
+        if (eventId) {{ fd.append('event_id', eventId); }}
 
         fetch('/api/announcements/post', {{
             method: 'POST',
@@ -603,9 +653,15 @@ async def post_announcement(request: Request):
     subject = form.get("subject", "").strip()
     message = form.get("message", "").strip()
     notify = form.get("notify") == "1"
+    event_id = form.get("event_id", "").strip()
 
     if not subject:
         raise HTTPException(status_code=400, detail="Subject is required")
+
+    # If an event was chosen, deep-link the notification to that event page.
+    notif_link = "/dashboard"
+    if event_id.isdigit():
+        notif_link = f"/events/{event_id}"
 
     poster_name = user.get("display_name", user.get("username", "Unknown"))
     author_tag = f"\n<p>[Posted by {poster_name}]</p>"
@@ -660,7 +716,7 @@ async def post_announcement(request: Request):
             await create_notification_for_all(
                 ndb, "announcement", f"📢 {subject}",
                 body=_strip_html(message)[:200] if message else None,
-                link="/dashboard",
+                link=notif_link,
                 icon="📢"
             )
     except Exception as e:
