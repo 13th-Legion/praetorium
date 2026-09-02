@@ -1024,6 +1024,7 @@ async def events_page(request: Request):
         "rank_abbr": _ranks.abbr_map(),
         "recipient_groups": recipient_groups,
         "tradoc_blocks": tradoc_blocks,
+        "nc_rooms": _nc_rooms_svc.selectable_rooms(),
     })
 
 

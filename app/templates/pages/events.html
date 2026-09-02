@@ -264,9 +264,28 @@
             </div>
 
             <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Meeting mode</label>
+                <select name="meeting_mode" id="evt-meeting-mode" onchange="toggleMeetingMode()"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="physical" selected>📍 In person (physical location)</option>
+                    <option value="online">💻 Online (Nextcloud Talk)</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;" id="physical-location-block">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Location</label>
                 <input type="text" name="location" id="evt-location"
                     style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;display:none;" id="online-room-block">
+                <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Nextcloud Talk channel</label>
+                <select name="talk_token"
+                    style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+                    <option value="">-- Select channel --</option>
+                    {% for r in nc_rooms %}
+                    <option value="{{ r.token }}">{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+                <span style="font-size:11px;color:#666;margin-top:2px;display:block;">A “Join on Nextcloud Talk” link is added automatically.</span>
             </div>
             <div style="margin-bottom:12px;" id="instructor-block">
                 <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Instructor (Online Training only)</label>
@@ -345,14 +364,20 @@
         document.getElementById('recur-until-wrap').style.display = (endMode === 'until') ? 'inline' : 'none';
     }
     
-    // Auto-set location to NC Talk for online training
+    // Meeting-mode toggle: show physical location OR NC Talk channel picker
+    function toggleMeetingMode() {
+        var mode = document.getElementById('evt-meeting-mode').value;
+        document.getElementById('physical-location-block').style.display = (mode === 'online') ? 'none' : 'block';
+        document.getElementById('online-room-block').style.display = (mode === 'online') ? 'block' : 'none';
+    }
+
+    // Category change: online_training defaults to online mode + shows instructor
     document.querySelector('select[name="category"]').addEventListener('change', function(e) {
-        var loc = document.getElementById('evt-location');
         if (e.target.value === 'online_training') {
-            if (!loc.value) loc.value = 'Nextcloud Talk: T2 · Training';
+            var modeSel = document.getElementById('evt-meeting-mode');
+            if (modeSel.value !== 'online') { modeSel.value = 'online'; toggleMeetingMode(); }
             document.getElementById('instructor-block').style.display = 'block';
         } else {
-            if (loc.value === 'Nextcloud Talk: T2 · Training') loc.value = '';
             document.getElementById('instructor-block').style.display = 'none';
         }
     });
