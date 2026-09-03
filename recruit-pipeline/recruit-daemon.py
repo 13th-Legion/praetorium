@@ -620,19 +620,34 @@ def attach_submission_files(submission, card_id, stack_id):
                 log.warning(f"Failed to download {filename}: {dl.status_code}")
                 continue
 
-            # Attach to Deck card
+            # Attach to Deck card.
+            #
+            # `data` is REQUIRED. Deck's AttachmentApiController::create is
+            # `create(int $cardId, string $type, string $data)` -- with no
+            # default on $data, so omitting it makes Nextcloud's AppFramework
+            # reject the request with a bare HTTP 400 and an EMPTY body,
+            # *before* the controller runs. Nothing is written to
+            # nextcloud.log, which is why this went unnoticed from ~2026-08-04
+            # until Archer reported missing attachments on 2026-09-03: every
+            # upload had been silently 400ing for a month.
+            # For type=deck_file, `data` is the filename.
             r2 = req.post(
                 f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks/{stack_id}/cards/{card_id}/attachments",
                 auth=auth,
                 headers={"OCS-APIRequest": "true"},
-                data={"type": "deck_file"},
+                data={"type": "deck_file", "data": filename},
                 files={"file": (filename, dl.content)},
                 timeout=30,
             )
             if r2.status_code in (200, 201):
                 log.info(f"Attached file to card #{card_id}: {filename}")
             else:
-                log.warning(f"Failed to attach {filename} to card #{card_id}: {r2.status_code}")
+                # Include the body: a status code alone told us nothing for a
+                # month because this failure mode returns an empty 400.
+                log.warning(
+                    f"Failed to attach {filename} to card #{card_id}: "
+                    f"{r2.status_code} body={r2.text[:200]!r}"
+                )
 
     except Exception as e:
         log.error(f"Error attaching files to card #{card_id}: {e}")
