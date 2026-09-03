@@ -53,6 +53,7 @@ def plan_rotation(
     *,
     recent_history: Sequence[int] = (),
     seed: Optional[int] = None,
+    leave: Optional[dict[int, tuple]] = None,
 ) -> list[RotationSlot]:
     """Deal ``pool_ids`` across ``events`` in fair cycle-aware random order.
 
@@ -81,21 +82,51 @@ def plan_rotation(
     used.sort(key=lambda m: recency_rank[m])
     cycle.extend(used)
 
+    leave = leave or {}
+
+    def _on_leave_for(member_id: int, when: datetime) -> bool:
+        """True if member_id is on an approved LOA covering ``when``."""
+        window = leave.get(member_id)
+        if not window:
+            return False
+        start, end = window
+        d = when.date()
+        if start and d < start:
+            return False
+        if end and d > end:
+            return False
+        return True
+
+    # `cycle` is the queue of members who still owe a turn this cycle.
     slots: list[RotationSlot] = []
-    idx = 0
     for ev in events:
-        if idx >= len(cycle):
-            # Pool exhausted -> reshuffle for the next full cycle.
+        if not cycle:
             cycle = _shuffled(pool, rng)
-            idx = 0
-        mid = cycle[idx]
-        idx += 1
+
+        # Take the first member in the queue who is NOT on leave for this
+        # event's date. Members skipped for leave STAY in the queue so they
+        # still get their turn once they're back.
+        chosen = None
+        for i, cand in enumerate(cycle):
+            if not _on_leave_for(cand, ev.date_start):
+                chosen = cycle.pop(i)
+                break
+
+        if chosen is None:
+            # Everyone still owed a turn is on leave for this date. Fall back
+            # to anyone in the pool who is available; if literally nobody is,
+            # leave the event unassigned rather than assigning someone away.
+            avail = [m for m in pool if not _on_leave_for(m, ev.date_start)]
+            if not avail:
+                continue
+            chosen = rng.choice(avail)
+
         slots.append(
             RotationSlot(
                 event_id=ev.id,
                 date_start=ev.date_start,
-                member_id=mid,
-                member_label=labels.get(mid, f"#{mid}"),
+                member_id=chosen,
+                member_label=labels.get(chosen, f"#{chosen}"),
                 previous_instructor_id=ev.instructor_id,
             )
         )
@@ -162,6 +193,24 @@ async def recent_instructors(db, series_id: str, limit: int = 40) -> list[int]:
     )
     ids = [r[0] for r in result.all() if r[0] is not None]
     return ids[-limit:]
+
+
+async def leave_windows(db, member_ids: Sequence[int]) -> dict[int, tuple]:
+    """{member_id: (leave_start, leave_end)} for members flagged on_leave.
+
+    Used to skip an instructor only for events that fall INSIDE their leave,
+    so they remain eligible once they return. A NULL leave_end is treated as
+    open-ended (excluded from every date on/after leave_start).
+    """
+    if not member_ids:
+        return {}
+    result = await db.execute(
+        select(Member.id, Member.leave_start, Member.leave_end).where(
+            Member.id.in_(list(member_ids)),
+            Member.on_leave.is_(True),
+        )
+    )
+    return {row[0]: (row[1], row[2]) for row in result.all()}
 
 
 async def member_labels(db, member_ids: Sequence[int]) -> dict[int, str]:

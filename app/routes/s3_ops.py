@@ -772,7 +772,10 @@ async def instructor_rotation_preview(request: Request):
 
         labels = await _rot.member_labels(db, pool_ids)
         history = await _rot.recent_instructors(db, series_id) if continue_rotation else []
-        slots = _rot.plan_rotation(events, pool_ids, labels, recent_history=history)
+        leave = await _rot.leave_windows(db, pool_ids)
+        slots = _rot.plan_rotation(
+            events, pool_ids, labels, recent_history=history, leave=leave
+        )
 
     rows = ""
     for s in slots:
@@ -790,6 +793,14 @@ async def instructor_rotation_preview(request: Request):
     note = (f'{len(slots)} event(s) · pool of {len(pool_ids)} · '
             f'{cycles} full cycle(s)' if cycles > 1 else
             f'{len(slots)} event(s) · pool of {len(pool_ids)}')
+
+    if leave:
+        who = []
+        for mid, (ls, le) in leave.items():
+            back = f" — back {le.strftime('%d %b %Y')}" if le else " — open-ended"
+            who.append(f"{labels.get(mid, '#' + str(mid))}{back}")
+        note += ('</div><div style="font-size:11px;color:#d4a537;margin-bottom:10px;">'
+                 '🌴 On leave (skipped while away): ' + '; '.join(who))
 
     payload = "&".join(f"assign={s.event_id}:{s.member_id}" for s in slots)
 
@@ -883,16 +894,32 @@ async def instructor_rotation_schedule(request: Request, series_id: str = ""):
         events = await _rot.series_events(db, series_id, future_only=True)
         ids = [e.instructor_id for e in events if e.instructor_id]
         labels = await _rot.member_labels(db, ids)
+        leave = await _rot.leave_windows(db, ids)
         title = events[0].title if events else "Series"
 
     if not events:
         return HTMLResponse('<div style="color:#666;font-size:13px;">No upcoming occurrences.</div>')
 
+    def _clash(mid, when):
+        w = leave.get(mid)
+        if not w:
+            return False
+        ls, le = w
+        d = when.date()
+        return not ((ls and d < ls) or (le and d > le))
+
     rows = ""
     unassigned = 0
+    conflicts = 0
     for e in events:
         if e.instructor_id:
-            who = f'<span style="color:#d4a537;font-weight:600;">{labels.get(e.instructor_id, "#" + str(e.instructor_id))}</span>'
+            name = labels.get(e.instructor_id, "#" + str(e.instructor_id))
+            if _clash(e.instructor_id, e.date_start):
+                conflicts += 1
+                who = (f'<span style="color:#b71c1c;font-weight:600;">{name}</span>'
+                       '<span style="color:#b71c1c;font-size:11px;"> 🌴 ON LEAVE</span>')
+            else:
+                who = f'<span style="color:#d4a537;font-weight:600;">{name}</span>'
         else:
             who = '<span style="color:#777;font-style:italic;">unassigned</span>'
             unassigned += 1
@@ -912,8 +939,14 @@ async def instructor_rotation_schedule(request: Request, series_id: str = ""):
                    f'<input type="checkbox" name="rooms" value="{token}"{pre} style="accent-color:#d4a537;"> '
                    f'{name}</label>')
 
-    warn = (f'<div style="color:#b71c1c;font-size:12px;margin-bottom:8px;">'
-            f'\u26a0\ufe0f {unassigned} occurrence(s) still unassigned.</div>') if unassigned else ""
+    warn = ""
+    if unassigned:
+        warn += (f'<div style="color:#b71c1c;font-size:12px;margin-bottom:8px;">'
+                 f'⚠️ {unassigned} occurrence(s) still unassigned.</div>')
+    if conflicts:
+        warn += (f'<div style="color:#b71c1c;font-size:12px;margin-bottom:8px;">'
+                 f'⚠️ {conflicts} occurrence(s) assigned to a member who is ON LEAVE '
+                 f'that week — re-run the rotation to fix.</div>')
 
     return HTMLResponse(f"""
     <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:6px;padding:12px;">
