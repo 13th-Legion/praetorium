@@ -123,8 +123,11 @@ PORTAL_DB_NAME = "praetorium"
 PORTAL_DB_USER = "praetorium"
 PORTAL_DB_PASS = os.environ.get("POSTGRES_PASSWORD", "")
 
-STATE_FILE = Path("/opt/recruit-pipeline/state.json")
-LOG_DIR = Path("/opt/recruit-pipeline")
+# Paths are env-overridable so the module can be imported and unit-tested off
+# the server. Unset (i.e. in production) they resolve to the same values as
+# before.
+STATE_FILE = Path(os.environ.get("RECRUIT_STATE_FILE", "/opt/recruit-pipeline/state.json"))
+LOG_DIR = Path(os.environ.get("RECRUIT_LOG_DIR", "/opt/recruit-pipeline"))
 
 # Question ID → label mapping (from NC Form ID 3)
 Q_MAP = {
@@ -178,14 +181,20 @@ NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
 # ─── Logging ─────────────────────────────────────────────────────────────────
 
 def setup_logging():
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    handlers = [logging.StreamHandler()]
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        handlers.insert(0, logging.FileHandler(LOG_DIR / "recruit-daemon.log"))
+    except OSError as e:
+        # Importing the module for tests on a machine without /opt/recruit-pipeline
+        # must not be fatal. In production this path is writable; if it ever
+        # stops being writable we still get stderr -> journald.
+        print(f"[warn] file logging disabled ({LOG_DIR}: {e}); logging to stderr only",
+              file=sys.stderr)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(LOG_DIR / "recruit-daemon.log"),
-            logging.StreamHandler(),
-        ],
+        handlers=handlers,
     )
     return logging.getLogger("recruit-daemon")
 
@@ -201,61 +210,173 @@ log = setup_logging()
 _RETRY_STATUSES = {429, 500, 502, 503, 504, 520, 521, 522, 523, 524}
 _NC_API_MAX_ATTEMPTS = 4          # 1 try + 3 retries
 _NC_API_BACKOFF_BASE = 2.0        # seconds: 2, 4, 8 between attempts
+_BODY_LOG_LIMIT = 300             # chars of response body kept in a failure log
 
 
-def nc_api(method, endpoint, data=None, json_data=None, user=None, passwd=None):
-    """Make a Nextcloud API call with retry + exponential backoff.
+def _body_excerpt(resp, limit=_BODY_LOG_LIMIT):
+    """Whitespace-collapsed, truncated response body for logging.
 
-    Retries transient failures (connection errors, read timeouts, 5xx, and
-    Cloudflare 52x origin errors, plus 429) up to 3 times with 2s/4s/8s
-    backoff. Non-transient HTTP errors (e.g. 401/403/404) fail fast. The
-    final failure is re-raised so genuine outages still surface to the caller.
+    NEVER log a bare status code. Deck's attachment endpoint 400s with an
+    EMPTY body when a required argument is missing (incident 2026-08-04 →
+    2026-09-03: a month of silently-failing uploads), and the portal
+    offboarding bugs were equally invisible. '<empty body>' is itself a
+    diagnostic signal -- it means the AppFramework rejected the request
+    before the controller ran.
     """
-    url = f"{NC_URL}{endpoint}"
-    headers = {
-        "OCS-APIRequest": "true",
-        "Accept": "application/json",
-    }
-    if json_data is not None:
-        headers["Content-Type"] = "application/json"
+    try:
+        raw = resp.content[: limit * 4]
+        total = len(resp.content)
+    except Exception as e:                        # pragma: no cover - defensive
+        return f"<unreadable body: {e}>"
+    if not raw:
+        return "<empty body>"
+    try:
+        text = raw.decode(resp.encoding or "utf-8", errors="replace")
+    except (LookupError, TypeError):
+        text = raw.decode("utf-8", errors="replace")
+    text = " ".join(text.split())
+    if len(text) > limit:
+        return f"{text[:limit]!r}...(+{total - limit} more bytes)"
+    return repr(text)
 
+
+class NCRequestError(requests.exceptions.HTTPError):
+    """HTTP error that carries the response body in its message.
+
+    requests' own raise_for_status() throws away the body, which is exactly
+    how the Deck attachment 400s stayed invisible for a month.
+    """
+
+
+def nc_request(method, url_or_endpoint, data=None, json_data=None, files=None,
+               params=None, headers=None, user=None, passwd=None, auth=None,
+               timeout=30, ocs=True, retry=True, expected_statuses=(),
+               raise_for_status=False, label=None):
+    """Single low-level HTTP entry point for every Nextcloud call.
+
+    Returns the raw ``requests.Response`` so callers can inspect status, body
+    and headers themselves -- unlike the old nc_api(), which called
+    raise_for_status() and discarded the body.
+
+    Handles:
+      * absolute URLs *or* ``/ocs/...`` endpoints (NC_URL is prepended)
+      * non-standard WebDAV verbs (PROPFIND / MKCOL / MOVE / COPY)
+      * multipart uploads via ``files=``, query strings via ``params=``
+      * custom credentials via ``user``/``passwd`` or a full ``auth`` tuple
+      * retry + exponential backoff on 429 / 5xx / Cloudflare 52x and on
+        connection errors and read timeouts (2s, 4s, 8s)
+
+    Any non-2xx response is logged at WARNING with a truncated body, unless
+    the status is listed in ``expected_statuses`` (e.g. a 404 that the caller
+    treats as a normal "not found" answer).
+
+    Set ``raise_for_status=True`` to raise NCRequestError -- which, unlike
+    requests' HTTPError, includes the body in its message.
+    """
+    if url_or_endpoint.startswith("http://") or url_or_endpoint.startswith("https://"):
+        url = url_or_endpoint
+    else:
+        url = f"{NC_URL}{url_or_endpoint}"
+    tag = label or f"{method} {url_or_endpoint}"
+
+    req_headers = {}
+    if ocs:
+        req_headers["OCS-APIRequest"] = "true"
+        req_headers["Accept"] = "application/json"
+    if json_data is not None:
+        req_headers["Content-Type"] = "application/json"
+    if headers:
+        # Caller wins; a None value removes a default (e.g. Accept on WebDAV).
+        for k, v in headers.items():
+            if v is None:
+                req_headers.pop(k, None)
+            else:
+                req_headers[k] = v
+
+    if auth is None:
+        auth = (user or NC_USER, passwd or NC_PASS)
+
+    max_attempts = _NC_API_MAX_ATTEMPTS if retry else 1
     last_exc = None
-    for attempt in range(1, _NC_API_MAX_ATTEMPTS + 1):
+    resp = None
+
+    for attempt in range(1, max_attempts + 1):
         try:
             resp = requests.request(
                 method, url,
-                auth=(user or NC_USER, passwd or NC_PASS),
-                headers=headers, data=data, json=json_data,
-                timeout=30,
+                auth=auth, headers=req_headers,
+                data=data, json=json_data, files=files, params=params,
+                timeout=timeout,
             )
-            # Retry transient server/Cloudflare statuses; raise others normally.
-            if resp.status_code in _RETRY_STATUSES and attempt < _NC_API_MAX_ATTEMPTS:
-                wait = _NC_API_BACKOFF_BASE ** attempt
-                log.warning(
-                    "nc_api %s %s -> HTTP %s (transient), retry %d/%d in %.0fs",
-                    method, endpoint, resp.status_code,
-                    attempt, _NC_API_MAX_ATTEMPTS - 1, wait,
-                )
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            return resp.json()
         except (requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError) as e:
             last_exc = e
-            if attempt < _NC_API_MAX_ATTEMPTS:
+            if attempt < max_attempts:
                 wait = _NC_API_BACKOFF_BASE ** attempt
                 log.warning(
-                    "nc_api %s %s -> %s (transient), retry %d/%d in %.0fs",
-                    method, endpoint, type(e).__name__,
-                    attempt, _NC_API_MAX_ATTEMPTS - 1, wait,
+                    "nc_request %s -> %s (transient), retry %d/%d in %.0fs",
+                    tag, type(e).__name__, attempt, max_attempts - 1, wait,
                 )
                 time.sleep(wait)
                 continue
             raise
-    # Exhausted retries on a connection/timeout error.
-    if last_exc is not None:
-        raise last_exc
+
+        if resp.status_code in _RETRY_STATUSES and attempt < max_attempts:
+            wait = _NC_API_BACKOFF_BASE ** attempt
+            log.warning(
+                "nc_request %s -> HTTP %s (transient), retry %d/%d in %.0fs body=%s",
+                tag, resp.status_code, attempt, max_attempts - 1, wait,
+                _body_excerpt(resp),
+            )
+            time.sleep(wait)
+            continue
+        break
+    else:                                          # pragma: no cover - defensive
+        if last_exc is not None:
+            raise last_exc
+
+    if resp is None:                               # pragma: no cover - defensive
+        raise last_exc or RuntimeError(f"nc_request {tag}: no response and no error")
+
+    ok = 200 <= resp.status_code < 300
+    if not ok and resp.status_code not in expected_statuses:
+        log.warning(
+            "nc_request %s -> HTTP %s body=%s",
+            tag, resp.status_code, _body_excerpt(resp),
+        )
+
+    if raise_for_status and not ok:
+        raise NCRequestError(
+            f"{tag} -> HTTP {resp.status_code} body={_body_excerpt(resp)}",
+            response=resp,
+        )
+
+    return resp
+
+
+def nc_api(method, endpoint, data=None, json_data=None, user=None, passwd=None,
+           params=None, timeout=30):
+    """JSON wrapper over nc_request(): returns the decoded body, raises on non-2xx.
+
+    Thin by design -- retry/backoff/body-logging all live in nc_request().
+    Kept with the original signature so existing call sites are unchanged.
+    """
+    resp = nc_request(
+        method, endpoint,
+        data=data, json_data=json_data, params=params,
+        user=user, passwd=passwd, timeout=timeout,
+        raise_for_status=True, label=f"nc_api {method} {endpoint}",
+    )
+    try:
+        return resp.json()
+    except ValueError as e:
+        # A 2xx that isn't JSON is still a bug -- say what came back instead of
+        # letting a bare JSONDecodeError bubble up with no context.
+        raise NCRequestError(
+            f"nc_api {method} {endpoint} -> HTTP {resp.status_code} "
+            f"but body is not JSON ({e}) body={_body_excerpt(resp)}",
+            response=resp,
+        ) from e
 
 
 def load_state():
