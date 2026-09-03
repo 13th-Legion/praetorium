@@ -2946,42 +2946,65 @@ def _nc_talk_remove(nc_username: str) -> bool:
     )
 
 
+async def _nc_list_groups(client: httpx.AsyncClient, nc_username: str) -> list[str]:
+    """Groups an NC user belongs to. Raises on transport/HTTP failure."""
+    resp = await client.get(
+        f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
+        headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+        params={"format": "json"},
+        timeout=15,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}")
+    return resp.json().get("ocs", {}).get("data", {}).get("groups", []) or []
+
+
 async def _nc_remove_all_groups(nc_username: str) -> tuple[bool, list[str]]:
     """Remove an NC user from every group they belong to.
 
-    Returns (all_removed, failed_group_names). Unlike the previous inline
-    version this reports WHICH groups it could not remove, so a partial failure
-    is visible to the operator instead of collapsing to a single False.
+    Returns (all_removed, still_member_of). Reports WHICH groups are still
+    attached rather than collapsing everything to one bool.
+
+    Correctness note: success is decided by RE-LISTING the user's groups
+    afterwards, not by parsing the DELETE response. The OCS group-removal
+    endpoint does not reliably return a JSON body -- an earlier version of this
+    helper tried to read ocs.meta.statuscode from it, hit
+    "Expecting value: line 1 column 1", and reported failure for removals that
+    had actually succeeded. Ground truth is the group list itself.
     """
-    failed: list[str] = []
     try:
         async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
-            resp = await client.get(
-                f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
-                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                timeout=15,
-            )
-            if resp.status_code != 200:
-                return False, [f"<could not list groups: HTTP {resp.status_code}>"]
-            groups = resp.json().get("ocs", {}).get("data", {}).get("groups", [])
+            try:
+                groups = await _nc_list_groups(client, nc_username)
+            except Exception as e:
+                return False, [f"<could not list groups: {e}>"]
+
             for group in groups:
                 try:
-                    d = await client.delete(
+                    # NB: params=, NOT data=. httpx's .delete() has no `data`
+                    # kwarg, so the old data={...} call raised TypeError on
+                    # every single offboarding and the bare `except Exception`
+                    # hid it -- group removal never once worked.
+                    await client.delete(
                         f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
                         headers={"OCS-APIRequest": "true"},
-                        params={"groupid": group},
+                        params={"groupid": group, "format": "json"},
                         timeout=10,
                     )
-                    code = d.json().get("ocs", {}).get("meta", {}).get("statuscode", 0)
-                    if code not in (100, 200):
-                        failed.append(group)
                 except Exception as e:
-                    logger.error(f"group removal failed for {nc_username}/{group}: {e}")
-                    failed.append(group)
+                    logger.error(f"group removal call failed for {nc_username}/{group}: {e}")
+
+            # Verify against the server rather than trusting the responses.
+            try:
+                remaining = await _nc_list_groups(client, nc_username)
+            except Exception as e:
+                return False, [f"<could not verify groups: {e}>"]
+            if remaining:
+                logger.error(f"{nc_username} still in groups after removal: {remaining}")
+            return (not remaining), remaining
     except Exception as e:
         logger.error(f"group removal aborted for {nc_username}: {e}")
         return False, [f"<error: {e}>"]
-    return (not failed), failed
 
 
 async def _nc_group_add(nc_username: str, group: str) -> bool:
