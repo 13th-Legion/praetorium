@@ -593,21 +593,21 @@ def _levenshtein(s1, s2):
 
 
 def notify_s1_nctalk(message):
-    """Send a notification message to the S1 NC Talk room."""
+    """Send a notification message to the S1 NC Talk room. Returns True on success."""
     try:
-        resp = requests.post(
-            f"{NC_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NCTALK_S1_ROOM}",
-            auth=(NC_USER, NC_PASS),
-            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-            data={"message": message},
-            timeout=15,
+        resp = nc_request(
+            "POST", f"/ocs/v2.php/apps/spreed/api/v1/chat/{NCTALK_S1_ROOM}",
+            data={"message": message}, timeout=15,
+            label="NC Talk S1 notification",
         )
         if resp.status_code in (200, 201):
-            log.info(f"S1 notification sent to NC Talk")
-        else:
-            log.warning(f"S1 NC Talk notification failed: {resp.status_code}")
+            log.info("S1 notification sent to NC Talk")
+            return True
+        # nc_request already logged status + body.
+        return False
     except Exception as e:
-        log.error(f"Failed to send S1 NC Talk notification: {e}")
+        log.error(f"Failed to send S1 NC Talk notification: {e}", exc_info=True)
+        return False
 
 
 def send_rejection_email(recipient_email, name):
@@ -1358,6 +1358,18 @@ def parse_card_for_onboarding(card):
     return info
 
 
+def _ocs_section(resp, section):
+    """resp.json()['ocs'][section] as a dict, or {} if the body isn't OCS JSON.
+
+    Never raises: OCS endpoints answer with HTML error pages often enough that
+    a bare JSONDecodeError here would mask the real status.
+    """
+    try:
+        return resp.json().get("ocs", {}).get(section, {}) or {}
+    except (ValueError, AttributeError):
+        return {}
+
+
 def nc_user_exists(username):
     """Does this NC account exist?  True / False / None (couldn't tell).
 
@@ -1365,24 +1377,28 @@ def nc_user_exists(username):
     have completed the creation anyway.
     """
     try:
-        r = requests.get(
-            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
-            auth=(NC_SVC_USER, NC_SVC_PASS),
-            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-            timeout=30,
+        r = nc_request(
+            "GET", f"/ocs/v2.php/cloud/users/{quote(username)}",
+            user=NC_SVC_USER, passwd=NC_SVC_PASS,
+            expected_statuses=(404,),      # a normal "no such user" answer
+            label=f"lookup NC user {username}",
         )
         if r.status_code == 404:
             return False
-        meta = r.json().get("ocs", {}).get("meta", {})
+        meta = _ocs_section(r, "meta")
         status = meta.get("statuscode", 0)
         if status in (100, 200):
             return True
         if status in (404, 998):
             return False
-        log.warning(f"Unexpected OCS status {status} checking NC user {username}")
+        log.warning(
+            f"Unexpected OCS status {status} checking NC user {username} "
+            f"(HTTP {r.status_code} body={_body_excerpt(r)})"
+        )
         return None
     except Exception as e:
-        log.warning(f"Could not check whether NC account {username} exists: {e}")
+        log.warning(f"Could not check whether NC account {username} exists: {e}",
+                    exc_info=True)
         return None
 
 
@@ -1394,39 +1410,52 @@ def nc_user_never_logged_in(username):
     and we must not clobber it.
     """
     try:
-        r = requests.get(
-            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
-            auth=(NC_SVC_USER, NC_SVC_PASS),
-            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-            timeout=30,
+        r = nc_request(
+            "GET", f"/ocs/v2.php/cloud/users/{quote(username)}",
+            user=NC_SVC_USER, passwd=NC_SVC_PASS,
+            expected_statuses=(404,),
+            label=f"lastLogin for {username}",
         )
-        data = r.json().get("ocs", {}).get("data", {})
+        data = _ocs_section(r, "data")
         if "lastLogin" not in data:
+            # Unknown, NOT "never logged in": the caller must not reset a
+            # password on the strength of a body it couldn't read.
+            log.warning(
+                f"No lastLogin field for {username} (HTTP {r.status_code} "
+                f"body={_body_excerpt(r)}) — treating as UNKNOWN"
+            )
             return None
         return int(data.get("lastLogin") or 0) == 0
     except Exception as e:
-        log.warning(f"Could not read lastLogin for {username}: {e}")
+        log.warning(f"Could not read lastLogin for {username}: {e}", exc_info=True)
         return None
 
 
 def set_nc_password(username, password):
     """Set an existing NC account's password. Returns True on success."""
     try:
-        r = requests.put(
-            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
-            auth=(NC_SVC_USER, NC_SVC_PASS),
-            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+        r = nc_request(
+            "PUT", f"/ocs/v2.php/cloud/users/{quote(username)}",
             data={"key": "password", "value": password},
-            timeout=30,
+            user=NC_SVC_USER, passwd=NC_SVC_PASS,
+            # OCS reports failures in the body with HTTP 400/996-ish; we log
+            # the body ourselves below with the username attached.
+            expected_statuses=(400,),
+            label=f"set NC password for {username}",
         )
-        status = r.json().get("ocs", {}).get("meta", {}).get("statuscode", 0)
+        meta = _ocs_section(r, "meta")
+        status = meta.get("statuscode", 0)
         if status in (100, 200):
             log.info(f"Reset NC password for {username}")
             return True
-        log.error(f"Failed to reset NC password for {username}: OCS status {status}")
+        log.error(
+            f"Failed to reset NC password for {username}: OCS status {status} "
+            f"msg={meta.get('message', '')!r} (HTTP {r.status_code} "
+            f"body={_body_excerpt(r)})"
+        )
         return False
     except Exception as e:
-        log.error(f"Error resetting NC password for {username}: {e}")
+        log.error(f"Error resetting NC password for {username}: {e}", exc_info=True)
         return False
 
 
@@ -1459,14 +1488,18 @@ def create_nc_account(username, password, display_name, email, groups):
     for g in groups:
         form_pairs.append(("groups[]", g))
 
-    url = f"{NC_URL}/ocs/v2.php/cloud/users"
-    headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
     try:
-        r = requests.post(url, auth=(NC_SVC_USER, NC_SVC_PASS), headers=headers,
-                          data=form_pairs, timeout=30)
+        r = nc_request(
+            "POST", "/ocs/v2.php/cloud/users",
+            data=form_pairs, user=NC_SVC_USER, passwd=NC_SVC_PASS,
+            # HTTP 400 is how NC delivers OCS 102 "User already exists", which
+            # is a SUCCESS for us. We inspect and log the body ourselves below.
+            expected_statuses=(400,),
+            label=f"create NC account {username}",
+        )
     except Exception as e:
         # AMBIGUOUS failure (timeout / reset): the account may exist anyway.
-        log.error(f"Error creating NC account {username}: {e}")
+        log.error(f"Error creating NC account {username}: {e}", exc_info=True)
         if nc_user_exists(username) is True:
             log.warning(
                 f"NC account {username} exists despite the failed request "
@@ -1477,10 +1510,7 @@ def create_nc_account(username, password, display_name, email, groups):
 
     # Parse the OCS body regardless of HTTP status: NC answers HTTP 400 with
     # OCS statuscode 102 for "User already exists".
-    try:
-        meta = r.json().get("ocs", {}).get("meta", {})
-    except Exception:
-        meta = {}
+    meta = _ocs_section(r, "meta")
     status = meta.get("statuscode", 0)
     msg = meta.get("message", "") or ""
 
@@ -1491,7 +1521,10 @@ def create_nc_account(username, password, display_name, email, groups):
         log.warning(f"NC account {username} already exists — continuing onboarding (idempotent)")
         return NC_ACCOUNT_EXISTS
 
-    log.error(f"Failed to create NC account {username}: {msg or ('HTTP ' + str(r.status_code))}")
+    log.error(
+        f"Failed to create NC account {username}: OCS status {status} "
+        f"msg={msg!r} (HTTP {r.status_code} body={_body_excerpt(r)})"
+    )
     return None
 
 
@@ -1662,20 +1695,31 @@ def _portal_geocode(address, city=None, state=None, zip_code=None):
 
 
 def _nominatim_geocode(address):
-    """Host-side Nominatim fallback (used only if the portal container is unreachable)."""
+    """Host-side Nominatim fallback (used only if the portal container is unreachable).
+
+    Deliberately uses `requests` directly rather than nc_request(): this is
+    OpenStreetMap, not Nextcloud, and must not be sent NC credentials or the
+    OCS-APIRequest header.
+    """
     try:
-        import requests as req
-        r = req.get(
+        r = requests.get(
             "https://nominatim.openstreetmap.org/search",
             params={"q": address, "format": "json", "limit": 1, "countrycodes": "us"},
             headers={"User-Agent": "13thLegion-Praetorium/1.0"},
             timeout=10,
         )
+        if r.status_code != 200:
+            log.warning(
+                f"Nominatim lookup for {address!r} -> HTTP {r.status_code} "
+                f"body={_body_excerpt(r)}"
+            )
+            return None, None
         results = r.json()
         if results:
             return float(results[0]["lat"]), float(results[0]["lon"])
+        log.info(f"Nominatim returned no match for {address!r}")
     except Exception as e:
-        log.warning(f"Nominatim fallback failed for '{address}': {e}")
+        log.warning(f"Nominatim fallback failed for {address!r}: {e}")
     return None, None
 
 
@@ -1695,51 +1739,19 @@ def add_map_pin(name, team, address):
     """DEPRECATED no-op. We use the bespoke portal map (/roster/map), NOT the
     Nextcloud Maps app (which is disabled). Member lat/lon is stored on the
     roster row by create_portal_member and rendered by the portal map.
-    Kept as a no-op so callers don't break. Gated off 2026-07-02."""
-    return True
-    lat, lng = geocode_address(address)
-    if lat is None:
-        log.warning(f"Could not geocode address for {name}, skipping map pin")
-        return False
+    Kept as a no-op so callers don't break. Gated off 2026-07-02.
 
-    try:
-        data = {"name": name, "lat": lat, "lng": lng, "category": team, "comment": f"Team {team} (Recruit)"}
-        nc_api("POST", "/index.php/apps/maps/api/1/favorites", json_data=data)
-        log.info(f"Added map pin: {name} → {team} ({lat:.4f}, {lng:.4f})")
-        return True
-    except Exception as e:
-        log.error(f"Failed to add map pin for {name}: {e}")
-        return False
+    The old NC Maps implementation used to sit below an unconditional
+    `return True`; it was deleted 2026-09-03 rather than left as unreachable
+    code masquerading as behaviour. `git show 2069b46` has it if ever needed.
+    """
+    return True
 
 
 def remove_map_pin(name):
     """DEPRECATED no-op. NC Maps app is disabled; portal map is authoritative.
-    Gated off 2026-07-02."""
+    Gated off 2026-07-02. Unreachable implementation deleted 2026-09-03."""
     return True
-    try:
-        import requests as req
-        r = req.get(
-            f"{NC_URL}/index.php/apps/maps/api/1/favorites",
-            auth=(NC_USER, NC_PASS),
-            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-            timeout=30,
-        )
-        favorites = r.json()
-        for fav in favorites:
-            if fav.get("name") == name:
-                req.delete(
-                    f"{NC_URL}/index.php/apps/maps/api/1/favorites/{fav['id']}",
-                    auth=(NC_USER, NC_PASS),
-                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                    timeout=30,
-                )
-                log.info(f"Removed map pin: {name} (ID {fav['id']})")
-                return True
-        log.warning(f"No map pin found for {name}")
-        return False
-    except Exception as e:
-        log.error(f"Failed to remove map pin for {name}: {e}")
-        return False
 
 
 _SUBMISSION_ID_RE = re.compile(r"\*Submission ID:\*\s*(\d+)")
