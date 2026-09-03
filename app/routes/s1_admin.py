@@ -3096,3 +3096,44 @@ async def _process_leave_returns(db: AsyncSession) -> list:
         processed.append((m, emailed))
     await db.commit()
     return processed
+
+
+@router.get("/glance", response_class=HTMLResponse)
+@require_auth
+async def s1_glance(request: Request):
+    """Small at-a-glance stat strip for the S1 dashboard."""
+    from app.auth import get_current_user
+    from app.database import async_session
+    from app.models.training import TrainingClaim
+
+    user = get_current_user(request)
+    if not set(user.get("roles", [])) & {"s1", "s1_lead", "command", "admin"}:
+        return HTMLResponse('<div style="color:#b71c1c;font-size:13px;">Access denied.</div>', status_code=403)
+
+    async with async_session() as db:
+        pending_claims = (await db.execute(
+            select(func.count()).select_from(TrainingClaim).where(TrainingClaim.status == "pending")
+        )).scalar() or 0
+        recruits = (await db.execute(
+            select(func.count()).select_from(Member).where(Member.status == "recruit")
+        )).scalar() or 0
+        active = (await db.execute(
+            select(func.count()).select_from(Member).where(Member.status == "active")
+        )).scalar() or 0
+
+    def card(icon, label, value, href, warn=False):
+        color = "#b71c1c" if warn and value else "#d4a537"
+        return (f'<a href="{href}" style="flex:1;min-width:150px;background:#16213e;'
+                f'border:1px solid #2a2a4a;border-radius:8px;padding:14px;text-decoration:none;'
+                f'display:block;text-align:center;">'
+                f'<div style="font-size:20px;margin-bottom:4px;">{icon}</div>'
+                f'<div style="color:{color};font-size:24px;font-weight:700;">{value}</div>'
+                f'<div style="color:#888;font-size:12px;margin-top:2px;">{label}</div></a>')
+
+    html = '<div style="display:flex;flex-wrap:wrap;gap:12px;">'
+    html += card("\U0001F4DD", "Pending training claims", pending_claims,
+                 "/api/training/claims/review", warn=True)
+    html += card("\U0001F4E5", "Recruits in pipeline", recruits, "/api/s1/pipeline")
+    html += card("\U0001F465", "Active members", active, "/roster")
+    html += "</div>"
+    return HTMLResponse(html)

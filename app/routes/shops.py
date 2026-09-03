@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,14 +67,43 @@ def _check_shop_access(user: dict, shop: str) -> bool:
     return bool(user_roles & required)
 
 
+S1_TOOLS = [
+    {"href": "/api/s1/pipeline", "icon": "\U0001F4E5", "name": "Recruit Pipeline",
+     "desc": "Kanban board of applicants from new application through onboarding."},
+    {"href": "/api/s1/recruiters", "icon": "\U0001F91D", "name": "Recruiters",
+     "desc": "Assign recruiters and track sponsor load."},
+    {"href": "/api/s1/recruiting-analytics", "icon": "\U0001F4CA", "name": "Recruiting Analytics",
+     "desc": "Funnel conversion, sources, and time-in-stage."},
+    {"href": "/api/training/claims/review", "icon": "\U0001F4DD", "name": "Training Claims",
+     "desc": "Review member TRADOC and certification claims."},
+    {"href": "/api/awards", "icon": "\U0001F396\uFE0F", "name": "Awards & Sign-offs",
+     "desc": "Direct TRADOC sign-offs, certs, ribbons, and gladii."},
+    {"href": "/api/s1/documents/status", "icon": "\U0001F4C4", "name": "Documents",
+     "desc": "NDA / waiver status across the roster."},
+    {"href": "/api/s1/payments", "icon": "\U0001F4B3", "name": "Payments",
+     "desc": "Dues tracking and PayPal reconciliation."},
+    {"href": "/api/s1/newsletter", "icon": "\U0001F4F0", "name": "Newsletter",
+     "desc": "Compose and send the Legionary Dispatch."},
+    {"href": "/api/s1/email-blast", "icon": "\U0001F4E3", "name": "Unit Comms",
+     "desc": "Targeted email blast to any org group."},
+    {"href": "/api/s1/offboard", "icon": "\U0001F6AA", "name": "Offboarding",
+     "desc": "Separate a member and send the notification."},
+]
+
+
 @router.get("/s1")
 @require_auth
 async def shop_s1(request: Request):
-    """S1 dashboard — redirect to existing pipeline for now."""
+    """S1 Personnel & Administration dashboard."""
     user = get_current_user(request)
     if not _check_shop_access(user, "s1"):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
-    return RedirectResponse("/api/s1/pipeline", status_code=302)
+    return templates.TemplateResponse("pages/shop_s1.html", {
+        "request": request,
+        "user": user,
+        "tools": S1_TOOLS,
+    })
+
 
 
 @router.get("/s3")

@@ -719,9 +719,18 @@ async def instructor_rotation_panel(request: Request):
           Continue rotation (avoid recent instructors first)
         </label>
       </div>
-      <button type="submit" style="padding:8px 16px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
-        🎲 Preview rotation
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" style="padding:8px 16px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
+          🎲 Preview rotation
+        </button>
+        <button type="button"
+                hx-get="/api/s3/instructor-rotation/schedule"
+                hx-include="[name='series_id']"
+                hx-target="#rotation-result" hx-swap="innerHTML"
+                style="padding:8px 16px;background:#333;color:#ccc;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:13px;">
+          📅 View current schedule
+        </button>
+      </div>
     </form>
     <div id="rotation-result" style="margin-top:16px;"></div>
     """)
@@ -790,7 +799,7 @@ async def instructor_rotation_preview(request: Request):
       <div style="font-size:11px;color:#888;margin-bottom:10px;">{note}</div>
       <table style="width:100%;border-collapse:collapse;">{rows}</table>
       <div style="display:flex;gap:8px;margin-top:12px;">
-        <button hx-post="/api/s3/instructor-rotation/apply" hx-vals='{{"payload":"{payload}"}}'
+        <button hx-post="/api/s3/instructor-rotation/apply" hx-vals='{{"payload":"{payload}","series_id":"{series_id}"}}'
                 hx-target="#rotation-result" hx-swap="innerHTML"
                 style="padding:8px 16px;background:#1b5e20;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
           ✅ Apply this rotation
@@ -815,6 +824,7 @@ async def instructor_rotation_apply(request: Request):
 
     form = await request.form()
     raw = form.get("payload") or ""
+    series_id = (form.get("series_id") or "").strip()
     pairs = []
     for chunk in raw.split("&"):
         if not chunk.startswith("assign="):
@@ -839,7 +849,132 @@ async def instructor_rotation_apply(request: Request):
                 applied += 1
         await db.commit()
 
+    follow = ""
+    if series_id:
+        follow = (f'<button hx-get="/api/s3/instructor-rotation/schedule?series_id={series_id}" '
+                  'hx-target="#rotation-result" hx-swap="innerHTML" '
+                  'style="margin-top:10px;padding:7px 14px;background:#333;color:#ccc;'
+                  'border:1px solid #555;border-radius:4px;cursor:pointer;font-size:13px;">'
+                  '\U0001F4C5 View &amp; publish schedule</button>')
+
     return HTMLResponse(
         '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        f'✅ Assigned instructors to {applied} event(s).</div>'
+        f'✅ Assigned instructors to {applied} event(s).</div>{follow}'
+    )
+
+
+@router.get("/api/s3/instructor-rotation/schedule", response_class=HTMLResponse)
+@require_auth
+async def instructor_rotation_schedule(request: Request, series_id: str = ""):
+    """Show the CURRENT instructor schedule for a series + publish controls."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    from app.services import instructor_rotation as _rot
+    from app.services import nc_rooms as _nc_rooms_svc
+
+    async with async_session() as db:
+        if not series_id:
+            opts = await _rot.series_options(db)
+            if not opts:
+                return HTMLResponse('<div style="color:#666;font-size:13px;">No series.</div>')
+            series_id = opts[0]["series_id"]
+        events = await _rot.series_events(db, series_id, future_only=True)
+        ids = [e.instructor_id for e in events if e.instructor_id]
+        labels = await _rot.member_labels(db, ids)
+        title = events[0].title if events else "Series"
+
+    if not events:
+        return HTMLResponse('<div style="color:#666;font-size:13px;">No upcoming occurrences.</div>')
+
+    rows = ""
+    unassigned = 0
+    for e in events:
+        if e.instructor_id:
+            who = f'<span style="color:#d4a537;font-weight:600;">{labels.get(e.instructor_id, "#" + str(e.instructor_id))}</span>'
+        else:
+            who = '<span style="color:#777;font-style:italic;">unassigned</span>'
+            unassigned += 1
+        rows += ('<tr>'
+                 f'<td style="padding:5px 10px;color:#ccc;font-size:13px;">{e.date_start.strftime("%a %d %b %Y")}</td>'
+                 f'<td style="padding:5px 10px;font-size:13px;">{who}</td></tr>')
+
+    rooms = _nc_rooms_svc.selectable_rooms()
+    checks = ""
+    for r in rooms:
+        name = r.get("name") if isinstance(r, dict) else getattr(r, "name", "")
+        token = r.get("token") if isinstance(r, dict) else getattr(r, "token", "")
+        pre = " checked" if name in ("T1 · Leaders", "T2 · Training") else ""
+        checks += ('<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;'
+                   'background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;'
+                   'cursor:pointer;font-size:12px;">'
+                   f'<input type="checkbox" name="rooms" value="{token}"{pre} style="accent-color:#d4a537;"> '
+                   f'{name}</label>')
+
+    warn = (f'<div style="color:#b71c1c;font-size:12px;margin-bottom:8px;">'
+            f'\u26a0\ufe0f {unassigned} occurrence(s) still unassigned.</div>') if unassigned else ""
+
+    return HTMLResponse(f"""
+    <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:6px;padding:12px;">
+      <div style="font-size:13px;color:#d4a537;font-weight:600;margin-bottom:8px;">
+        \ud83d\udcc5 Current schedule \u2014 {title}
+      </div>
+      {warn}
+      <table style="width:100%;border-collapse:collapse;">{rows}</table>
+      <div style="border-top:1px solid #333;margin-top:12px;padding-top:12px;">
+        <form hx-post="/api/s3/instructor-rotation/publish" hx-target="#publish-result" hx-swap="innerHTML">
+          <input type="hidden" name="series_id" value="{series_id}">
+          <div style="font-size:12px;color:#aaa;margin-bottom:6px;">Publish schedule to NC Talk:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">{checks}</div>
+          <button type="submit" style="padding:7px 14px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
+            \ud83d\udce2 Publish schedule
+          </button>
+        </form>
+        <div id="publish-result" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    """)
+
+
+@router.post("/api/s3/instructor-rotation/publish", response_class=HTMLResponse)
+@require_auth
+async def instructor_rotation_publish(request: Request):
+    """Post the instructor schedule to selected NC Talk rooms."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    form = await request.form()
+    series_id = (form.get("series_id") or "").strip()
+    rooms = form.getlist("rooms")
+    if not series_id or not rooms:
+        return HTMLResponse('<div style="color:#b71c1c;font-size:13px;">Pick at least one room.</div>')
+
+    from app.routes.events import _post_talk
+    from app.services import instructor_rotation as _rot
+
+    async with async_session() as db:
+        events = await _rot.series_events(db, series_id, future_only=True)
+        ids = [e.instructor_id for e in events if e.instructor_id]
+        labels = await _rot.member_labels(db, ids)
+        title = events[0].title if events else "Training"
+
+    if not events:
+        return HTMLResponse('<div style="color:#b71c1c;font-size:13px;">Nothing to publish.</div>')
+
+    lines = [f"\ud83d\udcc5 **{title} \u2014 Instructor Schedule**", ""]
+    for e in events:
+        who = labels.get(e.instructor_id, "_unassigned_") if e.instructor_id else "_unassigned_"
+        lines.append(f"- **{e.date_start.strftime('%a %d %b')}** \u2014 {who}")
+    lines.append("")
+    lines.append("_Posted from the S3 dashboard._")
+    msg = "\n".join(lines)
+
+    for token in rooms:
+        await _post_talk(token, msg)
+
+    return HTMLResponse(
+        '<div style="padding:10px;background:#1b5e20;color:#fff;border-radius:6px;font-size:13px;">'
+        f'\u2705 Published to {len(rooms)} room(s).</div>'
     )

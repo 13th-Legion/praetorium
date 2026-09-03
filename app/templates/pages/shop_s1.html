@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}S1 — Personnel{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <span style="font-size: 32px;">📋</span>
+        <h1 style="font-family: 'Oswald', sans-serif; color: #d4a537; margin: 0;">S1 — Personnel &amp; Administration</h1>
+    </div>
+
+    <!-- At a glance -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 12px; font-size: 20px;">📈 At a Glance</h2>
+        <div id="s1-glance" hx-get="/api/s1/glance" hx-trigger="load" hx-swap="innerHTML">
+            <div style="color: #666; font-size: 13px; padding: 12px;">Loading…</div>
+        </div>
+    </div>
+
+    <!-- Tools -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 16px; font-size: 20px;">🛠️ S1 Tools</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px;">
+            {% for tool in tools %}
+            <a href="{{ tool.href }}" style="background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 14px; text-decoration: none; display: block;">
+                <div style="font-size: 22px; margin-bottom: 6px;">{{ tool.icon }}</div>
+                <div style="color: #d4a537; font-weight: 600; font-size: 14px; margin-bottom: 4px;">{{ tool.name }}</div>
+                <div style="color: #888; font-size: 12px; line-height: 1.4;">{{ tool.desc }}</div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <a href="/roster" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">👥</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Personnel Roster</div>
+        </a>
+        <a href="/roster/map" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🗺️</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Personnel Map</div>
+        </a>
+        <a href="/events" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📅</div>
+            <div style="color: #d4a537; font-weight: 600; font-size: 14px;">Events Calendar</div>
+        </a>
+    </div>
+</div>
+{% endblock %}
