@@ -648,3 +648,198 @@ async def save_opord(
         '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ OPORD saved.</div>'
         '<script>setTimeout(()=>window.location.reload(),500)</script>'
     )
+
+
+# ─── Instructor Rotation (PP-300) ────────────────────────────────────────────
+
+
+def _rotation_group_grid(groups: dict, checked: set[str]) -> str:
+    """Checkbox grid of the 21 org groups (same registry as event invites)."""
+    html = '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+    for key, group in groups.items():
+        mark = " checked" if key in checked else ""
+        html += (
+            '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;'
+            'background:rgba(255,255,255,0.05);border:1px solid #444;border-radius:6px;'
+            'cursor:pointer;font-size:12px;">'
+            f'<input type="checkbox" name="pool_groups" value="{key}"{mark} style="accent-color:#d4a537;"> '
+            f'{group["label"]}</label>'
+        )
+    return html + "</div>"
+
+
+@router.get("/api/s3/instructor-rotation", response_class=HTMLResponse)
+@require_auth
+async def instructor_rotation_panel(request: Request):
+    """Render the Instructor Rotation panel (series picker + org-group grid)."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    from app.routes.events import _build_recipient_groups
+    from app.services import instructor_rotation as _rot
+
+    async with async_session() as db:
+        series = await _rot.series_options(db)
+        groups = await _build_recipient_groups(db)
+
+    if not series:
+        return HTMLResponse('<div style="color:#666;font-size:13px;padding:12px;">'
+                            'No recurring series with upcoming occurrences.</div>')
+
+    opts = ""
+    for s in series:
+        nd = s["next_date"].strftime("%d %b %Y")
+        opts += (f'<option value="{s["series_id"]}">{s["title"]} — {s["upcoming"]} upcoming '
+                 f'(next {nd})</option>')
+
+    return HTMLResponse(f"""
+    <form id="rotation-form" hx-post="/api/s3/instructor-rotation/preview"
+          hx-target="#rotation-result" hx-swap="innerHTML">
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;">Event series</label>
+        <select name="series_id" style="width:100%;padding:8px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:14px;">
+          {opts}
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Instructor pool</label>
+        {_rotation_group_grid(groups, {"leaders"})}
+        <span style="font-size:11px;color:#666;margin-top:4px;display:block;">
+          Same groups as event invites. Members matching ANY checked group go in the pool.
+        </span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;">
+        <label style="font-size:12px;color:#ccc;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" name="only_unassigned" value="1" checked style="accent-color:#d4a537;">
+          Only fill events with no instructor
+        </label>
+        <label style="font-size:12px;color:#ccc;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" name="continue_rotation" value="1" checked style="accent-color:#d4a537;">
+          Continue rotation (avoid recent instructors first)
+        </label>
+      </div>
+      <button type="submit" style="padding:8px 16px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
+        🎲 Preview rotation
+      </button>
+    </form>
+    <div id="rotation-result" style="margin-top:16px;"></div>
+    """)
+
+
+@router.post("/api/s3/instructor-rotation/preview", response_class=HTMLResponse)
+@require_auth
+async def instructor_rotation_preview(request: Request):
+    """Compute a proposed rotation WITHOUT writing anything."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    form = await request.form()
+    series_id = (form.get("series_id") or "").strip()
+    pool_groups = form.getlist("pool_groups")
+    only_unassigned = form.get("only_unassigned") == "1"
+    continue_rotation = form.get("continue_rotation") == "1"
+
+    if not series_id:
+        return HTMLResponse('<div style="color:#b71c1c;">Pick a series.</div>')
+    if not pool_groups:
+        return HTMLResponse('<div style="color:#b71c1c;">Select at least one group for the instructor pool.</div>')
+
+    from app.routes.events import _resolve_invite_groups
+    from app.services import instructor_rotation as _rot
+
+    async with async_session() as db:
+        events = await _rot.series_events(db, series_id, future_only=True,
+                                          only_unassigned=only_unassigned)
+        if not events:
+            return HTMLResponse('<div style="color:#666;font-size:13px;">'
+                                'No matching upcoming occurrences. (Try unchecking '
+                                '"only fill events with no instructor".)</div>')
+
+        pool_ids = sorted(await _resolve_invite_groups(db, pool_groups))
+        if not pool_ids:
+            return HTMLResponse('<div style="color:#b71c1c;">That group selection matched 0 members.</div>')
+
+        labels = await _rot.member_labels(db, pool_ids)
+        history = await _rot.recent_instructors(db, series_id) if continue_rotation else []
+        slots = _rot.plan_rotation(events, pool_ids, labels, recent_history=history)
+
+    rows = ""
+    for s in slots:
+        prev = ""
+        if s.previous_instructor_id and s.previous_instructor_id != s.member_id:
+            prev = f'<span style="color:#888;font-size:11px;"> (was {labels.get(s.previous_instructor_id, "#" + str(s.previous_instructor_id))})</span>'
+        rows += (
+            '<tr>'
+            f'<td style="padding:6px 10px;color:#ccc;font-size:13px;">{s.date_start.strftime("%a %d %b %Y")}</td>'
+            f'<td style="padding:6px 10px;color:#d4a537;font-size:13px;font-weight:600;">{s.member_label}{prev}</td>'
+            '</tr>'
+        )
+
+    cycles = (len(slots) + len(pool_ids) - 1) // len(pool_ids)
+    note = (f'{len(slots)} event(s) · pool of {len(pool_ids)} · '
+            f'{cycles} full cycle(s)' if cycles > 1 else
+            f'{len(slots)} event(s) · pool of {len(pool_ids)}')
+
+    payload = "&".join(f"assign={s.event_id}:{s.member_id}" for s in slots)
+
+    return HTMLResponse(f"""
+    <div style="background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.2);border-radius:6px;padding:12px;">
+      <div style="font-size:13px;color:#d4a537;font-weight:600;margin-bottom:8px;">Proposed rotation</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px;">{note}</div>
+      <table style="width:100%;border-collapse:collapse;">{rows}</table>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button hx-post="/api/s3/instructor-rotation/apply" hx-vals='{{"payload":"{payload}"}}'
+                hx-target="#rotation-result" hx-swap="innerHTML"
+                style="padding:8px 16px;background:#1b5e20;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
+          ✅ Apply this rotation
+        </button>
+        <button hx-post="/api/s3/instructor-rotation/preview" hx-include="#rotation-form"
+                hx-target="#rotation-result" hx-swap="innerHTML"
+                style="padding:8px 16px;background:#333;color:#ccc;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:13px;">
+          🎲 Re-roll
+        </button>
+      </div>
+    </div>
+    """)
+
+
+@router.post("/api/s3/instructor-rotation/apply", response_class=HTMLResponse)
+@require_auth
+async def instructor_rotation_apply(request: Request):
+    """Persist a previewed rotation (event_id:member_id pairs)."""
+    user = get_current_user(request)
+    if not _has_s3_access(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    form = await request.form()
+    raw = form.get("payload") or ""
+    pairs = []
+    for chunk in raw.split("&"):
+        if not chunk.startswith("assign="):
+            continue
+        val = chunk.split("=", 1)[1]
+        if ":" not in val:
+            continue
+        eid, mid = val.split(":", 1)
+        if eid.isdigit() and mid.isdigit():
+            pairs.append((int(eid), int(mid)))
+
+    if not pairs:
+        return HTMLResponse('<div style="color:#b71c1c;">Nothing to apply.</div>')
+
+    applied = 0
+    async with async_session() as db:
+        for eid, mid in pairs:
+            ev = await db.get(Event, eid)
+            if ev:
+                ev.instructor_id = mid
+                ev.updated_at = datetime.utcnow()
+                applied += 1
+        await db.commit()
+
+    return HTMLResponse(
+        '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
+        f'✅ Assigned instructors to {applied} event(s).</div>'
+    )

@@ -34,6 +34,18 @@
         </div>
     </div>
 
+    <!-- Instructor Rotation -->
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 12px; font-size: 20px;">🎲 Instructor Rotation</h2>
+        <p style="color: #999; font-size: 14px; margin-bottom: 16px;">
+            Randomly assign instructors across a recurring series. Fair rotation — nobody repeats
+            until everyone in the pool has taught. Preview before applying.
+        </p>
+        <div id="s3-instructor-rotation" hx-get="/api/s3/instructor-rotation" hx-trigger="load" hx-swap="innerHTML">
+            <div style="color: #666; font-size: 13px; padding: 12px;">Loading rotation tool...</div>
+        </div>
+    </div>
+
     <!-- Quick Links -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
         <a href="/events" style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-decoration: none; text-align: center;">

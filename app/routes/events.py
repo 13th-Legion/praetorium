@@ -1952,7 +1952,11 @@ async def edit_event(request: Request, event_id: int):
                 ev.description = event.description
                 ev.training_block = event.training_block
                 ev.training_blocks = event.training_blocks
-                ev.instructor_id = event.instructor_id
+                # NOTE: instructor_id is deliberately NOT propagated. It is
+                # per-occurrence assignment data (instructors rotate week to
+                # week), not series content. Propagating it stamped one
+                # instructor across every future occurrence and wiped the
+                # rotation. Use the S3 Instructor Rotation tool to assign.
                 ev.rsvp_enabled = event.rsvp_enabled
                 ev.invite_groups = event.invite_groups
                 ev.updated_at = datetime.utcnow()
