@@ -2310,14 +2310,25 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
     # would never have appeared in a "last 20" list. The host reconciler flips
     # these flags once it confirms the NC side is actually clean, so anything
     # still listed here is either genuinely dirty or has never been reconciled.
+    #
+    # Two filters matter here, both learned by getting it wrong first:
+    #  * Only members who are CURRENTLY separated/blacklisted. A reactivated
+    #    member is not an unfinished offboarding.
+    #  * Exclude reactivation entries. reactivate_member() writes its audit
+    #    trail into this same separation_log table with a reason like
+    #    "reactivated (inactive -> active)", and those rows naturally have the
+    #    cleanup flags false -- flagging them as incomplete cleanup is
+    #    nonsense and would have made this panel permanent noise.
     stale_result = await db.execute(
         select(SeparationLog, Member)
-        .join(Member, SeparationLog.member_id == Member.id, isouter=True)
+        .join(Member, SeparationLog.member_id == Member.id)
         .where(
+            Member.status.in_(("separated", "blacklisted")),
+            ~SeparationLog.reason.ilike("reactivated%"),
             (SeparationLog.nc_account_disabled.is_(False))
             | (SeparationLog.groups_removed.is_(False))
             | (SeparationLog.talk_removed.is_(False))
-            | (SeparationLog.tokens_revoked.is_(False))
+            | (SeparationLog.tokens_revoked.is_(False)),
         )
         .order_by(desc(SeparationLog.created_at))
         .limit(50)
