@@ -85,14 +85,19 @@ FORM_FOLDER_NAME = f"{FORM_ID} - {FORM_TITLE}"
 # Destination for archived applicant documents.
 APPLICATIONS_FOLDER = "13th Legion Shared/[S-1] Admin/Applications"
 
-# How the archive step relocates documents: "copy" (WebDAV COPY, leaves the
-# originals in Forms storage so the Forms UI still shows each submission's
-# attachments) or "move" (WebDAV MOVE, the original intent).
-# COPY is the default because this step had never once executed successfully
-# before 2026-09-03 -- a destructive operation running for the first time
-# against real member documents should be reversible. Flip to "move" once a
-# few cycles have been observed archiving correctly.
-ARCHIVE_VERB = os.environ.get("RECRUIT_ARCHIVE_VERB", "copy").upper()
+# How the archive step relocates documents: "move" (WebDAV MOVE) or "copy".
+#
+# MOVE is safe here and is the documented intent. A WebDAV MOVE *within the
+# same storage* preserves the Nextcloud fileId, and Nextcloud Forms references
+# uploads by fileId rather than by path, so submissions keep resolving after
+# the file is archived. Verified on production 2026-09-03 after the backlog
+# backfill (scripts/backfill_s1_archive.py): all 17 archived files kept their
+# fileIds and all 17 are still referenced by the Forms API.
+#
+# It also has to match the backfill, which MOVEd. If the live path COPYed,
+# every new applicant would leave a duplicate behind and the archive would
+# diverge from the backlog it is supposed to continue.
+ARCHIVE_VERB = os.environ.get("RECRUIT_ARCHIVE_VERB", "move").upper()
 
 # Onboarding retry policy. A card that fails onboarding this many times is
 # moved to the dead-letter list and stops being retried, so one poisoned card

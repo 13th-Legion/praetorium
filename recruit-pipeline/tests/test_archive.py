@@ -81,11 +81,19 @@ def test_archives_every_file_into_the_applicant_folder(daemon, http):
         assert call.kwargs["headers"]["Destination"].startswith(dest + "/")
 
 
-def test_defaults_to_copy_so_the_first_live_run_is_reversible(daemon, http):
+def test_defaults_to_move_matching_the_backfill(daemon, http):
+    """MOVE preserves the Nextcloud fileId, and Forms references uploads by
+    fileId, so archived files keep resolving. Verified on production: all 17
+    backfilled files kept their fileIds and are still referenced by Forms.
+
+    It must also match scripts/backfill_s1_archive.py, which MOVEd the
+    backlog -- a COPYing live path would leave a duplicate behind for every
+    new applicant.
+    """
     http.queue(propfind_response(FILE_A), FakeResponse(201, b""), FakeResponse(201, b""))
     daemon.archive_applicant_files("John Garcia", SUB)
-    assert daemon.ARCHIVE_VERB == "COPY"
-    assert http.calls[-1].method == "COPY"
+    assert daemon.ARCHIVE_VERB == "MOVE"
+    assert http.calls[-1].method == "MOVE"
 
 
 def test_destination_header_keeps_the_url_encoded_filename(daemon, http):
