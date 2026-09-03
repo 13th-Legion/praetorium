@@ -1,5 +1,7 @@
 """Authentication routes — NC OAuth2 SSO login/logout."""
 
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -9,6 +11,7 @@ from config import get_settings
 from app.auth import fetch_nc_groups, map_groups_to_roles
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -182,6 +185,36 @@ async def callback(request: Request):
     username = userdata.get("id", "")
     display_name = userdata.get("displayname", username)
     email = userdata.get("email", "")
+
+    # Revoke the NC OAuth2 token now that we're done with it (2026-09-03).
+    # The portal uses this token EXACTLY ONCE — the /cloud/user call above.
+    # Groups come from the admin provisioning creds (fetch_nc_groups) and the
+    # portal session is a signed cookie, so the token is dead weight from here
+    # on. Left alone, NC keeps it FOREVER: every single login minted another
+    # permanent oc_authtoken row, which is how that table got to 90% "Project
+    # Praetorium" (1,807 of 2,015 rows). That bloat doesn't lock anyone out by
+    # itself, but it buries the real device tokens and made diagnosing SGT
+    # Moreno's stale-token 401 loop far harder than it should have been.
+    #
+    # DELETE /ocs/v2.php/core/apppassword kills the token that authenticated
+    # the request — verified against NC 33 w/ a bearer token: 200 on delete,
+    # 401 on reuse, main password unaffected.
+    #
+    # BEST-EFFORT ONLY. This runs on the login path, so a hiccup here must
+    # never cost a member their session — same defensive posture as the
+    # fetch_nc_groups fallback below. Worst case we leak one token like before.
+    try:
+        await oauth.nextcloud.delete(
+            f"{settings.nc_url}/ocs/v2.php/core/apppassword",
+            token=token,
+            headers={"OCS-APIRequest": "true"},
+        )
+    except Exception:
+        logger.warning(
+            "NC OAuth2 token revoke failed for %s (non-fatal, login continues)",
+            username or "<unknown>",
+            exc_info=True,
+        )
 
     # IMPORTANT: the self-scoped OCS endpoint (/cloud/user) returns only a
     # partial group list for non-privileged users, so shop groups like
