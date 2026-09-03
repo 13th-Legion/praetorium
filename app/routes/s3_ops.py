@@ -704,7 +704,7 @@ async def instructor_rotation_panel(request: Request):
       </div>
       <div style="margin-bottom:12px;">
         <label style="display:block;font-size:13px;color:#aaa;margin-bottom:6px;">Instructor pool</label>
-        {_rotation_group_grid(groups, {"leaders"})}
+        {_rotation_group_grid(groups, {"leaders_group"})}
         <span style="font-size:11px;color:#666;margin-top:4px;display:block;">
           Same groups as event invites. Members matching ANY checked group go in the pool.
         </span>
@@ -1006,10 +1006,44 @@ async def instructor_rotation_publish(request: Request):
     lines.append("_Posted from the S3 dashboard._")
     msg = "\n".join(lines)
 
-    for token in rooms:
-        await _post_talk(token, msg)
+    # Post to each room and REPORT failures. (The shared _post_talk helper
+    # swallows errors, which made a failed room look like a success.)
+    settings = get_settings()
+    name_by_token = {}
+    try:
+        from app.services import nc_rooms as _nc
+        for r in _nc.selectable_rooms():
+            t = r.get("token") if isinstance(r, dict) else getattr(r, "token", "")
+            n = r.get("name") if isinstance(r, dict) else getattr(r, "name", "")
+            name_by_token[t] = n
+    except Exception:
+        pass
 
-    return HTMLResponse(
-        '<div style="padding:10px;background:#1b5e20;color:#fff;border-radius:6px;font-size:13px;">'
-        f'\u2705 Published to {len(rooms)} room(s).</div>'
-    )
+    ok, failed = [], []
+    async with httpx.AsyncClient(timeout=15) as client:
+        for token in rooms:
+            label = name_by_token.get(token, token)
+            try:
+                resp = await client.post(
+                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
+                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                    auth=(NC_TALK_USER, NC_TALK_PASS),
+                    data={"message": msg},
+                )
+                if resp.status_code in (200, 201):
+                    ok.append(label)
+                else:
+                    hint = " - bot not in room?" if resp.status_code == 404 else ""
+                    failed.append(f"{label} (HTTP {resp.status_code}{hint})")
+            except Exception as exc:  # noqa: BLE001
+                failed.append(f"{label} ({type(exc).__name__})")
+
+    html = ""
+    if ok:
+        html += ('<div style="padding:10px;background:#1b5e20;color:#fff;border-radius:6px;font-size:13px;">'
+                 f'\u2705 Published to: {", ".join(ok)}</div>')
+    if failed:
+        html += ('<div style="padding:10px;background:#b71c1c;color:#fff;border-radius:6px;'
+                 'font-size:13px;margin-top:8px;">'
+                 f'\u274c Failed: {", ".join(failed)}</div>')
+    return HTMLResponse(html or '<div style="color:#b71c1c;">Nothing sent.</div>')

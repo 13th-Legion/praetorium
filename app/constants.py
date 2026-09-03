@@ -119,7 +119,11 @@ RECIPIENT_GROUPS: dict[str, dict] = {
     "entire_unit": {"label": "13th Legion", "filter": ["active", "recruit"]},
     "patched": {"label": "Patched", "filter": ["active"]},
     "recruits": {"label": "Recruits", "filter": ["recruit"]},
-    "leaders": {"label": "Leaders", "roles": ["command", "leader", "officer", "nco"]},
+    # NOTE: "leaders" is deliberately BROAD (NCOs + Officers + Command) because
+    # it is used for invites/announcements where casting a wide net is correct.
+    # For "actually in the Nextcloud Leaders group", use "leaders_group" below.
+    "leaders": {"label": "Leaders (NCOs + Officers)", "roles": ["command", "leader", "officer", "nco"]},
+    "leaders_group": {"label": "Leaders (NC group only)", "roles": ["leader"]},
     "officers": {"label": "Officers", "roles": ["command", "officer"]},
     "ncos": {"label": "NCOs", "roles": ["nco"]},
     "team_leaders": {"label": "Team Leaders", "leadership": ["Team Leader", "Assistant Team Leader"]},
