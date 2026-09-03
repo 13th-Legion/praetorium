@@ -15,6 +15,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import secrets
 import smtplib
 import string
@@ -38,7 +39,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import requests
 
@@ -62,6 +63,36 @@ SMTP_FROM = "13th Legion <admin@13thlegion.org>"
 # Forms & Deck
 FORM_ID = 3
 BOARD_ID = 5
+
+# ── Forms storage layout (SINGLE SOURCE OF TRUTH) ───────────────────────────
+# Nextcloud Forms files land in the form owner's home under:
+#   Forms/{FORM_ID} - {FORM_TITLE}/{submission_id}/<uploaded files>
+# The "{FORM_ID} - " prefix is NOT optional.
+#
+# This used to be built three different ways in three places. Two hardcoded
+# the prefixed string and worked; move_applicant_files() built
+# "Forms/{form_title}" WITHOUT the prefix, so its PROPFIND 404'd every single
+# time. Result: 20 "No Forms folder yet" log lines dating back to 2026-03-07,
+# zero successful moves ever, and an empty [S-1] Admin/Applications/ folder.
+# No applicant document was ever archived. Verified on production 2026-09-03:
+# the prefixed path returns 207 with 39+ submission folders; the unprefixed
+# path returns 404.
+#
+# Build Forms URLs ONLY through forms_root_url() / forms_submission_url().
+FORM_TITLE = "Texas State Militia \u2014 Application & Background Check Release"
+FORM_FOLDER_NAME = f"{FORM_ID} - {FORM_TITLE}"
+
+# Destination for archived applicant documents.
+APPLICATIONS_FOLDER = "13th Legion Shared/[S-1] Admin/Applications"
+
+# How the archive step relocates documents: "copy" (WebDAV COPY, leaves the
+# originals in Forms storage so the Forms UI still shows each submission's
+# attachments) or "move" (WebDAV MOVE, the original intent).
+# COPY is the default because this step had never once executed successfully
+# before 2026-09-03 -- a destructive operation running for the first time
+# against real member documents should be reversible. Flip to "move" once a
+# few cycles have been observed archiving correctly.
+ARCHIVE_VERB = os.environ.get("RECRUIT_ARCHIVE_VERB", "copy").upper()
 
 # Onboarding retry policy. A card that fails onboarding this many times is
 # moved to the dead-letter list and stops being retried, so one poisoned card
@@ -377,6 +408,37 @@ def nc_api(method, endpoint, data=None, json_data=None, user=None, passwd=None,
             f"but body is not JSON ({e}) body={_body_excerpt(resp)}",
             response=resp,
         ) from e
+
+
+# ─── Forms / WebDAV path builders ──────────────────────────────────────
+#
+# These are the ONLY sanctioned way to address Forms storage. See the
+# FORM_FOLDER_NAME comment above for why.
+
+def dav_base_url(user=None):
+    """WebDAV files root for a user, e.g. .../remote.php/dav/files/spooky"""
+    return f"{NC_URL}/remote.php/dav/files/{quote(user or NC_USER)}"
+
+
+def forms_root_url(user=None):
+    """Folder holding every submission for this form (prefixed with the form id)."""
+    return f"{dav_base_url(user)}/Forms/{quote(FORM_FOLDER_NAME)}"
+
+
+def forms_submission_url(sub_id, user=None):
+    """Folder holding the uploaded files for one submission."""
+    return f"{forms_root_url(user)}/{quote(str(sub_id))}"
+
+
+def applicant_folder_name(name):
+    """Applicant archive folder name: 'Last, First' / 'First Last' -> First_Last."""
+    return name.replace(" ", "_").replace(",", "")
+
+
+def applications_folder_url(name, user=None):
+    """Destination folder for one applicant's archived documents."""
+    return (f"{dav_base_url(user)}/{quote(APPLICATIONS_FOLDER)}"
+            f"/{quote(applicant_folder_name(name))}")
 
 
 def load_state():
@@ -702,43 +764,63 @@ def create_deck_card(submission):
     return resp
 
 
-def attach_submission_files(submission, card_id, stack_id):
-    """Download files from Forms storage and attach them to a Deck card."""
-    import requests as req
+def list_submission_files(sub_id, label=""):
+    """WebDAV hrefs of every uploaded file for one Forms submission.
 
+    Returns a list of hrefs (may be empty). Returns None if the submission
+    folder does not exist, so callers can tell "no folder" from "no files".
+
+    Depth 3, not 1: Forms nests uploads inside a per-question subfolder
+    ('30 - Please upload copies of your driver license...'), so a Depth-1
+    listing of the submission folder finds only that subfolder and no files.
+    """
+    src = forms_submission_url(sub_id)
+    r = nc_request(
+        "PROPFIND", src, ocs=False, headers={"Depth": "3"},
+        expected_statuses=(404,),
+        label=f"PROPFIND forms submission #{sub_id}{label}",
+    )
+    if r.status_code == 404:
+        return None
+    if r.status_code != 207:
+        # nc_request already logged status + body.
+        return None
+    hrefs = re.findall(r"<d:href>([^<]+)</d:href>", r.text)
+    return [h for h in hrefs if not h.endswith("/")]
+
+
+def attach_submission_files(submission, card_id, stack_id):
+    """Download a submission's uploaded files and attach them to its Deck card.
+
+    Returns the number of files successfully attached.
+    """
     answers = submission.get("answers", [])
     if not isinstance(answers, list):
-        return
-
-    file_answers = [a for a in answers if a.get("fileId")]
-    if not file_answers:
-        return
+        return 0
+    if not any(a.get("fileId") for a in answers):
+        return 0
 
     sub_id = submission.get("id")
-    form_folder = f"Forms/3%20-%20Texas%20State%20Militia%20%e2%80%94%20Application%20%26%20Background%20Check%20Release/{sub_id}"
-    q_id = file_answers[0].get("questionId", 30)
-
-    # List files in the submission's question folder via WebDAV
-    import re
-    dav_base = f"{NC_URL}/remote.php/dav/files/{NC_USER}/{form_folder}"
-    auth = (NC_USER, NC_PASS)
+    attached = 0
 
     try:
-        r = req.request("PROPFIND", dav_base, auth=auth, headers={"Depth": "3"}, timeout=30)
-        if r.status_code == 404:
-            log.warning(f"No Forms folder for submission #{sub_id}")
-            return
-
-        hrefs = re.findall(r'<d:href>([^<]+)</d:href>', r.text)
-        # Filter to actual files (not directories)
-        file_hrefs = [h for h in hrefs if not h.endswith("/")]
+        file_hrefs = list_submission_files(sub_id)
+        if file_hrefs is None:
+            log.warning(
+                f"No Forms folder for submission #{sub_id} "
+                f"({forms_submission_url(sub_id)})"
+            )
+            return 0
+        if not file_hrefs:
+            log.info(f"Submission #{sub_id} has no uploaded files to attach")
+            return 0
 
         for href in file_hrefs:
-            filename = href.split("/")[-1]
-            # Download file
-            dl = req.get(f"{NC_URL}{href}", auth=auth, timeout=30)
+            filename = unquote(href.split("/")[-1])
+            dl = nc_request("GET", f"{NC_URL}{href}", ocs=False,
+                            label=f"download {filename} (submission #{sub_id})")
             if dl.status_code != 200:
-                log.warning(f"Failed to download {filename}: {dl.status_code}")
+                # nc_request already logged status + body.
                 continue
 
             # Attach to Deck card.
@@ -752,26 +834,29 @@ def attach_submission_files(submission, card_id, stack_id):
             # until Archer reported missing attachments on 2026-09-03: every
             # upload had been silently 400ing for a month.
             # For type=deck_file, `data` is the filename.
-            r2 = req.post(
-                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks/{stack_id}/cards/{card_id}/attachments",
-                auth=auth,
-                headers={"OCS-APIRequest": "true"},
+            # tests/test_recruit_daemon.py guards this argument.
+            r2 = nc_request(
+                "POST",
+                f"/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks/"
+                f"{stack_id}/cards/{card_id}/attachments",
+                ocs=False, headers={"OCS-APIRequest": "true"},
                 data={"type": "deck_file", "data": filename},
                 files={"file": (filename, dl.content)},
-                timeout=30,
+                label=f"attach {filename} to card #{card_id}",
             )
             if r2.status_code in (200, 201):
+                attached += 1
                 log.info(f"Attached file to card #{card_id}: {filename}")
-            else:
-                # Include the body: a status code alone told us nothing for a
-                # month because this failure mode returns an empty 400.
-                log.warning(
-                    f"Failed to attach {filename} to card #{card_id}: "
-                    f"{r2.status_code} body={r2.text[:200]!r}"
-                )
+            # Failures already logged with body by nc_request.
+
+        return attached
 
     except Exception as e:
-        log.error(f"Error attaching files to card #{card_id}: {e}")
+        log.error(
+            f"Error attaching files to card #{card_id} (submission #{sub_id}): {e}",
+            exc_info=True,
+        )
+        return attached
 
 
 def send_application_received_email(recipient_email, name):
@@ -1130,20 +1215,18 @@ def forward_application_to_unit(sub, company, recipient_email):
 
         # Attach uploaded files from Forms storage
         try:
-            import re as _re
             sub_id = sub.get("id")
-            form_folder = f"Forms/3%20-%20Texas%20State%20Militia%20%e2%80%94%20Application%20%26%20Background%20Check%20Release/{sub_id}"
-            dav_base = f"{NC_URL}/remote.php/dav/files/{NC_USER}/{form_folder}"
-            auth = (NC_USER, NC_PASS)
-            r = requests.request("PROPFIND", dav_base, auth=auth, headers={"Depth": "3"}, timeout=30)
-            if r.status_code != 404:
-                hrefs = _re.findall(r'<d:href>([^<]+)</d:href>', r.text)
-                file_hrefs = [h for h in hrefs if not h.endswith("/")]
+            file_hrefs = list_submission_files(sub_id, label=" (email forward)")
+            if file_hrefs is None:
+                log.warning(
+                    f"No Forms folder for submission #{sub_id} "
+                    f"({forms_submission_url(sub_id)}), forwarding without attachments"
+                )
+            else:
                 for href in file_hrefs:
-                    filename = href.split("/")[-1]
-                    from urllib.parse import unquote
-                    filename = unquote(filename)
-                    dl = requests.get(f"{NC_URL}{href}", auth=auth, timeout=30)
+                    filename = unquote(href.split("/")[-1])
+                    dl = nc_request("GET", f"{NC_URL}{href}", ocs=False,
+                                    label=f"download {filename} for forwarding")
                     if dl.status_code == 200:
                         part = MIMEBase("application", "octet-stream")
                         part.set_payload(dl.content)
@@ -1151,12 +1234,13 @@ def forward_application_to_unit(sub, company, recipient_email):
                         part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
                         msg.attach(part)
                         log.info(f"Attached file to forwarding email: {filename}")
-                    else:
-                        log.warning(f"Failed to download {filename} for forwarding: {dl.status_code}")
-            else:
-                log.warning(f"No Forms folder for submission #{sub_id}, forwarding without attachments")
+                    # Download failures already logged with body by nc_request.
         except Exception as fe:
-            log.warning(f"Error attaching files to forwarding email: {fe} — sending without attachments")
+            log.warning(
+                f"Error attaching files to forwarding email for submission "
+                f"#{sub.get('id')}: {fe} — sending without attachments",
+                exc_info=True,
+            )
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.login(SMTP_USER, SMTP_PASS)
@@ -1658,72 +1742,96 @@ def remove_map_pin(name):
         return False
 
 
-def move_applicant_files(name, form_title="Texas State Militia — Application & Background Check Release"):
-    """Move uploaded files from Forms/ to [S-1] Admin/Applications/{name}/."""
-    import requests as req
-    from urllib.parse import quote as urlquote
+_SUBMISSION_ID_RE = re.compile(r"\*Submission ID:\*\s*(\d+)")
 
-    dav_base = f"{NC_URL}/remote.php/dav/files/{NC_USER}"
-    auth = (NC_USER, NC_PASS)
 
-    # Sanitize name for folder (Last, First → Last_First)
-    folder_name = name.replace(" ", "_").replace(",", "")
+def parse_submission_id(card):
+    """Forms submission id from a Deck card description, or None.
 
-    # Source: Forms/{form_title}/ — find submissions containing this applicant
-    forms_path = f"{dav_base}/Forms/{urlquote(form_title)}"
+    create_deck_card() writes '*Submission ID:* {id}' into the description.
+    Note the SINGLE asterisks -- parse_card_for_onboarding() only picks up
+    '**Key:** value' lines, so it never sees this field.
+    """
+    m = _SUBMISSION_ID_RE.search(card.get("description") or "")
+    return int(m.group(1)) if m else None
+
+
+def archive_applicant_files(name, sub_id):
+    """Archive ONE applicant's uploaded files into [S-1] Admin/Applications/{Name}/.
+
+    Returns the number of files archived.
+
+    Replaces move_applicant_files(), which had three separate defects and had
+    therefore never once succeeded (20 'No Forms folder yet' log lines dating
+    to 2026-03-07, zero successful moves, empty Applications/ folder):
+
+      1. It built 'Forms/{form_title}' WITHOUT the '3 - ' form-id prefix, so
+         the very first PROPFIND 404'd and it returned early every time.
+      2. It iterated EVERY submission folder under the form root, using `name`
+         only for the destination. Had the path ever resolved, the first
+         onboarding would have swept all 39+ applicants' documents into one
+         person's folder. It now addresses exactly one submission.
+      3. It used Depth 1 on the submission folder, but Forms nests uploads
+         inside a per-question subfolder, so it would have found zero files
+         even with the path fixed. list_submission_files() uses Depth 3.
+
+    Uses ARCHIVE_VERB (default COPY) so the originals stay in Forms storage.
+    """
+    if sub_id is None:
+        log.warning(
+            f"No submission id on the card for {name} — cannot archive documents. "
+            f"(Card descriptions carry '*Submission ID:* N'; cards created "
+            f"before that field existed have nothing to archive from.)"
+        )
+        return 0
+
+    dest_folder = applications_folder_url(name)
+    folder_name = applicant_folder_name(name)
+    archived = 0
 
     try:
-        # List submission folders under the form
-        r = req.request("PROPFIND", forms_path, auth=auth,
-                        headers={"Depth": "1"}, timeout=30)
-        if r.status_code == 404:
-            log.info(f"No Forms folder yet — skipping file move for {name}")
-            return False
+        file_hrefs = list_submission_files(sub_id, label=f" (archive for {name})")
+        if file_hrefs is None:
+            log.warning(
+                f"Forms folder missing for submission #{sub_id} — nothing to "
+                f"archive for {name} ({forms_submission_url(sub_id)})"
+            )
+            return 0
+        if not file_hrefs:
+            log.info(f"No uploaded files for {name} (submission #{sub_id})")
+            return 0
 
-        import re
-        hrefs = re.findall(r'<d:href>([^<]+)</d:href>', r.text)
+        # 201 = created, 405 = already there. Both fine.
+        nc_request("MKCOL", dest_folder, ocs=False, expected_statuses=(405,),
+                   label=f"MKCOL Applications/{folder_name}")
 
-        # Create destination folder
-        dest_folder = f"{dav_base}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Applications/{urlquote(folder_name)}"
-        req.request("MKCOL", dest_folder, auth=auth, timeout=30)
+        for fhref in file_hrefs:
+            enc_filename = fhref.split("/")[-1]      # keep encoding for the URL
+            filename = unquote(enc_filename)         # decode for humans
+            r = nc_request(
+                ARCHIVE_VERB, f"{NC_URL}{fhref}", ocs=False,
+                headers={"Destination": f"{dest_folder}/{enc_filename}",
+                         "Overwrite": "T"},
+                label=f"{ARCHIVE_VERB} {filename} -> Applications/{folder_name}",
+            )
+            if r.status_code in (201, 204):
+                archived += 1
+                log.info(f"Archived: {filename} → Applications/{folder_name}/")
+            # Failures already logged with body by nc_request.
 
-        moved = 0
-        for href in hrefs:
-            # Skip the parent directory itself
-            if href.rstrip("/") == f"/remote.php/dav/files/{NC_USER}/Forms/{urlquote(form_title)}".rstrip("/"):
-                continue
-
-            # List files in each submission folder
-            full_url = f"{NC_URL}{href}"
-            r2 = req.request("PROPFIND", full_url, auth=auth,
-                             headers={"Depth": "1"}, timeout=30)
-            file_hrefs = re.findall(r'<d:href>([^<]+)</d:href>', r2.text)
-
-            for fhref in file_hrefs:
-                if fhref.rstrip("/") == href.rstrip("/"):
-                    continue
-                # Move each file to destination
-                filename = fhref.split("/")[-1]
-                src_url = f"{NC_URL}{fhref}"
-                dst_url = f"{dest_folder}/{filename}"
-                r3 = req.request("MOVE", src_url, auth=auth,
-                                 headers={"Destination": dst_url, "Overwrite": "T"},
-                                 timeout=30)
-                if r3.status_code in (201, 204):
-                    moved += 1
-                    log.info(f"Moved file: {filename} → Applications/{folder_name}/")
-                else:
-                    log.warning(f"Failed to move {filename}: {r3.status_code}")
-
-        if moved > 0:
-            log.info(f"Moved {moved} file(s) for {name} to [S-1] Admin/Applications/{folder_name}/")
-        else:
-            log.info(f"No uploaded files found for {name}")
-        return moved > 0
+        log.info(
+            f"Archived {archived}/{len(file_hrefs)} file(s) for {name} "
+            f"(submission #{sub_id}) to [S-1] Admin/Applications/{folder_name}/"
+        )
+        return archived
 
     except Exception as e:
-        log.error(f"Failed to move applicant files for {name}: {e}")
-        return False
+        log.error(
+            f"Failed to archive applicant files for {name} "
+            f"(submission #{sub_id}): {e}",
+            exc_info=True,
+        )
+        return archived
 
 
 def move_card_to_stack(card_id, from_stack, to_stack):
@@ -2156,8 +2264,9 @@ def _onboard_member(card, state, dry_run=False):
         last_first = f"{name.split()[-1]}, {name.split()[0]}" if " " in name else name
         add_map_pin(last_first, team, map_addr)
 
-    # 4. Move applicant files to S1 recruiting folder
-    move_applicant_files(name)
+    # 4. Archive applicant documents into the S1 recruiting folder.
+    # Needs the submission id so we only touch THIS applicant's files.
+    archive_applicant_files(name, parse_submission_id(card))
 
     # 5. Send welcome email (to Proton Mail address).
     # Guarded so a re-run can never send a second copy.
