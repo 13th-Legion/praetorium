@@ -63,6 +63,16 @@ SMTP_FROM = "13th Legion <admin@13thlegion.org>"
 FORM_ID = 3
 BOARD_ID = 5
 
+# Onboarding retry policy. A card that fails onboarding this many times is
+# moved to the dead-letter list and stops being retried, so one poisoned card
+# can't spin forever. (John Garcia's card retried 1,942 times over 7 days in
+# Aug-Sep 2026 and spammed the NC log the whole time.)
+MAX_ONBOARD_ATTEMPTS = 5
+
+# create_nc_account() outcomes
+NC_ACCOUNT_CREATED = "created"
+NC_ACCOUNT_EXISTS = "exists"
+
 # Stack IDs (S1 — Recruit Pipeline board)
 STACKS = {
     "new": 11,
@@ -1128,8 +1138,95 @@ def parse_card_for_onboarding(card):
     return info
 
 
+def nc_user_exists(username):
+    """Does this NC account exist?  True / False / None (couldn't tell).
+
+    Used to disambiguate a create call that failed with a TIMEOUT, where NC may
+    have completed the creation anyway.
+    """
+    try:
+        r = requests.get(
+            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
+            auth=(NC_SVC_USER, NC_SVC_PASS),
+            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+            timeout=30,
+        )
+        if r.status_code == 404:
+            return False
+        meta = r.json().get("ocs", {}).get("meta", {})
+        status = meta.get("statuscode", 0)
+        if status in (100, 200):
+            return True
+        if status in (404, 998):
+            return False
+        log.warning(f"Unexpected OCS status {status} checking NC user {username}")
+        return None
+    except Exception as e:
+        log.warning(f"Could not check whether NC account {username} exists: {e}")
+        return None
+
+
+def nc_user_never_logged_in(username):
+    """True if the account has never been logged into.  True / False / None.
+
+    Gate for whether it's safe to reset a password during onboarding recovery:
+    if the member has already logged in they may have chosen their own password
+    and we must not clobber it.
+    """
+    try:
+        r = requests.get(
+            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
+            auth=(NC_SVC_USER, NC_SVC_PASS),
+            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+            timeout=30,
+        )
+        data = r.json().get("ocs", {}).get("data", {})
+        if "lastLogin" not in data:
+            return None
+        return int(data.get("lastLogin") or 0) == 0
+    except Exception as e:
+        log.warning(f"Could not read lastLogin for {username}: {e}")
+        return None
+
+
+def set_nc_password(username, password):
+    """Set an existing NC account's password. Returns True on success."""
+    try:
+        r = requests.put(
+            f"{NC_URL}/ocs/v2.php/cloud/users/{quote(username)}",
+            auth=(NC_SVC_USER, NC_SVC_PASS),
+            headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+            data={"key": "password", "value": password},
+            timeout=30,
+        )
+        status = r.json().get("ocs", {}).get("meta", {}).get("statuscode", 0)
+        if status in (100, 200):
+            log.info(f"Reset NC password for {username}")
+            return True
+        log.error(f"Failed to reset NC password for {username}: OCS status {status}")
+        return False
+    except Exception as e:
+        log.error(f"Error resetting NC password for {username}: {e}")
+        return False
+
+
 def create_nc_account(username, password, display_name, email, groups):
-    """Create a Nextcloud user account via provisioning API."""
+    """Create a Nextcloud user account via provisioning API.
+
+    Returns NC_ACCOUNT_CREATED, NC_ACCOUNT_EXISTS, or None on failure.
+
+    IDEMPOTENCY (added 2026-09-03): "user already exists" is a SUCCESS here --
+    it means some earlier attempt already made the account, so onboarding
+    should carry on rather than abort.
+
+    This is the exact bug that stranded RCT John Garcia for 7 days / 1,942
+    retries: his first attempt READ TIMED OUT at 30s *after* NC had already
+    created the account. The old code called r.raise_for_status() first, so an
+    "exists" reply (HTTP 400 / OCS 102) raised before the status code could
+    ever be inspected, returned False, and aborted onboarding forever. Two
+    fixes below: parse the OCS body instead of raising on HTTP status, and on
+    an ambiguous transport failure ASK NC whether the user now exists.
+    """
     # NC provisioning API needs form-encoded data with groups[] array
     form_data = {
         "userid": username,
@@ -1142,24 +1239,40 @@ def create_nc_account(username, password, display_name, email, groups):
     for g in groups:
         form_pairs.append(("groups[]", g))
 
+    url = f"{NC_URL}/ocs/v2.php/cloud/users"
+    headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
     try:
-        url = f"{NC_URL}/ocs/v2.php/cloud/users"
-        headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
-        import requests as req
-        r = req.post(url, auth=(NC_SVC_USER, NC_SVC_PASS), headers=headers, data=form_pairs, timeout=30)
-        r.raise_for_status()
-        resp = r.json()
-        status = resp.get("ocs", {}).get("meta", {}).get("statuscode", 0)
-        if status in (100, 200):
-            log.info(f"Created NC account: {username}")
-            return True
-        else:
-            msg = resp.get("ocs", {}).get("meta", {}).get("message", "Unknown error")
-            log.error(f"Failed to create NC account {username}: {msg}")
-            return False
+        r = requests.post(url, auth=(NC_SVC_USER, NC_SVC_PASS), headers=headers,
+                          data=form_pairs, timeout=30)
     except Exception as e:
+        # AMBIGUOUS failure (timeout / reset): the account may exist anyway.
         log.error(f"Error creating NC account {username}: {e}")
-        return False
+        if nc_user_exists(username) is True:
+            log.warning(
+                f"NC account {username} exists despite the failed request "
+                f"— treating as created (idempotent recovery)"
+            )
+            return NC_ACCOUNT_EXISTS
+        return None
+
+    # Parse the OCS body regardless of HTTP status: NC answers HTTP 400 with
+    # OCS statuscode 102 for "User already exists".
+    try:
+        meta = r.json().get("ocs", {}).get("meta", {})
+    except Exception:
+        meta = {}
+    status = meta.get("statuscode", 0)
+    msg = meta.get("message", "") or ""
+
+    if status in (100, 200):
+        log.info(f"Created NC account: {username}")
+        return NC_ACCOUNT_CREATED
+    if status == 102 or "already exists" in msg.lower():
+        log.warning(f"NC account {username} already exists — continuing onboarding (idempotent)")
+        return NC_ACCOUNT_EXISTS
+
+    log.error(f"Failed to create NC account {username}: {msg or ('HTTP ' + str(r.status_code))}")
+    return None
 
 
 def add_to_nc_groups(username, groups):
@@ -1750,6 +1863,46 @@ Nunquam Non Paratus — Never Not Ready.
 
 
 def onboard_member(card, state, dry_run=False):
+    """Bounded-retry wrapper around _onboard_member.
+
+    Without this, ANY card that can't be onboarded (missing email, missing
+    Proton address, NC failure) is retried every poll forever. That is how one
+    card produced 1,942 failed attempts over 7 days and filled the Nextcloud
+    log with 'Failed addUser attempt' noise.
+
+    After MAX_ONBOARD_ATTEMPTS the card is dead-lettered and skipped. To retry
+    it, S1 fixes the underlying problem and removes the card id from
+    'onboard_dead_letter' in state.json.
+    """
+    card_id = card.get("id")
+
+    if card_id in state.get("onboarded_cards", []):
+        return False
+    if card_id in state.get("onboard_dead_letter", []):
+        return False
+
+    if _onboard_member(card, state, dry_run=dry_run):
+        state.setdefault("onboard_failures", {}).pop(str(card_id), None)
+        return True
+
+    fails = state.setdefault("onboard_failures", {})
+    key = str(card_id)
+    fails[key] = fails.get(key, 0) + 1
+    if fails[key] >= MAX_ONBOARD_ATTEMPTS:
+        state.setdefault("onboard_dead_letter", []).append(card_id)
+        log.error(
+            f"DEAD-LETTER: card #{card_id} failed onboarding {fails[key]}x — giving up. "
+            f"Fix the card, then remove {card_id} from 'onboard_dead_letter' in "
+            f"state.json to retry."
+        )
+    else:
+        log.warning(
+            f"Onboarding attempt {fails[key]}/{MAX_ONBOARD_ATTEMPTS} failed for card #{card_id}"
+        )
+    return False
+
+
+def _onboard_member(card, state, dry_run=False):
     """
     Full onboarding for an approved recruit:
     1. Parse card for member info
@@ -1759,9 +1912,6 @@ def onboard_member(card, state, dry_run=False):
     5. Move card to "Complete"
     """
     card_id = card.get("id")
-
-    if card_id in state.get("onboarded_cards", []):
-        return False
 
     info = parse_card_for_onboarding(card)
     name = info.get("Legal Name", info["raw_title"].replace("📋 ", "").replace("✅ ", ""))
@@ -1826,9 +1976,37 @@ def onboard_member(card, state, dry_run=False):
         last_name = parts[-2]
     
     display_name = f"RCT {last_name}"
-    if not create_nc_account(nc_username, nc_password, display_name, proton_email, groups):
+    nc_result = create_nc_account(nc_username, nc_password, display_name, proton_email, groups)
+    if nc_result is None:
         log.error(f"Onboarding aborted for {name} — NC account creation failed")
         return False
+
+    send_welcome = True
+    if nc_result == NC_ACCOUNT_EXISTS:
+        # Recovering a partially-completed onboarding. The account exists but we
+        # do NOT know its password, so the freshly generated one in
+        # nc_password would be wrong in the welcome email. Reset it -- but ONLY
+        # if they have never logged in, otherwise we'd clobber a password the
+        # member chose themselves.
+        never_logged_in = nc_user_never_logged_in(nc_username)
+        if never_logged_in is True:
+            if not set_nc_password(nc_username, nc_password):
+                log.error(
+                    f"Onboarding aborted for {name} — account exists but password "
+                    f"reset failed, so we cannot send working credentials"
+                )
+                return False
+            # Groups may also be incomplete from the partial run.
+            add_to_nc_groups(nc_username, groups)
+        else:
+            # Either they've logged in, or we couldn't tell. Both mean "don't
+            # touch the password and don't mail credentials".
+            send_welcome = False
+            log.warning(
+                f"{nc_username} already exists and has logged in (or lastLogin "
+                f"unreadable) — skipping password reset and welcome email; "
+                f"completing the rest of onboarding"
+            )
 
     # 2. Create portal DB record
     create_portal_member(info, nc_username, team)
@@ -1845,8 +2023,13 @@ def onboard_member(card, state, dry_run=False):
     # 4. Move applicant files to S1 recruiting folder
     move_applicant_files(name)
 
-    # 5. Send welcome email (to Proton Mail address)
-    send_welcome_email(proton_email, name, nc_username, nc_password, team)
+    # 5. Send welcome email (to Proton Mail address).
+    # Guarded so a re-run can never send a second copy.
+    if card_id in state.get("welcome_emailed_cards", []):
+        log.info(f"Welcome email already sent for card #{card_id} — not resending")
+    elif send_welcome:
+        send_welcome_email(proton_email, name, nc_username, nc_password, team)
+        state.setdefault("welcome_emailed_cards", []).append(card_id)
 
     # 6. Move card to Complete
     move_card_to_stack(card_id, STACKS["approved"], STACKS["complete"])
@@ -1966,7 +2149,29 @@ def check_payment_cards(state, dry_run=False):
         if not target_email:
             log.warning(f"No email found for card #{card_id} ({name}) — cannot send payment instructions.")
             continue
-            
+
+        # Guard against malformed recipients (e.g. a Y/N field value like "No"
+        # getting parsed into the email slot). A bad address is a PERMANENT
+        # failure — mark the card handled so we don't loop-spam SMTP errors
+        # every poll cycle, and flag S1 to fix the card data.
+        _te = target_email.strip()
+        if ("@" not in _te) or ("." not in _te.split("@")[-1]) or (" " in _te):
+            log.error(
+                f"Invalid payment-email recipient for card #{card_id} ({name}): "
+                f"{target_email!r} — skipping permanently. S1 should fix the card."
+            )
+            try:
+                notify_s1_nctalk(
+                    f"⚠️ **Payment email skipped — bad address**\n"
+                    f"Card #{card_id} ({name}) has an invalid email: `{target_email}`.\n"
+                    f"Fix the Proton/application email on the card, then move it out "
+                    f"and back into *Documents & Payment* to re-trigger."
+                )
+            except Exception as _ne:
+                log.warning(f"Could not notify S1 about bad email on card #{card_id}: {_ne}")
+            state.setdefault("payment_emailed_cards", []).append(card_id)
+            continue
+
         log.info(f"Sending payment email for {name} to {target_email}")
         
         if dry_run:
@@ -2037,11 +2242,17 @@ def main():
             except Exception:
                 pass  # non-fatal
 
-            # Systemd watchdog ping
-            sd_notify("WATCHDOG=1")
-
         except Exception as e:
             log.error(f"Error in main loop: {e}", exc_info=True)
+        finally:
+            # Systemd watchdog ping — ALWAYS, even when a phase raised.
+            # This used to sit inside the try, after the phases, so any
+            # exception skipped it. With poll=300s and WatchdogSec=15min, three
+            # consecutive transient failures (e.g. NC 502 on the Forms API) were
+            # enough for systemd to SIGABRT a perfectly healthy daemon. That
+            # happened twice on 2026-09-02. The process is alive and looping
+            # here regardless of whether a phase succeeded, so say so.
+            sd_notify("WATCHDOG=1")
 
         if args.once:
             break
