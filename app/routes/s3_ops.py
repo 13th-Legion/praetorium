@@ -918,17 +918,19 @@ async def instructor_rotation_schedule(request: Request, series_id: str = ""):
     return HTMLResponse(f"""
     <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:6px;padding:12px;">
       <div style="font-size:13px;color:#d4a537;font-weight:600;margin-bottom:8px;">
-        \ud83d\udcc5 Current schedule \u2014 {title}
+        📅 Current schedule — {title}
       </div>
       {warn}
       <table style="width:100%;border-collapse:collapse;">{rows}</table>
       <div style="border-top:1px solid #333;margin-top:12px;padding-top:12px;">
         <form hx-post="/api/s3/instructor-rotation/publish" hx-target="#publish-result" hx-swap="innerHTML">
           <input type="hidden" name="series_id" value="{series_id}">
-          <div style="font-size:12px;color:#aaa;margin-bottom:6px;">Publish schedule to NC Talk:</div>
+          <div style="font-size:12px;color:#aaa;margin-bottom:6px;">
+            Publish schedule to NC Talk <span style="color:#666;">(posts as the Tesserarius bot)</span>:
+          </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">{checks}</div>
           <button type="submit" style="padding:7px 14px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">
-            \ud83d\udce2 Publish schedule
+            📢 Publish schedule
           </button>
         </form>
         <div id="publish-result" style="margin-top:10px;"></div>
@@ -963,7 +965,7 @@ async def instructor_rotation_publish(request: Request):
     if not events:
         return HTMLResponse('<div style="color:#b71c1c;font-size:13px;">Nothing to publish.</div>')
 
-    lines = [f"\ud83d\udcc5 **{title} \u2014 Instructor Schedule**", ""]
+    lines = [f"📅 **{title} — Instructor Schedule**", ""]
     for e in events:
         who = labels.get(e.instructor_id, "_unassigned_") if e.instructor_id else "_unassigned_"
         lines.append(f"- **{e.date_start.strftime('%a %d %b')}** \u2014 {who}")
