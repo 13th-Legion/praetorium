@@ -1025,6 +1025,7 @@ async def events_page(request: Request):
         "recipient_groups": recipient_groups,
         "tradoc_blocks": tradoc_blocks,
         "nc_rooms": _nc_rooms_svc.selectable_rooms(),
+        "rsvp_categories": sorted(RSVP_CATEGORIES()),
     })
 
 
@@ -1689,7 +1690,23 @@ async def create_event(request: Request):
         category = "other"
 
     # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
-    rsvp_on = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
+    _rsvp_default = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
+    # Explicit toggle from the create form overrides the category default
+    # (checkbox present => honor it; absent field => fall back to the default).
+    # FTX/MCFTX still never RSVP-on at creation regardless of the toggle.
+    if "rsvp_enabled" in form.keys() and category not in ("ftx", "mcftx"):
+        rsvp_on = form.get("rsvp_enabled") == "on"
+    else:
+        rsvp_on = _rsvp_default
+
+    # Optional RSVP deadline (mirrors update_event): default 2359 if date-only.
+    rsvp_deadline = None
+    if rsvp_on and form.get("rsvp_deadline_date"):
+        try:
+            _dl_time = form.get("rsvp_deadline_time", "").strip() or "2359"
+            rsvp_deadline = _parse_mil_datetime(form["rsvp_deadline_date"].strip(), _dl_time)
+        except ValueError:
+            rsvp_deadline = None
 
     # Recurrence (PP-224): build RRULE + occurrence start datetimes.
     rrule_str = build_rrule_from_form(form)
@@ -1730,6 +1747,7 @@ async def create_event(request: Request):
                 date_end=occ_end,
                 status="active",
                 rsvp_enabled=rsvp_on,
+                rsvp_deadline=rsvp_deadline,
                 warno_scheduled_at=occ_warno,
                 training_block=(training_blocks[0] if training_blocks else None),
                 training_blocks=(",".join(str(b) for b in training_blocks) if training_blocks else None),

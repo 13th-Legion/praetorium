@@ -327,6 +327,29 @@
                 </div>
                 <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Select who receives RSVP invites. Defaults to Entire Unit if none selected.</span>
             </div>
+            <div style="margin-bottom:12px;padding:12px;background:rgba(212,165,55,0.08);border:1px solid rgba(212,165,55,0.2);border-radius:6px;" id="rsvp-controls-block">
+                <div style="font-size:13px;color:#d4a537;font-weight:600;margin-bottom:8px;">RSVP Controls</div>
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:13px;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" name="rsvp_enabled" id="evt-rsvp-enabled" style="accent-color:#d4a537;">
+                        RSVP Enabled
+                    </label>
+                    <span style="font-size:11px;color:#666;margin-top:2px;display:block;" id="rsvp-ftx-note"></span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="display:block;font-size:12px;color:#888;margin-bottom:4px;">RSVP Deadline Date</label>
+                        <input type="date" name="rsvp_deadline_date"
+                            style="width:100%;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:12px;color:#888;margin-bottom:4px;">Deadline Time (e.g. 2359 CT)</label>
+                        <input type="text" name="rsvp_deadline_time" placeholder="2359" maxlength="4"
+                            style="width:100%;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;font-family:monospace;">
+                    </div>
+                </div>
+                <span style="font-size:11px;color:#666;margin-top:4px;display:block;">Leave deadline blank for none. RSVP locks after the deadline.</span>
+            </div>
             <div id="create-result"></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button type="button" onclick="document.getElementById('create-modal').style.display='none'"
@@ -371,7 +394,27 @@
         document.getElementById('online-room-block').style.display = (mode === 'online') ? 'block' : 'none';
     }
 
-    // Category change: online_training defaults to online mode + shows instructor
+    // RSVP category set + FTX/MCFTX carve-out (mirrors backend create_event default).
+    var RSVP_CATS = {{ rsvp_categories | tojson }};
+    function updateRsvpDefault() {
+        var cat = document.querySelector('select[name="category"]').value;
+        var cb = document.getElementById('evt-rsvp-enabled');
+        var note = document.getElementById('rsvp-ftx-note');
+        var isFtx = (cat === 'ftx' || cat === 'mcftx');
+        if (isFtx) {
+            // FTX/MCFTX RSVP activates on WARNO issue, not at creation.
+            cb.checked = false;
+            cb.disabled = true;
+            note.textContent = 'FTX/MCFTX RSVP activates automatically when the WARNO is issued.';
+        } else {
+            cb.disabled = false;
+            note.textContent = '';
+            cb.checked = RSVP_CATS.indexOf(cat) !== -1;
+        }
+    }
+
+    // Category change: online_training defaults to online mode + shows instructor;
+    // also refresh the RSVP-enabled default for the chosen category.
     document.querySelector('select[name="category"]').addEventListener('change', function(e) {
         if (e.target.value === 'online_training') {
             var modeSel = document.getElementById('evt-meeting-mode');
@@ -380,7 +423,9 @@
         } else {
             document.getElementById('instructor-block').style.display = 'none';
         }
+        updateRsvpDefault();
     });
+    updateRsvpDefault();  // initialize on load
 
     quill.on('text-change', function() {
         document.getElementById('hidden-desc').value = quill.root.innerHTML;
