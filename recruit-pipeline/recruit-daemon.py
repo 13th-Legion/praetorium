@@ -2540,13 +2540,214 @@ def check_payment_cards(state, dry_run=False):
             
     return emailed
 
+# ─── Startup / periodic self-check ────────────────────────────────────
+#
+# All four production incidents were detectable this way and none were
+# detected: an integration call started failing, the error was swallowed or
+# logged without a body, and nobody noticed for weeks (the Deck attachment
+# 400s ran for a month; the applicant-file archive was broken for six).
+#
+# Alerting follows the established server-side pattern used by
+# /usr/local/sbin/spooky-bot-audit.sh and /usr/local/sbin/offboard-reconcile.py:
+# post a Discord DM directly from the host, no OpenClaw cron and no model in
+# the loop.
+
+SELF_CHECK_INTERVAL = int(os.environ.get("RECRUIT_SELFCHECK_INTERVAL", 3600))
+AUDIT_SCRIPT = "/usr/local/sbin/spooky-bot-audit.sh"
+DISCORD_DM_CHANNEL = "1466732342704996352"   # Cav DM
+
+
+def _discord_token():
+    """Reuse the token spooky-bot-audit.sh already holds.
+
+    Deliberately read from that file rather than stored a second time: one
+    copy of a secret on the box is enough, and rotating it there rotates it
+    for everything.
+    """
+    try:
+        with open(AUDIT_SCRIPT, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("DISCORD_BOT_TOKEN="):
+                    return line.split("=", 1)[1].strip().strip("\"'")
+        log.warning(f"No DISCORD_BOT_TOKEN line found in {AUDIT_SCRIPT}")
+    except OSError as e:
+        log.warning(f"Could not read Discord token from {AUDIT_SCRIPT}: {e}")
+    return ""
+
+
+def notify_discord(text):
+    """DM Cav on Discord. Returns True on success."""
+    token = _discord_token()
+    if not token:
+        log.error("No Discord token available — self-check alert NOT delivered")
+        return False
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10/channels/{DISCORD_DM_CHANNEL}/messages",
+        data=json.dumps({"content": text[:1900]}).encode(),
+        headers={"Authorization": f"Bot {token}",
+                 "Content-Type": "application/json",
+                 "User-Agent": "recruit-daemon/1.0"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status in (200, 201)
+    except Exception as e:
+        log.warning(f"Discord alert failed: {e}")
+        return False
+
+
+def _check_deck_api():
+    """The Deck board exists and still has every stack the daemon routes to."""
+    resp = nc_request(
+        "GET", f"/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks",
+        retry=False, label="self-check Deck API",
+    )
+    if resp.status_code != 200:
+        return False, f"HTTP {resp.status_code} body={_body_excerpt(resp)}"
+    try:
+        found = {s.get("id") for s in resp.json()}
+    except (ValueError, AttributeError, TypeError) as e:
+        return False, f"unparseable stacks response ({e}) body={_body_excerpt(resp)}"
+    missing = {name: sid for name, sid in STACKS.items() if sid not in found}
+    if missing:
+        return False, (f"board {BOARD_ID} is missing configured stacks {missing} "
+                       f"(found {sorted(i for i in found if i is not None)})")
+    return True, f"board {BOARD_ID}: all {len(STACKS)} configured stacks present"
+
+
+def _check_forms_api():
+    """The Forms submissions endpoint answers — phase 1's only data source."""
+    resp = nc_request(
+        "GET", f"/ocs/v2.php/apps/forms/api/v3/forms/{FORM_ID}/submissions",
+        retry=False, label="self-check Forms API",
+    )
+    if resp.status_code != 200:
+        return False, f"HTTP {resp.status_code} body={_body_excerpt(resp)}"
+    try:
+        subs = resp.json()["ocs"]["data"]["submissions"]
+    except (ValueError, KeyError, TypeError) as e:
+        return False, f"unexpected shape ({e}) body={_body_excerpt(resp)}"
+    return True, f"form {FORM_ID}: {len(subs)} submission(s) readable"
+
+
+def _check_forms_storage():
+    """The Forms folder resolves at the path the daemon actually builds.
+
+    This is the check that would have caught the six-month archive outage on
+    day one: the daemon was building a path that 404'd and calling it
+    'No Forms folder yet'.
+    """
+    url = forms_root_url()
+    resp = nc_request(
+        "PROPFIND", url, ocs=False, headers={"Depth": "1"},
+        expected_statuses=(404,), retry=False,
+        label="self-check Forms storage",
+    )
+    if resp.status_code == 404:
+        return False, (f"Forms folder NOT FOUND at {url} — applicant uploads "
+                       f"cannot be attached to cards or archived")
+    if resp.status_code != 207:
+        return False, f"HTTP {resp.status_code} body={_body_excerpt(resp)}"
+    folders = [h for h in re.findall(r"<d:href>([^<]+)</d:href>", resp.text)
+               if h.endswith("/")]
+    return True, (f"{FORM_FOLDER_NAME!r} present, "
+                  f"{max(len(folders) - 1, 0)} submission folder(s)")
+
+
+def _check_provisioning_api():
+    """The service account can still use the user-provisioning API."""
+    resp = nc_request(
+        "GET", "/ocs/v2.php/cloud/users", params={"limit": 1},
+        user=NC_SVC_USER, passwd=NC_SVC_PASS,
+        retry=False, label="self-check provisioning API",
+    )
+    meta = _ocs_section(resp, "meta")
+    code = meta.get("statuscode")
+    if resp.status_code != 200 or code not in (100, 200):
+        return False, (f"HTTP {resp.status_code} OCS {code} "
+                       f"msg={meta.get('message', '')!r} body={_body_excerpt(resp)}")
+    return True, f"{NC_SVC_USER} can reach the provisioning API (OCS {code})"
+
+
+SELF_CHECKS = (
+    ("deck_api", _check_deck_api),
+    ("forms_api", _check_forms_api),
+    ("forms_storage", _check_forms_storage),
+    ("provisioning_api", _check_provisioning_api),
+)
+
+
+def self_check():
+    """Run every integration probe. Returns [(name, ok, detail), ...].
+
+    Never raises: a broken probe reports itself as a failure rather than
+    taking down the poll loop.
+    """
+    results = []
+    for name, fn in SELF_CHECKS:
+        try:
+            ok, detail = fn()
+        except Exception as e:
+            ok, detail = False, f"{type(e).__name__}: {e}"
+        results.append((name, ok, detail))
+        log.log(logging.INFO if ok else logging.ERROR,
+                f"self-check {name}: {'OK' if ok else 'FAIL'} — {detail}")
+    return results
+
+
+def run_self_check(state, dry_run=False, reason="periodic"):
+    """Run the self-check, alert on transitions, record state. Returns True if healthy.
+
+    Alerts only when the set of failing checks CHANGES, so a persistent outage
+    produces one DM rather than one per hour, and sends a recovery notice when
+    it clears.
+    """
+    results = self_check()
+    failed = sorted(name for name, ok, _ in results if not ok)
+    previous = sorted(state.get("self_check_failing", []))
+    state["last_self_check"] = int(time.time())
+
+    if dry_run:
+        log.info("[DRY RUN] self-check complete — no Discord alert sent")
+        return not failed
+
+    if failed and failed != previous:
+        lines = [f"🚨 **Recruit daemon self-check FAILED** ({reason})", ""]
+        lines += [f"{'✅' if ok else '❌'} `{name}` — {detail}"
+                  for name, ok, detail in results]
+        lines += ["", "_NC droplet · `journalctl -u recruit-daemon -n 100`_"]
+        notify_discord("\n".join(lines))
+    elif previous and not failed:
+        notify_discord(
+            "✅ **Recruit daemon self-check recovered** — previously failing: "
+            f"`{', '.join(previous)}`"
+        )
+
+    state["self_check_failing"] = failed
+    return not failed
+
+
 def main():
     parser = argparse.ArgumentParser(description="13th Legion S1 Recruit Pipeline Daemon")
     parser.add_argument("--poll-interval", type=int, default=300, help="Seconds between checks (default 5 min)")
     parser.add_argument("--dry-run", action="store_true", help="Don't create accounts or send emails")
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     parser.add_argument("--test-email", metavar="EMAIL", help="Send a test welcome email and exit")
+    parser.add_argument("--self-check", action="store_true",
+                        help="Run the integration self-check once and exit "
+                             "(rc 0 healthy, 1 failing). Read-only.")
     args = parser.parse_args()
+
+    # Self-check mode: read-only probes, no state written, no Discord alert.
+    if args.self_check:
+        results = self_check()
+        for name, ok, detail in results:
+            print(f"{'PASS' if ok else 'FAIL'}  {name:<18} {detail}")
+        healthy = all(ok for _, ok, _ in results)
+        print(f"\n{'all checks passed' if healthy else 'SELF-CHECK FAILED'}")
+        return 0 if healthy else 1
 
     # Test email mode
     if args.test_email:
@@ -2568,8 +2769,20 @@ def main():
 
     state = load_state()
 
+    # Startup self-check: fail loudly at boot rather than weeks later.
+    # Never fatal -- a transient NC blip during a restart must not stop the
+    # daemon from coming up and retrying on its own schedule.
+    try:
+        run_self_check(state, dry_run=args.dry_run, reason="daemon startup")
+    except Exception as e:
+        log.error(f"Startup self-check itself failed: {e}", exc_info=True)
+
     while True:
         try:
+            # Periodic self-check (default hourly).
+            if time.time() - state.get("last_self_check", 0) >= SELF_CHECK_INTERVAL:
+                run_self_check(state, dry_run=args.dry_run, reason="periodic")
+
             # Phase 1: Check for new form submissions → create Deck cards
             new = check_new_submissions(state, dry_run=args.dry_run)
             if new:
@@ -2618,8 +2831,9 @@ def main():
         time.sleep(args.poll_interval)
 
     log.info("Daemon stopped")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
 
