@@ -3281,23 +3281,41 @@ async def s1_glance(request: Request):
         recruits = (await db.execute(
             select(func.count()).select_from(Member).where(Member.status == "recruit")
         )).scalar() or 0
-        active = (await db.execute(
+        patched = (await db.execute(
             select(func.count()).select_from(Member).where(Member.status == "active")
         )).scalar() or 0
+        # "Active members" must match the roster this card links to. The roster's
+        # default view is Member.status.in_(["active", "recruit"]) (see
+        # roster.py roster_list), i.e. everyone currently serving -- patched
+        # members AND recruits. This card previously counted status == "active"
+        # alone, so it reported only patched members (26) while the roster it
+        # links to showed 48. Keep the predicate identical to roster_list's or
+        # the two will drift apart again.
+        active = (await db.execute(
+            select(func.count()).select_from(Member).where(
+                Member.status.in_(["active", "recruit"])
+            )
+        )).scalar() or 0
 
-    def card(icon, label, value, href, warn=False):
+    def card(icon, label, value, href, warn=False, sub=None):
         color = "#b71c1c" if warn and value else "#d4a537"
+        sub_html = (f'<div style="color:#666;font-size:11px;margin-top:3px;">{sub}</div>'
+                    if sub else "")
         return (f'<a href="{href}" style="flex:1;min-width:150px;background:#16213e;'
                 f'border:1px solid #2a2a4a;border-radius:8px;padding:14px;text-decoration:none;'
                 f'display:block;text-align:center;">'
                 f'<div style="font-size:20px;margin-bottom:4px;">{icon}</div>'
                 f'<div style="color:{color};font-size:24px;font-weight:700;">{value}</div>'
-                f'<div style="color:#888;font-size:12px;margin-top:2px;">{label}</div></a>')
+                f'<div style="color:#888;font-size:12px;margin-top:2px;">{label}</div>'
+                f'{sub_html}</a>')
 
     html = '<div style="display:flex;flex-wrap:wrap;gap:12px;">'
     html += card("\U0001F4DD", "Pending training claims", pending_claims,
                  "/api/training/claims/review", warn=True)
     html += card("\U0001F4E5", "Recruits in pipeline", recruits, "/api/s1/pipeline")
-    html += card("\U0001F465", "Active members", active, "/roster")
+    # Breakdown makes the relationship to the adjacent recruits card explicit,
+    # so 48 total / 22 recruits doesn't read as double-counting.
+    html += card("\U0001F465", "Active members", active, "/roster",
+                 sub=f"{patched} patched · {recruits} recruits")
     html += "</div>"
     return HTMLResponse(html)
