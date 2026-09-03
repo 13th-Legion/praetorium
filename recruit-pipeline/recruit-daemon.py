@@ -1353,34 +1353,53 @@ def check_new_submissions(state, dry_run=False):
                     f"Card created in pipeline — please verify and take action."
                 )
 
-            # Route by company
-            route = COMPANY_ROUTING.get(company, None)
+        # Route by company
+        route = COMPANY_ROUTING.get(company, None)
 
+        if dry_run:
+            # --dry-run must have NO external side effects. This block used to
+            # sit outside the guard, so a dry run would really create Deck
+            # cards, really forward applications to other units' S1s and
+            # really email applicants. It was only ever harmless because every
+            # submission happened to be in processed_submissions already.
+            # The deploy procedure mandates a dry run after every edit, so this
+            # was a loaded gun pointed at exactly the routine we run most.
+            forward_to = route if route else STATE_S1_FALLBACK
+            log.info(
+                f"[DRY RUN] Would process submission #{sub_id} ({name}) — "
+                f"company={company!r} route="
+                + ("create Deck card" if route == "deck" else f"forward to {forward_to}")
+                + (f", confirmation email to {email}" if email else ", no email")
+            )
+            state["processed_submissions"].append(sub_id)
+            new_count += 1
+            continue
+
+        if route == "deck":
+            # 13th Legion — full pipeline
+            try:
+                create_deck_card(sub)
+            except Exception as e:
+                log.error(
+                    f"Failed to create card for submission #{sub_id} "
+                    f"({name}): {e}", exc_info=True,
+                )
+                # NOT marked processed: leave it for the next poll to retry.
+                continue
+        else:
+            # Other company — forward to unit S1 or state fallback
+            forward_to = route if route else STATE_S1_FALLBACK
+            forward_application_to_unit(sub, company, forward_to)
+
+        # Send application received confirmation — 13th gets branded, others get generic TSM
+        if email:
             if route == "deck":
-                # 13th Legion — full pipeline
-                try:
-                    create_deck_card(sub)
-                except Exception as e:
-                    log.error(
-                        f"Failed to create card for submission #{sub_id} "
-                        f"({name}): {e}", exc_info=True,
-                    )
-                    # NOT marked processed: leave it for the next poll to retry.
-                    continue
+                send_application_received_email(email, name)
             else:
-                # Other company — forward to unit S1 or state fallback
-                forward_to = route if route else STATE_S1_FALLBACK
-                forward_application_to_unit(sub, company, forward_to)
-
-            # Send application received confirmation — 13th gets branded, others get generic TSM
-            if email:
-                if route == "deck":
-                    send_application_received_email(email, name)
-                else:
-                    company_email = route if route else STATE_S1_FALLBACK
-                    send_generic_application_received_email(email, name, company, company_email=company_email)
-            else:
-                log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
+                company_email = route if route else STATE_S1_FALLBACK
+                send_generic_application_received_email(email, name, company, company_email=company_email)
+        else:
+            log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
 
         state["processed_submissions"].append(sub_id)
         new_count += 1
