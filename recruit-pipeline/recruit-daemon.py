@@ -134,6 +134,7 @@ def _resolve_portal_db_host():
 
     Falls back to the last-known IP if docker inspect is unavailable."""
     import subprocess
+    fallback = "172.21.0.2"
     try:
         out = subprocess.run(
             ["docker", "inspect", "-f",
@@ -144,11 +145,37 @@ def _resolve_portal_db_host():
         ip = out.stdout.strip()
         if ip:
             return ip
-    except Exception:
-        pass
-    return "172.21.0.2"
+        _db_host_warn(
+            f"docker inspect praetorium-db returned no IP "
+            f"(rc={out.returncode} stderr={out.stderr.strip()[:200]!r}); "
+            f"falling back to {fallback}"
+        )
+    except Exception as e:
+        # Silent fallback here used to hide a dead/renamed DB container behind
+        # a stale hardcoded IP, turning it into a confusing psycopg2 timeout
+        # later. Say so out loud.
+        _db_host_warn(
+            f"docker inspect praetorium-db failed ({type(e).__name__}: {e}); "
+            f"falling back to {fallback}"
+        )
+    return fallback
 
-PORTAL_DB_HOST = _resolve_portal_db_host()  # praetorium-db container IP (dynamic)
+
+def _db_host_warn(msg):
+    """Warn about DB-host resolution.
+
+    Needed because _resolve_portal_db_host() can be called before setup_logging()
+    has run; falls back to stderr, which systemd captures into the journal.
+    """
+    if "log" in globals():
+        log.warning(msg)
+    else:                                          # pragma: no cover
+        print(f"[warn] {msg}", file=sys.stderr)
+
+
+# NOTE: deliberately NOT resolved at import time. Both call sites invoke
+# _resolve_portal_db_host() directly so a recreated praetorium-db container
+# (new IP) is picked up without restarting the daemon.
 PORTAL_DB_PORT = 5432
 PORTAL_DB_NAME = "praetorium"
 PORTAL_DB_USER = "praetorium"
@@ -258,6 +285,8 @@ def _body_excerpt(resp, limit=_BODY_LOG_LIMIT):
         raw = resp.content[: limit * 4]
         total = len(resp.content)
     except Exception as e:                        # pragma: no cover - defensive
+        # Not silent: the failure text becomes the logged "body". This runs
+        # inside logging, so it must never raise and mask the real error.
         return f"<unreadable body: {e}>"
     if not raw:
         return "<empty body>"
@@ -567,11 +596,16 @@ def check_blacklist(name, email):
         return None, None
 
     except ImportError:
-        log.warning("psycopg2 not available — skipping blacklist check")
-        return None, None
+        # FAIL-OPEN, LOUDLY. Returning (None, None) here would be
+        # indistinguishable from "checked, and they're clean" -- the caller
+        # would wave the applicant straight through. "unavailable" lets the
+        # caller create the card anyway (a DB blip must not halt recruiting)
+        # while telling S1 the screen did not actually run.
+        log.error("psycopg2 not available — blacklist check DID NOT RUN")
+        return "unavailable", None
     except Exception as e:
-        log.error(f"Blacklist check failed: {e}")
-        return None, None
+        log.error(f"Blacklist check FAILED for {name!r} <{email}>: {e}", exc_info=True)
+        return "error", None
 
 
 def _levenshtein(s1, s2):
@@ -1289,6 +1323,20 @@ def check_new_submissions(state, dry_run=False):
                 new_count += 1
                 continue
 
+            if bl_match in ("error", "unavailable"):
+                # The screen did not run. Create the card so recruiting keeps
+                # moving, but make sure a human knows it wasn't checked.
+                log.error(
+                    f"Blacklist screen did not run for {name} ({email}) — "
+                    f"submission #{sub_id} is UNSCREENED"
+                )
+                notify_s1_nctalk(
+                    f"⚠️ **Blacklist check did not run**\n"
+                    f"Applicant: {name} ({email})\n"
+                    f"Submission #{sub_id} — reason: `{bl_match}`\n"
+                    f"The card was still created. **Screen this applicant manually.**"
+                )
+
             if bl_match == "fuzzy":
                 log.warning(f"⚠️ BLACKLIST FUZZY MATCH: {name} ({email}) ≈ {bl_info['name']} (ID {bl_info['id']})")
                 # Flag for S1 review but still create the card
@@ -1308,7 +1356,11 @@ def check_new_submissions(state, dry_run=False):
                 try:
                     create_deck_card(sub)
                 except Exception as e:
-                    log.error(f"Failed to create card for submission #{sub_id}: {e}")
+                    log.error(
+                        f"Failed to create card for submission #{sub_id} "
+                        f"({name}): {e}", exc_info=True,
+                    )
+                    # NOT marked processed: leave it for the next poll to retry.
                     continue
             else:
                 # Other company — forward to unit S1 or state fallback
@@ -1529,7 +1581,13 @@ def create_nc_account(username, password, display_name, email, groups):
 
 
 def add_to_nc_groups(username, groups):
-    """Add a user to Nextcloud groups."""
+    """Add a user to Nextcloud groups. Returns the list of groups that FAILED.
+
+    Group membership is what actually grants a recruit access to shares and
+    Talk rooms, so a per-group warning that no caller could see was a silent
+    half-onboarding. The caller decides how loud to be.
+    """
+    failed = []
     for group in groups:
         try:
             nc_api(
@@ -1542,6 +1600,8 @@ def add_to_nc_groups(username, groups):
             log.info(f"Added {username} to group: {group}")
         except Exception as e:
             log.warning(f"Failed to add {username} to group {group}: {e}")
+            failed.append(group)
+    return failed
 
 
 def create_portal_member(info, nc_username, team):
@@ -1652,7 +1712,12 @@ def create_portal_member(info, nc_username, team):
         log.warning("psycopg2 not available — skipping portal DB insert")
         return False
     except Exception as e:
-        log.error(f"Failed to create portal member: {e}")
+        log.error(
+            f"Failed to create portal member row for "
+            f"{info.get('Legal Name', '?')!r} (nc user {nc_username}, "
+            f"team {team}): {e}",
+            exc_info=True,
+        )
         return False
 
 
@@ -1870,7 +1935,10 @@ def move_card_to_stack(card_id, from_stack, to_stack):
         log.info(f"Moved card #{card_id} to stack {to_stack}")
         return True
     except Exception as e:
-        log.error(f"Failed to move card #{card_id}: {e}")
+        log.error(
+            f"Failed to move card #{card_id} from stack {from_stack} to "
+            f"{to_stack}: {e}", exc_info=True,
+        )
         return False
 
 
@@ -2253,7 +2321,20 @@ def _onboard_member(card, state, dry_run=False):
                 )
                 return False
             # Groups may also be incomplete from the partial run.
-            add_to_nc_groups(nc_username, groups)
+            failed_groups = add_to_nc_groups(nc_username, groups)
+            if failed_groups:
+                # Not fatal to onboarding, but the recruit will be missing
+                # share/Talk access until someone fixes it, so say so loudly.
+                log.error(
+                    f"{nc_username} could not be added to {failed_groups} — "
+                    f"recruit will lack access until this is corrected"
+                )
+                notify_s1_nctalk(
+                    f"⚠️ **Onboarding: group assignment failed**\n"
+                    f"Account: `{nc_username}` ({name})\n"
+                    f"Failed groups: `{', '.join(failed_groups)}`\n"
+                    f"Add them manually in Nextcloud user admin."
+                )
         else:
             # Either they've logged in, or we couldn't tell. Both mean "don't
             # touch the password and don't mail credentials".
@@ -2264,8 +2345,24 @@ def _onboard_member(card, state, dry_run=False):
                 f"completing the rest of onboarding"
             )
 
-    # 2. Create portal DB record
-    create_portal_member(info, nc_username, team)
+    # 2. Create portal DB record.
+    # DELIBERATELY non-fatal: the NC account already exists at this point, and
+    # the portal re-syncs rosters on its own pass, so aborting here would
+    # burn onboarding attempts toward the dead-letter cap for a transient DB
+    # blip. But it must never be silent -- a recruit with credentials and no
+    # roster row is invisible to S1.
+    if not create_portal_member(info, nc_username, team):
+        log.error(
+            f"Portal roster row NOT created for {name} ({nc_username}) — "
+            f"continuing onboarding; the member exists in Nextcloud but not "
+            f"on the portal roster"
+        )
+        notify_s1_nctalk(
+            f"⚠️ **Onboarding: portal roster insert failed**\n"
+            f"Member: {name} (`{nc_username}`, team {team})\n"
+            f"Their Nextcloud account was created, but the Praetorium roster "
+            f"row was not. Add them manually or re-run the portal sync."
+        )
 
     # 3. Add to NC Maps
     raw_addr = info.get("Address", "")
@@ -2491,13 +2588,17 @@ def main():
             state["last_check"] = int(time.time())
             save_state(state)
 
-            # Heartbeat to Uptime Kuma
+            # Heartbeat to Uptime Kuma.
+            # JUSTIFIED SILENCE (mostly): the heartbeat is monitoring, not
+            # pipeline work, and Kuma being unreachable must never fail a poll
+            # cycle. But it is logged at debug rather than swallowed outright,
+            # so "why did Kuma go red" is answerable from the daemon log.
             try:
                 kuma_msg = urllib.parse.quote(f"OK: {new or 0} new, {onboarded or 0} onboarded")
                 kuma_req = urllib.request.Request(KUMA_PUSH_URL + kuma_msg, headers={"User-Agent": "recruit-daemon/1.0"})
                 urllib.request.urlopen(kuma_req, timeout=10)
-            except Exception:
-                pass  # non-fatal
+            except Exception as e:
+                log.debug(f"Uptime Kuma heartbeat failed (non-fatal): {e}")
 
         except Exception as e:
             log.error(f"Error in main loop: {e}", exc_info=True)
