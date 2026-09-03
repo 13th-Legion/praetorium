@@ -1,8 +1,8 @@
 """S1 Admin routes — payment, NDA/waiver, recruiter assignment, offboarding."""
 
 import os
-import asyncio
 from datetime import datetime
+from html import escape
 from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
@@ -2305,6 +2305,30 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
             member.rank_display = _ranks_s1.abbr_map().get(member.rank_grade, "")
         recent_separations.append({"log": log, "member": member})
 
+    # Separations whose mechanical cleanup never completed. Deliberately NOT
+    # limited to the recent window: Rankin's sat unresolved for two months and
+    # would never have appeared in a "last 20" list. The host reconciler flips
+    # these flags once it confirms the NC side is actually clean, so anything
+    # still listed here is either genuinely dirty or has never been reconciled.
+    stale_result = await db.execute(
+        select(SeparationLog, Member)
+        .join(Member, SeparationLog.member_id == Member.id, isouter=True)
+        .where(
+            (SeparationLog.nc_account_disabled.is_(False))
+            | (SeparationLog.groups_removed.is_(False))
+            | (SeparationLog.talk_removed.is_(False))
+            | (SeparationLog.tokens_revoked.is_(False))
+        )
+        .order_by(desc(SeparationLog.created_at))
+        .limit(50)
+    )
+    unresolved_cleanup = []
+    for row in stale_result.all():
+        log, member = row[0], row[1]
+        if member:
+            member.rank_display = _ranks_s1.abbr_map().get(member.rank_grade, "")
+        unresolved_cleanup.append({"log": log, "member": member})
+
     return templates.TemplateResponse("pages/s1_offboard.html", {
         "request": request,
         "user": user,
@@ -2312,6 +2336,7 @@ async def offboard_dashboard(request: Request, db: AsyncSession = Depends(get_db
         "leave_eligible": leave_eligible,
         "on_leave_members": on_leave_members,
         "recent_separations": recent_separations,
+        "unresolved_cleanup": unresolved_cleanup,
         "now": datetime.utcnow(),
     })
 
@@ -2359,7 +2384,17 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
         notes=notes,
     )
 
-    # Disable NC account if requested
+    # ── Mechanical cleanup, with HONEST per-step reporting ──────────────────
+    # This block previously rendered only the steps that SUCCEEDED, so a failed
+    # group removal looked identical to one that was never requested. That is
+    # exactly how RCT Rankin's half-finished separation (2026-06-29) went
+    # unnoticed until 2026-09-03: separation_log recorded groups_removed=false
+    # and the operator was shown a green success box.
+    #
+    # steps entries are (state, label, detail) where state is one of:
+    #   ok | fail | skip | pending
+    steps: list[tuple[str, str, str]] = []
+
     if disable_nc and member.nc_username:
         try:
             async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
@@ -2368,42 +2403,42 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
                     headers={"OCS-APIRequest": "true"},
                     timeout=15,
                 )
-                log_entry.nc_account_disabled = resp.status_code in (200, 100)
-        except Exception:
-            log_entry.nc_account_disabled = False
-        # Disabling the NC account does NOT evict the user from Talk rooms,
-        # so remove them from all NC Talk conversations explicitly. Runs a
-        # blocking `docker exec ... occ` (up to 30s) via subprocess, so offload
-        # to a thread instead of stalling the event loop for every other
-        # in-flight request.
-        try:
-            await asyncio.to_thread(_nc_talk_remove, member.nc_username)
+            log_entry.nc_account_disabled = resp.status_code in (200, 100)
+            detail = "" if log_entry.nc_account_disabled else f"OCS returned HTTP {resp.status_code}"
         except Exception as e:
-            logger.error(f"NC Talk removal failed for {member.nc_username}: {e}")
+            log_entry.nc_account_disabled = False
+            detail = str(e)
+            logger.error(f"NC disable failed for {member.nc_username}: {e}")
+        steps.append(("ok" if log_entry.nc_account_disabled else "fail",
+                      "NC account disabled", detail))
+    else:
+        steps.append(("skip", "NC account disabled",
+                      "not requested" if member.nc_username else "no NC username on file"))
 
-    # Remove from NC groups if requested
     if remove_groups and member.nc_username:
-        try:
-            async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
-                resp = await client.get(
-                    f"{NC_URL}/ocs/v2.php/cloud/users/{member.nc_username}/groups",
-                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                    timeout=15,
-                )
-                if resp.status_code == 200:
-                    groups = resp.json().get("ocs", {}).get("data", {}).get("groups", [])
-                    for group in groups:
-                        await client.delete(
-                            f"{NC_URL}/ocs/v2.php/cloud/users/{member.nc_username}/groups",
-                            headers={"OCS-APIRequest": "true"},
-                            data={"groupid": group},
-                            timeout=10,
-                        )
-                    log_entry.groups_removed = True
-        except Exception:
-            log_entry.groups_removed = False
+        ok, failed_groups = await _nc_remove_all_groups(member.nc_username)
+        log_entry.groups_removed = ok
+        steps.append(("ok" if ok else "fail", "NC groups removed",
+                      "" if ok else "still a member of: " + ", ".join(failed_groups)))
+    else:
+        steps.append(("skip", "NC groups removed",
+                      "not requested" if member.nc_username else "no NC username on file"))
+
+    # Talk eviction and device-token revocation CANNOT be performed from this
+    # container: praetorium-app has no docker socket and no docker binary, so
+    # it cannot run occ, and Talk's API won't let an admin enumerate another
+    # user's rooms. Both steps genuinely matter -- a disabled NC account is
+    # STILL a Talk participant and its device tokens STILL authenticate, which
+    # is what made Rankin's Android client throw a 503 every ~20 minutes for
+    # two months. The host-side `offboard-reconcile` timer does them and flips
+    # these flags. Report as pending; never claim them as done here.
+    if member.nc_username:
+        steps.append(("pending", "Talk rooms evicted", "queued for host reconciler"))
+        steps.append(("pending", "Device tokens revoked", "queued for host reconciler"))
 
     log_entry.portal_access_revoked = revoke_portal
+    steps.append(("ok" if revoke_portal else "skip", "Portal access revoked",
+                  "" if revoke_portal else "not requested"))
     db.add(log_entry)
 
     # Release recruiter load if this was an active recruit (not a patched member).
@@ -2416,12 +2451,61 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
     if member.email:
         background_tasks.add_task(_send_offboard_email, member, reason, notes)
 
+    # Email is queued after commit, so report it as a step too.
+    steps.append(("ok" if member.email else "fail", "Separation email queued",
+                  "" if member.email else "no email on file — member was NOT notified"))
+
+    # Render every step, failures included. A single failed step turns the whole
+    # banner red: the operator must never be able to read this as "done" when
+    # part of it did not happen.
+    _ICON = {"ok": "✅", "fail": "❌", "skip": "⏭️", "pending": "⏳"}
+    _COLOR = {"ok": "#2e7d32", "fail": "#b71c1c", "skip": "#777", "pending": "#e65100"}
+    failed = [s for s in steps if s[0] == "fail"]
+    pending = [s for s in steps if s[0] == "pending"]
+
+    rows = "".join(
+        f'<div style="margin-top:4px;color:{_COLOR[state]}">'
+        f'{_ICON[state]} {escape(label)}'
+        + (f' <span style="color:#888;font-size:12px">— {escape(detail)}</span>' if detail else "")
+        + "</div>"
+        for state, label, detail in steps
+    )
+
+    if failed:
+        banner_bg, banner_edge = "#ffebee", "#b71c1c"
+        headline = (
+            f"<strong>Separated with {len(failed)} FAILED step"
+            f"{'s' if len(failed) > 1 else ''}:</strong> "
+            f"{escape(member.first_name)} {escape(member.last_name)} — {escape(reason)}"
+            "<div style='margin-top:6px;font-size:13px'>The separation is recorded, but the "
+            "cleanup below is incomplete. Re-run it or fix it by hand — a disabled account that "
+            "keeps its groups, Talk rooms or device tokens will keep erroring against the "
+            "server indefinitely.</div>"
+        )
+    else:
+        banner_bg, banner_edge = "#fff3e0", "#e65100"
+        headline = (
+            f"<strong>Separated:</strong> {escape(member.first_name)} "
+            f"{escape(member.last_name)} — {escape(reason)}"
+        )
+
+    pending_note = ""
+    if pending:
+        pending_note = (
+            "<div style='margin-top:10px;padding:8px 10px;background:#fff8e1;"
+            "border-left:3px solid #e65100;font-size:12px;color:#555'>"
+            "⏳ Talk eviction and token revocation run on the host "
+            "(<code>offboard-reconcile</code>, every 10 min) because this container has no "
+            "occ access. They'll show as complete in <em>Recent Separations</em> once done. "
+            "If they're still outstanding after ~15 minutes, that timer is broken — check it."
+            "</div>"
+        )
+
     return HTMLResponse(f"""
-        <div style="padding: 16px; background: #fff3e0; border-left: 4px solid #e65100; border-radius: 4px;">
-            <strong>Separated:</strong> {member.first_name} {member.last_name} — {reason}
-            {'<br>NC account disabled ✅' if log_entry.nc_account_disabled else ''}
-            {'<br>Groups removed ✅' if log_entry.groups_removed else ''}
-            {'<br>Separation email queued ✅' if member.email else '<br>⚠️ No email on file — notification not sent'}
+        <div style="padding: 16px; background: {banner_bg}; border-left: 4px solid {banner_edge}; border-radius: 4px;">
+            {headline}
+            <div style="margin-top:10px">{rows}</div>
+            {pending_note}
         </div>
     """)
 
@@ -2835,23 +2919,69 @@ NC_ON_LEAVE_GROUP = "on-leave"
 
 
 def _nc_talk_remove(nc_username: str) -> bool:
-    """Remove a user from all Nextcloud Talk rooms via occ. Disabling an NC
-    account does NOT evict them from Talk conversations, so this is required
-    on offboarding. Runs occ inside the nextcloud-app container."""
-    import subprocess
+    """DEAD PATH -- kept only to document why it cannot work from here.
+
+    This used to shell out to:
+        docker exec -u www-data nextcloud-app php occ talk:user:remove --user X
+
+    That can NEVER succeed from inside praetorium-app: the container has no
+    docker socket mounted and no docker binary on PATH, so subprocess.run
+    raised FileNotFoundError, the surrounding `except Exception` swallowed it,
+    and offboarding reported success anyway. That is precisely why RCT Rankin
+    remained in 5 Talk rooms for two months after being separated -- it was a
+    broken mechanism, not a missed checkbox.
+
+    Talk eviction (and device-token revocation) now belong to the host-side
+    `offboard-reconcile` systemd timer, which does have docker/occ access. The
+    portal records the steps as outstanding on the SeparationLog and the
+    reconciler flips them once confirmed.
+
+    Deliberately NOT reintroduced over the Talk OCS API: evicting a user needs
+    the list of rooms they belong to, and Talk's API only exposes rooms for the
+    *authenticated* user -- an admin cannot enumerate someone else's rooms.
+    """
+    raise NotImplementedError(
+        "Talk eviction is handled by the host-side offboard-reconcile timer; "
+        "praetorium-app has no docker/occ access."
+    )
+
+
+async def _nc_remove_all_groups(nc_username: str) -> tuple[bool, list[str]]:
+    """Remove an NC user from every group they belong to.
+
+    Returns (all_removed, failed_group_names). Unlike the previous inline
+    version this reports WHICH groups it could not remove, so a partial failure
+    is visible to the operator instead of collapsing to a single False.
+    """
+    failed: list[str] = []
     try:
-        r = subprocess.run(
-            ["docker", "exec", "-u", "www-data", "nextcloud-app",
-             "php", "occ", "talk:user:remove", "--user", nc_username],
-            capture_output=True, text=True, timeout=30,
-        )
-        ok = r.returncode == 0
-        if not ok:
-            logger.error(f"talk:user:remove failed for {nc_username}: {r.stderr.strip()}")
-        return ok
+        async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
+            resp = await client.get(
+                f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                return False, [f"<could not list groups: HTTP {resp.status_code}>"]
+            groups = resp.json().get("ocs", {}).get("data", {}).get("groups", [])
+            for group in groups:
+                try:
+                    d = await client.delete(
+                        f"{NC_URL}/ocs/v2.php/cloud/users/{nc_username}/groups",
+                        headers={"OCS-APIRequest": "true"},
+                        params={"groupid": group},
+                        timeout=10,
+                    )
+                    code = d.json().get("ocs", {}).get("meta", {}).get("statuscode", 0)
+                    if code not in (100, 200):
+                        failed.append(group)
+                except Exception as e:
+                    logger.error(f"group removal failed for {nc_username}/{group}: {e}")
+                    failed.append(group)
     except Exception as e:
-        logger.error(f"talk:user:remove error for {nc_username}: {e}")
-        return False
+        logger.error(f"group removal aborted for {nc_username}: {e}")
+        return False, [f"<error: {e}>"]
+    return (not failed), failed
 
 
 async def _nc_group_add(nc_username: str, group: str) -> bool:

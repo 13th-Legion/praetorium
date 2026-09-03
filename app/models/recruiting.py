@@ -55,4 +55,28 @@ class SeparationLog(Base):
     nc_account_disabled: Mapped[bool] = mapped_column(Boolean, default=False)
     portal_access_revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     groups_removed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Talk eviction and device-token revocation are NOT things a disabled NC
+    # account gives you for free -- see the notes on process_offboarding().
+    # They are performed by the host-side offboard-reconcile timer (the portal
+    # container has no docker socket and cannot run occ), so these start False
+    # and are flipped when that reconciler confirms them.
+    talk_removed: Mapped[bool] = mapped_column(Boolean, default=False)
+    tokens_revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Steps that must be true before a separation is mechanically complete.
+    CLEANUP_STEPS = (
+        ("nc_account_disabled", "NC account disabled"),
+        ("groups_removed", "NC groups removed"),
+        ("talk_removed", "Talk rooms evicted"),
+        ("tokens_revoked", "Device tokens revoked"),
+    )
+
+    @property
+    def cleanup_outstanding(self) -> list[str]:
+        """Human labels for cleanup steps that have NOT been confirmed."""
+        return [label for attr, label in self.CLEANUP_STEPS if not getattr(self, attr, False)]
+
+    @property
+    def cleanup_complete(self) -> bool:
+        return not self.cleanup_outstanding

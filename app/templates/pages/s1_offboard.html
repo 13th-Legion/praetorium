@@ -121,6 +121,46 @@
     <p style="color: #888; margin-bottom: 24px;">No members are currently on leave.</p>
     {% endif %}
 
+    <!-- Separations with unfinished mechanical cleanup -->
+    {% if unresolved_cleanup %}
+    <div style="margin-bottom: 24px; padding: 14px 16px; background: #ffebee; border-left: 4px solid #b71c1c; border-radius: 4px;">
+        <h2 style="margin: 0 0 6px 0; color: #b71c1c;">⚠️ Separations with unfinished cleanup ({{ unresolved_cleanup | length }})</h2>
+        <p style="margin: 0 0 10px 0; font-size: 13px; color: #555;">
+            These members are separated but still hold something on the Nextcloud side. A disabled
+            account that keeps its groups, Talk rooms or device tokens keeps erroring against the
+            server — one such account generated an HTTP 503 every ~20 minutes for two months before
+            anyone noticed. This list is not limited to recent separations.
+        </p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="border-bottom: 1px solid #ef9a9a;">
+                    <th style="text-align: left; padding: 6px;">Name</th>
+                    <th style="text-align: left; padding: 6px;">NC Username</th>
+                    <th style="text-align: left; padding: 6px;">Separated</th>
+                    <th style="text-align: left; padding: 6px;">Outstanding</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in unresolved_cleanup %}
+                {% set log = s.log %}
+                {% set m = s.member %}
+                <tr style="border-bottom: 1px solid #ffcdd2;">
+                    <td style="padding: 6px;">{% if m %}{{ m.rank_display }} {{ m.last_name }}, {{ m.first_name }}{% else %}#{{ log.member_id }}{% endif %}</td>
+                    <td style="padding: 6px; font-family: monospace; color: #666;">{% if m and m.nc_username %}{{ m.nc_username }}{% else %}—{% endif %}</td>
+                    <td style="padding: 6px; color: #666;">{{ log.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td style="padding: 6px; color: #b71c1c;">{{ log.cleanup_outstanding | join(', ') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p style="margin: 10px 0 0 0; font-size: 12px; color: #777;">
+            The host-side <code>offboard-reconcile</code> timer clears these automatically every 10
+            minutes. If entries persist beyond that, check <code>systemctl status
+            offboard-reconcile.timer</code> on the portal host.
+        </p>
+    </div>
+    {% endif %}
+
     <!-- Recent separations log -->
     <h2>Recent Separations</h2>
     {% if recent_separations %}
@@ -131,6 +171,7 @@
                 <th style="text-align: left; padding: 8px;">Reason</th>
                 <th style="text-align: left; padding: 8px;">Initiated By</th>
                 <th style="text-align: left; padding: 8px;">Date</th>
+                <th style="text-align: left; padding: 8px;">Cleanup</th>
                 <th style="text-align: left; padding: 8px;">Notes</th>
             </tr>
         </thead>
@@ -153,6 +194,17 @@
                 </td>
                 <td style="padding: 8px;">{{ log.initiated_by }}</td>
                 <td style="padding: 8px;">{{ log.created_at.strftime('%Y-%m-%d') }}</td>
+                <td style="padding: 8px;">
+                    {% if log.cleanup_complete %}
+                        <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #e8f5e9; color: #2e7d32;">complete</span>
+                    {% else %}
+                        <span title="Outstanding: {{ log.cleanup_outstanding | join(', ') }}"
+                              style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #ffebee; color: #b71c1c;">
+                            ⚠️ {{ log.cleanup_outstanding | length }} outstanding
+                        </span>
+                        <div style="color: #b71c1c; font-size: 11px; margin-top: 3px;">{{ log.cleanup_outstanding | join(', ') }}</div>
+                    {% endif %}
+                </td>
                 <td style="padding: 8px; color: #aaa; font-size: 12px;">{{ log.notes or '—' }}</td>
             </tr>
             {% endfor %}
