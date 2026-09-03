@@ -726,8 +726,13 @@ async def _fetch_pipeline_applicants() -> list[dict]:
                         "next_stage": DECK_STACKS.get(STAGE_FLOW.get(stack_id, 0), ""),
                         "is_approve": stack_id == 14,  # Docs & Payment → Approve triggers onboarding
                     })
-    except Exception:
-        pass
+    except Exception as e:
+        # Was a bare `except Exception: pass`, which turned a broken Deck
+        # integration into an empty applicant list with no trace anywhere --
+        # the same failure shape that hid four separate month-long outages in
+        # this codebase. Callers still get [] so the page renders, but the
+        # cause is now recorded.
+        logger.error("_fetch_pipeline_applicants failed: %s", e, exc_info=True)
     return applicants
 
 
@@ -3281,6 +3286,52 @@ async def s1_glance(request: Request):
         recruits = (await db.execute(
             select(func.count()).select_from(Member).where(Member.status == "recruit")
         )).scalar() or 0
+
+    # Applicants = people whose APPLICATION is still being processed. Anyone who
+    # has reached the roster proper is NOT an applicant, so this counts Deck
+    # cards, not Member rows.
+    #
+    # This card used to show Member.status == "recruit" (onboarded recruits
+    # awaiting patch) while linking to the applicant board -- number and
+    # destination described different populations.
+    #
+    # Two things that make a naive count wrong:
+    #   * Declined applicants are ARCHIVED in place (decline_applicant sets
+    #     archived=true and prefixes the title with an X); they stay in their
+    #     original stack, so archived cards MUST be excluded or the count is
+    #     wildly inflated -- 58 raw vs 7 real.
+    #   * Complete (16) is on the roster already, so it is excluded via
+    #     DECK_ACTIVE_STACKS. On Hold (81) is not completed but not actively
+    #     progressing either, so it is reported separately rather than hidden.
+    applicants = None      # None => could not determine; render honestly
+    on_hold = 0
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+        if resp.status_code != 200:
+            logger.error(
+                "s1_glance: Deck stacks fetch failed HTTP %s body=%r",
+                resp.status_code, resp.text[:300],
+            )
+        else:
+            applicants = 0
+            for stack in resp.json():
+                sid = stack.get("id")
+                if sid not in DECK_ACTIVE_STACKS and sid != ON_HOLD_STACK:
+                    continue
+                # The Deck API omits archived cards from this endpoint, but be
+                # explicit so a future API change cannot silently reinflate this.
+                live = [c for c in (stack.get("cards") or []) if not c.get("archived")]
+                if sid == ON_HOLD_STACK:
+                    on_hold = len(live)
+                else:
+                    applicants += len(live)
+    except Exception as e:
+        logger.error("s1_glance: could not count applicants from Deck: %s", e, exc_info=True)
         patched = (await db.execute(
             select(func.count()).select_from(Member).where(Member.status == "active")
         )).scalar() or 0
@@ -3312,7 +3363,15 @@ async def s1_glance(request: Request):
     html = '<div style="display:flex;flex-wrap:wrap;gap:12px;">'
     html += card("\U0001F4DD", "Pending training claims", pending_claims,
                  "/api/training/claims/review", warn=True)
-    html += card("\U0001F4E5", "Recruits in pipeline", recruits, "/api/s1/pipeline")
+    # Show "—" rather than a fake 0 when the Deck fetch failed: a silent zero on
+    # a dashboard is exactly how a broken integration goes unnoticed for weeks.
+    html += card(
+        "\U0001F4E5", "Applicants",
+        applicants if applicants is not None else "\u2014",
+        "/api/s1/pipeline",
+        sub=(f"{on_hold} on hold" if applicants is not None and on_hold
+             else ("in processing" if applicants is not None else "Deck unreachable")),
+    )
     # Breakdown makes the relationship to the adjacent recruits card explicit,
     # so 48 total / 22 recruits doesn't read as double-counting.
     html += card("\U0001F465", "Active members", active, "/roster",
