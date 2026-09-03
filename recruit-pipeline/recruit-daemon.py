@@ -109,6 +109,13 @@ MAX_ONBOARD_ATTEMPTS = 5
 NC_ACCOUNT_CREATED = "created"
 NC_ACCOUNT_EXISTS = "exists"
 
+# create_portal_member() outcomes. Distinct values matter: "row already there"
+# is a SUCCESS on an idempotent re-run, and must never share a return value
+# with a genuine DB failure -- onboarding aborts on failure, so conflating the
+# two would make every retry abort permanently.
+PORTAL_MEMBER_CREATED = "created"
+PORTAL_MEMBER_EXISTS = "exists"
+
 # Stack IDs (S1 — Recruit Pipeline board)
 STACKS = {
     "new": 11,
@@ -1721,20 +1728,47 @@ def create_portal_member(info, nc_username, team):
         ))
 
         result = cur.fetchone()
+
+        if result:
+            conn.commit()
+            cur.close()
+            conn.close()
+            log.info(f"Created portal member: {first_name} {last_name} ({serial_number})")
+            return PORTAL_MEMBER_CREATED
+
+        # No row returned. The INSERT carries ON CONFLICT (nc_username) DO
+        # NOTHING, so this means a row for this nc_username already exists --
+        # which is SUCCESS for an idempotent re-run, not failure. Confirm it
+        # rather than assuming, then report it distinctly.
+        #
+        # This used to `return False` here, sharing one value with three real
+        # failure paths. Aborting onboarding on a bare False would therefore
+        # have made every RETRY abort forever, because the second attempt
+        # always lands on the conflict -- the exact ambiguous-return bug that
+        # stranded RCT Garcia for 7 days.
+        cur.execute("SELECT id FROM members WHERE nc_username = %s", (nc_username,))
+        existing = cur.fetchone()
         conn.commit()
         cur.close()
         conn.close()
 
-        if result:
-            log.info(f"Created portal member: {first_name} {last_name} ({serial_number})")
-            return True
-        else:
-            log.warning(f"Member {first_name} {last_name} may already exist in portal DB")
-            return False
+        if existing:
+            log.info(
+                f"Portal member row already present for {first_name} {last_name} "
+                f"(id {existing[0]}, nc user {nc_username}) — treating as created"
+            )
+            return PORTAL_MEMBER_EXISTS
+
+        log.error(
+            f"Portal insert returned no row for {first_name} {last_name} "
+            f"(nc user {nc_username}) AND no existing row was found — the roster "
+            f"row does not exist"
+        )
+        return None
 
     except ImportError:
-        log.warning("psycopg2 not available — skipping portal DB insert")
-        return False
+        log.error("psycopg2 not available — cannot create the portal roster row")
+        return None
     except Exception as e:
         log.error(
             f"Failed to create portal member row for "
@@ -1742,7 +1776,7 @@ def create_portal_member(info, nc_username, team):
             f"team {team}): {e}",
             exc_info=True,
         )
-        return False
+        return None
 
 
 PORTAL_CONTAINER = os.environ.get("PORTAL_CONTAINER", "praetorium-app")
@@ -2369,24 +2403,39 @@ def _onboard_member(card, state, dry_run=False):
                 f"completing the rest of onboarding"
             )
 
-    # 2. Create portal DB record.
-    # DELIBERATELY non-fatal: the NC account already exists at this point, and
-    # the portal re-syncs rosters on its own pass, so aborting here would
-    # burn onboarding attempts toward the dead-letter cap for a transient DB
-    # blip. But it must never be silent -- a recruit with credentials and no
-    # roster row is invisible to S1.
-    if not create_portal_member(info, nc_username, team):
+    # 2. Create portal DB record. FATAL on failure (changed 2026-09-03 on
+    # Cav's call).
+    #
+    # A recruit holding an NC account and a welcome email but no roster row is
+    # a worse state than a clean failure: they are live in Nextcloud and
+    # invisible to S1, and nothing retries them. Aborting here is safe because
+    # every step so far is idempotent -- create_nc_account returns EXISTS on a
+    # re-run and the INSERT carries ON CONFLICT DO NOTHING -- so the next poll
+    # retries cleanly, and the bounded-retry wrapper dead-letters the card
+    # after MAX_ONBOARD_ATTEMPTS instead of looping forever.
+    #
+    # Critically this aborts BEFORE the welcome email (step 5), the card move
+    # to Complete (step 6), and the onboarded_cards write -- so a retry is
+    # still possible and the recruit is never sent credentials for a
+    # half-finished onboarding.
+    portal_result = create_portal_member(info, nc_username, team)
+    if portal_result is None:
         log.error(
-            f"Portal roster row NOT created for {name} ({nc_username}) — "
-            f"continuing onboarding; the member exists in Nextcloud but not "
-            f"on the portal roster"
+            f"Onboarding ABORTED for {name} ({nc_username}) — portal roster row "
+            f"could not be created. Their Nextcloud account exists; no welcome "
+            f"email was sent and the card was not advanced, so the next poll "
+            f"will retry."
         )
         notify_s1_nctalk(
-            f"⚠️ **Onboarding: portal roster insert failed**\n"
+            f"⛔ **Onboarding aborted: portal roster insert failed**\n"
             f"Member: {name} (`{nc_username}`, team {team})\n"
-            f"Their Nextcloud account was created, but the Praetorium roster "
-            f"row was not. Add them manually or re-run the portal sync."
+            f"Their Nextcloud account was created, but the Praetorium roster row "
+            f"was not, so onboarding stopped before sending credentials. It will "
+            f"retry automatically on the next poll. If it keeps failing the card "
+            f"is dead-lettered after {MAX_ONBOARD_ATTEMPTS} attempts — check the "
+            f"portal DB."
         )
+        return False
 
     # 3. Add to NC Maps
     raw_addr = info.get("Address", "")
