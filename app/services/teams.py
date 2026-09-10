@@ -18,7 +18,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from app.database import async_session
+from app import database
 from app.models.team import Team
 from app import constants as _const
 
@@ -64,7 +64,7 @@ def _seed_from_constants() -> list[TeamMeta]:
 
 async def _load() -> list[TeamMeta]:
     try:
-        async with async_session() as db:
+        async with database.async_session() as db:
             rows = (await db.execute(
                 select(Team).order_by(Team.sort_order, Team.name)
             )).scalars().all()

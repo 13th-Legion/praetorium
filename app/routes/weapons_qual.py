@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, desc
 
 from app.auth import require_auth, get_current_user
-from app.database import async_session
+from app import database
 from app.models.member import Member
 from app.models.events import Event, EventRSVP
 from app.services import ranks as _ranks
@@ -37,7 +37,7 @@ async def weapons_qual_page(request: Request, event_id: int | None = None, saved
     if not _can_manage(user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # FTX/MCFTX events, most recent first
         events = (await db.execute(
             select(Event)
@@ -98,7 +98,7 @@ async def weapons_qual_save(request: Request, event_id: int):
     form = await request.form()
     recorder = (user or {}).get("username") or "unknown"
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = (await db.execute(
             select(Event).where(Event.id == event_id)
         )).scalar_one_or_none()

@@ -58,16 +58,17 @@ class _FakeTalkClient:
 
 
 @pytest_asyncio.fixture
-async def frago_env(db_session, db_sessionmaker, monkeypatch):
+async def frago_env(db_session, db_sessionmaker, patch_global_session, monkeypatch):
     """An OPORD-issued event with two attending members (one without an email).
 
-    `app.routes.events` does `from app.database import async_session` at import
-    time, so the shared `patch_global_session` fixture does not reach it --
-    patch the module attribute directly or the handler talks to the real DB.
+    Session redirection comes from `patch_global_session`: `app.routes.events`
+    resolves the sessionmaker through the module (`database.async_session()`)
+    rather than binding a private copy, so rebinding `app.database.async_session`
+    once reaches it. Do NOT patch `events.async_session` -- that attribute does
+    not exist, and a module that reintroduces the by-name import would silently
+    escape the patch and dial the real DATABASE_URL host.
     """
     import app.routes.events as ev
-
-    monkeypatch.setattr(ev, "async_session", db_sessionmaker)
 
     event = await make_event(
         db_session,

@@ -25,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
 from app.auth import require_auth, get_current_user
-from app.database import async_session
+from app import database
 from app.models.member import Member
 from app.models.events import Event, EventRSVP
 from app.models.recruiting import Recruiter, DocumentSignature, SeparationLog
@@ -87,7 +87,7 @@ async def recruiting_analytics(request: Request):
     if not _has_access(user):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         all_members = (await db.execute(select(Member))).scalars().all()
         recruiters = (await db.execute(select(Recruiter))).scalars().all()
         sep_logs = (await db.execute(select(SeparationLog))).scalars().all()

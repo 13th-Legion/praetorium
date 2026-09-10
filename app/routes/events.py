@@ -19,7 +19,7 @@ from sqlalchemy import select, func, and_, or_, case, update
 from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
-from app.database import async_session
+from app import database
 from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, EventFrago
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
@@ -819,7 +819,7 @@ async def sync_calendar(request: Request):
         created = 0
         updated = 0
 
-        async with async_session() as db:
+        async with database.async_session() as db:
             # Get all active + recruit members for RSVP creation
             members_result = await db.execute(
                 select(Member.id).where(
@@ -908,7 +908,7 @@ async def events_page(request: Request):
     roles = set(user.get("roles", []))
     tab = request.query_params.get("tab", "all")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Get member_id for current user
         member_result = await db.execute(
             select(Member.id).where(Member.nc_username == user.get("username", ""))
@@ -1112,7 +1112,7 @@ async def event_detail(request: Request, event_id: int):
     """Event detail page with RSVP and roster."""
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(Event).options(
                 selectinload(Event.documents),
@@ -1225,7 +1225,7 @@ async def event_detail(request: Request, event_id: int):
 
     # FRAGOs issued against this event, newest first. Loaded here (rather than via the
     # Event.fragos relationship) so the ordering is explicit and the session is still open.
-    async with async_session() as _fdb:
+    async with database.async_session() as _fdb:
         _fragos = (await _fdb.execute(
             select(EventFrago)
             .where(EventFrago.event_id == event.id)
@@ -1294,7 +1294,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         except ValueError:
             guest_count = None
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Check event exists and RSVP is enabled/open
         event_result = await db.execute(select(Event).where(Event.id == event_id))
         event = event_result.scalar_one_or_none()
@@ -1588,7 +1588,7 @@ def _render_rsvp_controls(
 @require_auth
 async def event_roster(request: Request, event_id: int):
     """Return RSVP roster HTML partial. Shows confirmed attendees for finalized events."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Check if event is finalized
         evt = await db.execute(select(Event).where(Event.id == event_id))
         event = evt.scalar_one_or_none()
@@ -1729,7 +1729,7 @@ async def create_event(request: Request):
         starts = [date_start]
         series_id = None
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Resolve the RSVP recipient set ONCE (same for every occurrence)
         rsvp_member_ids = set()
         if rsvp_on:
@@ -1832,7 +1832,7 @@ async def edit_event(request: Request, event_id: int):
     form_dict = {k: (str(form[k])[:120] + "…" if len(str(form[k])) > 120 else form[k]) for k in form}
     logger.warning(f"EDIT event_id={event_id} form={form_dict}")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -2090,7 +2090,7 @@ async def cancel_event(request: Request, event_id: int):
     """
     form = await request.form()
     scope = (form.get("series_scope") or "this").strip()
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
@@ -2132,7 +2132,7 @@ async def delete_event(request: Request, event_id: int):
     """
     form = await request.form()
     scope = (form.get("series_scope") or "this").strip()
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
@@ -2182,7 +2182,7 @@ async def tradoc_agenda(request: Request):
     if not ordered:
         return HTMLResponse('<p style="color:#888;">Select one or more training blocks first.</p>')
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         blocks = (await db.execute(
             select(TradocBlock).where(TradocBlock.archived.is_(False))
         )).scalars().all()
@@ -2224,7 +2224,7 @@ async def upcoming_events(request: Request):
     user = request.session.get("user", {})
     now = _now_ct()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Try DB first — deduplicate recurring events (show next occurrence only)
         result = await db.execute(
             select(Event)
@@ -2410,7 +2410,7 @@ async def pending_finalization_widget(request: Request):
         return HTMLResponse("")
 
     now = _now_ct()
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(Event).where(
                 Event.category.in_(["ftx", "mcftx"]),
@@ -2467,7 +2467,7 @@ async def warno_banner(request: Request):
     user = request.session.get("user", {})
     now = _now_ct()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Auto-issue any WARNOs whose scheduled time has passed
         pending_warnos = await db.execute(
             select(Event).where(
@@ -2648,7 +2648,7 @@ async def warno_banner(request: Request):
 async def issue_warno(request: Request, event_id: int):
     """Immediately issue a WARNO for an event."""
     now = datetime.utcnow()
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -2686,7 +2686,7 @@ async def schedule_warno(request: Request, event_id: int):
             '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">Invalid date/time.</div>'
         )
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -2708,7 +2708,7 @@ async def schedule_warno(request: Request, event_id: int):
 async def issue_opord(request: Request, event_id: int, background_tasks: BackgroundTasks):
     """Publish OPORD: set timestamp, email attending members, cross-post to Talk, portal notification."""
     now = datetime.utcnow()
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -2966,7 +2966,7 @@ async def issue_fragord(
 
     now = datetime.utcnow()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Lock the parent event row so the per-event FRAGO number is claimed exactly once.
         result = await db.execute(select(Event).where(Event.id == event_id).with_for_update())
         event = result.scalar_one_or_none()
@@ -3075,7 +3075,7 @@ async def issue_fragord(
         )
 
         async def _record():
-            async with async_session() as db2:
+            async with database.async_session() as db2:
                 row = (await db2.execute(
                     select(EventFrago).where(EventFrago.id == frago_id)
                 )).scalar_one_or_none()
@@ -3115,7 +3115,7 @@ async def issue_fragord(
 @require_role("command", "s3", "s1", "admin")
 async def toggle_attendance(request: Request, event_id: int, rsvp_id: int):
     """Toggle attended flag for a specific RSVP."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventRSVP).where(
                 and_(EventRSVP.id == rsvp_id, EventRSVP.event_id == event_id)
@@ -3163,7 +3163,7 @@ async def add_walk_in(request: Request, event_id: int):
     if not member_id:
         return HTMLResponse("No member selected", status_code=400)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Check event exists and is not finalized
         ev_result = await db.execute(select(Event).where(Event.id == event_id))
         event = ev_result.scalar_one_or_none()
@@ -3222,7 +3222,7 @@ async def add_walk_in(request: Request, event_id: int):
 @require_role("command", "s3", "s1", "admin")
 async def attendance_roster(request: Request, event_id: int):
     """Return the attendance confirmation checklist partial."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         ev_result = await db.execute(select(Event).where(Event.id == event_id))
         event = ev_result.scalar_one_or_none()
         if not event:
@@ -3297,7 +3297,7 @@ async def finalize_event(request: Request, event_id: int):
             '<div style="color:#ef5350;font-size:13px;">❌ Only Command, S3, or S1 can finalize events.</div>'
         )
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -3368,7 +3368,7 @@ async def unfinalize_event(request: Request, event_id: int):
             '<div style="color:#ef5350;font-size:13px;">❌ Only Command or S1 can reopen finalized events.</div>'
         )
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -3542,7 +3542,7 @@ async def save_aar(request: Request, event_id: int):
     commander_intent = (form.get("commander_intent") or "").strip()
     mission_summary = (form.get("mission_summary") or "").strip()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event or not event.finalized_at:
             return HTMLResponse('<div style="color:#ef5350;font-size:13px;">❌ Event must be finalized before AAR.</div>')
@@ -3650,7 +3650,7 @@ async def save_aar(request: Request, event_id: int):
                 pass
             try:
                 from app.routes.notifications import create_notification_for_all
-                async with async_session() as ndb:
+                async with database.async_session() as ndb:
                     await create_notification_for_all(
                         ndb, "event", f"\U0001f4cb AAR \u2014 {_evt_title}",
                         body=f"{_date_str} \u00b7 After Action Review published",
@@ -3693,7 +3693,7 @@ async def export_opord_pdf(request: Request, event_id: int):
 
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Event).where(Event.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
@@ -3986,7 +3986,7 @@ async def export_aar_pdf(request: Request, event_id: int):
     from starlette.responses import Response
     import textwrap, io, os
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event or not event.aar_published_at:
             return HTMLResponse('<div style="color:#ef5350;">AAR not published yet.</div>', status_code=404)

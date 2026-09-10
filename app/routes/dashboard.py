@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_
 
 from app.auth import require_auth
-from app.database import async_session
+from app import database
 from app.models.elections import Election, ElectionBallot
 from app.models.member import Member
 from app.models.events import Event
@@ -59,7 +59,7 @@ async def dashboard(request: Request):
     # Check for an active election to show banner
     active_election = None
     election_winner_name = None
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(Election)
             .where(Election.phase.in_(["scheduled", "nominations", "voting", "complete"]))
@@ -103,7 +103,7 @@ async def dashboard(request: Request):
     # Order by EVENT date_start desc (not publish time) so a late-published AAR
     # for an old event does not jump ahead of newer events' AARs.
     latest_aars = []
-    async with async_session() as db2:
+    async with database.async_session() as db2:
         _r = await db2.execute(
             select(Event)
             .where(Event.aar_published_at.is_not(None))
@@ -149,7 +149,7 @@ async def activity_feed(request: Request):
     (they are not discrete 'events').
     """
     items = []  # each: {dt, kind, icon, member_id, name, callsign, text, img}
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Promotions — skip the very first (initial) assignment where old_rank is null
         pr = await db.execute(
             select(RankHistory, Member)

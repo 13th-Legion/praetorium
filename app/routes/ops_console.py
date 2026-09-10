@@ -27,7 +27,7 @@ from sqlalchemy import select, and_, delete
 from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
-from app.database import async_session
+from app import database
 from app.models.events import (
     Event, EventRSVP, EventGuest, EventBuddyPair,
     EventGuardSlot, EventGuardDuty, EventVexillation, EventVexillationAssignment,
@@ -115,7 +115,7 @@ async def ops_console(request: Request, event_id: int):
     user = get_current_user(request)
     settings = get_settings()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
         roster_rows = await _build_roster(db, event)
         guard_slots = await _get_guard_slots(db, event_id)
@@ -169,7 +169,7 @@ async def ops_qr_code(request: Request, event_id: int):
     user = get_current_user(request)
     settings = get_settings()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
     window = _qr_rotation_window()
@@ -204,7 +204,7 @@ async def qr_checkin(request: Request, event_id: int, token: str = ""):
             "message": "Invalid or expired check-in token. Ask S1 for a fresh QR code.",
         })
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
 
         # Look up member
@@ -284,7 +284,7 @@ async def qr_checkin_get(request: Request, event_id: int, token: str = ""):
             "message": "Invalid or expired check-in token. Ask S1 for a fresh QR code.",
         })
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
 
         username = user.get("username")
@@ -352,7 +352,7 @@ async def ops_roster(request: Request, event_id: int):
     """HTMX partial: live roster table body (polls every 10s)."""
     user = get_current_user(request)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
         roster_rows = await _build_roster(db, event)
         guard_slots = await _get_guard_slots(db, event_id)
@@ -390,7 +390,7 @@ async def override_rsvp(
     if status not in ("attending", "declined", "pending"):
         return HTMLResponse("Invalid status", status_code=400)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
 
         rsvp_result = await db.execute(
@@ -444,7 +444,7 @@ async def manual_checkin(
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         result = await db.execute(
@@ -493,7 +493,7 @@ async def pair_buddy(
     if not member_a_id and not guest_a_id:
         raise HTTPException(status_code=400, detail="At least one person (A) required")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         pair = EventBuddyPair(
@@ -514,7 +514,7 @@ async def pair_buddy(
 @require_role(*S1_CMD_ROLES)
 async def unpair_buddy(request: Request, event_id: int, pair_id: int):
     """Remove a battle buddy pairing (HTMX DELETE)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventBuddyPair).where(
                 and_(EventBuddyPair.id == pair_id, EventBuddyPair.event_id == event_id)
@@ -533,7 +533,7 @@ async def unpair_buddy(request: Request, event_id: int, pair_id: int):
 @require_role(*S1_CMD_ROLES)
 async def unpair_buddy_post(request: Request, event_id: int, pair_id: int):
     """Remove a battle buddy pairing (POST fallback for non-JS)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventBuddyPair).where(
                 and_(EventBuddyPair.id == pair_id, EventBuddyPair.event_id == event_id)
@@ -562,7 +562,7 @@ async def configure_guard_slots(
     slot_labels: str = Form(""),  # comma-separated labels
 ):
     """Configure guard duty slots for an event."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         # Remove existing slots
@@ -599,7 +599,7 @@ async def assign_guard(
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         # Get slot info
@@ -630,7 +630,7 @@ async def assign_guard(
 @require_role(*S1_S2_CMD_ROLES)
 async def unassign_guard(request: Request, event_id: int, assignment_id: int):
     """Remove a guard duty assignment (HTMX DELETE)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventGuardDuty).where(
                 and_(EventGuardDuty.id == assignment_id, EventGuardDuty.event_id == event_id)
@@ -649,7 +649,7 @@ async def unassign_guard(request: Request, event_id: int, assignment_id: int):
 @require_role(*S1_S2_CMD_ROLES)
 async def unassign_guard_post(request: Request, event_id: int, assignment_id: int):
     """Remove a guard duty assignment (POST fallback)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventGuardDuty).where(
                 and_(EventGuardDuty.id == assignment_id, EventGuardDuty.event_id == event_id)
@@ -671,7 +671,7 @@ async def auto_assign_guard(request: Request, event_id: int):
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         # Get slots
@@ -730,7 +730,7 @@ async def create_vexillation(
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         vex = EventVexillation(
@@ -750,7 +750,7 @@ async def create_vexillation(
 @require_role(*S3_CMD_ROLES)
 async def delete_vexillation(request: Request, event_id: int, vex_id: int):
     """Delete a vexillation and all its assignments (HTMX DELETE)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventVexillation).where(
                 and_(EventVexillation.id == vex_id, EventVexillation.event_id == event_id)
@@ -771,7 +771,7 @@ async def delete_vexillation_post(request: Request, event_id: int, vex_id: int):
     """Delete a vexillation (POST fallback)."""
     user = get_current_user(request)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventVexillation).where(
                 and_(EventVexillation.id == vex_id, EventVexillation.event_id == event_id)
@@ -785,7 +785,7 @@ async def delete_vexillation_post(request: Request, event_id: int, vex_id: int):
 
     # HTMX → return updated vex summary partial
     if request.headers.get("HX-Request"):
-        async with async_session() as db:
+        async with database.async_session() as db:
             event = await _get_event_or_404(db, event_id)
             vexillations = await _get_vexillations(db, event_id)
             member_map = await _get_member_map(db, event_id)
@@ -813,7 +813,7 @@ async def assign_vexillation(
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         # Remove any existing vexillation assignment for this member at this event
@@ -854,7 +854,7 @@ async def set_vexillation_status(
     if field_status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status: {field_status}")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventVexillation).where(
                 and_(EventVexillation.id == vex_id, EventVexillation.event_id == event_id)
@@ -878,7 +878,7 @@ async def set_vexillation_commander(
     commander_id: Optional[int] = Form(None),
 ):
     """Set or clear the commander (Praepositus) of a vexillation."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(EventVexillation).where(
                 and_(EventVexillation.id == vex_id, EventVexillation.event_id == event_id)
@@ -912,7 +912,7 @@ async def add_walkin_guest(
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
         guest = EventGuest(
@@ -944,7 +944,7 @@ async def ops_guard_config(request: Request, event_id: int):
     """HTMX partial: guard slot configuration panel."""
     user = get_current_user(request)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
         guard_slots = await _get_guard_slots(db, event_id)
         guard_duties = await _get_guard_duties(db, event_id)
@@ -968,7 +968,7 @@ async def ops_vex_summary(request: Request, event_id: int):
     """HTMX partial: vexillation summary with field status toggles."""
     user = get_current_user(request)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await _get_event_or_404(db, event_id)
         vexillations = await _get_vexillations(db, event_id)
         member_map = await _get_member_map(db, event_id)

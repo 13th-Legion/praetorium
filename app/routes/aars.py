@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth
-from app.database import async_session
+from app import database
 from app.models.events import Event
 
 log = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ def _summarize(event):
 @require_auth
 async def aar_library(request: Request):
     user = request.session.get("user", {})
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(Event)
             .where(Event.aar_published_at.is_not(None))

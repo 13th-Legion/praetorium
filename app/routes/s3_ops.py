@@ -9,7 +9,8 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth, get_current_user
-from app.database import get_db, async_session
+from app import database
+from app.database import get_db
 from app.models.events import Event, EventRSVP
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
@@ -296,7 +297,7 @@ async def set_training_site(
     if site_key and site_key not in TRAINING_SITES:
         site_key = None
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
@@ -353,7 +354,7 @@ async def add_schedule_block(
     else:
         end_time = None
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         block = EventScheduleBlock(
             event_id=event_id,
             day_number=day_number,
@@ -397,7 +398,7 @@ async def delete_schedule_block(request: Request, event_id: int, block_id: int):
     if not _has_s3_access(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         block = await db.get(EventScheduleBlock, block_id)
         if block and block.event_id == event_id:
             await db.delete(block)
@@ -437,7 +438,7 @@ async def update_schedule_block(
             _instructor_id = None
     instructor_id = _instructor_id
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         block = await db.get(EventScheduleBlock, block_id)
         if not block or block.event_id != event_id:
             return HTMLResponse('<div style="color:#b71c1c;">Block not found.</div>', status_code=404)
@@ -477,7 +478,7 @@ async def set_rally_point(
     if not _has_s2_access(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied — S2/Command only.</div>', status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
@@ -570,7 +571,7 @@ async def set_rally_time(
     if not _has_s3_access(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
@@ -599,7 +600,7 @@ async def set_frequencies(
 
     form = await request.form()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
@@ -632,7 +633,7 @@ async def save_opord(
 
     form = await request.form()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         event = await db.get(Event, event_id)
         if not event:
             return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
@@ -679,7 +680,7 @@ async def instructor_rotation_panel(request: Request):
     from app.routes.events import _build_recipient_groups
     from app.services import instructor_rotation as _rot
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         series = await _rot.series_options(db)
         groups = await _build_recipient_groups(db)
 
@@ -758,7 +759,7 @@ async def instructor_rotation_preview(request: Request):
     from app.routes.events import _resolve_invite_groups
     from app.services import instructor_rotation as _rot
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         events = await _rot.series_events(db, series_id, future_only=True,
                                           only_unassigned=only_unassigned)
         if not events:
@@ -851,7 +852,7 @@ async def instructor_rotation_apply(request: Request):
         return HTMLResponse('<div style="color:#b71c1c;">Nothing to apply.</div>')
 
     applied = 0
-    async with async_session() as db:
+    async with database.async_session() as db:
         for eid, mid in pairs:
             ev = await db.get(Event, eid)
             if ev:
@@ -885,7 +886,7 @@ async def instructor_rotation_schedule(request: Request, series_id: str = ""):
     from app.services import instructor_rotation as _rot
     from app.services import nc_rooms as _nc_rooms_svc
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         if not series_id:
             opts = await _rot.series_options(db)
             if not opts:
@@ -989,7 +990,7 @@ async def instructor_rotation_publish(request: Request):
     from app.routes.events import _post_talk
     from app.services import instructor_rotation as _rot
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         events = await _rot.series_events(db, series_id, future_only=True)
         ids = [e.instructor_id for e in events if e.instructor_id]
         labels = await _rot.member_labels(db, ids)

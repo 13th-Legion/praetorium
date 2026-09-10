@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select, update, desc, or_, and_
-from app.database import async_session
+from app import database
 from app.models.notifications import Notification
 from app.models.member import Member
 from app.auth import require_auth
@@ -26,7 +26,7 @@ async def get_current_member_id(request: Request, db):
 @router.get("/count", response_class=HTMLResponse)
 @require_auth
 async def get_unread_count(request: Request):
-    async with async_session() as db:
+    async with database.async_session() as db:
         member_id = await get_current_member_id(request, db)
         if not member_id:
             return ""
@@ -47,7 +47,7 @@ async def get_unread_count(request: Request):
 @router.get("/dropdown", response_class=HTMLResponse)
 @require_auth
 async def get_dropdown(request: Request):
-    async with async_session() as db:
+    async with database.async_session() as db:
         member_id = await get_current_member_id(request, db)
         if not member_id:
             return ""
@@ -127,7 +127,7 @@ async def get_dropdown(request: Request):
 @router.post("/{notification_id}/read", response_class=HTMLResponse)
 @require_auth
 async def mark_read(request: Request, notification_id: int):
-    async with async_session() as db:
+    async with database.async_session() as db:
         member_id = await get_current_member_id(request, db)
         if not member_id:
             return ""
@@ -181,7 +181,7 @@ async def mark_read(request: Request, notification_id: int):
 @router.post("/read-all", response_class=HTMLResponse)
 @require_auth
 async def mark_all_read(request: Request):
-    async with async_session() as db:
+    async with database.async_session() as db:
         member_id = await get_current_member_id(request, db)
         if not member_id:
             return ""

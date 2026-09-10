@@ -155,26 +155,15 @@ async def db_session(db_sessionmaker):
 async def patch_global_session(db_sessionmaker, monkeypatch):
     """Redirect app.database.async_session (used directly by many routes/
     services) at the test sessionmaker, so side-effecting handlers hit the
-    throwaway DB instead of prod-shaped db:5432."""
+    throwaway DB instead of prod-shaped db:5432.
+
+    This single rebind is sufficient because application modules resolve the
+    sessionmaker through the module (`database.async_session()`) rather than
+    binding a private copy with `from app.database import async_session`. A
+    module that reintroduces the by-name import will silently escape this
+    patch and try to reach the real DATABASE_URL host; see the note in
+    app/database.py."""
     import app.database as dbmod
 
-    real_session = dbmod.async_session
     monkeypatch.setattr(dbmod, "async_session", db_sessionmaker)
-
-    # A module that did `from app.database import async_session` at import time
-    # holds its OWN reference to the sessionmaker; rebinding the attribute on
-    # app.database above does not touch that copy, so such a module would still
-    # open connections against the real (unreachable) DATABASE_URL host.
-    #
-    # Sweep every already-imported app module and redirect any copy that is
-    # still the real sessionmaker. The identity check keeps this precise, and
-    # monkeypatch unwinds each setattr at teardown. This replaces the old
-    # hand-maintained allowlist, which only covered app.routes.paypal_webhook
-    # and silently missed every other module with the same import style.
-    for name, mod in list(sys.modules.items()):
-        if mod is None or not (name == "app" or name.startswith("app.")):
-            continue
-        if getattr(mod, "async_session", None) is real_session:
-            monkeypatch.setattr(mod, "async_session", db_sessionmaker, raising=False)
-
     return db_sessionmaker
