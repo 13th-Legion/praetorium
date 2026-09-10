@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.database import async_session
+from app import database
 
 router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
@@ -27,7 +27,10 @@ async def readiness():
     (a static /health can't).
     """
     try:
-        async with async_session() as db:
+        # Resolved through the module (not `from ... import async_session`) so a
+        # rebound app.database.async_session — e.g. the test suite's throwaway
+        # sessionmaker — is actually picked up here.
+        async with database.async_session() as db:
             await db.execute(text("SELECT 1"))
         return {"status": "ready", "db": "ok"}
     except Exception as e:
