@@ -17,7 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth, require_role, get_current_user
-from app.database import get_db, async_session
+from app import database
+from app.database import get_db
 from app.models.member import Member
 from app.models.org import ShopReporting
 from app.services import ranks as _ranks
@@ -256,7 +257,7 @@ async def config_page(request: Request, db: AsyncSession = Depends(get_db)):
 @require_role(*CONFIG_ROLES)
 async def config_save(request: Request):
     form = await request.form()
-    async with async_session() as db:
+    async with database.async_session() as db:
         rres = await db.execute(select(ShopReporting))
         reporting = {r.shop_key: r for r in rres.scalars().all()}
 

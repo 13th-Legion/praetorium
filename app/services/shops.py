@@ -15,7 +15,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from app.database import async_session
+from app import database
 from app.models.shop import Shop
 
 log = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def access_roles(role_key: str) -> set[str]:
 
 async def all_shops_async(include_archived: bool = False) -> list[ShopMeta]:
     try:
-        async with async_session() as db:
+        async with database.async_session() as db:
             rows = (await db.execute(select(Shop).order_by(Shop.sort_order))).scalars().all()
         if not rows:
             metas = _seed_fallback()

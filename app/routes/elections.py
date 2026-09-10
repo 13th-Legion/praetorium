@@ -16,7 +16,7 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.exc import IntegrityError
 
 from app.auth import require_auth, require_role, get_current_user
-from app.database import async_session
+from app import database
 from app.models.elections import (
     Election, ElectionNomination, ElectionNominationReceipt,
     ElectionBallot, ElectionVoterRoll,
@@ -177,7 +177,7 @@ async def election_admin(request: Request):
     """Admin panel — create and manage elections. Command only."""
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         elections_result = await db.execute(
             select(Election).order_by(Election.created_at.desc())
         )
@@ -231,7 +231,7 @@ async def create_election(
 
     initial_phase = _determine_phase(nom_open)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = Election(
             title=title.strip(),
             phase=initial_phase,
@@ -263,7 +263,7 @@ async def create_election(
 async def advance_phase(request: Request, election_id: int):
     """Emergency override — advance election to next phase. Admin only."""
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)
@@ -326,7 +326,7 @@ async def election_page(request: Request, election_id: int):
     user = request.session.get("user", {})
     roles = set(user.get("roles", []))
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("<h1>Election not found</h1>", status_code=404)
@@ -515,7 +515,7 @@ async def submit_nomination(
     """Submit an anonymous nomination. One per member per election."""
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)
@@ -611,7 +611,7 @@ async def accept_nomination(request: Request, election_id: int):
     """Nominee accepts their nomination."""
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)
@@ -661,7 +661,7 @@ async def decline_nomination(request: Request, election_id: int):
     """Nominee declines their nomination."""
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)
@@ -721,7 +721,7 @@ async def cast_vote(
     """
     user = request.session.get("user", {})
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         election = await _get_election(db, election_id)
         if not election:
             return HTMLResponse("Election not found", status_code=404)

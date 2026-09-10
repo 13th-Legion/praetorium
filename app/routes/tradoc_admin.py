@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select, func
 
 from app.auth import require_role, get_current_user
-from app.database import async_session
+from app import database
 from app.models.training import TradocBlock, TradocItem, TradocTier
 
 log = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ async def block_create(request: Request):
         raise HTTPException(status_code=400, detail="Block number required")
     if not name:
         raise HTTPException(status_code=400, detail="Block name required")
-    async with async_session() as db:
+    async with database.async_session() as db:
         if tier not in await _valid_tier_keys(db):
             tier = DEFAULT_TIER_KEY
         existing = (await db.execute(
@@ -87,7 +87,7 @@ async def block_edit(request: Request, block_id: int):
     tier = (form.get("tier") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Block name required")
-    async with async_session() as db:
+    async with database.async_session() as db:
         blk = (await db.execute(
             select(TradocBlock).where(TradocBlock.id == block_id)
         )).scalar_one_or_none()
@@ -116,7 +116,7 @@ async def block_archive(request: Request, block_id: int):
     """Soft-delete (archive) or restore a block. Hides its subjects from the page."""
     form = await request.form()
     unarchive = bool((form.get("unarchive") or "").strip())
-    async with async_session() as db:
+    async with database.async_session() as db:
         blk = (await db.execute(
             select(TradocBlock).where(TradocBlock.id == block_id)
         )).scalar_one_or_none()
@@ -141,7 +141,7 @@ async def tier_create(request: Request):
     key = _slugify_tier_key(key)
     if not label:
         raise HTTPException(status_code=400, detail="Category label required")
-    async with async_session() as db:
+    async with database.async_session() as db:
         existing = (await db.execute(
             select(TradocTier).where(TradocTier.key == key)
         )).scalar_one_or_none()
@@ -169,7 +169,7 @@ async def tier_edit(request: Request, tier_id: int):
     sort_order = _form_int(form, "sort_order", 0)
     if not label:
         raise HTTPException(status_code=400, detail="Category label required")
-    async with async_session() as db:
+    async with database.async_session() as db:
         tier = (await db.execute(
             select(TradocTier).where(TradocTier.id == tier_id)
         )).scalar_one_or_none()
@@ -194,7 +194,7 @@ async def tier_archive(request: Request, tier_id: int):
     """
     form = await request.form()
     unarchive = bool((form.get("unarchive") or "").strip())
-    async with async_session() as db:
+    async with database.async_session() as db:
         tier = (await db.execute(
             select(TradocTier).where(TradocTier.id == tier_id)
         )).scalar_one_or_none()
@@ -240,7 +240,7 @@ async def subject_create(request: Request):
         raise HTTPException(status_code=400, detail="Subject name required")
     if doc_type not in VALID_DOC_TYPES:
         raise HTTPException(status_code=400, detail="Invalid doc type")
-    async with async_session() as db:
+    async with database.async_session() as db:
         blk = (await db.execute(
             select(TradocBlock).where(TradocBlock.number == block)
         )).scalar_one_or_none()
@@ -283,7 +283,7 @@ async def subject_edit(request: Request, item_id: int):
         raise HTTPException(status_code=400, detail="Invalid doc type")
     if not name:
         raise HTTPException(status_code=400, detail="Subject name required")
-    async with async_session() as db:
+    async with database.async_session() as db:
         it = (await db.execute(
             select(TradocItem).where(TradocItem.id == item_id)
         )).scalar_one_or_none()
@@ -317,7 +317,7 @@ async def subject_archive(request: Request, item_id: int):
     """Soft-delete (archive) or restore a subject. Sign-off history is preserved."""
     form = await request.form()
     unarchive = bool((form.get("unarchive") or "").strip())
-    async with async_session() as db:
+    async with database.async_session() as db:
         it = (await db.execute(
             select(TradocItem).where(TradocItem.id == item_id)
         )).scalar_one_or_none()

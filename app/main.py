@@ -15,7 +15,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import select
 
 from config import get_settings
-from app.database import engine, Base, async_session
+from app import database
+from app.database import engine, Base
 from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin
 
 
@@ -112,7 +113,7 @@ class ContactVerifyMiddleware(BaseHTTPMiddleware):
         from app.models.member import Member
         username = user.get("username", "")
         if username:
-            async with async_session() as db:
+            async with database.async_session() as db:
                 result = await db.execute(
                     select(Member.contact_verified_at).where(Member.nc_username == username)
                 )
@@ -207,7 +208,7 @@ class DisplayRefreshMiddleware(BaseHTTPMiddleware):
                     # Refresh display_name from Member DB
                     from app.models.member import Member
                     try:
-                        async with async_session() as db:
+                        async with database.async_session() as db:
                             result = await db.execute(
                                 select(Member).where(Member.nc_username == username)
                             )
@@ -370,7 +371,7 @@ async def verify_contact_page(request: Request):
 
     from app.models.member import Member
     username = user.get("username", "")
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Member).where(Member.nc_username == username))
         member = result.scalar_one_or_none()
 
@@ -404,7 +405,7 @@ async def submit_verify_contact(
     from app.models.member import Member
     username = user.get("username", "")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Member).where(Member.nc_username == username))
         member = result.scalar_one_or_none()
         if not member:

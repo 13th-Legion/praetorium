@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.auth import require_auth, get_current_user
 from app.constants import COMMAND_ROLES, S1_ROLES
 from app.services import ranks as _ranks
-from app.database import async_session
+from app import database
 from app.models.member import Member
 from app.models.rank_history import RankHistory
 from app.models.promotion_stage import PromotionStage, OFFICER_GRADES
@@ -109,7 +109,7 @@ async def promotions_dashboard(request: Request):
 
     today = date.today()
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Get all active + recruit members
         result = await db.execute(
             select(Member).where(
@@ -194,7 +194,7 @@ async def promotions_dashboard(request: Request):
     staged_member_ids = {s.member_id for s in staged_objs}
     missing_ids = staged_member_ids - set(member_lookup.keys())
     if missing_ids:
-        async with async_session() as db2:
+        async with database.async_session() as db2:
             extra = await db2.execute(
                 select(Member).where(Member.id.in_(missing_ids))
             )
@@ -251,7 +251,7 @@ async def promote_member(request: Request):
     if new_rank not in _rank_index():
         raise HTTPException(400, f"Invalid rank: {new_rank}")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Member).where(Member.id == member_id))
         member = result.scalar_one_or_none()
         if not member:
@@ -341,7 +341,7 @@ async def batch_promote(request: Request):
     # — NC/DB drift. Accumulate here, sync post-commit (idempotent + retryable).
     nc_syncs = []  # list of (nc_username, new_rank, display_name)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         for p in pairs:
             mid = int(p.get("member_id", 0))
             new_rank = p.get("new_rank", "").strip()
@@ -471,7 +471,7 @@ async def stage_promotion(request: Request):
     today = date.today()
     username = user.get("username", "unknown")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(Member).where(Member.id == member_id))
         member = result.scalar_one_or_none()
         if not member:
@@ -542,7 +542,7 @@ async def remove_stage(request: Request, stage_id: int):
     if not _has_access(user):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(PromotionStage).where(PromotionStage.id == stage_id))
         stage = result.scalar_one_or_none()
         if not stage:
@@ -571,7 +571,7 @@ async def edit_stage(request: Request, stage_id: int):
     if not to_rank or to_rank not in _rank_index():
         return HTMLResponse(f'<div class="toast error">❌ Invalid rank: {to_rank}</div>')
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(select(PromotionStage).where(PromotionStage.id == stage_id))
         stage = result.scalar_one_or_none()
         if not stage:
@@ -614,7 +614,7 @@ async def finalize_staged(request: Request):
     successes = []
     errors = []
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         q = select(PromotionStage).where(PromotionStage.status == "staged")
         if target_date is not None:
             q = q.where(PromotionStage.target_date == target_date)
@@ -677,7 +677,7 @@ async def export_formation(request: Request):
     if not _has_access(user):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(PromotionStage).where(PromotionStage.status == "staged")
         )

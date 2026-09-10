@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, case, desc
 
 from app.auth import require_auth, get_current_user
-from app.database import async_session
+from app import database
 from app.models.events import Event, EventRSVP
 from app.models.member import Member
 
@@ -56,7 +56,7 @@ async def attendance_analytics(request: Request):
     if not _has_access(user):
         return HTMLResponse("<h2>Access Denied</h2>", status_code=403)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Get all finalized FTX/MCFTX events
         events_result = await db.execute(
             select(Event).where(

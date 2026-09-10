@@ -16,7 +16,7 @@ from urllib.parse import quote
 import httpx
 from sqlalchemy import select
 
-from app.database import async_session
+from app import database
 from app.models.newsletter import Newsletter, NewsletterAttachment
 from app.newsletter_assets import NEWSLETTER_ATTACH_DIR
 from app.newsletter_send import (
@@ -57,7 +57,7 @@ async def _archive_to_nextcloud(nl: Newsletter, html: str) -> str | None:
 async def deliver_newsletter(nl_id: int) -> None:
     """Resolve recipients, send, archive, and persist results for one newsletter.
     Used by both the scheduler and the send-now path."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         nl = await db.get(Newsletter, nl_id)
         if not nl or nl.status in ("sending", "sent"):
             return
@@ -92,7 +92,7 @@ async def deliver_newsletter(nl_id: int) -> None:
 
     archive_path = await _archive_to_nextcloud(nl, html)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         nl = await db.get(Newsletter, nl_id)
         if not nl:
             return
@@ -108,7 +108,7 @@ async def deliver_newsletter(nl_id: int) -> None:
 
 
 async def _scan_once() -> None:
-    async with async_session() as db:
+    async with database.async_session() as db:
         now = datetime.utcnow()
         due = (await db.execute(
             select(Newsletter.id).where(

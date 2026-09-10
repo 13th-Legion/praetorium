@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, or_, func
 from sqlalchemy.exc import IntegrityError
 
-from app.database import async_session
+from app import database
 from app.models.member import Member
 from app.models.webhook_event import WebhookEvent
 from config import get_settings
@@ -345,7 +345,7 @@ async def paypal_webhook(request: Request):
     # Record the transaction id up front; a duplicate hits the UNIQUE
     # constraint and we short-circuit without re-processing side effects.
     if transaction_id:
-        async with async_session() as db0:
+        async with database.async_session() as db0:
             db0.add(WebhookEvent(
                 provider="paypal",
                 transaction_id=transaction_id,
@@ -432,7 +432,7 @@ async def paypal_webhook(request: Request):
             f"({deck_match['name']}) — needs manual S1 review. txn={transaction_id}"
         )
         try:
-            async with async_session() as dbr:
+            async with database.async_session() as dbr:
                 from app.routes.notifications import create_notification_for_roles
                 await create_notification_for_roles(
                     dbr, ["s1", "command", "admin"],
@@ -471,7 +471,7 @@ async def paypal_webhook(request: Request):
         )
 
         # If a member record happens to exist already, update it too
-        async with async_session() as db:
+        async with database.async_session() as db:
             name_parts = deck_match["name"].split(None, 1)
             if len(name_parts) >= 2:
                 result = await db.execute(
@@ -515,7 +515,7 @@ async def paypal_webhook(request: Request):
 
     # ── Strategy 2: Match against members table ─────────────────────────
     matched_member = None
-    async with async_session() as db:
+    async with database.async_session() as db:
         # Try email match first (personal_email or proton email)
         if payer_email:
             result = await db.execute(
@@ -595,7 +595,7 @@ async def paypal_webhook(request: Request):
     )
 
     try:
-        async with async_session() as db2:
+        async with database.async_session() as db2:
             from app.routes.notifications import create_notification_for_roles
             await create_notification_for_roles(
                 db2, ["s1", "command", "admin"],

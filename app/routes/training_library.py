@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
 from app.auth import require_auth, require_role, get_current_user
-from app.database import async_session
+from app import database
 from app.models.training import TradocBlock, TradocItem, TradocTier
 from app.models.library import LibraryDocument
 
@@ -175,7 +175,7 @@ async def tradoc_page(request: Request):
     user = get_current_user(request)
     can_manage = _can_manage_tradoc(user)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         block_rows = (await db.execute(
             select(TradocBlock).order_by(TradocBlock.sort_order, TradocBlock.number)
         )).scalars().all()
@@ -292,7 +292,7 @@ async def tradoc_doc_page(request: Request, slug: str):
 
     # Numeric slug => DB-backed markdown doc
     if slug.isdigit():
-        async with async_session() as db:
+        async with database.async_session() as db:
             item = (await db.execute(
                 select(TradocItem).where(TradocItem.id == int(slug))
             )).scalar_one_or_none()
@@ -344,7 +344,7 @@ async def battle_library_page(request: Request):
     """Battle Library — FMs, TCs, ATPs, and other reference publications."""
     user = get_current_user(request)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         result = await db.execute(
             select(LibraryDocument).order_by(
                 LibraryDocument.sort_order, LibraryDocument.pub_number
@@ -386,7 +386,7 @@ async def battle_library_page(request: Request):
 @require_auth
 async def battle_library_file(request: Request, doc_id: int):
     """Serve a Battle Library PDF inline (all authed members)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         doc = (await db.execute(
             select(LibraryDocument).where(LibraryDocument.id == doc_id)
         )).scalar_one_or_none()
@@ -444,7 +444,7 @@ async def battle_library_upload(request: Request):
     stored_path = LIBRARY_DIR / stored_name
     stored_path.write_bytes(data)
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         doc = LibraryDocument(
             category=category,
             pub_number=pub_number or "—",
@@ -475,7 +475,7 @@ async def battle_library_edit(request: Request, doc_id: int):
     sort_order_raw = (form.get("sort_order") or "").strip()
     upload = form.get("file")
 
-    async with async_session() as db:
+    async with database.async_session() as db:
         doc = (await db.execute(
             select(LibraryDocument).where(LibraryDocument.id == doc_id)
         )).scalar_one_or_none()
@@ -529,7 +529,7 @@ async def battle_library_edit(request: Request, doc_id: int):
 @require_role(*MANAGE_ROLES)
 async def battle_library_delete(request: Request, doc_id: int):
     """Delete a Battle Library doc (DB row + file on disk)."""
-    async with async_session() as db:
+    async with database.async_session() as db:
         doc = (await db.execute(
             select(LibraryDocument).where(LibraryDocument.id == doc_id)
         )).scalar_one_or_none()

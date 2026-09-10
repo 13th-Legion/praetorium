@@ -25,7 +25,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from app.database import async_session
+from app import database
 from app.models.rank import Rank
 from app import constants as _const
 
@@ -181,7 +181,7 @@ def choices() -> list[tuple[str, str]]:
 
 async def all_ranks(include_archived: bool = False) -> list[RankMeta]:
     try:
-        async with async_session() as db:
+        async with database.async_session() as db:
             rows = (await db.execute(select(Rank).order_by(Rank.sort_order))).scalars().all()
         if not rows:
             return _seed_from_constants()
