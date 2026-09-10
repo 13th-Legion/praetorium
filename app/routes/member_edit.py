@@ -745,17 +745,74 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
     temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(14))
 
     # 1. Reset NC password
+    #
+    # The OCS provisioning API returns **HTTP 200 even when the operation fails** --
+    # the authoritative result is the <statuscode> inside the OCS body (100/200 = OK;
+    # 102 = invalid/rejected password, e.g. by the password_policy app; 997 = auth
+    # failure; 998 = user not found). Checking only resp.status_code meant a rejected
+    # reset looked like a success, and we then emailed the member a password that was
+    # never actually set -- an unrecoverable lockout that looks like "the reset didn't
+    # work". Parse the OCS status and fail loudly instead.
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.put(
                 f"{settings.nc_url}/ocs/v2.php/cloud/users/{member.nc_username}",
                 auth=(NC_SVC_USER, NC_SVC_PASS),
-                headers={"OCS-APIRequest": "true"},
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                params={"format": "json"},
                 data={"key": "password", "value": temp_password},
             )
         if resp.status_code != 200:
-            log.error(f"Resend creds: NC password reset failed for {member.nc_username}: {resp.status_code}")
+            log.error(
+                "Resend creds: NC password reset failed for %s: HTTP %s body=%r",
+                member.nc_username, resp.status_code, resp.text[:300],
+            )
             raise HTTPException(status_code=502, detail=f"NC password reset failed (HTTP {resp.status_code})")
+
+        # HTTP 200 is not enough -- read the OCS meta block.
+        ocs_code, ocs_msg = None, ""
+        try:
+            meta = (resp.json() or {}).get("ocs", {}).get("meta", {}) or {}
+            ocs_code = int(meta.get("statuscode"))
+            ocs_msg = str(meta.get("message") or "")
+        except Exception:
+            # Body wasn't the JSON we expect (XML fallback, proxy error page, ...).
+            m = re.search(r"<statuscode>(\d+)</statuscode>", resp.text or "")
+            if m:
+                ocs_code = int(m.group(1))
+                mm = re.search(r"<message>(.*?)</message>", resp.text or "", re.S)
+                ocs_msg = (mm.group(1).strip() if mm else "")
+
+        if ocs_code is None:
+            log.error(
+                "Resend creds: could not parse OCS status for %s; body=%r",
+                member.nc_username, (resp.text or "")[:300],
+            )
+            raise HTTPException(
+                status_code=502,
+                detail="NC returned an unreadable response; password state unknown. Nothing was emailed.",
+            )
+
+        if ocs_code not in (100, 200):
+            log.error(
+                "Resend creds: NC REJECTED the password reset for %s: ocs_status=%s message=%r",
+                member.nc_username, ocs_code, ocs_msg[:200],
+            )
+            hint = {
+                102: "Nextcloud rejected the generated password (password policy).",
+                997: "Nextcloud rejected our service credentials (NC_SVC_USER/NC_SVC_PASS).",
+                998: f"Nextcloud has no user '{member.nc_username}'.",
+            }.get(ocs_code, f"Nextcloud returned OCS status {ocs_code}.")
+            raise HTTPException(
+                status_code=502,
+                detail=f"{hint} Password was NOT changed and no email was sent."
+                       + (f" NC said: {ocs_msg[:120]}" if ocs_msg else ""),
+            )
+
+        log.info(
+            "Resend creds: NC password reset confirmed for %s (ocs_status=%s)",
+            member.nc_username, ocs_code,
+        )
     except HTTPException:
         raise
     except Exception as e:
