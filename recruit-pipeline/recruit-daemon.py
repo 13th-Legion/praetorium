@@ -2626,7 +2626,15 @@ def check_payment_cards(state, dry_run=False):
 # the loop.
 
 SELF_CHECK_INTERVAL = int(os.environ.get("RECRUIT_SELFCHECK_INTERVAL", 3600))
-AUDIT_SCRIPT = "/usr/local/sbin/spooky-bot-audit.sh"
+# Token source moved 2026-09-10: spooky-bot-audit.sh was world-readable (0755)
+# and held the token in its body. It now lives in a root-only env file (0600).
+# Same KEY=value line format, so the parser below is unchanged. The old script
+# is kept as a fallback so this keeps working if the env file is ever missing.
+TOKEN_SOURCES = (
+    "/etc/spooky-bot-audit.env",
+    "/usr/local/sbin/spooky-bot-audit.sh",
+)
+AUDIT_SCRIPT = TOKEN_SOURCES[0]  # retained for log messages
 DISCORD_DM_CHANNEL = "1466732342704996352"   # Cav DM
 
 
@@ -2638,11 +2646,15 @@ def _discord_token():
     for everything.
     """
     try:
-        with open(AUDIT_SCRIPT, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("DISCORD_BOT_TOKEN="):
-                    return line.split("=", 1)[1].strip().strip("\"'")
+        for _src in TOKEN_SOURCES:
+            try:
+                with open(_src, encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("DISCORD_BOT_TOKEN="):
+                            return line.split("=", 1)[1].strip().strip("\"'")
+            except OSError:
+                continue
         log.warning(f"No DISCORD_BOT_TOKEN line found in {AUDIT_SCRIPT}")
     except OSError as e:
         log.warning(f"Could not read Discord token from {AUDIT_SCRIPT}: {e}")

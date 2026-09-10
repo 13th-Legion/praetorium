@@ -145,18 +145,30 @@ def nc_is_neutralised(uid):
 NOT_REACTIVATION = "reason NOT ILIKE 'reactivated%%'"
 
 
-AUDIT_SCRIPT = "/usr/local/sbin/spooky-bot-audit.sh"
+# Token source moved 2026-09-10: spooky-bot-audit.sh was world-readable (0755)
+# and held the token in its body. It now lives in a root-only env file (0600).
+# Same KEY=value line format, so the parser below is unchanged. The old script
+# is kept as a fallback so this keeps working if the env file is ever missing.
+TOKEN_SOURCES = (
+    "/etc/spooky-bot-audit.env",
+    "/usr/local/sbin/spooky-bot-audit.sh",
+)
+AUDIT_SCRIPT = TOKEN_SOURCES[0]  # retained for log messages
 
 
 def discord_token():
     """Reuse the token the existing server-side audit script already holds,
     rather than storing a second copy of the same secret on this box."""
     try:
-        with open(AUDIT_SCRIPT, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("DISCORD_BOT_TOKEN="):
-                    return line.split("=", 1)[1].strip().strip("\"'")
+        for _src in TOKEN_SOURCES:
+            try:
+                with open(_src, encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("DISCORD_BOT_TOKEN="):
+                            return line.split("=", 1)[1].strip().strip("\"'")
+            except OSError:
+                continue
     except Exception as e:
         log.warning(f"could not read Discord token from {AUDIT_SCRIPT}: {e}")
     return ""
