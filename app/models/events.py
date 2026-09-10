@@ -109,6 +109,7 @@ class Event(Base):
     # Relationships
     rsvps: Mapped[list["EventRSVP"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     documents: Mapped[list["EventDocument"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    fragos: Mapped[list["EventFrago"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guests: Mapped[list["EventGuest"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     buddy_pairs: Mapped[list["EventBuddyPair"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guard_slots: Mapped[list["EventGuardSlot"]] = relationship(back_populates="event", cascade="all, delete-orphan")
@@ -201,6 +202,56 @@ class EventDocument(Base):
 
     def __repr__(self):
         return f"<EventDocument {self.doc_type}: {self.title}>"
+
+
+class EventFrago(Base):
+    """A fragmentary order issued against an event.
+
+    FRAGOs are inherently repeatable: a single event can accumulate FRAGO 1, 2, 3...
+    as the plan changes. This deliberately does NOT reuse `Event.fragord_issued_at`
+    as the source of truth -- that single timestamp column could only ever record one
+    FRAGO, and captured no content, so issuing one told nobody what had changed.
+    `Event.fragord_issued_at` is still maintained as a mirror of the most recent
+    FRAGO's timestamp so the existing pipeline banner/chip keeps rendering unchanged.
+
+    `number` is per-event and 1-based, assigned under a row lock on the parent event
+    so two concurrent issues cannot claim the same number.
+    """
+
+    __tablename__ = "event_fragos"
+    __table_args__ = (
+        UniqueConstraint("event_id", "number", name="uq_event_fragos_event_number"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+
+    # Per-event sequence, starting at 1 ("FRAGO 1", "FRAGO 2", ...).
+    number: Mapped[int] = mapped_column(Integer)
+
+    # What changed. `body` is the substance of the order and is required in practice;
+    # it is nullable only so the pre-feature backfill row can exist without inventing text.
+    subject: Mapped[str] = mapped_column(String(160))
+    body: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Who issued it (NC username, matching EventDocument.uploaded_by convention).
+    issued_by: Mapped[str] = mapped_column(String(64))
+    issued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Distribution audit -- so "did this actually reach anyone?" is answerable later.
+    # email_count is NULL until the background send reports back.
+    email_count: Mapped[Optional[int]] = mapped_column(Integer)
+    email_failed: Mapped[Optional[int]] = mapped_column(Integer)
+    talk_posted: Mapped[bool] = mapped_column(Boolean, default=False)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    event: Mapped["Event"] = relationship(back_populates="fragos")
+
+    def __repr__(self):
+        return f"<EventFrago event={self.event_id} #{self.number}: {self.subject}>"
 
 
 # ─── PP-070: Ops Console Models ───────────────────────────────────────────────

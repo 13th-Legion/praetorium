@@ -20,7 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
 from app.database import async_session
-from app.models.events import Event, EventRSVP, EventDocument, EventAARItem
+from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, EventFrago
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
@@ -1222,6 +1222,16 @@ async def event_detail(request: Request, event_id: int):
     # full_edit = may edit ALL fields (admins + owning leaders); instructors
     # get description-only, so they are excluded here.
     _full_edit = _is_admin(user) or _owns_event
+
+    # FRAGOs issued against this event, newest first. Loaded here (rather than via the
+    # Event.fragos relationship) so the ordering is explicit and the session is still open.
+    async with async_session() as _fdb:
+        _fragos = (await _fdb.execute(
+            select(EventFrago)
+            .where(EventFrago.event_id == event.id)
+            .order_by(EventFrago.number.desc())
+        )).scalars().all()
+
     return templates.TemplateResponse("pages/event_detail.html", {
         "members": members,
         "request": request,
@@ -1231,6 +1241,7 @@ async def event_detail(request: Request, event_id: int):
         "is_instructor": _is_instr,
         "can_edit": _can_edit,
         "event": event,
+        "fragos": _fragos,
         "icon": _get_icon(event.category),
         "category_label": CATEGORY_LABELS().get(event.category, event.category),
         "date_display": _format_range(event.date_start, event.date_end, all_day),
@@ -2861,25 +2872,240 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
     )
 
 
+def _frago_email_html(event, frago_number: int, subject: str, body: str, date_str: str) -> str:
+    """13th Legion FRAGO email, matching the WARNO/OPORD house style."""
+    def esc(s):
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    body_html = esc(body).replace("\n", "<br>")
+    rally_html = ""
+    if event.rally_point:
+        rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {esc(event.rally_point)}'
+        if event.rally_point_time:
+            rally_html += f' @ {esc(event.rally_point_time)}'
+        rally_html += '</p>'
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
+<div style="background: #1a1a2e; padding: 20px; text-align: center;">
+    <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align: middle; padding-right: 15px;">
+            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+        </td>
+        <td style="vertical-align: middle; text-align: center;">
+            <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
+            <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
+        </td>
+    </tr></table>
+</div>
+<div style="padding: 20px;">
+    <div style="background:#ef6c00;color:#fff;padding:10px 16px;border-radius:6px;font-weight:700;font-size:18px;">
+        📝 FRAGO {frago_number} — {esc(event.title)}
+    </div>
+    <p style="color:#666;margin:12px 0 0;"><strong>{esc(date_str)}</strong><br>
+       📍 {esc(event.location or 'TBD')}</p>
+    <h2 style="color:#d4a537;margin:20px 0 4px;font-size:16px;">{esc(subject)}</h2>
+    <div style="background:#f5f5f5;border-left:4px solid #ef6c00;padding:12px 16px;border-radius:4px;">
+        <p style="color:#333;font-size:14px;line-height:1.6;margin:0;">{body_html}</p>
+    </div>
+    {rally_html}
+    <p style="font-size:14px;">This is a change to a previously issued order. All other
+       instructions from the WARNO/OPORD remain in effect.</p>
+    <p style="font-size:14px;">
+        🔗 <a href="https://portal.13thlegion.org/events/{event.id}">View the full event on the Portal</a>
+    </p>
+</div>
+<div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
+    13th Legion · Texas State Militia · DFW
+</div>
+</body></html>"""
+
+
 @router.post("/api/events/{event_id}/issue-fragord", response_class=HTMLResponse)
 @require_auth
 @require_role("command", "s3", "admin")
-async def issue_fragord(request: Request, event_id: int):
-    """Mark FRAGORD as issued."""
+async def issue_fragord(
+    request: Request,
+    event_id: int,
+    background_tasks: BackgroundTasks,
+    subject: str = Form(""),
+    body: str = Form(""),
+):
+    """Issue a numbered FRAGO: persist it, then actually distribute it.
+
+    FRAGOs are unlimited per event -- each call creates the next numbered order.
+    The number is claimed under a row lock on the parent event so two concurrent
+    issues cannot collide on the same number.
+
+    This used to set `event.fragord_issued_at` and nothing else, which meant
+    issuing a FRAGO told nobody anything. It now mirrors what WARNO/OPORD do:
+    email the attending roster, cross-post to T1 · Announcements, and raise a
+    portal notification -- and it reports what actually happened rather than
+    unconditionally claiming success.
+    """
+    import logging
+    _frago_log = logging.getLogger("events.frago")
+
+    user = get_current_user(request)
+    issuer = (user or {}).get("username") or "unknown"
+
+    subject = (subject or "").strip()
+    body = (body or "").strip()
+    if not subject or not body:
+        # The entire point of a FRAGO is communicating what changed. Refusing an
+        # empty one is the fix for "I issued a FRAGO and it did absolutely nothing".
+        return HTMLResponse(
+            '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
+            '⚠️ A FRAGO needs both a subject and a description of what changed. '
+            'Nothing was issued and nobody was notified.</div>',
+            status_code=400,
+        )
+    if len(subject) > 160:
+        subject = subject[:157] + "..."
+
     now = datetime.utcnow()
+
     async with async_session() as db:
-        result = await db.execute(select(Event).where(Event.id == event_id))
+        # Lock the parent event row so the per-event FRAGO number is claimed exactly once.
+        result = await db.execute(select(Event).where(Event.id == event_id).with_for_update())
         event = result.scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
+
+        max_num = (await db.execute(
+            select(func.coalesce(func.max(EventFrago.number), 0)).where(EventFrago.event_id == event_id)
+        )).scalar() or 0
+        number = int(max_num) + 1
+
+        frago = EventFrago(
+            event_id=event_id,
+            number=number,
+            subject=subject,
+            body=body,
+            issued_by=issuer,
+            issued_at=now,
+        )
+        db.add(frago)
+
+        # Mirror onto the legacy column so the existing pipeline chip keeps working.
         event.fragord_issued_at = now
         event.updated_at = now
+        await db.flush()
+        frago_id = frago.id
+
+        # Recipients: same set OPORD uses -- the people actually going.
+        attending_result = await db.execute(
+            select(Member).join(EventRSVP, EventRSVP.member_id == Member.id).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.status == "attending")
+            )
+        )
+        attending_members = attending_result.scalars().all()
+        recipient_emails = [m.email for m in attending_members if m.email]
+        email_count = len(recipient_emails)
+
+        local_dt = _fmt_ct_stored(event.date_start)
+        date_str = local_dt.strftime("%d %b %Y").upper().lstrip("0") + f" @ {local_dt.strftime('%H%M')} {local_dt.strftime('%Z')}"
+        event_title = event.title
+        html_body = _frago_email_html(event, number, subject, body, date_str)
+        subj_line = f"\U0001f4dd FRAGO {number} — {event_title}{_subject_date_suffix(event.date_start, event.date_end)}"
+
+        # Cross-post to T1 - Announcements. Unlike the WARNO/OPORD paths this records
+        # whether it worked instead of swallowing the failure.
+        talk_msg = (
+            f"\U0001f4dd **FRAGO {number} — {event_title}**\n\n"
+            f"\U0001f4c5 {date_str}\n"
+            f"\U0001f4cd {event.location or 'TBD'}\n\n"
+            f"**{subject}**\n{body}\n\n"
+            f"All other instructions from the WARNO/OPORD remain in effect.\n"
+            f"\U0001f517 https://portal.13thlegion.org/events/{event_id}"
+        )
+        talk_ok = False
+        try:
+            settings = get_settings()
+            async with httpx.AsyncClient(timeout=15) as client:
+                tr = await client.post(
+                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
+                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                    auth=(NC_TALK_USER, NC_TALK_PASS),
+                    data={"message": talk_msg},
+                )
+            talk_ok = tr.status_code < 300
+            if not talk_ok:
+                _frago_log.error(
+                    "FRAGO %s/%s Talk post failed: HTTP %s body=%r",
+                    event_id, number, tr.status_code, (tr.text or "")[:300],
+                )
+        except Exception as e:
+            _frago_log.error("FRAGO %s/%s Talk post error: %s", event_id, number, e, exc_info=True)
+
+        notified_ok = False
+        try:
+            from app.routes.notifications import create_notification_for_all
+            await create_notification_for_all(
+                db, "event", f"\U0001f4dd FRAGO {number} — {event_title}",
+                body=subject,
+                link=f"/events/{event_id}",
+                icon="\U0001f4dd",
+            )
+            notified_ok = True
+        except Exception as e:
+            _frago_log.error("FRAGO %s/%s portal notification failed: %s", event_id, number, e, exc_info=True)
+
+        frago.talk_posted = talk_ok
+        frago.notified = notified_ok
         await db.commit()
 
+    def _send_frago_emails():
+        """Send over one SMTP connection, then record what actually happened."""
+        import asyncio
+        from app.integrations import email as email_service
+        sent = failed = 0
+        try:
+            sent, failed = email_service.send_bulk([
+                email_service.EmailMessage(to=addr, subject=subj_line, html=html_body)
+                for addr in recipient_emails
+            ])
+        except Exception as e:
+            failed = len(recipient_emails)
+            _frago_log.error("FRAGO %s/%s email blast raised: %s", event_id, number, e, exc_info=True)
+        _frago_log.info(
+            "FRAGO %s email blast complete: %s sent, %s failed — %s",
+            number, sent, failed, event_title,
+        )
+
+        async def _record():
+            async with async_session() as db2:
+                row = (await db2.execute(
+                    select(EventFrago).where(EventFrago.id == frago_id)
+                )).scalar_one_or_none()
+                if row:
+                    row.email_count = sent
+                    row.email_failed = failed
+                    await db2.commit()
+        try:
+            asyncio.run(_record())
+        except Exception as e:
+            _frago_log.error("FRAGO %s/%s could not record email result: %s", event_id, number, e)
+
+    if recipient_emails:
+        background_tasks.add_task(_send_frago_emails)
+
+    # Report what actually happened, not a blanket success.
+    bits = []
+    if email_count:
+        bits.append(f'emailing {email_count} attending member{"s" if email_count != 1 else ""}')
+    else:
+        bits.append('no attending members with an email on file — <strong>no email sent</strong>')
+    bits.append('posted to Announcements' if talk_ok else '<strong>Talk post FAILED</strong>')
+    bits.append('portal notification sent' if notified_ok else '<strong>portal notification FAILED</strong>')
+    all_ok = bool(email_count) and talk_ok and notified_ok
+    bg = "#1b5e20" if all_ok else "#e65100"
+
     return HTMLResponse(
-        '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
-        '📝 FRAGORD issued. Banner updated.</div>'
-        '<script>setTimeout(()=>window.location.reload(),1500)</script>'
+        f'<div style="padding:12px;background:{bg};color:#fff;border-radius:6px;">'
+        f'📝 FRAGO {number} issued — {"; ".join(bits)}.</div>'
+        '<script>setTimeout(()=>window.location.reload(),2500)</script>'
     )
 
 
