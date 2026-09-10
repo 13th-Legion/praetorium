@@ -3286,6 +3286,21 @@ async def s1_glance(request: Request):
         recruits = (await db.execute(
             select(func.count()).select_from(Member).where(Member.status == "recruit")
         )).scalar() or 0
+        patched = (await db.execute(
+            select(func.count()).select_from(Member).where(Member.status == "active")
+        )).scalar() or 0
+        # "Active members" must match the roster this card links to. The roster's
+        # default view is Member.status.in_(["active", "recruit"]) (see
+        # roster.py roster_list), i.e. everyone currently serving -- patched
+        # members AND recruits. This card previously counted status == "active"
+        # alone, so it reported only patched members (26) while the roster it
+        # links to showed 48. Keep the predicate identical to roster_list's or
+        # the two will drift apart again.
+        active = (await db.execute(
+            select(func.count()).select_from(Member).where(
+                Member.status.in_(["active", "recruit"])
+            )
+        )).scalar() or 0
 
     # Applicants = people whose APPLICATION is still being processed. Anyone who
     # has reached the roster proper is NOT an applicant, so this counts Deck
@@ -3332,21 +3347,6 @@ async def s1_glance(request: Request):
                     applicants += len(live)
     except Exception as e:
         logger.error("s1_glance: could not count applicants from Deck: %s", e, exc_info=True)
-        patched = (await db.execute(
-            select(func.count()).select_from(Member).where(Member.status == "active")
-        )).scalar() or 0
-        # "Active members" must match the roster this card links to. The roster's
-        # default view is Member.status.in_(["active", "recruit"]) (see
-        # roster.py roster_list), i.e. everyone currently serving -- patched
-        # members AND recruits. This card previously counted status == "active"
-        # alone, so it reported only patched members (26) while the roster it
-        # links to showed 48. Keep the predicate identical to roster_list's or
-        # the two will drift apart again.
-        active = (await db.execute(
-            select(func.count()).select_from(Member).where(
-                Member.status.in_(["active", "recruit"])
-            )
-        )).scalar() or 0
 
     def card(icon, label, value, href, warn=False, sub=None):
         color = "#b71c1c" if warn and value else "#d4a537"

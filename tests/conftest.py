@@ -21,8 +21,14 @@ import pytest_asyncio
 import itsdangerous
 from starlette.testclient import TestClient
 
-# Import app after env vars are set
-from app.main import app
+# Import app after env vars are set.
+#
+# Aliased deliberately: the `import app.models` below binds the name `app` to
+# the top-level PACKAGE in this module's namespace, which would shadow a plain
+# `from app.main import app` and leave the TestClient fixtures constructed with
+# a module instead of the ASGI app ("TypeError: 'module' object is not
+# callable" at startup). Keep the alias.
+from app.main import app as fastapi_app
 
 # Register all models against Base metadata so the test schema can be built.
 import app.models  # noqa: F401
@@ -60,7 +66,7 @@ FAKE_USER = {
 @pytest.fixture(scope="session")
 def client():
     """Unauthenticated TestClient. Does NOT follow redirects by default."""
-    with TestClient(app, raise_server_exceptions=True, follow_redirects=False) as c:
+    with TestClient(fastapi_app, raise_server_exceptions=True, follow_redirects=False) as c:
         yield c
 
 
@@ -78,11 +84,15 @@ def auth_client():
     }
     cookie_value = make_session_cookie(session_data)
     with TestClient(
-        app,
+        fastapi_app,
         raise_server_exceptions=False,
         follow_redirects=False,
     ) as c:
-        c.cookies.set("session", cookie_value, domain="testserver", path="/")
+        # No explicit domain: http.cookiejar refuses to return a
+        # domain-specified cookie for a dotless host like "testserver", so
+        # passing domain="testserver" here silently dropped the cookie and
+        # every authenticated request redirected to /auth/login.
+        c.cookies.set("session", cookie_value)
         yield c
 
 
