@@ -26,11 +26,24 @@ from __future__ import annotations
 
 from typing import Optional
 
-#: Domains Proton issues. Note these are NOT interchangeable aliases for a
-#: given user — PFC Pope's @protonmail.com hard-bounced while his @proton.me
-#: worked, and Chaplain Pati's was the exact reverse. Both are *allowed*; they
-#: are simply not assumed to be the same mailbox.
-PROTON_DOMAINS = ("proton.me", "protonmail.com")
+#: Proton's own consumer domains. Note these are NOT interchangeable aliases
+#: for a given user — PFC Pope's @protonmail.com hard-bounced while his
+#: @proton.me worked, and Chaplain Pati's was the exact reverse. Both are
+#: *allowed*; they are simply not assumed to be the same mailbox.
+PROTON_NATIVE_DOMAINS = ("proton.me", "protonmail.com")
+
+#: Unit domains hosted **on Proton** as Proton for Business "company" accounts.
+#: These are Proton mailboxes that simply carry our own domain, so they satisfy
+#: the Proton-only rule exactly as much as an @proton.me address does.
+#:
+#: Getting this wrong is not cosmetic: the first cut of this module treated
+#: @13thlegion.org as "not Proton", which made the validator **reject any edit**
+#: to the three members who use one (Locy, Eastman, Kavadas) — including the CO.
+#: If another unit domain is ever moved onto Proton, add it here.
+PROTON_CUSTOM_DOMAINS = ("13thlegion.org",)
+
+#: Everything that counts as "a Proton address" for the policy.
+PROTON_DOMAINS = PROTON_NATIVE_DOMAINS + PROTON_CUSTOM_DOMAINS
 
 
 def _norm(addr: Optional[str]) -> str:
@@ -38,7 +51,12 @@ def _norm(addr: Optional[str]) -> str:
 
 
 def is_proton(addr: Optional[str]) -> bool:
-    """True if ``addr`` is on a Proton domain."""
+    """True if ``addr`` is a Proton-hosted mailbox.
+
+    Covers Proton's own domains *and* unit domains hosted on Proton for
+    Business — an @13thlegion.org address is a Proton mailbox wearing our
+    domain, not a third-party host.
+    """
     a = _norm(addr)
     return any(a.endswith("@" + d) for d in PROTON_DOMAINS)
 
@@ -58,8 +76,8 @@ def validate_official(addr: Optional[str]) -> tuple[bool, str]:
         return False, f"{addr!r} is not a valid email address."
     if not is_proton(a):
         return False, (
-            "The official address must be a Proton address "
-            f"({' or '.join('@' + d for d in PROTON_DOMAINS)}). "
+            "The official address must be a Proton mailbox — "
+            f"{', '.join('@' + d for d in PROTON_DOMAINS)}. "
             f"{addr!r} is not. Put a non-Proton address in the personal email "
             "field instead."
         )

@@ -31,6 +31,12 @@ unit = pytest.mark.unit
     "someone@protonmail.com",
     "Mixed.Case@Proton.Me",
     "  padded@proton.me  ",
+    # Unit domain hosted on Proton for Business — a Proton mailbox wearing our
+    # own domain. The first cut of this module wrongly rejected these, which
+    # made the validator block every edit to Locy's, Eastman's and the CO's
+    # records. Keep these cases.
+    "adam.locy@13thlegion.org",
+    "Levi.Kavadas@13thLegion.org",
 ])
 def test_proton_addresses_accepted(addr):
     assert email_policy.is_proton(addr) is True
@@ -40,9 +46,10 @@ def test_proton_addresses_accepted(addr):
 @pytest.mark.parametrize("addr", [
     "someone@gmail.com",
     "kyleconrey@yahoo.com",
-    "adam.locy@13thlegion.org",      # unit domain is still not Proton
-    "someone@proton.me.evil.com",    # suffix must be the actual domain
+    "someone@proton.me.evil.com",       # suffix must be the actual domain
     "someone@notproton.me",
+    "someone@not13thlegion.org",
+    "someone@13thlegion.org.evil.com",
     "", None,
 ])
 def test_non_proton_rejected(addr):
@@ -58,12 +65,19 @@ def test_official_accepts_proton():
 
 
 @unit
+def test_official_accepts_unit_proton_domain():
+    """@13thlegion.org is provisioned through Proton for Business."""
+    ok, why = email_policy.validate_official("adam.locy@13thlegion.org")
+    assert ok is True and why == ""
+
+
+@unit
 @pytest.mark.parametrize("addr,fragment", [
     ("", "required"),
     (None, "required"),
     ("notanemail", "not a valid"),
-    ("kyleconrey@yahoo.com", "must be a Proton address"),
-    ("adam.locy@13thlegion.org", "must be a Proton address"),
+    ("kyleconrey@yahoo.com", "must be a Proton mailbox"),
+    ("someone@gmail.com", "must be a Proton mailbox"),
 ])
 def test_official_rejects(addr, fragment):
     ok, why = email_policy.validate_official(addr)
