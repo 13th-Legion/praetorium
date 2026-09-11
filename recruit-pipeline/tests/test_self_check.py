@@ -179,18 +179,46 @@ def test_records_the_timestamp_so_the_interval_advances(daemon, http, discord):
 
 # ─── Discord token handling ──────────────────────────────────────────────────
 
-def test_token_is_read_from_the_existing_audit_script(daemon, tmp_path, monkeypatch):
-    """One copy of the secret on the box, not two."""
-    script = tmp_path / "spooky-bot-audit.sh"
-    script.write_text(
-        '#!/bin/bash\nBOT=2\nDISCORD_BOT_TOKEN="tok.en.value"\nCAV_DISCORD_ID="1"\n'
-    )
-    monkeypatch.setattr(daemon, "AUDIT_SCRIPT", str(script))
+def test_token_is_read_from_the_env_file(daemon, tmp_path, monkeypatch):
+    """One copy of the secret on the box, not two.
+
+    Since 2026-09-10 it lives in a root-only env file rather than in the body
+    of the world-readable audit script.
+    """
+    envf = tmp_path / "spooky-bot-audit.env"
+    envf.write_text("# comment\nDISCORD_BOT_TOKEN=tok.en.value\n")
+    monkeypatch.setattr(daemon, "TOKEN_SOURCES", (str(envf),))
     assert daemon._discord_token() == "tok.en.value"
 
 
-def test_missing_audit_script_is_logged_not_fatal(daemon, monkeypatch, caplog):
-    monkeypatch.setattr(daemon, "AUDIT_SCRIPT", "/nonexistent/nope.sh")
+def test_falls_back_to_the_audit_script_when_the_env_file_is_missing(
+    daemon, tmp_path, monkeypatch
+):
+    """The old location stays readable so a missing env file is not an outage."""
+    script = tmp_path / "spooky-bot-audit.sh"
+    script.write_text(
+        '#!/bin/bash\nBOT=2\nDISCORD_BOT_TOKEN="from.the.script"\nCAV_DISCORD_ID="1"\n'
+    )
+    monkeypatch.setattr(
+        daemon, "TOKEN_SOURCES", ("/nonexistent/nope.env", str(script))
+    )
+    assert daemon._discord_token() == "from.the.script"
+
+
+def test_env_file_wins_over_the_script(daemon, tmp_path, monkeypatch):
+    """Order matters: the env file is the source of truth after the move."""
+    envf = tmp_path / "a.env"
+    envf.write_text("DISCORD_BOT_TOKEN=preferred\n")
+    script = tmp_path / "b.sh"
+    script.write_text('DISCORD_BOT_TOKEN="stale"\n')
+    monkeypatch.setattr(daemon, "TOKEN_SOURCES", (str(envf), str(script)))
+    assert daemon._discord_token() == "preferred"
+
+
+def test_no_readable_source_is_logged_not_fatal(daemon, monkeypatch, caplog):
+    monkeypatch.setattr(
+        daemon, "TOKEN_SOURCES", ("/nonexistent/nope.env", "/nonexistent/nope.sh")
+    )
     with caplog.at_level(logging.WARNING):
         assert daemon._discord_token() == ""
     assert "Could not read Discord token" in caplog.text

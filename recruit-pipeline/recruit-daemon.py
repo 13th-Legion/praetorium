@@ -2639,30 +2639,78 @@ DISCORD_DM_CHANNEL = "1466732342704996352"   # Cav DM
 
 
 def _discord_token():
-    """Reuse the token spooky-bot-audit.sh already holds.
+    """Read the Discord token from the first source that has it.
 
-    Deliberately read from that file rather than stored a second time: one
-    copy of a secret on the box is enough, and rotating it there rotates it
-    for everything.
+    Deliberately not stored a second time: one copy of the secret on the box is
+    enough, and rotating it in one place rotates it for everything. Since
+    2026-09-10 that place is the root-only env file, with the old audit script
+    kept as a fallback — see TOKEN_SOURCES.
     """
-    try:
-        for _src in TOKEN_SOURCES:
-            try:
-                with open(_src, encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line.startswith("DISCORD_BOT_TOKEN="):
-                            return line.split("=", 1)[1].strip().strip("\"'")
-            except OSError:
-                continue
-        log.warning(f"No DISCORD_BOT_TOKEN line found in {AUDIT_SCRIPT}")
-    except OSError as e:
-        log.warning(f"Could not read Discord token from {AUDIT_SCRIPT}: {e}")
+    for _src in TOKEN_SOURCES:
+        try:
+            with open(_src, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("DISCORD_BOT_TOKEN="):
+                        return line.split("=", 1)[1].strip().strip("\"'")
+        except OSError as e:
+            log.debug(f"Could not read Discord token from {_src}: {e}")
+            continue
+    log.warning(
+        "Could not read Discord token from any of: %s", ", ".join(TOKEN_SOURCES)
+    )
     return ""
 
 
+#: Ops room for daemon alerts — T2 · Digital Infrastructure. Matches the
+#: standing SOP that infra/work notices go there rather than to Discord.
+TALK_ALERT_ROOM = "td853igi"
+
+
+def notify_talk(text):
+    """Post an alert to the NC Talk ops room. Returns True on success.
+
+    Uses the ``/ocs`` endpoint through nc_request so it inherits the same auth,
+    retry and transient-error handling as every other Nextcloud call here.
+    """
+    try:
+        resp = nc_request(
+            "POST",
+            f"/ocs/v2.php/apps/spreed/api/v1/chat/{TALK_ALERT_ROOM}",
+            data={"message": text[:3000]},
+        )
+    except Exception as e:
+        log.warning(f"Talk alert failed: {e}")
+        return False
+    ok = bool(resp is not None and getattr(resp, "status_code", 0) in (200, 201))
+    if not ok:
+        log.warning(
+            "Talk alert failed: HTTP %s",
+            getattr(resp, "status_code", "?"),
+        )
+    return ok
+
+
+def notify(text):
+    """Alert the operator: NC Talk first, Discord only if Talk could not be reached.
+
+    Talk is the requested channel. Discord is kept strictly as a fallback for a
+    specific and important reason: **Talk runs on the very system these alerts
+    are usually about.** On 2026-09-11 an unattended glibc/Python upgrade
+    restarted containerd and briefly broke DNS — every self-check failed, and a
+    Talk-only alert would have failed with them, leaving the outage silent. An
+    off-box channel is the only thing that can tell you Nextcloud is down.
+    """
+    if notify_talk(text):
+        return True
+    log.warning("Talk alert failed — falling back to Discord")
+    return notify_discord(
+        text + "\n\n_(sent via Discord: NC Talk was unreachable)_"
+    )
+
+
 def notify_discord(text):
-    """DM Cav on Discord. Returns True on success."""
+    """DM Cav on Discord. Fallback only — see notify(). Returns True on success."""
     token = _discord_token()
     if not token:
         log.error("No Discord token available — self-check alert NOT delivered")
@@ -2795,7 +2843,7 @@ def run_self_check(state, dry_run=False, reason="periodic"):
     state["last_self_check"] = int(time.time())
 
     if dry_run:
-        log.info("[DRY RUN] self-check complete — no Discord alert sent")
+        log.info("[DRY RUN] self-check complete — no alert sent")
         return not failed
 
     if failed and failed != previous:
@@ -2803,9 +2851,9 @@ def run_self_check(state, dry_run=False, reason="periodic"):
         lines += [f"{'✅' if ok else '❌'} `{name}` — {detail}"
                   for name, ok, detail in results]
         lines += ["", "_NC droplet · `journalctl -u recruit-daemon -n 100`_"]
-        notify_discord("\n".join(lines))
+        notify("\n".join(lines))
     elif previous and not failed:
-        notify_discord(
+        notify(
             "✅ **Recruit daemon self-check recovered** — previously failing: "
             f"`{', '.join(previous)}`"
         )
