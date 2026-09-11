@@ -27,6 +27,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 from app.constants import S1_ROLES as EDIT_ROLES, STATUS_OPTIONS, TEAM_OPTIONS, LEADERSHIP_TITLES
 from app.services import ranks as _ranks
+from app.services import nc_users
 from app.geo import assign_zone, geocode_zip
 from app.settings import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
@@ -667,6 +668,20 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 
     member.updated_at = datetime.utcnow()
     await db.commit()
+
+    # Propagate an email change onto the Nextcloud account so the portal edit
+    # form is the single place this has to be changed. Best-effort by design:
+    # the roster write is already committed and a Nextcloud outage must not
+    # lose the admin's edit. Failures are logged by the service and swept up by
+    # scripts/reconcile-member-emails.py.
+    if member.nc_username and nc_users.emails_differ(member.email, _old_email):
+        ok, detail = await nc_users.set_email(member.nc_username, member.email)
+        if not ok:
+            log.warning(
+                "Member %s email changed to %r but the Nextcloud push failed (%s); "
+                "Nextcloud will keep mailing the old address until reconciled.",
+                member_id, member.email, detail,
+            )
 
     # Redirect back to profile
     from fastapi.responses import RedirectResponse
