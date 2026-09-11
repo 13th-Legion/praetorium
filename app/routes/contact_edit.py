@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_auth, get_current_user
 from app.database import get_db
 from app.models.member import Member
+from app.services import email_policy
 
 router = APIRouter(prefix="/api/profile", tags=["contact-edit"])
 templates = Jinja2Templates(directory="app/templates")
@@ -130,7 +131,15 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
     member.city = form.get("city", "").strip() or None
     member.state = form.get("state", "TX").strip().upper() or "TX"
     member.zip_code = form.get("zip_code", "").strip() or None
-    member.personal_email = form.get("personal_email", "").strip() or None
+    # Unit policy: the personal address may be anything EXCEPT the member's own
+    # official Proton address — it exists so there is a second way to reach
+    # them. 27 members had it set to a byte-for-byte copy of their official
+    # address when the policy was written, which made it useless.
+    _personal = form.get("personal_email", "").strip() or None
+    _ok, _why = email_policy.validate_personal(_personal, member.email)
+    if not _ok:
+        raise HTTPException(status_code=400, detail=_why)
+    member.personal_email = _personal
     member.emergency_contact = form.get("emergency_contact", "").strip() or None
     member.emergency_phone = form.get("emergency_phone", "").strip() or None
 

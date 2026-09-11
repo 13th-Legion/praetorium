@@ -27,6 +27,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 from app.constants import S1_ROLES as EDIT_ROLES, STATUS_OPTIONS, TEAM_OPTIONS, LEADERSHIP_TITLES
 from app.services import ranks as _ranks
+from app.services import email_policy
 from app.services import nc_users
 from app.geo import assign_zone, geocode_zip
 from app.settings import (
@@ -468,7 +469,29 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     member.first_name = (form.get("first_name") or member.first_name).strip()
     member.last_name = (form.get("last_name") or member.last_name).strip()
     member.callsign = _str_field(form, "callsign", member.callsign)
+    # Captured before the write so the Nextcloud push after commit only fires on
+    # a real change. The address lives in TWO systems — the roster (here) and
+    # the member's Nextcloud account — and nothing used to keep them in step.
+    _old_email = member.email
     member.email = _str_field(form, "email", member.email)
+
+    # Unit policy: the official address MUST be a Proton address, because it is
+    # also the Nextcloud account address and the unit's system of record.
+    # Rejected rather than saved-with-a-warning: a non-Proton official address
+    # breaks the guarantee that roster and Nextcloud hold the same mailbox.
+    _ok, _why = email_policy.validate_official(member.email)
+    if not _ok:
+        log.warning(
+            "Rejected member-edit id=%s by %s: official email %r violates policy (%s)",
+            member_id, user.get("username"), member.email, _why,
+        )
+        raise HTTPException(status_code=400, detail=_why)
+
+    # The personal address exists to be a SECOND way to reach someone, so it
+    # must not duplicate the official one.
+    _ok, _why = email_policy.validate_personal(member.personal_email, member.email)
+    if not _ok:
+        raise HTTPException(status_code=400, detail=_why)
 
     # Assignment — track old rank for promotion logic
     old_rank = member.rank_grade
