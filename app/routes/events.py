@@ -29,6 +29,8 @@ from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
 from app.services import ranks as _ranks
 from app.services import nc_rooms as _nc_rooms_svc
 
+PORTAL_BASE = "https://portal.13thlegion.org"
+
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -1405,6 +1407,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                         freq_html += f' / {event.freq_fob_alternate}'
                 freq_html += '</p>'
 
+            maps_html = _site_maps_html(event)
             rally_html = ""
             if event.rally_point:
                 rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {event.rally_point}'
@@ -1435,6 +1438,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 <strong>Location:</strong> {evt_location}</p>
 {rally_html}
 {freq_html}
+{maps_html}
 {smeac_html}
 <p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
 <a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
@@ -2015,6 +2019,60 @@ async def _delete_caldav_event(uid: str) -> bool:
             return r.status_code in (200, 202, 204, 404)
     except Exception:
         return False
+
+
+def _site_maps_html(event) -> str:
+    """Training-site map links for an OPORD email, or "" if the event has no site.
+
+    The maps were already picked in the S3 event builder (``s3_ops`` renders
+    them via ``get_site_maps``) but never reached the published OPORD, so the
+    people who actually needed them — everyone driving to the site — got an
+    order with no map in it. Reported 2026-09-11.
+
+    Links are absolute and point at ``/static``, which is served without
+    authentication (verified: HTTP 200 application/pdf), so they open straight
+    from the email rather than bouncing the reader through a login.
+    """
+    from app.training_sites import TRAINING_SITES, get_site_maps
+
+    maps = get_site_maps(getattr(event, "training_site", None) or "")
+    if not maps:
+        return ""
+    site = TRAINING_SITES.get(event.training_site, {})
+    heading = f"MAPS — Training Site {site.get('name', event.training_site)}"
+    if site.get("nickname"):
+        heading += f" ({site['nickname']})"
+    rows = "".join(
+        f'<li style="margin:4px 0;">'
+        f'<a href="{PORTAL_BASE}{m["url"]}" style="color:#6fa8dc;">{m["label"]}</a>'
+        f'</li>'
+        for m in maps
+    )
+    addr = f'<p style="font-size:13px;color:#555;margin:4px 0;">{site["address"]}</p>' \
+        if site.get("address") else ""
+    return (
+        f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">{heading}</h3>'
+        f'{addr}'
+        f'<ul style="font-size:14px;margin:4px 0 0;padding-left:20px;">{rows}</ul>'
+    )
+
+
+def _site_maps_text(event) -> str:
+    """Same map links as plain text, for NC Talk messages."""
+    from app.training_sites import TRAINING_SITES, get_site_maps
+
+    maps = get_site_maps(getattr(event, "training_site", None) or "")
+    if not maps:
+        return ""
+    site = TRAINING_SITES.get(event.training_site, {})
+    name = site.get("name", event.training_site)
+    out = f"\n\U0001f5fa\ufe0f **Maps — Training Site {name}"
+    if site.get("nickname"):
+        out += f" ({site['nickname']})"
+    out += "**\n"
+    for m in maps:
+        out += f"• {m['label']}: {PORTAL_BASE}{m['url']}\n"
+    return out
 
 
 async def _post_talk(room: str, message: str) -> None:
@@ -2761,6 +2819,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
             freq_html += '</p>'
 
         # Rally info
+        maps_html = _site_maps_html(event)
         rally_html = ""
         if event.rally_point:
             rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {event.rally_point}'
@@ -2791,6 +2850,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
 <strong>Location:</strong> {event.location or 'TBD'}</p>
 {rally_html}
 {freq_html}
+{maps_html}
 {smeac_html}
 <p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
 <a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
@@ -2825,6 +2885,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
                 if event.rally_point_time:
                     talk_msg += f" @ {event.rally_point_time}"
                 talk_msg += "\n"
+            talk_msg += _site_maps_text(event)
             talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event_id_val}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
