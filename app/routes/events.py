@@ -1233,6 +1233,7 @@ async def event_detail(request: Request, event_id: int):
             .where(EventFrago.event_id == event.id)
             .order_by(EventFrago.number.desc())
         )).scalars().all()
+        _creator = await _resolve_creator(_fdb, event.created_by)
 
     return templates.TemplateResponse("pages/event_detail.html", {
         "members": members,
@@ -1244,6 +1245,7 @@ async def event_detail(request: Request, event_id: int):
         "can_edit": _can_edit,
         "event": event,
         "fragos": _fragos,
+        "creator": _creator,
         "icon": _get_icon(event.category),
         "category_label": CATEGORY_LABELS().get(event.category, event.category),
         "date_display": _format_range(event.date_start, event.date_end, all_day),
@@ -2019,6 +2021,46 @@ async def _delete_caldav_event(uid: str) -> bool:
             return r.status_code in (200, 202, 204, 404)
     except Exception:
         return False
+
+
+#: created_by values written by automation rather than a person. Shown as-is
+#: (they are already descriptive) and flagged so the UI can style them apart
+#: from a real member.
+_SYSTEM_CREATORS = ("backfill", "historical_backfill", "sync", "unknown", "system")
+
+
+async def _resolve_creator(db, created_by: str) -> dict:
+    """Turn ``events.created_by`` (an NC username) into something readable.
+
+    The column has been populated on every event since the table existed — 375
+    of 375 rows, no nulls — and drives the owning-leader edit permission. It was
+    simply never rendered anywhere, so from the UI it looked like we weren't
+    tracking it at all.
+
+    Looks the member up by nc_username with **no status filter**: creators leave
+    the unit, and an event created by someone since separated must still show
+    their name rather than a bare username. Falls back to the stored string for
+    automation ('backfill', 'spooky (series extend)', ...), which is already
+    descriptive.
+    """
+    raw = (created_by or "").strip()
+    if not raw:
+        return {"raw": "", "display": "Unknown", "is_system": True, "member_id": None}
+
+    lowered = raw.lower()
+    looks_system = lowered in _SYSTEM_CREATORS or " " in raw
+    if not looks_system:
+        row = (await db.execute(
+            select(Member).where(Member.nc_username == raw)
+        )).scalar_one_or_none()
+        if row is not None:
+            return {
+                "raw": raw,
+                "display": row.display_name,
+                "is_system": False,
+                "member_id": row.id,
+            }
+    return {"raw": raw, "display": raw, "is_system": True, "member_id": None}
 
 
 def _site_maps_html(event) -> str:

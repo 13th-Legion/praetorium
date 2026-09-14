@@ -170,6 +170,16 @@ function insertTradocAgenda() {
                 {% if event.instructor %}
                 <div style="font-size:14px;color:#aaa;margin-bottom:4px;">👨‍🏫 Instructor: <a href="/profile/{{ event.instructor.id }}" style="color:#d4a537; text-decoration:none;">{{ rank_abbr.get(event.instructor.rank_grade, '') }} {{ event.instructor.last_name }}, {{ event.instructor.first_name }}</a></div>
                 {% endif %}
+                {# created_by has been recorded on every event since the table existed and
+                   already drives the owning-leader edit permission; it was simply never
+                   rendered, so from the UI it looked like we weren't tracking it. #}
+                {% if creator and creator.display %}
+                <div style="font-size:13px;color:#777;margin-top:6px;">
+                    &#9997; Created by
+                    {% if creator.member_id %}<a href="/profile/{{ creator.member_id }}" style="color:#8a7a3f;text-decoration:none;">{{ creator.display }}</a>{% else %}<span title="created by automation, not a member">{{ creator.display }}</span>{% endif %}
+                    {%- if event.created_at %} on {{ event.created_at.strftime('%d %b %Y') }}{% endif %}
+                </div>
+                {% endif %}
                 {% if event.block_list %}
                 <div style="font-size:13px;color:#888;">🎓 Training Block {{ event.block_list | join(', ') }}</div>
                 {% endif %}
