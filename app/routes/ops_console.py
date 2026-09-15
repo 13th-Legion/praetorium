@@ -7,7 +7,7 @@ Provides the live ops console for any event:
   - Guard duty slots + assignment
   - Vexillation (mission team) management
   - Walk-in guest management
-  - Manual check-in by S1
+  - Manual check-in / un-check-in by S1
 """
 
 import hashlib
@@ -472,6 +472,36 @@ async def manual_checkin(
         await db.commit()
 
     # Return updated roster partial
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
+@router.post("/events/{event_id}/ops/uncheckin", response_class=HTMLResponse)
+@require_role(*OPS_ROLES)
+async def manual_uncheckin(
+    request: Request,
+    event_id: int,
+    member_id: int = Form(...),
+):
+    """Undo a check-in. Also clears official attendance so Finalize cannot restore it.
+
+    Works after finalize: reverses this-event auto TRADOC credits and recomputes
+    ftx_count / last_ftx for that member. Does not unfinalize the event.
+    """
+    async with database.async_session() as db:
+        event = await _get_event_or_404(db, event_id)
+        result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+            )
+        )
+        rsvp = result.scalar_one_or_none()
+        if not rsvp or not (rsvp.checked_in or rsvp.attended):
+            return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+        from app.services import attendance as attendance_svc
+        await attendance_svc.revoke_rsvp_attendance(db, event, rsvp)
+        await db.commit()
+
     return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 

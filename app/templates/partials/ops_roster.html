@@ -146,6 +146,12 @@
           <input type="hidden" name="member_id" value="{{ member.id }}">
           <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="font-size:11px;padding:2px 8px;">Check In</button>
         </form>
+        {% elif rsvp.checked_in and can_checkin %}
+        <form method="POST" action="/events/{{ event.id }}/ops/uncheckin" style="display:inline;">
+          <input type="hidden" name="member_id" value="{{ member.id }}">
+          <button type="submit" class="ops-btn ops-btn-danger" style="font-size:11px;padding:2px 8px;"
+                  onclick="if(!confirm('Undo check-in for this member?')){event.preventDefault();return false;} this.disabled=true;">Undo Check-In</button>
+        </form>
         {% endif %}
       </td>
       {% endif %}

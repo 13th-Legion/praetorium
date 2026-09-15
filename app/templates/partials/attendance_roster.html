@@ -1,0 +1,74 @@
+{# PP-074a attendance confirmation. Seeded from ops-console check-in. #}
+{% macro att_row(rsvp, member, event, present) %}
+<div id="att-row-{{ rsvp.id }}"
+     data-att-group="{% if present %}present{% elif rsvp.status == 'attending' %}expected{% else %}other{% endif %}"
+     style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+  <button hx-post="/api/events/{{ event.id }}/attendance/{{ rsvp.id }}"
+          hx-target="#attendance-roster" hx-swap="innerHTML"
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:{{ '#27ae60' if present else '#888' }};padding:0;line-height:1;">{{ '☑' if present else '☐' }}</button>
+  <span style="color:{{ '#e0e0e0' if present else '#888' }};font-size:14px;">{{ member.display_name }}</span>
+  {% if rsvp.checked_in %}
+  <span style="font-size:10px;color:#d4a537;letter-spacing:0.4px;text-transform:uppercase;">ops</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+<p style="font-size:12px;color:#888;margin:0 0 12px;">
+  Boxes follow the ops-console check-in roster. Unchecking someone also clears their check-in so Finalize will not put them back. Declined / pending are under the expander — do not Check All those.
+</p>
+
+<div id="att-present">
+  <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">
+    Present ({{ present | length }})
+  </div>
+  {% if present %}
+    {% for rsvp, member in present %}
+      {{ att_row(rsvp, member, event, true) }}
+    {% endfor %}
+  {% else %}
+    <div style="font-size:13px;color:#555;padding:8px 0;">Nobody checked in yet.</div>
+  {% endif %}
+</div>
+
+<div id="att-expected" style="margin-top:16px;">
+  <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">
+    RSVP'd attending — not checked in ({{ expected | length }})
+  </div>
+  {% if expected %}
+    {% for rsvp, member in expected %}
+      {{ att_row(rsvp, member, event, false) }}
+    {% endfor %}
+  {% else %}
+    <div style="font-size:13px;color:#555;padding:8px 0;">No leftover attending RSVPs.</div>
+  {% endif %}
+</div>
+
+<details id="att-other" style="margin-top:16px;">
+  <summary style="cursor:pointer;font-size:12px;color:#888;">
+    Declined / pending ({{ other | length }}) — not on the ops roster
+  </summary>
+  <div style="margin-top:8px;">
+    {% for rsvp, member in other %}
+      {{ att_row(rsvp, member, event, false) }}
+    {% endfor %}
+    {% if not other %}
+      <div style="font-size:13px;color:#555;padding:8px 0;">None.</div>
+    {% endif %}
+  </div>
+</details>
+
+{% if available %}
+<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">
+  <form hx-post="/api/events/{{ event.id }}/walk-in" hx-target="#walkin-result" hx-swap="innerHTML"
+        style="display:flex;gap:8px;align-items:center;">
+    <select name="member_id" style="flex:1;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+      <option value="">— Add Walk-In —</option>
+      {% for m in available %}
+      <option value="{{ m.id }}">{{ m.display_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" style="padding:6px 14px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">+ Add</button>
+  </form>
+  <div id="walkin-result" style="margin-top:8px;"></div>
+</div>
+{% endif %}

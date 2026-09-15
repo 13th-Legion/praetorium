@@ -364,11 +364,11 @@ function insertTradocAgenda() {
     <div class="card" style="margin-bottom:16px;">
         <h2 class="card-title" style="font-size:0.9rem;">📋 Attendance Confirmation</h2>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <button onclick="document.querySelectorAll('[id^=att-row-] button').forEach(b=>{if(b.textContent.trim()==='☐')b.click()})"
+            <button onclick="document.querySelectorAll('#att-present button, #att-expected button').forEach(b=>{if(b.textContent.trim()==='☐')b.click()})"
                 style="padding:4px 12px;background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.3);border-radius:4px;color:#27ae60;font-size:12px;cursor:pointer;font-weight:600;">
                 ☑ Check All
             </button>
-            <button onclick="document.querySelectorAll('[id^=att-row-] button').forEach(b=>{if(b.textContent.trim()==='☑')b.click()})"
+            <button onclick="document.querySelectorAll('#att-present button').forEach(b=>{if(b.textContent.trim()==='☑')b.click()})"
                 style="padding:4px 12px;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);border-radius:4px;color:#e74c3c;font-size:12px;cursor:pointer;font-weight:600;">
                 ☐ Uncheck All
             </button>
@@ -383,7 +383,7 @@ function insertTradocAgenda() {
     {% if 'command' in user_roles or 's3' in user_roles or 's1' in user_roles or 'admin' in user_roles %}
     <div class="card" style="margin-bottom:16px;">
         <h2 class="card-title" style="font-size:0.9rem;">🔒 Finalize Event</h2>
-        <p style="font-size:13px;color:#aaa;margin-bottom:12px;">Finalizing locks attendance, sets status to complete, and auto-credits TRADOC items for attendees.</p>
+        <p style="font-size:13px;color:#aaa;margin-bottom:12px;">Finalizing locks attendance, imports any remaining ops-console check-ins as attended, sets status to complete, and auto-credits TRADOC items for attendees.</p>
         <div id="finalize-result"></div>
         <form hx-post="/api/events/{{ event.id }}/finalize" hx-target="#finalize-result" hx-swap="innerHTML"
               hx-confirm="Finalize this event? This will lock attendance and auto-credit TRADOC items. This action cannot be undone.">

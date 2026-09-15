@@ -28,6 +28,7 @@ from config import get_settings
 from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
 from app.services import ranks as _ranks
 from app.services import nc_rooms as _nc_rooms_svc
+from app.services import attendance as attendance_svc
 
 PORTAL_BASE = "https://portal.13thlegion.org"
 
@@ -3217,7 +3218,11 @@ async def issue_fragord(
 @router.post("/api/events/{event_id}/attendance/{rsvp_id}", response_class=HTMLResponse)
 @require_role("command", "s3", "s1", "admin")
 async def toggle_attendance(request: Request, event_id: int, rsvp_id: int):
-    """Toggle attended flag for a specific RSVP."""
+    """Toggle official attendance. Present = attended OR ops check-in.
+
+    Unchecking clears both flags so Finalize cannot copy the check-in back.
+    Checking a no-show sets attended only (they never scanned).
+    """
     async with database.async_session() as db:
         result = await db.execute(
             select(EventRSVP).where(
@@ -3228,7 +3233,6 @@ async def toggle_attendance(request: Request, event_id: int, rsvp_id: int):
         if not rsvp:
             return HTMLResponse("RSVP not found", status_code=404)
 
-        # Check event is not finalized
         ev_result = await db.execute(select(Event).where(Event.id == event_id))
         event = ev_result.scalar_one_or_none()
         if event and event.finalized_at:
@@ -3236,25 +3240,14 @@ async def toggle_attendance(request: Request, event_id: int, rsvp_id: int):
                 '<div style="color:#ef5350;font-size:13px;">🔒 Event is finalized — attendance locked.</div>'
             )
 
-        rsvp.attended = not rsvp.attended
-        rsvp.updated_at = datetime.utcnow()
-        new_state = rsvp.attended
+        if attendance_svc.is_present(rsvp):
+            await attendance_svc.revoke_rsvp_attendance(db, event, rsvp)
+        else:
+            rsvp.attended = True
+            rsvp.updated_at = datetime.utcnow()
         await db.commit()
 
-        # Get member name for display
-        m_result = await db.execute(select(Member).where(Member.id == rsvp.member_id))
-        member = m_result.scalar_one_or_none()
-        name = member.display_name if member else f"Member #{rsvp.member_id}"
-
-    check = "☑" if new_state else "☐"
-    color = "#27ae60" if new_state else "#888"
-    return HTMLResponse(f"""
-    <div id="att-row-{rsvp_id}" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-        <button hx-post="/api/events/{event_id}/attendance/{rsvp_id}"
-                hx-target="#att-row-{rsvp_id}" hx-swap="outerHTML"
-                style="background:none;border:none;font-size:20px;cursor:pointer;color:{color};padding:0;line-height:1;">{check}</button>
-        <span style="color:{'#e0e0e0' if new_state else '#888'};font-size:14px;">{name}</span>
-    </div>""")
+        return await _attendance_roster_response(request, db, event_id)
 
 
 @router.post("/api/events/{event_id}/walk-in", response_class=HTMLResponse)
@@ -3321,69 +3314,56 @@ async def add_walk_in(request: Request, event_id: int):
 
 # ─── PP-074a: Attendance Roster Partial ──────────────────────────────────────
 
+async def _attendance_roster_response(request: Request, db, event_id: int):
+    """Render the confirmation checklist, seeded from ops-console check-in."""
+    ev_result = await db.execute(select(Event).where(Event.id == event_id))
+    event = ev_result.scalar_one_or_none()
+    if not event:
+        return HTMLResponse("Event not found", status_code=404)
+
+    roster_result = await db.execute(
+        select(EventRSVP, Member).join(Member, EventRSVP.member_id == Member.id).where(
+            EventRSVP.event_id == event_id
+        ).order_by(Member.last_name)
+    )
+    roster_rows = roster_result.all()
+
+    present, expected, other = [], [], []
+    for rsvp, member in roster_rows:
+        if attendance_svc.is_present(rsvp):
+            present.append((rsvp, member))
+        elif rsvp.status == "attending":
+            expected.append((rsvp, member))
+        else:
+            other.append((rsvp, member))
+
+    rostered_ids = {r.member_id for r, _ in roster_rows}
+    available_result = await db.execute(
+        select(Member).where(
+            and_(
+                Member.status.in_(["active", "recruit"]),
+                ~Member.id.in_(rostered_ids) if rostered_ids else True,
+            )
+        ).order_by(Member.last_name)
+    )
+    available = available_result.scalars().all()
+
+    return templates.TemplateResponse("partials/attendance_roster.html", {
+        "request": request,
+        "event": event,
+        "present": present,
+        "expected": expected,
+        "other": other,
+        "available": available,
+    })
+
+
 @router.get("/api/events/{event_id}/attendance-roster", response_class=HTMLResponse)
 @require_role("command", "s3", "s1", "admin")
 async def attendance_roster(request: Request, event_id: int):
     """Return the attendance confirmation checklist partial."""
     async with database.async_session() as db:
-        ev_result = await db.execute(select(Event).where(Event.id == event_id))
-        event = ev_result.scalar_one_or_none()
-        if not event:
-            return HTMLResponse("Event not found", status_code=404)
-
-        # Get all RSVPs with member info
-        roster_result = await db.execute(
-            select(EventRSVP, Member).join(Member, EventRSVP.member_id == Member.id).where(
-                EventRSVP.event_id == event_id
-            ).order_by(Member.last_name)
-        )
-        roster_rows = roster_result.all()
-
-        # Get active members NOT on the roster (for walk-in dropdown)
-        rostered_ids = {r.member_id for r, _ in roster_rows}
-        available_result = await db.execute(
-            select(Member).where(
-                and_(
-                    Member.status.in_(["active", "recruit"]),
-                    ~Member.id.in_(rostered_ids) if rostered_ids else True,
-                )
-            ).order_by(Member.last_name)
-        )
-        available = available_result.scalars().all()
-
-    rows_html = []
-    for rsvp, member in roster_rows:
-        check = "☑" if rsvp.attended else "☐"
-        color = "#27ae60" if rsvp.attended else "#888"
-        text_color = "#e0e0e0" if rsvp.attended else "#888"
-        rows_html.append(f"""
-        <div id="att-row-{rsvp.id}" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <button hx-post="/api/events/{event_id}/attendance/{rsvp.id}"
-                    hx-target="#att-row-{rsvp.id}" hx-swap="outerHTML"
-                    style="background:none;border:none;font-size:20px;cursor:pointer;color:{color};padding:0;line-height:1;">{check}</button>
-            <span style="color:{text_color};font-size:14px;">{member.display_name}</span>
-        </div>""")
-
-    # Walk-in dropdown
-    options = "".join(
-        f'<option value="{m.id}">{m.display_name}</option>' for m in available
-    )
-    walkin_html = f"""
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">
-        <form hx-post="/api/events/{event_id}/walk-in" hx-target="#walkin-result" hx-swap="innerHTML"
-              style="display:flex;gap:8px;align-items:center;">
-            <select name="member_id" style="flex:1;padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
-                <option value="">— Add Walk-In —</option>
-                {options}
-            </select>
-            <button type="submit" style="padding:6px 14px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-size:13px;">+ Add</button>
-        </form>
-        <div id="walkin-result" style="margin-top:8px;"></div>
-    </div>""" if available else ""
-
-    return HTMLResponse(
-        f'<div>{"".join(rows_html)}</div>{walkin_html}'
-    )
+        return await _attendance_roster_response(request, db, event_id)
 
 
 # ─── PP-074b: Event Finalization ─────────────────────────────────────────────
