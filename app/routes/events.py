@@ -2814,6 +2814,20 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
         event = result.scalar_one_or_none()
         if not event:
             return HTMLResponse("Event not found", status_code=404)
+
+        # Same idempotency guard as the AAR publish path (2026-09-16). This
+        # route also emails attendees, cross-posts to Talk and writes a
+        # notification per member, and it had no check either — so a
+        # double-click here would double-email the unit exactly the way the
+        # FTX AAR did. Issuing an OPORD is a one-shot action, so a repeat is
+        # reported and ignored rather than downgraded to a save.
+        if event.opord_issued_at is not None:
+            return HTMLResponse(
+                '<div style="padding:8px 12px;background:rgba(212,165,55,0.15);'
+                'color:#d4a537;border-radius:6px;">ℹ️ OPORD was already issued for '
+                'this event. Nothing was re-sent.</div>'
+            )
+
         event.opord_issued_at = now
         event.updated_at = now
 
@@ -3630,6 +3644,21 @@ async def save_aar(request: Request, event_id: int):
         if not event or not event.finalized_at:
             return HTMLResponse('<div style="color:#ef5350;font-size:13px;">❌ Event must be finalized before AAR.</div>')
 
+        # Idempotency guard (2026-09-16). Publishing twice re-ran the ENTIRE
+        # fan-out in _aar_bg(): an email to every active member and recruit, a
+        # Talk cross-post, and one notification per member. There was no check
+        # that aar_published_at was already set, so a double-submit duplicated
+        # everything. SGT Deaton's FTX AAR fired twice ~6s apart: 125 members
+        # each got two emails and two notifications, and T1 Announcements got
+        # two identical posts (comments 50213/50214).
+        #
+        # A repeat publish now saves the edits and skips the fan-out, rather
+        # than erroring — editing an already-published AAR is legitimate, but
+        # re-notifying the whole unit for it is not.
+        republished = action == "publish" and event.aar_published_at is not None
+        if republished:
+            action = "save"
+
         # Save narrative fields
         event.aar_commander_intent = commander_intent or None
         event.aar_mission_summary = mission_summary or None
@@ -3749,6 +3778,12 @@ async def save_aar(request: Request, event_id: int):
             '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
             '\U0001f4cb AAR published. Emails sending in background.</div>'
             '<script>setTimeout(()=>window.location.reload(),1500)</script>'
+        )
+    elif republished:
+        return HTMLResponse(
+            '<div style="padding:8px 12px;background:rgba(212,165,55,0.15);color:#d4a537;border-radius:6px;">'
+            '💾 Changes saved. This AAR was already published — the unit was '
+            'not emailed or notified again.</div>'
         )
     else:
         return HTMLResponse(
