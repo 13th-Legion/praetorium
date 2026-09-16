@@ -2819,6 +2819,7 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
     from app.newsletter_assets import (
         NEWSLETTER_ATTACH_DIR, ALLOWED_ATTACH_MIMES,
         MAX_ATTACH_BYTES, MAX_TOTAL_ATTACH_BYTES,
+        attach_ext_for_mime, sniff_attachment_mime,
     )
     staged_atts: list[tuple[str, str, str]] = []  # (disk_path, orig_name, mime)
     total_bytes = 0
@@ -2826,17 +2827,21 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
         if not getattr(up, "filename", None):
             continue
         fdata = await up.read()
-        fmime = up.content_type or "application/octet-stream"
+        fmime = (up.content_type or "application/octet-stream").strip().lower()
         if fmime not in ALLOWED_ATTACH_MIMES:
             return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">Unsupported attachment type: {up.filename}</div>')
         if len(fdata) > MAX_ATTACH_BYTES:
             return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">{up.filename} exceeds {MAX_ATTACH_BYTES // (1024*1024)}MB.</div>')
+        if sniff_attachment_mime(fdata) != fmime:
+            return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">{up.filename} contents do not match its declared type.</div>')
         total_bytes += len(fdata)
         if total_bytes > MAX_TOTAL_ATTACH_BYTES:
             return HTMLResponse(f'<div style="color:#ef5350;padding:8px;">Attachments exceed {MAX_TOTAL_ATTACH_BYTES // (1024*1024)}MB total (Proton limit).</div>')
         NEWSLETTER_ATTACH_DIR.mkdir(parents=True, exist_ok=True)
-        _ext = os.path.splitext(up.filename)[1].lower()
-        _stored = f"blast_{_uuid.uuid4().hex}{_ext}"
+        # Extension from the validated mime, not up.filename — this directory is
+        # inside the unauthenticated /nlmedia mount, which types responses by
+        # file extension. Same bug class as the newsletter image upload.
+        _stored = f"blast_{_uuid.uuid4().hex}{attach_ext_for_mime(fmime)}"
         with open(NEWSLETTER_ATTACH_DIR / _stored, "wb") as _fh:
             _fh.write(fdata)
         staged_atts.append((str(NEWSLETTER_ATTACH_DIR / _stored), up.filename, fmime))
