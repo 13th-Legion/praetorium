@@ -75,6 +75,12 @@
         };
       })();
     </script>
+    <!-- Shared Quill image upload-on-paste/drop helper. Defines
+         window.attachQuillImageUpload(quill, endpoint); every template that
+         constructs a Quill editor calls it. Loading it here (rather than per
+         page) keeps one implementation and one cache entry. It touches nothing
+         until called, so pages without an editor pay only the request. -->
+    <script src="/static/js/quill-image-upload.js?v=20260915"></script>
     {% block head %}{% endblock %}
 </head>
 <body>

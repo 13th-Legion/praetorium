@@ -195,27 +195,14 @@ var nlQuill = new Quill('#nl-editor', {
 });
 {% if nl %}nlQuill.root.innerHTML = {{ (nl.body_html or '') | tojson }};{% endif %}
 
-// Custom image handler — upload to server, insert hosted URL (no base64).
-nlQuill.getModule('toolbar').addHandler('image', function() {
-    var input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
-    input.click();
-    input.onchange = function() {
-        var file = input.files[0];
-        if (!file) return;
-        var fd = new FormData();
-        fd.append('file', file);
-        fetch('/api/s1/newsletter/image-upload', { method: 'POST', body: fd })
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                if (d.error) { alert(d.error); return; }
-                var range = nlQuill.getSelection(true);
-                nlQuill.insertEmbed(range.index, 'image', d.url);
-                nlQuill.setSelection(range.index + 1);
-            }).catch(function(e){ alert('Image upload failed: ' + e); });
-    };
-});
+// Images: toolbar button, paste AND drag-drop all upload to the server and
+// insert a hosted URL. Never base64 — bleach strips `data:` srcs on save, so a
+// pasted image would silently vanish. Shared implementation lives in
+// /static/js/quill-image-upload.js (loaded by base.html).
+//
+// Newsletters keep their own endpoint: it also writes the NewsletterImage row
+// that the orphan re-key/cleanup pass in newsletter.py depends on.
+attachQuillImageUpload(nlQuill, '/api/s1/newsletter/image-upload');
 
 function updateCrestPreview() {
     var key = document.getElementById('nl-crest').value;

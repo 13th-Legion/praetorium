@@ -44,9 +44,15 @@ document.addEventListener("DOMContentLoaded", function() {
     if(document.getElementById('editor-container')) {
         var quill = new Quill('#editor-container', {
             theme: 'snow',
-            modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
+            modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link', 'image'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
         });
         eventQuill = quill;
+
+        // Images: toolbar button, paste AND drag-drop all upload to the server
+        // and insert a hosted URL. Never base64 — _clean_description() runs
+        // bleach, which strips `data:` srcs, so a pasted image would silently
+        // vanish on save. Shared: /static/js/quill-image-upload.js.
+        attachQuillImageUpload(quill, '/api/media/image-upload');
 
         // Normalize the description so blank lines can't compound across edits.
         // Quill can leave/insert empty paragraphs (<p><br></p>) on load; without
