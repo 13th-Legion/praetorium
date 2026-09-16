@@ -87,6 +87,43 @@ ALLOWED_ATTACH_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+# Stored filename extension per allowed ATTACHMENT MIME.
+#
+# SECURITY: same rule as IMAGE_MIME_EXT, and for the same reason. Attachments
+# land in NEWSLETTER_ATTACH_DIR, which sits inside the volume published by the
+# unauthenticated /nlmedia StaticFiles mount, so the extension on disk chooses
+# the Content-Type we serve. Taking it from the caller's filename let a caller
+# upload bytes with an allowed Content-Type (say application/pdf) under the name
+# "payload.html" and have us serve text/html — stored XSS on our own origin,
+# reachable without a session. Every value here is inert when served.
+ATTACH_MIME_EXT: dict[str, str] = {
+    "application/pdf": ".pdf",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+}
+
+# Magic-byte signatures for the non-image attachment types. Checked so that a
+# lying Content-Type header cannot get arbitrary bytes — HTML, SVG, script —
+# stored under a document extension.
+#
+# application/msword accepts both OLE2 (Word 97-2003) and RTF, because Word
+# writes RTF under a .doc name and browsers label both application/msword.
+# The docx signature is the bare ZIP local-file header: every OOXML file is a
+# zip, so this confirms "is a zip", not "is a valid Word document". That is
+# enough for the job here, which is to keep markup out of the volume.
+_OLE2_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+_ZIP_MAGICS = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
+_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+# Per the PDF spec the header need only appear near the start of the file, and
+# real-world PDFs sometimes carry a short prefix, so scan a window instead of
+# demanding startswith and rejecting files that every reader accepts.
+_PDF_HEADER_WINDOW = 1024
+
 
 def crest_url(key: str) -> str:
     """Absolute URL of the crest for `key`, falling back to standard if the
@@ -119,6 +156,17 @@ def image_ext_for_mime(mime: str) -> str:
     return IMAGE_MIME_EXT.get((mime or "").strip().lower(), ".png")
 
 
+def attach_ext_for_mime(mime: str) -> str:
+    """Stored-file extension for a validated attachment MIME.
+
+    Only ever call this with a MIME already checked against
+    ALLOWED_ATTACH_MIMES. Anything unrecognised falls back to ".bin", which
+    StaticFiles serves as application/octet-stream — inert either way, and
+    never the caller's own suffix.
+    """
+    return ATTACH_MIME_EXT.get((mime or "").strip().lower(), ".bin")
+
+
 def sniff_image_mime(data: bytes) -> str | None:
     """Detect the real image type from magic bytes, or None if unrecognised.
 
@@ -134,4 +182,35 @@ def sniff_image_mime(data: bytes) -> str | None:
     # WebP is a RIFF container: "RIFF" <4-byte size> "WEBP"
     if len(data) >= 12 and data.startswith(b"RIFF") and data[8:12] == b"WEBP":
         return "image/webp"
+    return None
+
+
+def sniff_attachment_mime(data: bytes) -> str | None:
+    """Detect the real type of uploaded attachment bytes, or None.
+
+    Covers exactly the types in ALLOWED_ATTACH_MIMES: the four image types via
+    sniff_image_mime, plus PDF and the two Word formats. None means "not a
+    recognised attachment type", which is what HTML, SVG and script all return
+    — so the callers reject on it rather than writing those bytes into the
+    publicly served volume.
+
+    The returned MIME is canonical, not the caller's claim, so a caller cannot
+    pick the stored extension by mislabelling the upload.
+    """
+    if not data:
+        return None
+
+    img = sniff_image_mime(data)
+    if img:
+        return img
+
+    if b"%PDF-" in data[:_PDF_HEADER_WINDOW]:
+        return "application/pdf"
+
+    if data.startswith(_ZIP_MAGICS):
+        return _DOCX_MIME
+
+    if data.startswith(_OLE2_MAGIC) or data.startswith(b"{\\rtf"):
+        return "application/msword"
+
     return None

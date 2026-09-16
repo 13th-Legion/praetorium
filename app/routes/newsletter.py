@@ -6,7 +6,7 @@ self-building Nextcloud archive.
 """
 from __future__ import annotations
 
-import os
+import html
 import uuid
 import logging
 from datetime import datetime
@@ -32,6 +32,7 @@ from app.newsletter_assets import (
     MAX_IMAGE_BYTES, MAX_ATTACH_BYTES, MAX_TOTAL_ATTACH_BYTES,
     ALLOWED_IMAGE_MIMES, ALLOWED_ATTACH_MIMES,
     image_ext_for_mime, sniff_image_mime,
+    attach_ext_for_mime, sniff_attachment_mime,
 )
 from app.newsletter_send import EMAIL_BLAST_GROUPS, resolve_recipients
 from app.newsletter_scheduler import deliver_newsletter
@@ -171,11 +172,19 @@ async def newsletter_attachment_add(request: Request, nl_id: int, db: AsyncSessi
     if not file or not getattr(file, "filename", None):
         return HTMLResponse('<div style="color:#ef5350;">No file provided.</div>', status_code=400)
     data = await file.read()
-    mime = file.content_type or "application/octet-stream"
+    mime = (file.content_type or "application/octet-stream").strip().lower()
     if mime not in ALLOWED_ATTACH_MIMES:
         return HTMLResponse('<div style="color:#ef5350;">Unsupported file type.</div>', status_code=400)
     if len(data) > MAX_ATTACH_BYTES:
         return HTMLResponse(f'<div style="color:#ef5350;">File exceeds {MAX_ATTACH_BYTES // (1024*1024)}MB.</div>', status_code=400)
+    # Confirm the declared Content-Type against the real bytes before anything
+    # is written. Without this, "Content-Type: application/pdf" plus an HTML
+    # body would put markup in the publicly served volume.
+    if sniff_attachment_mime(data) != mime:
+        return HTMLResponse(
+            '<div style="color:#ef5350;">File contents do not match its declared type.</div>',
+            status_code=400,
+        )
 
     existing = (await db.execute(
         select(NewsletterAttachment).where(NewsletterAttachment.newsletter_id == nl_id)
@@ -187,8 +196,14 @@ async def newsletter_attachment_add(request: Request, nl_id: int, db: AsyncSessi
             status_code=400,
         )
 
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    stored = f"{uuid.uuid4().hex}{ext}"
+    # Extension comes from the VALIDATED mime, never from file.filename.
+    # NEWSLETTER_ATTACH_DIR lives under the volume published by the
+    # unauthenticated /nlmedia StaticFiles mount, and StaticFiles picks the
+    # response Content-Type from the extension on disk — so honouring an
+    # uploaded "payload.html" would serve attacker HTML from our own origin.
+    # The original name is still kept in orig_name for display and for the
+    # outgoing mail part; it just never reaches the filesystem.
+    stored = f"{uuid.uuid4().hex}{attach_ext_for_mime(mime)}"
     NEWSLETTER_ATTACH_DIR.mkdir(parents=True, exist_ok=True)
     with open(NEWSLETTER_ATTACH_DIR / stored, "wb") as fh:
         fh.write(data)
@@ -252,8 +267,13 @@ async def newsletter_attachment_view(
 def _attachment_row_html(att: NewsletterAttachment, nl_id: int) -> str:
     kb = max(1, att.size // 1024)
     view_url = f"/api/s1/newsletter/{nl_id}/attachment/{att.id}/view"
+    # orig_name is the caller's filename, straight off the upload. This fragment
+    # is assembled by hand rather than by Jinja, so nothing escapes it for us and
+    # a name like '<img src=x onerror=...>.pdf' would execute in the S1 editor.
+    # The equivalent row in newsletter_edit.html is safe because Jinja autoescapes.
+    orig_name = html.escape(att.orig_name or att.filename or "")
     return f'''<div id="att-{att.id}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid #444;border-radius:4px;margin-bottom:6px;">
-      <span style="font-size:13px;color:#ddd;">📎 {att.orig_name} <span style="color:#888;">({kb} KB)</span></span>
+      <span style="font-size:13px;color:#ddd;">📎 {orig_name} <span style="color:#888;">({kb} KB)</span></span>
       <span style="display:flex;align-items:center;gap:12px;">
         <a href="{view_url}" target="_blank" rel="noopener" style="color:#d4a537;font-size:12px;text-decoration:none;">View</a>
         <button type="button" hx-post="/api/s1/newsletter/{nl_id}/attachment/{att.id}/delete" hx-target="#att-{att.id}" hx-swap="outerHTML"

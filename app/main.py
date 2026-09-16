@@ -302,7 +302,48 @@ import os as _os
 _nlmedia_dir = _os.getenv("NEWSLETTER_DATA_DIR", "/app/data/newsletter")
 _os.makedirs(_os.path.join(_nlmedia_dir, "images"), exist_ok=True)
 _os.makedirs(_os.path.join(_nlmedia_dir, "attachments"), exist_ok=True)
-app.mount("/nlmedia", StaticFiles(directory=_nlmedia_dir), name="nlmedia")
+
+
+class _NewsletterMedia(StaticFiles):
+    """The /nlmedia mount, with the browser told not to render what it serves.
+
+    StaticFiles derives Content-Type from the file extension, so this mount is
+    the thing that turns a badly-named upload into an executable response. The
+    upload handlers already derive stored extensions from the validated MIME
+    (app/newsletter_assets.py); this is the second line, so a future handler
+    that forgets cannot reintroduce stored XSS on our origin.
+
+    `images/` stays inline and unauthenticated — that is the whole reason this
+    mount is public. Gmail's image proxy fetches embedded newsletter images and
+    a Content-Disposition of attachment would stop them rendering in delivered
+    mail. Only the non-image subtree (`attachments/`) is forced to download.
+
+    Attachments are emailed as real MIME parts read straight off disk
+    (app/newsletter_scheduler.py) and previewed through the auth-gated
+    /api/s1/newsletter/{id}/attachment/{att_id}/view route, so nothing in the
+    product links to /nlmedia/attachments/ — its public reachability is an
+    accident of sharing one volume with the inline images.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._inline_root = _os.path.realpath(_os.path.join(str(self.directory), "images"))
+
+    def _serves_inline(self, full_path) -> bool:
+        real = _os.path.realpath(str(full_path))
+        return real == self._inline_root or real.startswith(self._inline_root + _os.sep)
+
+    def file_response(self, full_path, stat_result, scope, status_code: int = 200):
+        resp = super().file_response(full_path, stat_result, scope, status_code=status_code)
+        # Never let a browser second-guess our Content-Type into something
+        # scriptable.
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        if not self._serves_inline(full_path):
+            resp.headers["Content-Disposition"] = "attachment"
+        return resp
+
+
+app.mount("/nlmedia", _NewsletterMedia(directory=_nlmedia_dir), name="nlmedia")
 templates = Jinja2Templates(directory="app/templates")
 
 # Custom Jinja2 filters
