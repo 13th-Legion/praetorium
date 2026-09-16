@@ -8,7 +8,7 @@ from app.models.recruiting import Recruiter, DocumentSignature, SeparationLog  #
 from app.models.events import (  # noqa: F401
     Event, EventRSVP, EventDocument,
     EventGuest, EventBuddyPair, EventGuardSlot, EventGuardDuty,
-    EventVexillation, EventVexillationAssignment,
+    EventVexillation, EventVexillationAssignment, EventDutyAssignment,
 )
 from app.models.s4_logistics import (  # noqa: F401
     S4MealPlan, S4Expense, S4PurchaseRequest, 

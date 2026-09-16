@@ -40,6 +40,7 @@
   .badge-guest     { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
   .badge-walkin    { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
   .badge-immunes   { background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
+  .badge-duty      { background: rgba(234,179,8,0.16); color: #facc15; border: 1px solid rgba(234,179,8,0.35); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
 
   /* Field status badges for vexillations */
   .status-assembly { background: rgba(99,102,241,0.15); color: #818cf8; }
@@ -179,6 +180,10 @@
   <!-- ── Guard assignment panel (tactical; hidden in TV mode) ── -->
   {% if show_tactical and can_guard and display_mode != 'tv' %}
     {% include "partials/ops_guard_config.html" %}
+  {% endif %}
+
+  {% if show_tactical and can_duty and display_mode != 'tv' %}
+    {% include "partials/ops_duty_team.html" %}
   {% endif %}
 
   <!-- ── Vexillation Summary (tactical events only) ── -->

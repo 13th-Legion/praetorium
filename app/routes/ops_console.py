@@ -31,8 +31,10 @@ from app import database
 from app.models.events import (
     Event, EventRSVP, EventGuest, EventBuddyPair,
     EventGuardSlot, EventGuardDuty, EventVexillation, EventVexillationAssignment,
+    EventDutyAssignment,
 )
 from app.models.member import Member
+from app.services import teams as teams_svc
 from config import get_settings
 
 router = APIRouter(tags=["ops-console"])
@@ -67,7 +69,8 @@ templates.env.filters["cdt_stored"] = _fmt_ct_stored
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 TACTICAL_CATEGORIES = {"ftx", "mcftx", "training_course"}
-OPS_ROLES = ("s1", "command", "admin")
+OPS_ROLES = ("s1", "s3", "command", "admin")
+DUTY_SUGGESTED_LABELS = ("KP", "Latrine")
 S1_CMD_ROLES = ("s1", "command", "admin")
 S1_S2_CMD_ROLES = ("s1", "s2", "command", "admin")
 S3_CMD_ROLES = ("s3", "command", "admin")
@@ -82,6 +85,15 @@ def _form_flag(value: Optional[str]) -> bool:
     return str(value).strip().lower() in {"1", "true", "on", "yes", "y"}
 
 
+def _normalize_duty_label(label: str) -> str:
+    cleaned = (label or "").strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Duty label is required")
+    if len(cleaned) > 32:
+        raise HTTPException(status_code=400, detail="Duty label must be 32 characters or fewer")
+    return cleaned
+
+
 def _ops_flags(user: dict, display_mode: str = "normal") -> dict:
     return {
         "display_mode": display_mode,
@@ -92,6 +104,8 @@ def _ops_flags(user: dict, display_mode: str = "normal") -> dict:
         "can_vex_create": _user_has_role(user, *S3_CMD_ROLES),
         "can_vex_assign": _user_has_role(user, *S1_S3_CMD_ROLES),
         "can_immunes": _user_has_role(user, *S1_S3_CMD_ROLES),
+        "can_duty": _user_has_role(user, *S1_S3_CMD_ROLES),
+        "duty_labels": DUTY_SUGGESTED_LABELS,
     }
 
 
@@ -143,11 +157,13 @@ async def ops_console(request: Request, event_id: int):
         checked_in_members = await _get_checked_in_members(db, event_id)
         member_map = await _get_member_map(db, event_id)
         guest_map = await _get_guest_map(db, event_id)
+        duty_assignments = await _get_duty_assignments(db, event_id)
         sponsor_ids = {g.sponsor_id for g in guest_map.values()} - set(member_map)
         if sponsor_ids:
             extra = await db.execute(select(Member).where(Member.id.in_(sponsor_ids)))
             for m in extra.scalars().all():
                 member_map[m.id] = m
+    team_options = await teams_svc.team_options()
 
     show_tactical = event.category in TACTICAL_CATEGORIES
     display_mode = request.query_params.get("display", "normal")  # "tv" or "normal"
@@ -172,6 +188,8 @@ async def ops_console(request: Request, event_id: int):
         "vexillations": vexillations,
         "checked_in_members": checked_in_members,
         "guest_map": guest_map,
+        "duty_assignments": duty_assignments,
+        "team_options": team_options,
         "qr_svg": qr_svg,
         "qr_url": qr_url,
         "next_refresh": next_refresh,
@@ -562,6 +580,164 @@ async def toggle_immunes(
         "show_tactical": event.category in TACTICAL_CATEGORIES,
         **_ops_flags(user, request.query_params.get("display", "normal")),
     })
+
+
+# ─── Duty team (event-scoped extra duties) ────────────────────────────────────
+
+@router.post("/events/{event_id}/ops/duty/assign", response_class=HTMLResponse)
+@require_role(*S1_S3_CMD_ROLES)
+async def assign_duty(
+    request: Request,
+    event_id: int,
+    member_id: int = Form(...),
+    duty_label: str = Form(...),
+    override_immunes: str = Form(""),
+):
+    """Add one checked-in member to the event duty team. Immunes need override."""
+    user = get_current_user(request)
+    username = user.get("username", "unknown")
+    label = _normalize_duty_label(duty_label)
+
+    async with database.async_session() as db:
+        await _get_event_or_404(db, event_id)
+        rsvp_result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+            )
+        )
+        rsvp = rsvp_result.scalar_one_or_none()
+        if not rsvp or not rsvp.checked_in:
+            raise HTTPException(status_code=400, detail="Member is not checked in")
+        if rsvp.immunes and not _form_flag(override_immunes):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Member is immunes (exempt from extra duties). "
+                    "Resubmit with override_immunes=1 to assign anyway."
+                ),
+            )
+        existing = await db.execute(
+            select(EventDutyAssignment).where(
+                and_(
+                    EventDutyAssignment.event_id == event_id,
+                    EventDutyAssignment.member_id == member_id,
+                )
+            )
+        )
+        row = existing.scalar_one_or_none()
+        if row:
+            row.duty_label = label
+            row.source = "ad_hoc"
+            row.geo_team_name = None
+            row.assigned_by = username
+        else:
+            db.add(EventDutyAssignment(
+                event_id=event_id,
+                member_id=member_id,
+                duty_label=label,
+                source="ad_hoc",
+                assigned_by=username,
+                created_at=datetime.utcnow(),
+            ))
+        await db.commit()
+
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
+@router.post("/events/{event_id}/ops/duty/from-team", response_class=HTMLResponse)
+@require_role(*S1_S3_CMD_ROLES)
+async def assign_duty_from_team(
+    request: Request,
+    event_id: int,
+    team_name: str = Form(...),
+    duty_label: str = Form(...),
+):
+    """Put every checked-in member of a geographic/HQ team on extra duty.
+
+    Immunes are skipped. Permanent Member.team is not written.
+    """
+    user = get_current_user(request)
+    username = user.get("username", "unknown")
+    label = _normalize_duty_label(duty_label)
+    team_name = (team_name or "").strip()
+    known = set(await teams_svc.team_options())
+    if team_name not in known:
+        raise HTTPException(status_code=400, detail="Unknown team")
+
+    async with database.async_session() as db:
+        await _get_event_or_404(db, event_id)
+        immunes_ids = await _immunes_member_ids(db, event_id)
+        already = await db.execute(
+            select(EventDutyAssignment.member_id).where(
+                EventDutyAssignment.event_id == event_id
+            )
+        )
+        already_ids = {row[0] for row in already.all()}
+        result = await db.execute(
+            select(Member.id)
+            .join(EventRSVP, EventRSVP.member_id == Member.id)
+            .where(and_(
+                EventRSVP.event_id == event_id,
+                EventRSVP.checked_in == True,
+                Member.team == team_name,
+                Member.status.in_(("active", "recruit")),
+            ))
+        )
+        for (member_id,) in result.all():
+            if member_id in immunes_ids or member_id in already_ids:
+                continue
+            db.add(EventDutyAssignment(
+                event_id=event_id,
+                member_id=member_id,
+                duty_label=label,
+                source="geo_team",
+                geo_team_name=team_name,
+                assigned_by=username,
+                created_at=datetime.utcnow(),
+            ))
+        await db.commit()
+
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
+@router.delete("/events/{event_id}/ops/duty/{assignment_id}", response_class=HTMLResponse)
+@require_role(*S1_S3_CMD_ROLES)
+async def unassign_duty(request: Request, event_id: int, assignment_id: int):
+    async with database.async_session() as db:
+        result = await db.execute(
+            select(EventDutyAssignment).where(
+                and_(
+                    EventDutyAssignment.id == assignment_id,
+                    EventDutyAssignment.event_id == event_id,
+                )
+            )
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            raise HTTPException(status_code=404, detail="Duty assignment not found")
+        await db.delete(row)
+        await db.commit()
+    return HTMLResponse(content="", status_code=200)
+
+
+@router.post("/events/{event_id}/ops/duty/{assignment_id}/delete", response_class=HTMLResponse)
+@require_role(*S1_S3_CMD_ROLES)
+async def unassign_duty_post(request: Request, event_id: int, assignment_id: int):
+    async with database.async_session() as db:
+        result = await db.execute(
+            select(EventDutyAssignment).where(
+                and_(
+                    EventDutyAssignment.id == assignment_id,
+                    EventDutyAssignment.event_id == event_id,
+                )
+            )
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            raise HTTPException(status_code=404, detail="Duty assignment not found")
+        await db.delete(row)
+        await db.commit()
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
 # ─── Battle Buddy ─────────────────────────────────────────────────────────────
@@ -1139,6 +1315,11 @@ async def _build_roster(db, event: Event) -> list[dict]:
     guard_map = {gd.member_id: gd for gd in guard_duties if gd.member_id}
     guest_guard_map = {gd.guest_id: gd for gd in guard_duties if gd.guest_id}
 
+    duty_result = await db.execute(
+        select(EventDutyAssignment).where(EventDutyAssignment.event_id == event_id)
+    )
+    duty_map = {d.member_id: d for d in duty_result.scalars().all()}
+
     # Get vexillation assignments
     vex_assign_result = await db.execute(
         select(EventVexillationAssignment, EventVexillation)
@@ -1187,6 +1368,7 @@ async def _build_roster(db, event: Event) -> list[dict]:
             "buddy_name": buddy_name,
             "guard_duty": guard,
             "vexillation": vex,
+            "duty": duty_map.get(member.id),
             "immunes": bool(rsvp.immunes),
             "row_type": "member",
         })
@@ -1250,6 +1432,14 @@ async def _get_guest_map(db, event_id: int) -> dict[int, EventGuest]:
         select(EventGuest).where(EventGuest.event_id == event_id)
     )
     return {g.id: g for g in result.scalars().all()}
+
+
+async def _get_duty_assignments(db, event_id: int) -> list[EventDutyAssignment]:
+    result = await db.execute(
+        select(EventDutyAssignment).where(EventDutyAssignment.event_id == event_id)
+        .order_by(EventDutyAssignment.created_at)
+    )
+    return result.scalars().all()
 
 
 async def _immunes_member_ids(db, event_id: int) -> set[int]:

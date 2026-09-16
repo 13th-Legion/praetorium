@@ -11,6 +11,7 @@
       {% if show_tactical %}
       <th>Buddy</th>
       <th>Guard</th>
+      <th>Duty</th>
       <th>Vexillation</th>
       {% endif %}
       {% if not display_mode or display_mode != 'tv' %}
@@ -105,6 +106,23 @@
             <button type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;"
                     onclick="var f=this.form; if(f.dataset.immunes==='1'){ if(!confirm('This member is immunes (exempt from extra duties). Assign to guard anyway?')){ event.preventDefault(); return false; } f.querySelector('[name=override_immunes]').value='1'; } this.disabled=true; f.submit();">Assign</button>
           </form>
+        {% else %}
+          <span style="color:#333;font-size:11px;">—</span>
+        {% endif %}
+      </td>
+
+      {# Duty Team Column #}
+      <td>
+        {% if row.duty %}
+          <span class="badge-duty">{{ row.duty.duty_label }}</span>
+          {% if can_duty %}
+          <form method="POST" action="/events/{{ event.id }}/ops/duty/{{ row.duty.id }}/delete" style="display:inline;">
+            <button type="submit" class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
+                    onclick="if(!confirm('Remove from duty team?')){event.preventDefault();return false;} this.disabled=true;">✕</button>
+          </form>
+          {% endif %}
+        {% elif rsvp.checked_in %}
+          <span style="color:#333;font-size:11px;">—</span>
         {% else %}
           <span style="color:#333;font-size:11px;">—</span>
         {% endif %}
@@ -217,13 +235,14 @@
         {% endif %}
       </td>
       <td>—</td>
+      <td>—</td>
       {% endif %}
       {% if not display_mode or display_mode != 'tv' %}<td>—</td>{% endif %}
     </tr>
     {% endif %}
     {% else %}
     <tr>
-      <td colspan="{% if show_tactical %}9{% else %}6{% endif %}" style="color:#555;text-align:center;padding:24px;">
+      <td colspan="{% if show_tactical %}10{% else %}6{% endif %}" style="color:#555;text-align:center;padding:24px;">
         No attendees yet. Waiting for check-ins…
       </td>
     </tr>

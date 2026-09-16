@@ -10,7 +10,10 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.models.events import EventGuardDuty, EventGuardSlot, EventGuest, EventRSVP
+from app.models.events import (
+    EventDutyAssignment, EventGuardDuty, EventGuardSlot, EventGuest, EventRSVP,
+)
+from app.models.member import Member
 from tests.factories import make_event, make_member, make_rsvp
 
 pytestmark = pytest.mark.integration
@@ -350,4 +353,125 @@ async def test_checked_in_guest_has_guard_assign_control(
         assert len(duties) == 1
         assert duties[0].guest_id == guest.id
         assert duties[0].member_id is None
+
+
+# ─── PP-323 Duty team ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_duty_from_team_skips_immunes_and_does_not_change_permanent_team(
+    auth_client, db_session, patch_global_session, db_sessionmaker
+):
+    event = await make_event(db_session)
+    aquila = await make_member(db_session, last_name="Able", team="Aquila")
+    exempt = await make_member(db_session, last_name="Medic", team="Aquila")
+    other = await make_member(db_session, last_name="Bravo", team="Bravo")
+    await make_rsvp(db_session, event, aquila, attended=False, checked_in=True)
+    await make_rsvp(
+        db_session, event, exempt, attended=False, checked_in=True, immunes=True
+    )
+    await make_rsvp(db_session, event, other, attended=False, checked_in=True)
+    await db_session.commit()
+
+    tok = _csrf(auth_client)
+    resp = auth_client.post(
+        f"/events/{event.id}/ops/duty/from-team",
+        data={"team_name": "Aquila", "duty_label": "KP", "csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+        follow_redirects=False,
+    )
+    assert resp.status_code in (303, 200), resp.text
+
+    async with db_sessionmaker() as s:
+        rows = (await s.execute(
+            select(EventDutyAssignment).where(EventDutyAssignment.event_id == event.id)
+        )).scalars().all()
+        assert {r.member_id for r in rows} == {aquila.id}
+        assert rows[0].duty_label == "KP"
+        assert rows[0].source == "geo_team"
+        assert rows[0].geo_team_name == "Aquila"
+        still = (await s.execute(select(Member).where(Member.id == aquila.id))).scalar_one()
+        assert still.team == "Aquila"
+        medic = (await s.execute(select(Member).where(Member.id == exempt.id))).scalar_one()
+        assert medic.team == "Aquila"
+
+
+@pytest.mark.asyncio
+async def test_duty_assign_immunes_requires_override(
+    auth_client, db_session, patch_global_session, db_sessionmaker
+):
+    event = await make_event(db_session)
+    m = await make_member(db_session)
+    await make_rsvp(db_session, event, m, attended=False, checked_in=True, immunes=True)
+    await db_session.commit()
+
+    tok = _csrf(auth_client)
+    blocked = auth_client.post(
+        f"/events/{event.id}/ops/duty/assign",
+        data={"member_id": m.id, "duty_label": "Latrine", "csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+        follow_redirects=False,
+    )
+    assert blocked.status_code == 409, blocked.text
+
+    ok = auth_client.post(
+        f"/events/{event.id}/ops/duty/assign",
+        data={
+            "member_id": m.id, "duty_label": "Latrine",
+            "override_immunes": "1", "csrf_token": tok,
+        },
+        headers={"X-CSRF-Token": tok},
+        follow_redirects=False,
+    )
+    assert ok.status_code in (303, 200), ok.text
+
+    async with db_sessionmaker() as s:
+        rows = (await s.execute(
+            select(EventDutyAssignment).where(EventDutyAssignment.event_id == event.id)
+        )).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].duty_label == "Latrine"
+        assert rows[0].source == "ad_hoc"
+
+
+@pytest.mark.asyncio
+async def test_duty_assignment_unique_per_member(db_session):
+    event = await make_event(db_session)
+    m = await make_member(db_session)
+    db_session.add(EventDutyAssignment(
+        event_id=event.id, member_id=m.id, duty_label="KP",
+        source="ad_hoc", assigned_by="test", created_at=datetime.utcnow(),
+    ))
+    await db_session.flush()
+    db_session.add(EventDutyAssignment(
+        event_id=event.id, member_id=m.id, duty_label="Latrine",
+        source="ad_hoc", assigned_by="test", created_at=datetime.utcnow(),
+    ))
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
+
+@pytest.mark.asyncio
+async def test_duty_custom_label_and_roster_badge(
+    auth_client, db_session, patch_global_session
+):
+    event = await make_event(db_session)
+    m = await make_member(db_session, last_name="Miller")
+    await make_rsvp(db_session, event, m, attended=False, checked_in=True)
+    await db_session.commit()
+
+    tok = _csrf(auth_client)
+    resp = auth_client.post(
+        f"/events/{event.id}/ops/duty/assign",
+        data={"member_id": m.id, "duty_label": "Water buffalo", "csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+        follow_redirects=False,
+    )
+    assert resp.status_code in (303, 200), resp.text
+
+    roster = auth_client.get(f"/events/{event.id}/ops/roster")
+    assert roster.status_code == 200, roster.text
+    assert "badge-duty" in roster.text
+    assert "Water buffalo" in roster.text
+    assert "Miller" in roster.text
 

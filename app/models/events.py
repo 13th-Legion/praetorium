@@ -118,6 +118,7 @@ class Event(Base):
     guard_slots: Mapped[list["EventGuardSlot"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guard_duties: Mapped[list["EventGuardDuty"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     vexillations: Mapped[list["EventVexillation"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    duty_assignments: Mapped[list["EventDutyAssignment"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     aar_items: Mapped[list["EventAARItem"]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
     @property
@@ -410,6 +411,29 @@ class EventVexillationAssignment(Base):
 
     def __repr__(self):
         return f"<EventVexillationAssignment vex={self.vexillation_id} member={self.member_id}>"
+
+
+class EventDutyAssignment(Base):
+    """Event-scoped extra duty (KP / latrine / free-text). Does NOT alter Member.team — PP-323."""
+
+    __tablename__ = "event_duty_assignments"
+    __table_args__ = (
+        UniqueConstraint("event_id", "member_id", name="uq_duty_assign_member"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
+    duty_label: Mapped[str] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(16), default="ad_hoc")  # ad_hoc | geo_team
+    geo_team_name: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    assigned_by: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    event: Mapped["Event"] = relationship(back_populates="duty_assignments")
+
+    def __repr__(self):
+        return f"<EventDutyAssignment event={self.event_id} member={self.member_id} {self.duty_label}>"
 
 
 class EventAARItem(Base):
