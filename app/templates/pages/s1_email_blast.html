@@ -113,27 +113,13 @@
                 placeholder: 'Compose your message...'
             });
 
-            // Inline image: upload to server, insert hosted URL (no base64).
-            commsQuill.getModule('toolbar').addHandler('image', function() {
-                var input = document.createElement('input');
-                input.setAttribute('type', 'file');
-                input.setAttribute('accept', 'image/*');
-                input.click();
-                input.onchange = function() {
-                    var file = input.files[0];
-                    if (!file) return;
-                    var ifd = new FormData();
-                    ifd.append('file', file);
-                    fetch('/api/s1/newsletter/image-upload', { method:'POST', body: ifd })
-                        .then(function(r){ return r.json(); })
-                        .then(function(d){
-                            if (d.error) { alert(d.error); return; }
-                            var range = commsQuill.getSelection(true);
-                            commsQuill.insertEmbed(range.index, 'image', d.url);
-                            commsQuill.setSelection(range.index + 1);
-                        }).catch(function(e){ alert('Image upload failed: ' + e); });
-                };
-            });
+            // Inline images: toolbar button, paste AND drag-drop all upload to
+            // the server and insert a hosted URL. Never base64 — bleach strips
+            // `data:` srcs on save, so a pasted image would silently vanish.
+            // Shared implementation: /static/js/quill-image-upload.js.
+            // Unit Comms stays on the S1 newsletter endpoint (same S1 gate,
+            // same image-record bookkeeping) rather than the general one.
+            attachQuillImageUpload(commsQuill, '/api/s1/newsletter/image-upload');
 
             // Staged attachments (sent with the blast form).
             var commsAttachments = [];

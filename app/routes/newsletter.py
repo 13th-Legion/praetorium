@@ -31,6 +31,7 @@ from app.newsletter_assets import (
     NEWSLETTER_IMG_DIR, NEWSLETTER_ATTACH_DIR, image_url,
     MAX_IMAGE_BYTES, MAX_ATTACH_BYTES, MAX_TOTAL_ATTACH_BYTES,
     ALLOWED_IMAGE_MIMES, ALLOWED_ATTACH_MIMES,
+    image_ext_for_mime, sniff_image_mime,
 )
 from app.newsletter_send import EMAIL_BLAST_GROUPS, resolve_recipients
 from app.newsletter_scheduler import deliver_newsletter
@@ -130,14 +131,20 @@ async def newsletter_image_upload(request: Request, db: AsyncSession = Depends(g
     file: UploadFile = form.get("file")
     if not file or not getattr(file, "filename", None):
         return JSONResponse({"error": "No file provided."}, status_code=400)
-    data = await file.read()
+    data = await file.read(MAX_IMAGE_BYTES + 1)
     if len(data) > MAX_IMAGE_BYTES:
         return JSONResponse({"error": f"Image exceeds {MAX_IMAGE_BYTES // (1024*1024)}MB limit."}, status_code=400)
-    mime = file.content_type or "image/png"
+    mime = (file.content_type or "image/png").strip().lower()
     if mime not in ALLOWED_IMAGE_MIMES:
         return JSONResponse({"error": "Unsupported image type."}, status_code=400)
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".png"
-    stored = f"{uuid.uuid4().hex}{ext}"
+    # Confirm the declared Content-Type against the real bytes, then derive the
+    # stored extension from the VALIDATED mime rather than the caller's
+    # filename. /nlmedia is a StaticFiles mount that picks Content-Type from the
+    # extension, so trusting an uploaded "x.svg" would let a caller serve
+    # image/svg+xml (script) from our origin.
+    if sniff_image_mime(data) != mime:
+        return JSONResponse({"error": "File contents do not match a supported image type."}, status_code=400)
+    stored = f"{uuid.uuid4().hex}{image_ext_for_mime(mime)}"
     NEWSLETTER_IMG_DIR.mkdir(parents=True, exist_ok=True)
     with open(NEWSLETTER_IMG_DIR / stored, "wb") as fh:
         fh.write(data)

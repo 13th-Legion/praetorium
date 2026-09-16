@@ -368,8 +368,14 @@
 <script>
     var quill = new Quill('#editor-container', {
         theme: 'snow',
-        modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
+        modules: { toolbar: [ ['bold', 'italic', 'underline', 'strike'], ['link', 'image'], [{'list': 'ordered'}, {'list': 'bullet'}] ] }
     });
+
+    // Images: toolbar button, paste AND drag-drop all upload to the server and
+    // insert a hosted URL. Never base64 — _clean_description() runs bleach,
+    // which strips `data:` srcs, so a pasted image would silently vanish on
+    // save. Shared implementation: /static/js/quill-image-upload.js.
+    attachQuillImageUpload(quill, '/api/media/image-upload');
 
     // Recurring-event UI toggles (PP-224)
     function updateRecurUI() {

@@ -48,6 +48,31 @@ PIPELINE_ROLES: set[str] = {"command", "admin", "s1", "s1_lead"}
 UNIT_COMMS_ROLES: set[str] = {"command", "admin", "s1", "s1_lead"}
 AWARD_ROLES: set[str] = {"command", "admin", "s1", "leader"}
 
+# Inline-image upload for the shared Quill editors (POST /api/media/image-upload).
+#
+# This is deliberately the UNION of the role sets that already gate a rich-text
+# editor, and nothing more. Every role listed here can already author HTML
+# containing <img> through an existing route, so the shared upload endpoint
+# grants no capability that was not already reachable:
+#
+#   UNIT_COMMS_ROLES                     newsletter + unit-comms editors
+#                                        (app/routes/newsletter.py _require_s1)
+#   S1_ROLES                             announcements (_can_post in
+#                                        app/routes/announcements.py)
+#   {command, s3, admin, leader}         event create/edit (require_role in
+#                                        app/routes/events.py)
+#   {command, s3, admin}                 TRADOC_MANAGE_ROLES in
+#                                        app/routes/training_library.py
+#
+# Guest accounts never reach this: GuestReadOnlyMiddleware rejects every
+# POST/PUT/PATCH/DELETE before the route runs.
+MEDIA_UPLOAD_ROLES: set[str] = (
+    UNIT_COMMS_ROLES
+    | S1_ROLES
+    | {"command", "s3", "admin", "leader"}
+    | {"command", "s3", "admin"}
+)
+
 # ─── Team / Element Constants ────────────────────────────────────────────────
 
 # NOTE: "Aquila" is the North zone (formerly "Alpha", renamed 2026-07-21). The
