@@ -61,6 +61,13 @@
 - /scripts/ch-fix-dates.py
 - /scripts/movie-rename.py
 - /scripts/sync_ftx_and_recruit.py
+# Droplet ops tooling, not application source. ot-notify-secure-cred.sh moves
+# NC_USER/NC_PASS out of root's crontab into a root-only env file, and
+# ot-notify-auth-probe.py is a read-only probe that proves those creds arrive
+# and authenticate. Both are run by hand on the host; neither belongs in the
+# container, and the credential-handling one especially should not ship.
+- /scripts/ot-notify-secure-cred.sh
+- /scripts/ot-notify-auth-probe.py
 + /scripts/***
 + /leave_return_runner.py
 
