@@ -56,6 +56,30 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024          # 5 MB per inline image
 MAX_ATTACH_BYTES = 15 * 1024 * 1024        # 15 MB per attachment
 MAX_TOTAL_ATTACH_BYTES = 18 * 1024 * 1024  # 18 MB total payload (Proton Bridge ceiling)
 ALLOWED_IMAGE_MIMES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+
+# Stored filename extension per allowed image MIME.
+#
+# SECURITY: the extension on disk MUST come from the validated MIME, never from
+# the caller's filename. /nlmedia is a StaticFiles mount and StaticFiles derives
+# the response Content-Type from the file extension, so honouring an uploaded
+# name like "payload.svg" would let a caller have us serve image/svg+xml — i.e.
+# script — from our own origin. SVG is excluded from ALLOWED_IMAGE_MIMES for the
+# same reason; keep it that way.
+IMAGE_MIME_EXT: dict[str, str] = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+# Magic-byte signatures for the allowed types, so a lying Content-Type header
+# cannot get arbitrary bytes stored under an image extension.
+_IMAGE_SIGNATURES: tuple[tuple[bytes, str], ...] = (
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+)
 ALLOWED_ATTACH_MIMES = {
     "application/pdf",
     "image/png", "image/jpeg", "image/gif", "image/webp",
@@ -83,3 +107,31 @@ def crest_available(key: str) -> bool:
 
 def image_url(filename: str) -> str:
     return f"{NLMEDIA_URL_BASE}/images/{filename}"
+
+
+def image_ext_for_mime(mime: str) -> str:
+    """Stored-file extension for a validated image MIME.
+
+    Only ever call this with a MIME already checked against
+    ALLOWED_IMAGE_MIMES; the .png fallback is a belt-and-braces default, not a
+    licence to skip validation.
+    """
+    return IMAGE_MIME_EXT.get((mime or "").strip().lower(), ".png")
+
+
+def sniff_image_mime(data: bytes) -> str | None:
+    """Detect the real image type from magic bytes, or None if unrecognised.
+
+    Covers exactly the four types in ALLOWED_IMAGE_MIMES. Used to confirm that
+    the uploaded bytes match the declared Content-Type, so a caller cannot get
+    SVG (or anything else) written out under a .png/.jpg name.
+    """
+    if not data:
+        return None
+    for signature, mime in _IMAGE_SIGNATURES:
+        if data.startswith(signature):
+            return mime
+    # WebP is a RIFF container: "RIFF" <4-byte size> "WEBP"
+    if len(data) >= 12 and data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
