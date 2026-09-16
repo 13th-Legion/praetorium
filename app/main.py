@@ -17,7 +17,7 @@ from sqlalchemy import select
 from config import get_settings
 from app import database
 from app.database import engine, Base
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media
 
 
 @asynccontextmanager
@@ -352,6 +352,7 @@ app.include_router(checkout.router)
 app.include_router(debug.router)
 app.include_router(settings_route.router)
 app.include_router(conduct.router)
+app.include_router(media.router)
 app.include_router(promotions.router)
 app.include_router(donate.router)
 app.include_router(weapons_qual.router)
