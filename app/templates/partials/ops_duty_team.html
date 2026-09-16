@@ -1,0 +1,85 @@
+{# Event-scoped extra-duty team (KP / latrine / custom) — PP-323 #}
+<div id="duty-team-panel" style="margin-bottom:16px;">
+  <div class="card">
+    <h3 style="font-size:0.85rem;margin:0 0 12px;color:#d4a537;">🧹 Duty Team</h3>
+    <div style="font-size:12px;color:#888;margin-bottom:12px;">
+      Extra duties for this FTX only. Does not change permanent team assignment.
+    </div>
+
+    {% if duty_assignments %}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      {% for duty in duty_assignments %}
+      {% set m = member_map.get(duty.member_id) %}
+      <span class="badge-duty" style="display:inline-flex;align-items:center;gap:6px;">
+        {{ duty.duty_label }}
+        ·
+        {% if m %}{{ m.last_name }}, {{ m.first_name }}{% else %}Member #{{ duty.member_id }}{% endif %}
+        {% if can_duty %}
+        <form method="POST" action="/events/{{ event.id }}/ops/duty/{{ duty.id }}/delete" style="display:inline;margin:0;">
+          <button type="submit" class="ops-btn ops-btn-danger" style="padding:0 4px;font-size:10px;border:none;background:none;"
+                  hx-post="/events/{{ event.id }}/ops/duty/{{ duty.id }}/delete"
+                  hx-confirm="Remove from duty team?">✕</button>
+        </form>
+        {% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="color:#555;font-size:13px;margin-bottom:12px;">No duty team designated.</div>
+    {% endif %}
+
+    {% if can_duty %}
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <form method="POST" action="/events/{{ event.id }}/ops/duty/from-team" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+        <div>
+          <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">From geographic team</label>
+          <select name="team_name" required style="padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">
+            <option value="">— Select team —</option>
+            {% for name in team_options %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">Duty</label>
+          <input type="text" name="duty_label" list="duty-label-suggestions" required placeholder="KP"
+                 maxlength="32"
+                 style="width:120px;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">
+        </div>
+        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Add team</button>
+      </form>
+
+      <form method="POST" action="/events/{{ event.id }}/ops/duty/assign" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+        <input type="hidden" name="override_immunes" value="0">
+        <div>
+          <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">Ad-hoc member</label>
+          <select name="member_id" required style="padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">
+            <option value="">— Checked-in member —</option>
+            {% for row in roster %}
+            {% if row.row_type == 'member' and row.rsvp.checked_in and not row.duty %}
+            <option value="{{ row.member.id }}" data-immunes="{{ 1 if row.immunes else 0 }}">
+              {{ row.member.last_name }}, {{ row.member.first_name }}{% if row.immunes %} (immunes){% endif %}
+            </option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#666;margin-bottom:3px;">Duty</label>
+          <input type="text" name="duty_label" list="duty-label-suggestions" required placeholder="Latrine"
+                 maxlength="32"
+                 style="width:120px;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">
+        </div>
+        <button type="submit" class="ops-btn ops-btn-primary"
+                onclick="var f=this.form; var sel=f.querySelector('[name=member_id]'); var opt=sel.options[sel.selectedIndex]; if(opt && opt.dataset.immunes==='1'){ if(!confirm('This member is immunes (exempt from extra duties). Add to the duty team anyway?')){ event.preventDefault(); return false; } f.querySelector('[name=override_immunes]').value='1'; } this.disabled=true; f.submit();">Add member</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <datalist id="duty-label-suggestions">
+      {% for label in duty_labels %}
+      <option value="{{ label }}"></option>
+      {% endfor %}
+    </datalist>
+  </div>
+</div>

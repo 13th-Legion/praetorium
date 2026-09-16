@@ -1,15 +1,18 @@
 """Events & Attendance models — PP-060 / PP-070."""
 
-from datetime import datetime, date
-from typing import Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
-    String, Text, Date, DateTime, Boolean, Integer,
-    ForeignKey, Enum as SAEnum, UniqueConstraint
+    String, Text, DateTime, Boolean, Integer,
+    ForeignKey, UniqueConstraint
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.member import Member
 
 
 class Event(Base):
@@ -115,6 +118,7 @@ class Event(Base):
     guard_slots: Mapped[list["EventGuardSlot"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     guard_duties: Mapped[list["EventGuardDuty"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     vexillations: Mapped[list["EventVexillation"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    duty_assignments: Mapped[list["EventDutyAssignment"]] = relationship(back_populates="event", cascade="all, delete-orphan")
     aar_items: Mapped[list["EventAARItem"]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
     @property
@@ -163,6 +167,9 @@ class EventRSVP(Base):
 
     # Post-event confirmed attendance
     attended: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Event-scoped extra-duty exemption (PP-324). Not a standing member-profile flag.
+    immunes: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -336,6 +343,7 @@ class EventGuardDuty(Base):
     __tablename__ = "event_guard_duty"
     __table_args__ = (
         UniqueConstraint("event_id", "slot_number", "member_id", name="uq_guard_event_slot_member"),
+        UniqueConstraint("event_id", "slot_number", "guest_id", name="uq_guard_event_slot_guest"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -403,6 +411,29 @@ class EventVexillationAssignment(Base):
 
     def __repr__(self):
         return f"<EventVexillationAssignment vex={self.vexillation_id} member={self.member_id}>"
+
+
+class EventDutyAssignment(Base):
+    """Event-scoped extra duty (KP / latrine / free-text). Does NOT alter Member.team — PP-323."""
+
+    __tablename__ = "event_duty_assignments"
+    __table_args__ = (
+        UniqueConstraint("event_id", "member_id", name="uq_duty_assign_member"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
+    duty_label: Mapped[str] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(16), default="ad_hoc")  # ad_hoc | geo_team
+    geo_team_name: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    assigned_by: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    event: Mapped["Event"] = relationship(back_populates="duty_assignments")
+
+    def __repr__(self):
+        return f"<EventDutyAssignment event={self.event_id} member={self.member_id} {self.duty_label}>"
 
 
 class EventAARItem(Base):
