@@ -192,7 +192,32 @@
           <span class="badge-guest">👤 Pre-reg</span>
         {% endif %}
       </td>
-      {% if show_tactical %}<td>—</td><td>—</td><td>—</td>{% endif %}
+      {% if show_tactical %}
+      <td>—</td>
+      <td>
+        {% if row.guard_duty %}
+          <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
+          {% if can_guard %}
+          <button class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
+                  hx-delete="/events/{{ event.id }}/ops/guard/{{ row.guard_duty.id }}"
+                  hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Remove guard assignment?">✕</button>
+          {% endif %}
+        {% elif guest.checked_in_at and can_guard and guard_slots %}
+          <form method="POST" action="/events/{{ event.id }}/ops/guard/assign" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+            <input type="hidden" name="guest_id" value="{{ guest.id }}">
+            <select name="slot_number" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;">
+              {% for slot in guard_slots %}
+              <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
+              {% endfor %}
+            </select>
+            <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>
+          </form>
+        {% else %}
+          <span style="color:#333;font-size:11px;">—</span>
+        {% endif %}
+      </td>
+      <td>—</td>
+      {% endif %}
       {% if not display_mode or display_mode != 'tv' %}<td>—</td>{% endif %}
     </tr>
     {% endif %}

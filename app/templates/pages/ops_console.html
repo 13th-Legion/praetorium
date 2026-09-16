@@ -176,6 +176,11 @@
   </div>
   {% endif %}
 
+  <!-- ── Guard assignment panel (tactical; hidden in TV mode) ── -->
+  {% if show_tactical and can_guard and display_mode != 'tv' %}
+    {% include "partials/ops_guard_config.html" %}
+  {% endif %}
+
   <!-- ── Vexillation Summary (tactical events only) ── -->
   {% if show_tactical and vexillations %}
   <div id="vex-summary-panel"
@@ -334,7 +339,7 @@
       <div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:8px;">Auto-Assign</div>
       <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign">
         <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
-          ⚡ Auto-distribute checked-in members
+          ⚡ Auto-distribute checked-in members and guests
         </button>
       </form>
     </div>

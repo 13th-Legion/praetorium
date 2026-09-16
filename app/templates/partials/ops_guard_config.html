@@ -28,7 +28,10 @@
             {% set m = member_map.get(duty.member_id) %}
             {% if m %}{{ m.last_name }}, {{ m.first_name }}{% else %}Member #{{ duty.member_id }}{% endif %}
             {% elif duty.guest_id %}
-            Guest #{{ duty.guest_id }}
+            {% set g = guest_map.get(duty.guest_id) if guest_map is defined else none %}
+            {% if g %}
+              {{ g.last_name }}, {{ g.first_name }}{% set sp = member_map.get(g.sponsor_id) %}{% if sp %} ({{ sp.last_name }}){% endif %}
+            {% else %}Guest #{{ duty.guest_id }}{% endif %}
             {% endif %}
             <button class="ops-btn ops-btn-danger" style="padding:0 4px;font-size:10px;border:none;background:none;"
                     hx-delete="/events/{{ event.id }}/ops/guard/{{ duty.id }}"
@@ -69,7 +72,7 @@
       {% if guard_slots %}
       <form method="POST" action="/events/{{ event.id }}/ops/guard/auto-assign" style="margin-top:8px;">
         <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary" style="width:100%;">
-          ⚡ Auto-assign checked-in members to slots
+          ⚡ Auto-assign checked-in members and guests to slots
         </button>
       </form>
       {% endif %}

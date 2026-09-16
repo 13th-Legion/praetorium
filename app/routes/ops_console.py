@@ -138,9 +138,16 @@ async def ops_console(request: Request, event_id: int):
         event = await _get_event_or_404(db, event_id)
         roster_rows = await _build_roster(db, event)
         guard_slots = await _get_guard_slots(db, event_id)
+        guard_duties = await _get_guard_duties(db, event_id)
         vexillations = await _get_vexillations(db, event_id)
         checked_in_members = await _get_checked_in_members(db, event_id)
         member_map = await _get_member_map(db, event_id)
+        guest_map = await _get_guest_map(db, event_id)
+        sponsor_ids = {g.sponsor_id for g in guest_map.values()} - set(member_map)
+        if sponsor_ids:
+            extra = await db.execute(select(Member).where(Member.id.in_(sponsor_ids)))
+            for m in extra.scalars().all():
+                member_map[m.id] = m
 
     show_tactical = event.category in TACTICAL_CATEGORIES
     display_mode = request.query_params.get("display", "normal")  # "tv" or "normal"
@@ -161,8 +168,10 @@ async def ops_console(request: Request, event_id: int):
         "event": event,
         "roster": roster_rows,
         "guard_slots": guard_slots,
+        "guard_duties": guard_duties,
         "vexillations": vexillations,
         "checked_in_members": checked_in_members,
+        "guest_map": guest_map,
         "qr_svg": qr_svg,
         "qr_url": qr_url,
         "next_refresh": next_refresh,
@@ -1039,6 +1048,12 @@ async def ops_guard_config(request: Request, event_id: int):
         guard_slots = await _get_guard_slots(db, event_id)
         guard_duties = await _get_guard_duties(db, event_id)
         member_map = await _get_member_map(db, event_id)
+        guest_map = await _get_guest_map(db, event_id)
+        sponsor_ids = {g.sponsor_id for g in guest_map.values()} - set(member_map)
+        if sponsor_ids:
+            extra = await db.execute(select(Member).where(Member.id.in_(sponsor_ids)))
+            for m in extra.scalars().all():
+                member_map[m.id] = m
 
     return templates.TemplateResponse("partials/ops_guard_config.html", {
         "request": request,
@@ -1047,6 +1062,7 @@ async def ops_guard_config(request: Request, event_id: int):
         "guard_slots": guard_slots,
         "guard_duties": guard_duties,
         "member_map": member_map,
+        "guest_map": guest_map,
     })
 
 
@@ -1121,6 +1137,7 @@ async def _build_roster(db, event: Event) -> list[dict]:
     )
     guard_duties = guard_result.scalars().all()
     guard_map = {gd.member_id: gd for gd in guard_duties if gd.member_id}
+    guest_guard_map = {gd.guest_id: gd for gd in guard_duties if gd.guest_id}
 
     # Get vexillation assignments
     vex_assign_result = await db.execute(
@@ -1185,6 +1202,7 @@ async def _build_roster(db, event: Event) -> list[dict]:
         rows.append({
             "guest": guest,
             "sponsor": sponsor,
+            "guard_duty": guest_guard_map.get(guest.id),
             "row_type": "guest",
         })
 
@@ -1227,6 +1245,13 @@ async def _get_member_map(db, event_id: int) -> dict[int, "Member"]:
     return {m.id: m for m in result.scalars().all()}
 
 
+async def _get_guest_map(db, event_id: int) -> dict[int, EventGuest]:
+    result = await db.execute(
+        select(EventGuest).where(EventGuest.event_id == event_id)
+    )
+    return {g.id: g for g in result.scalars().all()}
+
+
 async def _immunes_member_ids(db, event_id: int) -> set[int]:
     result = await db.execute(
         select(EventRSVP.member_id).where(
@@ -1241,15 +1266,16 @@ async def _guard_auto_assign_targets(
 ) -> list[tuple[Optional[int], Optional[int]]]:
     """People eligible for guard auto-assign: (member_id, guest_id).
 
-    Members first: checked-in, not immunes, not already assigned.
-    Guests are appended in PP-325.
+    Members first (checked-in, not immunes, not already assigned), then
+    checked-in guests appended (ordered by last name, first name). Guests
+    are not immunes in v1.
     """
-    assigned_result = await db.execute(
+    assigned_members = await db.execute(
         select(EventGuardDuty.member_id).where(
             and_(EventGuardDuty.event_id == event_id, EventGuardDuty.member_id.isnot(None))
         )
     )
-    already_assigned = {row[0] for row in assigned_result.all()}
+    already_assigned_members = {row[0] for row in assigned_members.all()}
     immunes_ids = await _immunes_member_ids(db, event_id)
 
     checkin_result = await db.execute(
@@ -1259,9 +1285,28 @@ async def _guard_auto_assign_targets(
     )
     targets: list[tuple[Optional[int], Optional[int]]] = []
     for (member_id,) in checkin_result.all():
-        if member_id in already_assigned or member_id in immunes_ids:
+        if member_id in already_assigned_members or member_id in immunes_ids:
             continue
         targets.append((member_id, None))
+
+    assigned_guests = await db.execute(
+        select(EventGuardDuty.guest_id).where(
+            and_(EventGuardDuty.event_id == event_id, EventGuardDuty.guest_id.isnot(None))
+        )
+    )
+    already_assigned_guests = {row[0] for row in assigned_guests.all()}
+    guest_result = await db.execute(
+        select(EventGuest).where(
+            and_(
+                EventGuest.event_id == event_id,
+                EventGuest.checked_in_at.isnot(None),
+            )
+        ).order_by(EventGuest.last_name, EventGuest.first_name)
+    )
+    for guest in guest_result.scalars().all():
+        if guest.id in already_assigned_guests:
+            continue
+        targets.append((None, guest.id))
     return targets
 
 

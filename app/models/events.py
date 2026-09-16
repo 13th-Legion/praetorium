@@ -342,6 +342,7 @@ class EventGuardDuty(Base):
     __tablename__ = "event_guard_duty"
     __table_args__ = (
         UniqueConstraint("event_id", "slot_number", "member_id", name="uq_guard_event_slot_member"),
+        UniqueConstraint("event_id", "slot_number", "guest_id", name="uq_guard_event_slot_guest"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
