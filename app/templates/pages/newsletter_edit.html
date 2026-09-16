@@ -185,7 +185,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-<script src="/static/js/quill-image-upload.js"></script>
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 <script>
 var CRESTS = {{ crests | tojson }};
@@ -196,15 +195,27 @@ var nlQuill = new Quill('#nl-editor', {
 });
 {% if nl %}nlQuill.root.innerHTML = {{ (nl.body_html or '') | tojson }};{% endif %}
 
-// PP-327: shared upload module. This previously handled the toolbar button
-// ONLY, so PASTE stayed broken even here — a pasted image came in as a base64
-// data: URI and bleach (which allows only http/https/mailto) stripped the src
-// on save, so the image silently vanished. The module covers toolbar, paste and
-// drag-drop, and surfaces errors instead of failing quietly. Newsletter images
-// keep using the S1 endpoint so they land in the same store the mailer reads.
-if (window.attachQuillImageUpload) {
-    attachQuillImageUpload(nlQuill, '/api/s1/newsletter/image-upload');
-}
+// Custom image handler — upload to server, insert hosted URL (no base64).
+nlQuill.getModule('toolbar').addHandler('image', function() {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+    input.onchange = function() {
+        var file = input.files[0];
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('file', file);
+        fetch('/api/s1/newsletter/image-upload', { method: 'POST', body: fd })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d.error) { alert(d.error); return; }
+                var range = nlQuill.getSelection(true);
+                nlQuill.insertEmbed(range.index, 'image', d.url);
+                nlQuill.setSelection(range.index + 1);
+            }).catch(function(e){ alert('Image upload failed: ' + e); });
+    };
+});
 
 function updateCrestPreview() {
     var key = document.getElementById('nl-crest').value;

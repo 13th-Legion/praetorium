@@ -106,7 +106,6 @@
             </button>
 
             <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-            <script src="/static/js/quill-image-upload.js"></script>
             <script>
             var commsQuill = new Quill('#comms-editor', {
                 theme: 'snow',
@@ -114,12 +113,27 @@
                 placeholder: 'Compose your message...'
             });
 
-            // PP-327: shared upload module. Replaces a toolbar-only handler that
-            // left PASTE broken — a pasted image arrived as a base64 data: URI and
-            // bleach (http/https/mailto only) stripped the src on save, so it
-            // silently vanished. This also covers drag-and-drop and shows errors
-            // instead of failing quietly.
-            if (window.attachQuillImageUpload) attachQuillImageUpload(commsQuill);
+            // Inline image: upload to server, insert hosted URL (no base64).
+            commsQuill.getModule('toolbar').addHandler('image', function() {
+                var input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', 'image/*');
+                input.click();
+                input.onchange = function() {
+                    var file = input.files[0];
+                    if (!file) return;
+                    var ifd = new FormData();
+                    ifd.append('file', file);
+                    fetch('/api/s1/newsletter/image-upload', { method:'POST', body: ifd })
+                        .then(function(r){ return r.json(); })
+                        .then(function(d){
+                            if (d.error) { alert(d.error); return; }
+                            var range = commsQuill.getSelection(true);
+                            commsQuill.insertEmbed(range.index, 'image', d.url);
+                            commsQuill.setSelection(range.index + 1);
+                        }).catch(function(e){ alert('Image upload failed: ' + e); });
+                };
+            });
 
             // Staged attachments (sent with the blast form).
             var commsAttachments = [];
