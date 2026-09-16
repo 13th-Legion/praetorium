@@ -475,3 +475,35 @@ async def test_duty_custom_label_and_roster_badge(
     assert "Water buffalo" in roster.text
     assert "Miller" in roster.text
 
+
+# ─── PP-322 Mobile layout ─────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_mobile_card_labels_present_and_tv_css_untouched(
+    auth_client, db_session, patch_global_session
+):
+    event = await make_event(db_session)
+    m = await make_member(db_session, last_name="Narrow")
+    await make_rsvp(db_session, event, m, attended=False, checked_in=True, immunes=True)
+    await db_session.commit()
+
+    page = auth_client.get(f"/events/{event.id}/ops")
+    assert page.status_code == 200, page.text
+    assert 'data-label="Name"' in page.text
+    assert 'data-label="Duty"' in page.text
+    assert 'data-label="Actions"' in page.text
+    assert "@media (max-width: 720px)" in page.text
+    assert "badge-immunes" in page.text
+
+    roster = auth_client.get(f"/events/{event.id}/ops/roster")
+    assert roster.status_code == 200, roster.text
+    assert 'data-label="Name"' in roster.text
+    assert 'data-label="Duty"' in roster.text
+
+    tv = auth_client.get(f"/events/{event.id}/ops?display=tv")
+    assert tv.status_code == 200, tv.text
+    assert "@media (max-width: 720px)" not in tv.text
+    assert "max-height: 60vh" in tv.text
+    assert "overflow-y: auto" in tv.text
+

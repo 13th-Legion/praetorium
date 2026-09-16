@@ -4,7 +4,7 @@
 {% block head %}
 <style>
   /* ── Ops Console Styles ───────────────────────────────────────── */
-  .ops-page { max-width: {% if display_mode == 'tv' %}100%{% else %}1200px{% endif %}; }
+  .ops-page { max-width: {% if display_mode == 'tv' %}100%{% else %}1200px{% endif %}; box-sizing: border-box; }
 
   /* QR Section */
   .qr-section { text-align: center; padding: 24px 16px; }
@@ -65,12 +65,53 @@
   {% if display_mode == 'tv' %}
   .ops-roster-wrapper { max-height: 60vh; overflow-y: auto; }
   body { font-size: 16px; }
+  {% else %}
+  /* PP-322: phone/tablet card roster. TV rules above are untouched. */
+  .qr-container { max-width: 100%; box-sizing: border-box; }
+  .qr-container svg { max-width: 100%; height: auto; }
+  .ops-roster-table form, .ops-roster-table select, .ops-roster-table input {
+    max-width: 100%; box-sizing: border-box;
+  }
+  @media (max-width: 720px) {
+    .ops-page { max-width: 100%; overflow-x: hidden; }
+    .ops-roster-wrapper { overflow-x: hidden; }
+    .ops-roster-table, .ops-roster-table thead, .ops-roster-table tbody {
+      display: block; width: 100%;
+    }
+    .ops-roster-table thead { display: none; }
+    .ops-roster-table tr {
+      display: flex; flex-direction: column;
+      border: 1px solid #2a2a4a; border-radius: 8px;
+      margin-bottom: 10px; padding: 8px 10px; background: #111122;
+    }
+    .ops-roster-table td {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 8px; border-bottom: none; padding: 4px 0; width: 100%;
+      box-sizing: border-box; flex-wrap: wrap;
+    }
+    .ops-roster-table td::before {
+      content: attr(data-label); color: #888; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.6px; flex: 0 0 78px; padding-top: 3px;
+    }
+    .ops-roster-table td[data-label="Name"] { order: 1; font-size: 14px; }
+    .ops-roster-table td[data-label="Status"] { order: 2; }
+    .ops-roster-table td[data-label="Actions"] { order: 3; justify-content: flex-end; }
+    .ops-roster-table td[data-label="Actions"]::before { display: none; }
+    .ops-roster-table td[data-label="Rank"] { order: 4; }
+    .ops-roster-table td[data-label="Callsign"] { order: 5; }
+    .ops-roster-table td[data-label="Team"] { order: 6; }
+    .ops-roster-table td[data-label="Buddy"] { order: 7; }
+    .ops-roster-table td[data-label="Guard"] { order: 8; }
+    .ops-roster-table td[data-label="Duty"] { order: 9; }
+    .ops-roster-table td[data-label="Vexillation"] { order: 10; }
+    .headcount-bar { width: 100%; box-sizing: border-box; }
+  }
   {% endif %}
 
   /* Modal */
   .ops-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
   .ops-modal-overlay.show { display: flex; }
-  .ops-modal { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; min-width: 360px; max-width: 90vw; }
+  .ops-modal { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; min-width: 0; width: min(420px, calc(100vw - 24px)); max-width: calc(100vw - 24px); box-sizing: border-box; }
   .ops-modal h3 { margin: 0 0 16px; font-size: 1rem; color: #d4a537; }
   .ops-form-row { margin-bottom: 12px; }
   .ops-form-row label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; text-transform: uppercase; }

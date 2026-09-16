@@ -27,14 +27,14 @@
     {% set rsvp = row.rsvp %}
     {% set member = row.member %}
     <tr {% if rsvp.checked_in %}style="color:#eee;"{% else %}style="color:#777;"{% endif %}>
-      <td>{{ member.rank_grade or '—' }}</td>
-      <td>
+      <td data-label="Rank">{{ member.rank_grade or '—' }}</td>
+      <td data-label="Name">
         <strong>{{ member.last_name }}</strong>, {{ member.first_name }}
         {% if row.immunes %}<span class="badge-immunes" title="Exempt from extra duties">Immunes</span>{% endif %}
       </td>
-      <td>{{ member.callsign or '—' }}</td>
-      <td>{{ member.team or '—' }}</td>
-      <td>
+      <td data-label="Callsign">{{ member.callsign or '—' }}</td>
+      <td data-label="Team">{{ member.team or '—' }}</td>
+      <td data-label="Status">
         {% if rsvp.checked_in %}
           <span class="badge-checkedin">✅ Checked In</span>
         {% else %}
@@ -59,7 +59,7 @@
 
       {% if show_tactical %}
       {# Battle Buddy Column #}
-      <td>
+      <td data-label="Buddy">
         {% if row.buddy_name %}
           <span title="Pair ID {{ row.buddy_pair_id }}">{{ row.buddy_name }}</span>
           {% if can_buddy %}
@@ -85,7 +85,7 @@
       </td>
 
       {# Guard Duty Column #}
-      <td>
+      <td data-label="Guard">
         {% if row.guard_duty %}
           <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
           {% if can_guard %}
@@ -112,7 +112,7 @@
       </td>
 
       {# Duty Team Column #}
-      <td>
+      <td data-label="Duty">
         {% if row.duty %}
           <span class="badge-duty">{{ row.duty.duty_label }}</span>
           {% if can_duty %}
@@ -129,7 +129,7 @@
       </td>
 
       {# Vexillation Column #}
-      <td>
+      <td data-label="Vexillation">
         {% if row.vexillation %}
           <span style="color:#818cf8;">{{ row.vexillation.name }}</span>
           {% if can_vex_assign %}
@@ -162,7 +162,7 @@
       {% endif %}{# end show_tactical #}
 
       {% if not display_mode or display_mode != 'tv' %}
-      <td>
+      <td data-label="Actions">
         {% if not rsvp.checked_in and can_checkin %}
         <form method="POST" action="/events/{{ event.id }}/ops/manual-checkin" style="display:inline;">
           <input type="hidden" name="member_id" value="{{ member.id }}">
@@ -195,15 +195,15 @@
     {% set guest = row.guest %}
     {% set sponsor = row.sponsor %}
     <tr style="color:#9ca3af;">
-      <td>—</td>
-      <td>
+      <td data-label="Rank">—</td>
+      <td data-label="Name">
         <span style="color:#818cf8;">👤</span>
         {{ guest.last_name }}, {{ guest.first_name }}
         {% if guest.is_walkin %}<span class="badge-walkin" style="margin-left:4px;">Walk-in</span>{% endif %}
       </td>
-      <td>—</td>
-      <td style="font-size:11px;color:#666;">w/ {{ sponsor.last_name }}</td>
-      <td>
+      <td data-label="Callsign">—</td>
+      <td data-label="Team" style="font-size:11px;color:#666;">w/ {{ sponsor.last_name }}</td>
+      <td data-label="Status">
         {% if guest.checked_in_at %}
           <span class="badge-guest">✅ Guest</span>
         {% else %}
@@ -211,8 +211,8 @@
         {% endif %}
       </td>
       {% if show_tactical %}
-      <td>—</td>
-      <td>
+      <td data-label="Buddy">—</td>
+      <td data-label="Guard">
         {% if row.guard_duty %}
           <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
           {% if can_guard %}
@@ -234,10 +234,10 @@
           <span style="color:#333;font-size:11px;">—</span>
         {% endif %}
       </td>
-      <td>—</td>
-      <td>—</td>
+      <td data-label="Duty">—</td>
+      <td data-label="Vexillation">—</td>
       {% endif %}
-      {% if not display_mode or display_mode != 'tv' %}<td>—</td>{% endif %}
+      {% if not display_mode or display_mode != 'tv' %}<td data-label="Actions">—</td>{% endif %}
     </tr>
     {% endif %}
     {% else %}
