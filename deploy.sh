@@ -59,10 +59,80 @@ DEL_COUNT=$(printf '%s\n' "$DRY_DELETES" | grep -c . || true)
 echo "   OK — ${DEL_COUNT:-0} untracked/stale path(s) will be pruned, no tracked source at risk."
 echo
 
+# 1b. LEAK GATE: .rsync-exclude is an allowlist (deny-by-default) because this
+#     workspace holds ~860 untracked personal files beside the app. This asserts
+#     the filter still resolves that way before anything moves. On 2026-09-16
+#     MEMORY.md (psql/Cloudflare/DigitalOcean/WordPress/Discord credentials),
+#     USER.md, SOUL.md and 172 memory/ files were found at rest in $REMOTE_DIR
+#     and baked into the image layers. Never again silently.
+#     THE INVARIANT: every file shipped must be tracked in git. Untracked means
+#     "not application source" in this workspace, and that single rule is what
+#     makes the deploy safe — a top-level allowlist alone is not enough, because
+#     an allowlisted DIRECTORY still carries untracked files inside it. That was
+#     real: scripts/nc-droplet-downsize.sh (untracked, hardcoded DigitalOcean
+#     token) shipped inside `+ /scripts/***`.
+echo "→ Leak gate (is every path in the transfer set git-tracked?)..."
+XFER=$(rsync -an --out-format='%n' \
+    --exclude-from="$LOCAL_DIR/.rsync-exclude" "${RSYNC_PROTECT[@]}" \
+    "$LOCAL_DIR/" "$SERVER:$REMOTE_DIR/" 2>/dev/null \
+    | grep -v '/$' | grep -vx '\.' || true)
+UNTRACKED_XFER=$(comm -23 \
+    <(printf '%s\n' "$XFER" | grep -v '^$' | sort) \
+    <(git -C "$LOCAL_DIR" ls-files | sort))
+if [ -n "$UNTRACKED_XFER" ]; then
+    echo "❌ Aborting: the transfer set contains untracked files."
+    echo "   Untracked means it is not application source — it must not deploy."
+    printf '%s\n' "$UNTRACKED_XFER" | head -30 | sed 's/^/   /'
+    echo "   Either 'git add' it (if it really is app source) or add it to"
+    echo "   .rsync-exclude. Do not bypass this gate."
+    exit 1
+fi
+echo "   OK — all $(printf '%s\n' "$XFER" | grep -c .) transferred files are git-tracked."
+
+# Backstop: catches the inverse mistake — a private file that got git-added, so
+# the tracked-only rule above would happily wave it through.
+PRIVATE_RE='^(MEMORY|USER|SOUL|IDENTITY|AGENTS|HEARTBEAT|DREAMS|UNIT_CONTEXT|TOOLS)\.md$|^memory/|^\.openclaw/|^(tmp|archive|projects|area-studies|skills|references|recon-images|html-reports)/|^\.env|^tmp_'
+LEAKS=$(printf '%s\n' "$XFER" | grep -E "$PRIVATE_RE" || true)
+if [ -n "$LEAKS" ]; then
+    echo "❌ Aborting: transfer set contains known-private paths (tracked or not):"
+    printf '%s\n' "$LEAKS" | head -20 | sed 's/^/   /'
+    exit 1
+fi
+echo "   OK — no known-private paths in the transfer set."
+echo
+
 echo "→ Syncing files (--delete; protecting .env/.git/runtime dirs)..."
 rsync -avz --delete --info=DEL \
     --exclude-from="$LOCAL_DIR/.rsync-exclude" "${RSYNC_PROTECT[@]}" \
     "$LOCAL_DIR/" "$SERVER:$REMOTE_DIR/"
+echo
+
+# 1c. COMPLETENESS GATE: the flip side of a deny-by-default filter. A too-broad
+#     exclude pattern would not error — it would quietly stop shipping app code
+#     and the deploy would still report success. Assert the runtime-critical
+#     paths actually landed. Add to this list when you add a top-level file the
+#     app or a production cron job needs.
+echo "→ Verifying required application paths landed on the server..."
+REQUIRED_REMOTE_PATHS=(
+    app/main.py
+    config.py
+    alembic.ini
+    requirements.txt
+    Dockerfile
+    docker-compose.yml
+    migrations/env.py
+    tests/conftest.py
+    scripts/ot-instructor-notify.py   # root crontab, hourly Chicago-time guard
+    leave_return_runner.py            # root crontab, 06:15 daily via docker exec
+)
+MISSING_PATHS=$(ssh "$SERVER" "cd $REMOTE_DIR && for p in ${REQUIRED_REMOTE_PATHS[*]}; do [ -e \"\$p\" ] || echo \"\$p\"; done")
+if [ -n "$MISSING_PATHS" ]; then
+    echo "❌ Aborting: required application paths are missing after sync:"
+    printf '%s\n' "$MISSING_PATHS" | sed 's/^/   /'
+    echo "   An .rsync-exclude rule is too broad — it dropped shipped code."
+    exit 1
+fi
+echo "   OK — all ${#REQUIRED_REMOTE_PATHS[@]} required paths present."
 echo
 
 # 2. Verify .env still has POSTGRES_PASSWORD on remote

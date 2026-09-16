@@ -1,0 +1,85 @@
+# .dockerignore — build-context filter for `COPY . .` in Dockerfile
+#
+# Second line of defence. .rsync-exclude keeps private workspace files off the
+# droplet in the first place; this keeps them out of the image layers even if
+# something lands in /opt/praetorium by another route (manual scp, a restored
+# backup, leftovers from an older deploy).
+#
+# There was no .dockerignore before 2026-09-16, which is why MEMORY.md, USER.md,
+# SOUL.md and 172 memory/ files were baked into praetorium-app:latest.
+#
+# Deliberately a blacklist, unlike .rsync-exclude: an over-tight allowlist here
+# would break the build instead of failing loudly, and the rsync filter is
+# already the primary control.
+#
+# ORDERING MATTERS AND IS THE OPPOSITE OF RSYNC: Docker evaluates every line and
+# the LAST match wins. The re-includes at the bottom therefore override every
+# pattern above them. That is load-bearing — the app legitimately serves PDFs
+# from app/static/tradoc/ and app/static/maps/training-sites/, so the `!app/`
+# rule guarantees a document glob can never strip real application assets,
+# regardless of how Docker scopes `*` against path separators.
+
+# secrets and VCS
+.env
+.env.*
+.git
+.gitignore
+.githooks
+.github
+
+# agent workspace / private notes
+MEMORY.md
+USER.md
+SOUL.md
+IDENTITY.md
+AGENTS.md
+HEARTBEAT.md
+DREAMS.md
+UNIT_CONTEXT.md
+TOOLS.md
+memory/
+.openclaw/
+skills/
+references/
+prompts.json
+exec-approvals.json
+
+# scratch and personal documents sitting in the repo root
+tmp/
+tmp_*
+archive/
+projects/
+area-studies/
+recipe-work/
+recon-images/
+html-reports/
+audit-*/
+*.pdf
+*.csv
+*.CSV
+*.pptx
+*.webp
+*.log
+
+# build/test caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+*.bak*
+
+# --- re-includes: never let the rules above touch shipped application code ---
+# Last match wins, so these are final. Keep this block at the bottom.
+!app/
+!tests/
+!migrations/
+!scripts/
+!config.py
+!alembic.ini
+!leave_return_runner.py
+!requirements.txt
+!requirements-dev.txt
+!pyproject.toml

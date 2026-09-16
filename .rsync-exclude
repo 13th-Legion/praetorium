@@ -1,6 +1,83 @@
-__pycache__
-*.pyc
-.env
-.env.*
-*.bak*
-.git
+# .rsync-exclude — transfer filter for deploy.sh
+#
+# WHY THIS IS AN ALLOWLIST, NOT A BLACKLIST
+# ~/clawd is simultaneously the agent workspace and this repo's checkout, so
+# ~860 untracked personal files (memory notes, roster CSVs, IRS PDFs, PayPal
+# reports, area studies) sit beside the application. rsync does NOT read
+# .gitignore, so a blacklist of names ships every new personal file that
+# appears. That is exactly how MEMORY.md — with psql, Cloudflare, DigitalOcean,
+# WordPress and Discord credentials in it — ended up at rest on an
+# internet-facing droplet and baked into the container image layers
+# (discovered 2026-09-16).
+#
+# So: deny by default. Only the paths named below are shipped; the final
+# `- /*` rule drops every other repo-root entry. Adding a personal file to
+# ~/clawd can no longer leak it.
+#
+# rsync applies rules in order and the FIRST match wins, which is why the
+# "never ship" rules sit above the allowlist — otherwise `+ /app/***` would
+# happily carry __pycache__ and *.pyc along with it.
+#
+# BEFORE YOU ADD A NEW TOP-LEVEL FILE THE APP NEEDS: add it here too, or it
+# will not deploy. deploy.sh's post-sync REQUIRED_REMOTE_PATHS gate exists to
+# catch that mistake loudly instead of silently.
+
+# --- never ship, wherever it appears ---
+- .git/
+- .gitignore
+- __pycache__/
+- *.pyc
+- *.pyo
+# `.env.*` intentionally covers .env.example too — production reads .env, which
+# docker-compose supplies and the --filter protect rules preserve. Nothing in
+# the repo-root .env family is ever transferred, deliberately.
+- .env
+- .env.*
+- *.bak*
+- .pytest_cache/
+- .ruff_cache/
+- .openclaw/
+- *.egg-info/
+
+# --- the application itself ---
++ /app/***
++ /migrations/***
++ /alembic.ini
++ /config.py
+
+# --- host-side runners invoked in production ---
+# scripts/ot-instructor-notify.py runs from root's crontab (hourly guard) and
+# leave_return_runner.py runs daily at 06:15, both via `docker exec` against
+# /app. Dropping either silently breaks a production cron job.
+#
+# An allowlisted DIRECTORY still carries untracked files inside it, so scripts/
+# needs per-file denies: these are local scratch, not app source, and
+# nc-droplet-downsize.sh has a hardcoded DigitalOcean API token in it. The
+# tracked-only leak gate in deploy.sh will abort the deploy if a new untracked
+# file appears here, which is the intended loud failure — either `git add` it or
+# add it below.
+- /scripts/nc-droplet-downsize.sh
+- /scripts/create_loadtest_event.py
+- /scripts/ch-fix-dates.py
+- /scripts/movie-rename.py
+- /scripts/sync_ftx_and_recruit.py
++ /scripts/***
++ /leave_return_runner.py
+
+# --- build + deploy machinery ---
++ /Dockerfile
++ /docker-compose.yml
++ /.dockerignore
++ /requirements.txt
++ /requirements-dev.txt
++ /pyproject.toml
++ /deploy.sh
++ /.rsync-exclude
+
+# --- test suite (kept deployable so the droplet copy stays runnable) ---
++ /tests/***
+
++ /README.md
+
+# --- everything else at the repo root is workspace, not application ---
+- /*
