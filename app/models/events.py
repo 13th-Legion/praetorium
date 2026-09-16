@@ -1,15 +1,18 @@
 """Events & Attendance models — PP-060 / PP-070."""
 
-from datetime import datetime, date
-from typing import Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
-    String, Text, Date, DateTime, Boolean, Integer,
-    ForeignKey, Enum as SAEnum, UniqueConstraint
+    String, Text, DateTime, Boolean, Integer,
+    ForeignKey, UniqueConstraint
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.member import Member
 
 
 class Event(Base):
@@ -163,6 +166,9 @@ class EventRSVP(Base):
 
     # Post-event confirmed attendance
     attended: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Event-scoped extra-duty exemption (PP-324). Not a standing member-profile flag.
+    immunes: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

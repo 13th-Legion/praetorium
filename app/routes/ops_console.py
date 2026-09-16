@@ -21,7 +21,7 @@ from typing import Optional
 import qrcode
 import qrcode.image.svg
 from fastapi import APIRouter, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, and_, delete
 from sqlalchemy.orm import selectinload
@@ -74,6 +74,25 @@ S3_CMD_ROLES = ("s3", "command", "admin")
 S1_S3_CMD_ROLES = ("s1", "s3", "command", "admin")
 
 TOKEN_WINDOW_SECONDS = 900  # 15 min rotation
+
+
+def _form_flag(value: Optional[str]) -> bool:
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "on", "yes", "y"}
+
+
+def _ops_flags(user: dict, display_mode: str = "normal") -> dict:
+    return {
+        "display_mode": display_mode,
+        "can_checkin": _user_has_role(user, *OPS_ROLES),
+        "can_add_guest": _user_has_role(user, *S1_CMD_ROLES),
+        "can_buddy": _user_has_role(user, *S1_CMD_ROLES),
+        "can_guard": _user_has_role(user, *S1_S2_CMD_ROLES),
+        "can_vex_create": _user_has_role(user, *S3_CMD_ROLES),
+        "can_vex_assign": _user_has_role(user, *S1_S3_CMD_ROLES),
+        "can_immunes": _user_has_role(user, *S1_S3_CMD_ROLES),
+    }
 
 
 # ─── QR Token Helpers ────────────────────────────────────────────────────────
@@ -134,7 +153,6 @@ async def ops_console(request: Request, event_id: int):
 
     # Next refresh time
     next_refresh_unix = (window + 1) * TOKEN_WINDOW_SECONDS
-    from datetime import timezone
     next_refresh = datetime.fromtimestamp(next_refresh_unix, tz=_CDT)
 
     return templates.TemplateResponse("pages/ops_console.html", {
@@ -149,14 +167,8 @@ async def ops_console(request: Request, event_id: int):
         "qr_url": qr_url,
         "next_refresh": next_refresh,
         "show_tactical": show_tactical,
-        "display_mode": display_mode,
-        "can_checkin": _user_has_role(user, *OPS_ROLES),
-        "can_add_guest": _user_has_role(user, *S1_CMD_ROLES),
-        "can_buddy": _user_has_role(user, *S1_CMD_ROLES),
-        "can_guard": _user_has_role(user, *S1_S2_CMD_ROLES),
-        "can_vex_create": _user_has_role(user, *S3_CMD_ROLES),
-        "can_vex_assign": _user_has_role(user, *S1_S3_CMD_ROLES),
         "member_map": member_map,
+        **_ops_flags(user, display_mode),
     })
 
 
@@ -368,11 +380,7 @@ async def ops_roster(request: Request, event_id: int):
         "guard_slots": guard_slots,
         "vexillations": vexillations,
         "show_tactical": show_tactical,
-        "display_mode": request.query_params.get("display", "normal"),
-        "can_checkin": _user_has_role(user, *OPS_ROLES),
-        "can_buddy": _user_has_role(user, *S1_CMD_ROLES),
-        "can_guard": _user_has_role(user, *S1_S2_CMD_ROLES),
-        "can_vex_assign": _user_has_role(user, *S1_S3_CMD_ROLES),
+        **_ops_flags(user, request.query_params.get("display", "normal")),
     })
 
 
@@ -427,9 +435,9 @@ async def override_rsvp(
             "event": event,
             "roster": roster_rows,
             "show_tactical": event.category in TACTICAL_CATEGORIES,
-            "can_checkin": _user_has_role(user, *OPS_ROLES),
             "guard_slots": guard_slots,
             "vexillations": vexillations,
+            **_ops_flags(user, request.query_params.get("display", "normal")),
         })
 
 
@@ -503,6 +511,48 @@ async def manual_uncheckin(
         await db.commit()
 
     return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
+# ─── Immunes (event-scoped extra-duty exemption) ───────────────────────────────
+
+@router.post("/events/{event_id}/ops/immunes", response_class=HTMLResponse)
+@require_role(*S1_S3_CMD_ROLES)
+async def toggle_immunes(
+    request: Request,
+    event_id: int,
+    member_id: int = Form(...),
+    immunes: str = Form(""),
+):
+    """Toggle the event-scoped Immunes flag. Existing assignments are left in place."""
+    user = get_current_user(request)
+
+    async with database.async_session() as db:
+        event = await _get_event_or_404(db, event_id)
+        result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+            )
+        )
+        rsvp = result.scalar_one_or_none()
+        if not rsvp:
+            raise HTTPException(status_code=404, detail="RSVP not found")
+        rsvp.immunes = _form_flag(immunes) if immunes != "" else (not rsvp.immunes)
+        await db.commit()
+
+        roster_rows = await _build_roster(db, event)
+        guard_slots = await _get_guard_slots(db, event_id)
+        vexillations = await _get_vexillations(db, event_id)
+
+    return templates.TemplateResponse("partials/ops_roster.html", {
+        "request": request,
+        "user": user,
+        "event": event,
+        "roster": roster_rows,
+        "guard_slots": guard_slots,
+        "vexillations": vexillations,
+        "show_tactical": event.category in TACTICAL_CATEGORIES,
+        **_ops_flags(user, request.query_params.get("display", "normal")),
+    })
 
 
 # ─── Battle Buddy ─────────────────────────────────────────────────────────────
@@ -624,13 +674,34 @@ async def assign_guard(
     slot_number: int = Form(...),
     member_id: Optional[int] = Form(None),
     guest_id: Optional[int] = Form(None),
+    override_immunes: str = Form(""),
 ):
-    """Assign a member to a guard duty slot."""
+    """Assign a member or guest to a guard duty slot.
+
+    Immunes members are not silently assigned: the client must send
+    override_immunes=1 after an explicit confirm. Command is not hard-blocked.
+    """
     user = get_current_user(request)
     username = user.get("username", "unknown")
 
     async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
+
+        if member_id:
+            rsvp_result = await db.execute(
+                select(EventRSVP).where(
+                    and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+                )
+            )
+            rsvp = rsvp_result.scalar_one_or_none()
+            if rsvp and rsvp.immunes and not _form_flag(override_immunes):
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "Member is immunes (exempt from extra duties). "
+                        "Resubmit with override_immunes=1 to assign anyway."
+                    ),
+                )
 
         # Get slot info
         slot_result = await db.execute(
@@ -713,23 +784,11 @@ async def auto_assign_guard(request: Request, event_id: int):
         if not slots:
             raise HTTPException(status_code=400, detail="No guard slots configured")
 
-        # Get checked-in members not already assigned
-        assigned_result = await db.execute(
-            select(EventGuardDuty.member_id).where(
-                and_(EventGuardDuty.event_id == event_id, EventGuardDuty.member_id.isnot(None))
-            )
-        )
-        already_assigned = {row[0] for row in assigned_result.all()}
-
-        checkin_result = await db.execute(
-            select(EventRSVP.member_id).where(
-                and_(EventRSVP.event_id == event_id, EventRSVP.checked_in == True)
-            )
-        )
-        checked_in_ids = [row[0] for row in checkin_result.all() if row[0] not in already_assigned]
+        # Checked-in, not immunes, not already assigned. Guests appended in PP-325.
+        targets = await _guard_auto_assign_targets(db, event_id)
 
         # Distribute
-        for i, member_id in enumerate(checked_in_ids):
+        for i, (member_id, guest_id) in enumerate(targets):
             slot = slots[i % len(slots)]
             duty = EventGuardDuty(
                 event_id=event_id,
@@ -737,6 +796,7 @@ async def auto_assign_guard(request: Request, event_id: int):
                 slot_number=slot.slot_number,
                 slot_label=slot.slot_label,
                 member_id=member_id,
+                guest_id=guest_id,
                 assigned_by=username,
                 created_at=datetime.utcnow(),
             )
@@ -1110,6 +1170,7 @@ async def _build_roster(db, event: Event) -> list[dict]:
             "buddy_name": buddy_name,
             "guard_duty": guard,
             "vexillation": vex,
+            "immunes": bool(rsvp.immunes),
             "row_type": "member",
         })
 
@@ -1164,6 +1225,44 @@ async def _get_member_map(db, event_id: int) -> dict[int, "Member"]:
         .where(EventRSVP.event_id == event_id)
     )
     return {m.id: m for m in result.scalars().all()}
+
+
+async def _immunes_member_ids(db, event_id: int) -> set[int]:
+    result = await db.execute(
+        select(EventRSVP.member_id).where(
+            and_(EventRSVP.event_id == event_id, EventRSVP.immunes == True)
+        )
+    )
+    return {row[0] for row in result.all()}
+
+
+async def _guard_auto_assign_targets(
+    db, event_id: int
+) -> list[tuple[Optional[int], Optional[int]]]:
+    """People eligible for guard auto-assign: (member_id, guest_id).
+
+    Members first: checked-in, not immunes, not already assigned.
+    Guests are appended in PP-325.
+    """
+    assigned_result = await db.execute(
+        select(EventGuardDuty.member_id).where(
+            and_(EventGuardDuty.event_id == event_id, EventGuardDuty.member_id.isnot(None))
+        )
+    )
+    already_assigned = {row[0] for row in assigned_result.all()}
+    immunes_ids = await _immunes_member_ids(db, event_id)
+
+    checkin_result = await db.execute(
+        select(EventRSVP.member_id).where(
+            and_(EventRSVP.event_id == event_id, EventRSVP.checked_in == True)
+        )
+    )
+    targets: list[tuple[Optional[int], Optional[int]]] = []
+    for (member_id,) in checkin_result.all():
+        if member_id in already_assigned or member_id in immunes_ids:
+            continue
+        targets.append((member_id, None))
+    return targets
 
 
 async def _get_checked_in_members(db, event_id: int) -> list[Member]:

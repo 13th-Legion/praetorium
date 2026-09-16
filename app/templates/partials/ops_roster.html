@@ -29,6 +29,7 @@
       <td>{{ member.rank_grade or '—' }}</td>
       <td>
         <strong>{{ member.last_name }}</strong>, {{ member.first_name }}
+        {% if row.immunes %}<span class="badge-immunes" title="Exempt from extra duties">Immunes</span>{% endif %}
       </td>
       <td>{{ member.callsign or '—' }}</td>
       <td>{{ member.team or '—' }}</td>
@@ -92,14 +93,17 @@
                   hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Remove guard assignment?">✕</button>
           {% endif %}
         {% elif rsvp.checked_in and can_guard and guard_slots %}
-          <form method="POST" action="/events/{{ event.id }}/ops/guard/assign" style="display:flex;gap:4px;align-items:center;">
+          <form method="POST" action="/events/{{ event.id }}/ops/guard/assign" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"
+                data-immunes="{{ 1 if row.immunes else 0 }}">
             <input type="hidden" name="member_id" value="{{ member.id }}">
+            <input type="hidden" name="override_immunes" value="0">
             <select name="slot_number" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;">
               {% for slot in guard_slots %}
               <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
               {% endfor %}
             </select>
-            <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>
+            <button type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;"
+                    onclick="var f=this.form; if(f.dataset.immunes==='1'){ if(!confirm('This member is immunes (exempt from extra duties). Assign to guard anyway?')){ event.preventDefault(); return false; } f.querySelector('[name=override_immunes]').value='1'; } this.disabled=true; f.submit();">Assign</button>
           </form>
         {% else %}
           <span style="color:#333;font-size:11px;">—</span>
@@ -151,6 +155,17 @@
           <input type="hidden" name="member_id" value="{{ member.id }}">
           <button type="submit" class="ops-btn ops-btn-danger" style="font-size:11px;padding:2px 8px;"
                   onclick="if(!confirm('Undo check-in for this member?')){event.preventDefault();return false;} this.disabled=true;">Undo Check-In</button>
+        </form>
+        {% endif %}
+        {% if can_immunes %}
+        <form method="POST" action="/events/{{ event.id }}/ops/immunes" style="display:inline;margin-left:4px;"
+              hx-post="/events/{{ event.id }}/ops/immunes" hx-target="#ops-roster" hx-swap="innerHTML">
+          <input type="hidden" name="member_id" value="{{ member.id }}">
+          <input type="hidden" name="immunes" value="{{ 0 if row.immunes else 1 }}">
+          <button type="submit" class="ops-btn" style="font-size:11px;padding:2px 8px;"
+                  title="{{ 'Return to extra-duty pool' if row.immunes else 'Exempt from extra duties (event-scoped)' }}">
+            {{ 'Clear Immunes' if row.immunes else 'Mark Immunes' }}
+          </button>
         </form>
         {% endif %}
       </td>
