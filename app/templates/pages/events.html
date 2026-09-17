@@ -66,6 +66,64 @@
     </div>
     {% endif %}
 
+    <!-- Happening Now — featured while an event is actually running.
+         Previously an event flipped to "past" the instant it started, so the
+         one you most needed was collapsed into Past Events exactly while it
+         was underway. -->
+    {% if ongoing %}
+    <h2 style="font-size:1rem;color:#27ae60;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#27ae60;margin-right:6px;vertical-align:middle;animation:ongoingPulse 2s ease-in-out infinite;"></span>
+        Happening Now ({{ ongoing|length }})
+    </h2>
+    <style>
+        @keyframes ongoingPulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+        @media (prefers-reduced-motion: reduce) {
+            [style*="ongoingPulse"] { animation: none !important; }
+        }
+    </style>
+    <div class="events-grid" style="display:grid;gap:12px;margin-bottom:2rem;">
+        {% for e in ongoing %}
+        <a href="/events/{{ e.event.id }}" style="text-decoration:none;color:inherit;">
+        <div class="event-card" style="background:#123a2a;border:2px solid #27ae60;border-radius:8px;padding:16px;display:flex;align-items:flex-start;gap:14px;transition:border-color 0.2s,transform 0.1s;cursor:pointer;"
+             onmouseover="this.style.borderColor='#d4a537';this.style.transform='translateY(-1px)'"
+             onmouseout="this.style.borderColor='#27ae60';this.style.transform='none'">
+            <div style="font-size:32px;min-width:40px;text-align:center;">{{ e.icon }}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:15px;">{{ e.event.title }}</span>
+                    <span style="background:#27ae60;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">In Progress</span>
+                    <span style="background:#d4a537;color:#1a1a2e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;">{{ e.category_label }}</span>
+                    {% if e.my_rsvp == "attending" %}
+                    <span style="background:#27ae60;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;">GOING</span>
+                    {% elif e.my_rsvp == "declined" %}
+                    <span style="background:#e74c3c;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;">DECLINED</span>
+                    {% elif e.my_rsvp == "pending" %}
+                    <span style="background:#f39c12;color:#000;font-size:10px;padding:2px 6px;border-radius:8px;">PENDING</span>
+                    {% endif %}
+                </div>
+                <div style="font-size:13px;color:#cfe8d8;margin-bottom:4px;">{{ e.date_display }}</div>
+                {% if e.event.location %}
+                <div style="font-size:12px;color:#9ec7ad;">📍 {{ e.event.location }}</div>
+                {% endif %}
+                {% if e.event.instructor %}
+                <div style="font-size:12px;color:#d4a537;">👨🏫 {{ rank_abbr.get(e.event.instructor.rank_grade, '') }} {{ e.event.instructor.last_name }}</div>
+                {% endif %}
+            </div>
+            <div style="text-align:right;min-width:80px;">
+                {% if e.total > 0 %}
+                <div style="font-size:13px;font-weight:600;color:#27ae60;">{{ e.attending }}/{{ e.total }}</div>
+                <div style="font-size:11px;color:#9ec7ad;">attending</div>
+                <div style="background:#0b2419;border-radius:4px;height:6px;margin-top:4px;overflow:hidden;">
+                    <div style="background:#27ae60;height:100%;width:{{ (e.attending / e.total * 100) if e.total > 0 else 0 }}%;border-radius:4px;transition:width 0.3s;"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Upcoming Events -->
     {% if upcoming %}
     <h2 style="font-size:1rem;color:#d4a537;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em;">

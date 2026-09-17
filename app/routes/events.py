@@ -476,6 +476,44 @@ def _get_icon(category: str) -> str:
     return CATEGORY_ICONS().get(category, "📅")
 
 
+# Fallback length for a timed event with no recorded end. Long enough to cover
+# a normal meeting or drill, short enough that a stale row does not linger.
+DEFAULT_EVENT_HOURS = 3
+
+
+def _effective_end(event, all_day: bool = None) -> datetime:
+    """When an event is actually over.
+
+    Used to decide ongoing vs past. Previously the events page treated
+    ``date_start < now`` as "past", so an event was filed under Past Events the
+    moment it STARTED and got hidden in a collapsed section precisely while it
+    was running.
+
+    The obvious replacement -- "no ``date_end`` means it is still going" -- is
+    wrong and was checked against production: 6 rows have no ``date_end`` at
+    all, including Field Training Exercises from 2021, 2022 and 2023. Treating
+    a missing end as open-ended would have featured those as happening right
+    now. So a missing end is always bounded.
+    """
+    start = event.date_start
+    end = event.date_end
+    if all_day is None:
+        all_day = (start.hour == 0 and start.minute == 0
+                   and (not end or (end.hour == 0 and end.minute == 0)))
+
+    if end:
+        # A single all-day event stores end == start (both midnight). Without
+        # this it could never satisfy start <= now <= end and so could never
+        # be shown as ongoing on its own day.
+        if all_day and end <= start:
+            return end + timedelta(days=1)
+        return end
+
+    if all_day:
+        return start + timedelta(days=1)
+    return start + timedelta(hours=DEFAULT_EVENT_HOURS)
+
+
 # ─── iCal Parsing (reused from original) ────────────────────────────────────
 
 def _unescape_ical_text(text: str) -> str:
@@ -972,9 +1010,16 @@ async def events_page(request: Request):
             pending = counts.get("pending", 0)
             total = attending + declined + pending
 
-            is_past = event.date_start < now
             all_day = (event.date_start.hour == 0 and event.date_start.minute == 0
                        and (not event.date_end or (event.date_end.hour == 0 and event.date_end.minute == 0)))
+
+            # An event is only "past" once it has actually FINISHED. This used
+            # to be `event.date_start < now`, which shunted an event into Past
+            # Events the instant it began — so the thing you most need to reach
+            # was hidden in a collapsed section exactly while it was running.
+            effective_end = _effective_end(event, all_day)
+            is_ongoing = event.date_start <= now <= effective_end
+            is_past = effective_end < now
 
             events_data.append({
                 "event": event,
@@ -987,6 +1032,7 @@ async def events_page(request: Request):
                 "total": total,
                 "my_rsvp": my_rsvps_map.get(event.id),
                 "is_past": is_past,
+                "is_ongoing": is_ongoing,
             })
             
         # Get members for the instructor dropdown
@@ -996,8 +1042,11 @@ async def events_page(request: Request):
         # PP-225: selectable TRADOC blocks (single source of truth = TRADOC table)
         tradoc_blocks = await _active_tradoc_blocks(db)
 
-    # Split into upcoming and past
-    upcoming = [e for e in events_data if not e["is_past"]]
+    # Split into ongoing / upcoming / past. Ongoing is featured at the top of
+    # the page rather than being buried in the collapsed Past section.
+    ongoing = [e for e in events_data if e["is_ongoing"]]
+    ongoing.sort(key=lambda e: e["event"].date_start)  # earliest start first
+    upcoming = [e for e in events_data if not e["is_past"] and not e["is_ongoing"]]
     upcoming.reverse()  # ascending for upcoming
     past = [e for e in events_data if e["is_past"]]  # already desc from query
 
@@ -1016,6 +1065,7 @@ async def events_page(request: Request):
         "user": user,
         "is_admin": _is_admin(user),
         "can_create": bool(roles & {"command", "s3", "admin", "leader"}),
+        "ongoing": ongoing,
         "upcoming": upcoming,
         "past": past,
         "needs_finalization": needs_finalization,
