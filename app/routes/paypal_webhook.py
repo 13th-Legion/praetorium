@@ -6,6 +6,7 @@ member record.  Falls back to members table for edge cases where someone
 already has a DB row (re-applicants, manual record, etc.).
 """
 
+import json
 import os
 import re
 import logging
@@ -61,7 +62,16 @@ async def _verify_webhook(request: Request, body: bytes) -> bool:
         "transmission_sig": headers.get("paypal-transmission-sig", ""),
         "transmission_time": headers.get("paypal-transmission-time", ""),
         "webhook_id": os.getenv("PAYPAL_WEBHOOK_ID", ""),
-        "webhook_event": body.decode("utf-8"),
+        # PayPal expects webhook_event to be the event OBJECT, not a JSON
+        # string. Sending body.decode() produced
+        #   {"webhook_event": "{\"id\": \"WH-...\"}"}
+        # so PayPal could never reconstruct the payload and every verification
+        # returned FAILURE. That bug shipped with the original webhook in April
+        # but was harmless while a failed verification only logged a warning and
+        # processed the payment anyway. The 2026-07-22 hardening correctly made
+        # verification fail-closed (401), which turned this latent bug into a
+        # total outage: no applicant fee has auto-matched since.
+        "webhook_event": json.loads(body.decode("utf-8")),
     }
 
     async with httpx.AsyncClient(timeout=15) as client:
@@ -87,7 +97,24 @@ async def _verify_webhook(request: Request, body: bytes) -> bool:
         )
         if verify_resp.status_code == 200:
             result = verify_resp.json()
-            return result.get("verification_status") == "SUCCESS"
+            status = result.get("verification_status")
+            if status == "SUCCESS":
+                return True
+            # Log WHY. The previous code returned a bare False, so a permanently
+            # failing verification looked identical to a spoofed request and ran
+            # silently from 2026-07-22 until 2026-09-21.
+            logger.error(
+                "PayPal signature verification returned %s (webhook_id=%s). "
+                "Response: %s",
+                status, os.getenv("PAYPAL_WEBHOOK_ID", "")[:8] + "...",
+                json.dumps(result)[:400],
+            )
+            return False
+
+        logger.error(
+            "PayPal verify-webhook-signature HTTP %s: %s",
+            verify_resp.status_code, verify_resp.text[:400],
+        )
 
     return False
 

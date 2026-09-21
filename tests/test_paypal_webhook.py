@@ -102,3 +102,119 @@ class TestAmountWindow:
 
     def test_above_ceiling_not_app_fee(self):
         assert not (pw.APP_FEE_MIN <= 53.01 <= pw.APP_FEE_MAX)
+
+
+class _FakeVerifyClient:
+    """Captures what we actually POST to PayPal's verify endpoint.
+
+    Every other test in this file mocks _verify_webhook wholesale, so nothing
+    ever exercised the verification body itself -- which is exactly how the
+    webhook_event-as-string bug survived from April to September.
+    """
+
+    def __init__(self):
+        self.verify_payload = None
+
+    def __call__(self, *a, **kw):
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def post(self, url, **kw):
+        if "oauth2/token" in url:
+            return _FakeResp(200, {"access_token": "fake-token"})
+        if "verify-webhook-signature" in url:
+            self.verify_payload = kw.get("json")
+            return _FakeResp(200, {"verification_status": "SUCCESS"})
+        return _FakeResp(404, {})
+
+
+class _FakeResp:
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._payload = payload
+        self.text = json.dumps(payload)
+
+    def json(self):
+        return self._payload
+
+
+class TestVerificationBody:
+    """PayPal requires webhook_event to be the event OBJECT, not a JSON string.
+
+    Sending body.decode() produced {"webhook_event": "{\\"id\\": ...}"}, so
+    PayPal could never reconstruct the payload and verification always failed.
+    Harmless while a failure only logged a warning; a hard outage once the
+    2026-07-22 audit made verification fail-closed with a 401.
+    """
+
+    async def test_webhook_event_is_an_object_not_a_string(self, monkeypatch):
+        fake = _FakeVerifyClient()
+        monkeypatch.setattr(pw.httpx, "AsyncClient", fake)
+        monkeypatch.setattr(pw, "PAYPAL_CLIENT_ID", "cid", raising=False)
+        monkeypatch.setattr(pw, "PAYPAL_SECRET", "sec", raising=False)
+
+        evt = _event()
+        req = _make_request(evt)
+        body = json.dumps(evt).encode()
+
+        ok = await pw._verify_webhook(req, body)
+        assert ok is True
+
+        sent = fake.verify_payload
+        assert sent is not None, "never called PayPal's verify endpoint"
+        assert isinstance(sent["webhook_event"], dict), (
+            "webhook_event must be the event OBJECT; sending a JSON string "
+            "makes PayPal return FAILURE for every genuine delivery"
+        )
+        assert sent["webhook_event"]["event_type"] == "PAYMENT.CAPTURE.COMPLETED"
+
+    async def test_verification_body_carries_all_signature_headers(self, monkeypatch):
+        fake = _FakeVerifyClient()
+        monkeypatch.setattr(pw.httpx, "AsyncClient", fake)
+        monkeypatch.setattr(pw, "PAYPAL_CLIENT_ID", "cid", raising=False)
+        monkeypatch.setattr(pw, "PAYPAL_SECRET", "sec", raising=False)
+
+        evt = _event()
+        await pw._verify_webhook(_make_request(evt), json.dumps(evt).encode())
+
+        sent = fake.verify_payload
+        for key in ("auth_algo", "cert_url", "transmission_id",
+                    "transmission_sig", "transmission_time", "webhook_id"):
+            assert key in sent, f"verification body missing {key}"
+
+    async def test_failure_status_is_reported_not_swallowed(self, monkeypatch, caplog):
+        """A permanently-broken verification must not look like a spoof.
+
+        The old code returned a bare False and logged nothing, so this ran
+        silently for two months.
+        """
+        class _FailClient(_FakeVerifyClient):
+            async def post(self, url, **kw):
+                if "oauth2/token" in url:
+                    return _FakeResp(200, {"access_token": "fake-token"})
+                return _FakeResp(200, {"verification_status": "FAILURE"})
+
+        monkeypatch.setattr(pw.httpx, "AsyncClient", _FailClient())
+        monkeypatch.setattr(pw, "PAYPAL_CLIENT_ID", "cid", raising=False)
+        monkeypatch.setattr(pw, "PAYPAL_SECRET", "sec", raising=False)
+
+        evt = _event()
+        with caplog.at_level("ERROR"):
+            ok = await pw._verify_webhook(_make_request(evt), json.dumps(evt).encode())
+
+        assert ok is False
+        assert any("FAILURE" in r.message or "FAILURE" in str(r.args)
+                   for r in caplog.records), "the failure reason must be logged"
+
+    async def test_missing_credentials_fail_closed(self, monkeypatch):
+        """No credentials must never mean 'assume valid'."""
+        monkeypatch.setattr(pw, "PAYPAL_CLIENT_ID", "", raising=False)
+        monkeypatch.setattr(pw, "PAYPAL_SECRET", "", raising=False)
+        evt = _event()
+        ok = await pw._verify_webhook(_make_request(evt), json.dumps(evt).encode())
+        assert ok is False
