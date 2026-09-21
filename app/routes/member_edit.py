@@ -506,6 +506,14 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
                    "Please reload the edit page and try again.",
         )
 
+    # Captured BEFORE the identity writes so the Nextcloud push later only
+    # fires on a real change. display_name is a property over
+    # rank/last_name/callsign, so a last-name edit changes it even when rank
+    # does not. Capturing it after these writes makes the comparison always
+    # equal and the sync a silent no-op — caught by
+    # tests/test_nc_displayname_sync.py.
+    old_display_name = member.display_name
+
     # Identity — only overwrite when the field is present in the submission.
     member.first_name = (form.get("first_name") or member.first_name).strip()
     member.last_name = (form.get("last_name") or member.last_name).strip()
@@ -679,9 +687,15 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
         if member.status == "recruit":
             member.status = "active"
 
-    # Sync NC rank group and display name if rank changed
+    # Rank group follows rank only.
     if new_rank != old_rank and member.nc_username:
         await _sync_rank_group(member.nc_username, new_rank)
+
+    # Display name must follow ANY change to it, not just a rank change.
+    # This used to live inside the `new_rank != old_rank` branch, so editing
+    # a last name or callsign never reached Nextcloud: member 138 saved as
+    # "DeGarmo" in the roster while NC still showed "RCT Jesse" (2026-09-21).
+    if member.nc_username and member.display_name != old_display_name:
         await _sync_nc_displayname(member.nc_username, member.display_name)
 
     # Log rank change to history
