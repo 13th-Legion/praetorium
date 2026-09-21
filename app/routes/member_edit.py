@@ -530,6 +530,16 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
 
     # The personal address exists to be a SECOND way to reach someone, so it
     # must not duplicate the official one.
+    #
+    # Assign BEFORE validating, mirroring the official-email path above. This
+    # used to validate `member.personal_email` — the value still loaded from the
+    # database — while the submitted value was not applied until ~80 lines
+    # later. That made bad stored data permanently unfixable: member 138 had
+    # personal_email identical to his Proton address, so every save failed on
+    # the stale value, and clearing the field in the form could not help
+    # because the cleared value was never the one being checked. The profile
+    # could not be saved at all, which is why he sat there with no last name.
+    member.personal_email = _str_field(form, "personal_email", member.personal_email)
     _ok, _why = email_policy.validate_personal(member.personal_email, member.email)
     if not _ok:
         raise HTTPException(status_code=400, detail=_why)
@@ -610,7 +620,8 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     if form.get("state", _MISSING) is not _MISSING:
         member.state = (form.get("state", "").strip() or "TX")
     member.zip_code = _str_field(form, "zip_code", member.zip_code)
-    member.personal_email = _str_field(form, "personal_email", member.personal_email)
+    # personal_email is assigned earlier, next to its validation, so that the
+    # check sees the submitted value. Do not reassign it here.
     member.emergency_contact = _str_field(form, "emergency_contact", member.emergency_contact)
     member.emergency_phone = _str_field(form, "emergency_phone", member.emergency_phone)
 
