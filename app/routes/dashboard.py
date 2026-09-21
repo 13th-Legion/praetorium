@@ -15,6 +15,12 @@ from app.models.rank_history import RankHistory
 from app.models.ribbons import MemberRibbon, RibbonCatalog
 from app.routes.elections import _auto_advance
 from app.services import ranks as _ranks
+from app.services.ribbon_derive import derive_ribbons
+from app.models.schedule import EventScheduleBlock
+from app.models.events import EventRSVP
+
+import logging
+_log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory="app/templates")
@@ -143,10 +149,18 @@ def _member_name(m: Member) -> str:
 async def activity_feed(request: Request):
     """Unit-wide Promotions & Awards feed (PP-253).
 
-    Merges rank_history (promotions) + member_ribbons (manual/claim ribbon &
-    decoration grants) into one reverse-chronological stream. Auto-derived
-    ribbons are NOT rows in member_ribbons, so they correctly never appear here
-    (they are not discrete 'events').
+    Merges rank_history (promotions) + member_ribbons (manual/claim grants) +
+    EVENT-DERIVED ribbons into one reverse-chronological stream.
+
+    Derived ribbons are computed at render time and have no row and no
+    awarded_at, so before 2026-09-21 they never appeared here at all -- the
+    card looked frozen since the last manual grant (22 JUL 2026) even though
+    FTX/instructor ribbons were being earned continuously. We now surface the
+    event-derived codes using the date of the most recent triggering event.
+
+    Only EVENT-derived codes are included (ftx, mcftx, instructor_ftx,
+    instructor_online). Cert/TRADOC/rank-derived codes have no event date and
+    are not discrete 'events', so inventing a date for them would be a lie.
     """
     items = []  # each: {dt, kind, icon, member_id, name, callsign, text, img}
     async with database.async_session() as db:
@@ -163,7 +177,7 @@ async def activity_feed(request: Request):
             new_abbr = _ranks.abbr_map().get(rh.new_rank, rh.new_rank or "")
             insig = _ranks.insignia_map().get(rh.new_rank)  # None for E-1/W-1 (no insignia)
             items.append({
-                "dt": rh.effective_date,
+                "dt": _to_cdt(rh.effective_date),
                 "kind": "promotion",
                 "icon": "\U0001F53C",  # up-triangle fallback
                 "member_id": m.id,
@@ -185,7 +199,7 @@ async def activity_feed(request: Request):
         for mr, m, cat in rr.all():
             verb = "awarded"
             items.append({
-                "dt": mr.awarded_at,
+                "dt": _to_cdt(mr.awarded_at),
                 "kind": "award",
                 "icon": "\U0001F396\uFE0F",  # medal
                 "member_id": m.id,
@@ -195,6 +209,73 @@ async def activity_feed(request: Request):
                 "img": f"/static/img/ribbons/{cat.image}" if cat.image else None,
                 "rank_img": None,
             })
+
+        # ── Event-derived ribbons (no rows exist; computed at render time) ──
+        # Dates come from Event.date_start, which is stored NAIVE WALL-CLOCK CT,
+        # so it must be tagged with _fmt_ct_stored (NOT _to_cdt, which assumes
+        # UTC and would shift every derived award by the offset).
+        EVENT_DERIVED = {
+            "ftx": ("ftx",),
+            "mcftx": ("mcftx",),
+            "instructor_ftx": ("ftx", "mcftx"),
+            "instructor_online": ("online_training",),
+        }
+        cat_rows = (await db.execute(select(RibbonCatalog))).scalars().all()
+        cat_by_code = {c.code: c for c in cat_rows}
+
+        roster = (await db.execute(
+            select(Member).where(Member.status.in_(("active", "recruit")))
+        )).scalars().all()
+
+        for m in roster:
+            try:
+                derived_list = await derive_ribbons(db, m)
+            except Exception:
+                _log.exception("derive_ribbons failed for member %s", m.id)
+                continue
+            for d in derived_list:
+                code = d.get("code")
+                cats = EVENT_DERIVED.get(code)
+                if not cats:
+                    continue  # cert/TRADOC/rank derived: no event date, not an event
+                if code.startswith("instructor_"):
+                    latest = (await db.execute(
+                        select(func.max(Event.date_start))
+                        .select_from(EventScheduleBlock)
+                        .join(Event, Event.id == EventScheduleBlock.event_id)
+                        .where(
+                            EventScheduleBlock.instructor_id == m.id,
+                            EventScheduleBlock.activity_type == "class",
+                            Event.category.in_(cats),
+                        )
+                    )).scalar()
+                else:
+                    latest = (await db.execute(
+                        select(func.max(Event.date_start))
+                        .select_from(EventRSVP)
+                        .join(Event, Event.id == EventRSVP.event_id)
+                        .where(
+                            EventRSVP.member_id == m.id,
+                            EventRSVP.attended.is_(True),
+                            Event.category.in_(cats),
+                        )
+                    )).scalar()
+                if latest is None:
+                    continue
+                cat = cat_by_code.get(code)
+                if cat is None:
+                    continue
+                items.append({
+                    "dt": _fmt_ct_stored(latest),
+                    "kind": "award",
+                    "icon": "\U0001F396\uFE0F",
+                    "member_id": m.id,
+                    "name": _member_name(m),
+                    "callsign": m.callsign,
+                    "text": f"earned {cat.name}",
+                    "img": f"/static/img/ribbons/{cat.image}" if cat.image else None,
+                    "rank_img": None,
+                })
 
     # Merge, newest first, cap the stream
     items = [it for it in items if it["dt"] is not None]
@@ -208,7 +289,7 @@ async def activity_feed(request: Request):
         )
 
     def _row(it):
-        d = _to_cdt(it["dt"])
+        d = it["dt"]
         datestr = d.strftime("%d %b").upper().lstrip("0") if d else ""
         cs = f' <span style="color:#888;font-style:italic;">\u201c{it["callsign"]}\u201d</span>' if it["callsign"] else ""
         thumb_src = it.get("rank_img") or it.get("img")

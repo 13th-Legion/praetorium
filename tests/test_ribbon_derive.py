@@ -58,3 +58,109 @@ class TestDeriveFtxAttendance:
         assert "ftx" in codes
         ftx = next(r for r in ribbons if r["code"] == "ftx")
         assert ftx["device_count"] == 1   # 5 attended = first device tier
+
+
+class TestInstructorRibbonSplit:
+    """Instructor ribbons are split by event category (Cav, 2026-09-21).
+
+    The rule used to count EVERY class block regardless of category:
+
+        select(count()).select_from(EventScheduleBlock)
+            .where(instructor_id == mid, activity_type == "class")
+
+    so teaching an online_training session silently counted toward the FTX
+    instructor ribbon, and instructor_online had no derivation at all -- it was
+    manual-only, which is why "online training should reward the instructor"
+    never happened. instructor_ftx is now ftx/mcftx only; instructor_online
+    covers online_training.
+    """
+
+    @staticmethod
+    async def _block(db, event, member, activity_type="class", start="0800", title="CLASS: Test"):
+        from app.models.schedule import EventScheduleBlock
+        b = EventScheduleBlock(
+            event_id=event.id,
+            instructor_id=member.id,
+            activity_type=activity_type,
+            day_number=1,
+            start_time=start,
+            title=title,
+            created_by="test",
+        )
+        db.add(b)
+        await db.flush()
+        return b
+
+    async def test_online_training_awards_instructor_online_not_ftx(self, db_session):
+        """The exact regression: an online class must NOT bump instructor_ftx."""
+        m = await make_member(db_session)
+        e = await make_event(db_session, title="Comms Class", category="online_training")
+        await self._block(db_session, e, m)
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert "instructor_online" in codes
+        assert "instructor_ftx" not in codes, (
+            "an online_training class must not count toward the FTX instructor ribbon"
+        )
+
+    async def test_ftx_class_awards_instructor_ftx_not_online(self, db_session):
+        m = await make_member(db_session)
+        e = await make_event(db_session, title="FTX", category="ftx")
+        await self._block(db_session, e, m)
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert "instructor_ftx" in codes
+        assert "instructor_online" not in codes
+
+    async def test_mcftx_class_also_counts_toward_instructor_ftx(self, db_session):
+        m = await make_member(db_session)
+        e = await make_event(db_session, title="MCFTX", category="mcftx")
+        await self._block(db_session, e, m)
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert "instructor_ftx" in codes
+
+    async def test_device_count_is_one_less_than_classes_taught(self, db_session):
+        m = await make_member(db_session)
+        for i in range(3):
+            e = await make_event(db_session, title=f"Online {i}", category="online_training")
+            await self._block(db_session, e, m, start=f"0{8 + i}00")
+
+        ribbons = await rd.derive_ribbons(db_session, m)
+        online = next(r for r in ribbons if r["code"] == "instructor_online")
+        assert online["device_count"] == 2  # 3 taught, base + 2 devices
+
+    async def test_non_class_activity_earns_no_instructor_ribbon(self, db_session):
+        """Running the admin block at an FTX is not instructing."""
+        m = await make_member(db_session)
+        e = await make_event(db_session, title="FTX", category="ftx")
+        await self._block(db_session, e, m, activity_type="admin", title="Admin")
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert "instructor_ftx" not in codes
+        assert "instructor_online" not in codes
+
+    async def test_both_ribbons_when_teaching_both_kinds(self, db_session):
+        m = await make_member(db_session)
+        f = await make_event(db_session, title="FTX", category="ftx")
+        o = await make_event(db_session, title="Online", category="online_training")
+        await self._block(db_session, f, m)
+        await self._block(db_session, o, m, start="0900")
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert {"instructor_ftx", "instructor_online"} <= codes
+
+    async def test_other_categories_earn_nothing(self, db_session):
+        """meeting / external_training / social must not grant instructor ribbons.
+
+        external_training is deliberately excluded -- Cav scoped this to online
+        training only.
+        """
+        m = await make_member(db_session)
+        for cat in ("meeting", "external_training", "social", "volunteering"):
+            e = await make_event(db_session, title=cat, category=cat)
+            await self._block(db_session, e, m)
+
+        codes = {r["code"] for r in await rd.derive_ribbons(db_session, m)}
+        assert "instructor_ftx" not in codes
+        assert "instructor_online" not in codes

@@ -183,13 +183,31 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
         # base + one device per additional MCFTX beyond the first
         out.append({"code": "mcftx", "device_count": max(0, mcftx_count - 1), "awarded_at": None, "source": "auto"})
 
-    # ── Instructor (FTX classes taught) ──
-    taught = (await db.execute(
-        select(func.count()).select_from(EventScheduleBlock)
-        .where(EventScheduleBlock.instructor_id == mid, EventScheduleBlock.activity_type == "class")
-    )).scalar() or 0
-    if taught:
-        out.append({"code": "instructor_ftx", "device_count": max(0, taught - 1), "awarded_at": None, "source": "auto"})
+    # ── Instructor (classes taught), split by event category ──
+    # This used to count EVERY class block regardless of category, so teaching
+    # an online_training session silently counted toward the FTX instructor
+    # ribbon. The two ribbons must mean distinct things, so instructor_ftx is
+    # now ftx/mcftx only and instructor_online covers online_training.
+    # Decided with Cav 2026-09-21; this intentionally REDUCES existing device
+    # counts for anyone who had taught online sessions.
+    async def _taught(categories) -> int:
+        return (await db.execute(
+            select(func.count()).select_from(EventScheduleBlock)
+            .join(Event, Event.id == EventScheduleBlock.event_id)
+            .where(
+                EventScheduleBlock.instructor_id == mid,
+                EventScheduleBlock.activity_type == "class",
+                Event.category.in_(categories),
+            )
+        )).scalar() or 0
+
+    taught_ftx = await _taught(("ftx", "mcftx"))
+    if taught_ftx:
+        out.append({"code": "instructor_ftx", "device_count": max(0, taught_ftx - 1), "awarded_at": None, "source": "auto"})
+
+    taught_online = await _taught(("online_training",))
+    if taught_online:
+        out.append({"code": "instructor_online", "device_count": max(0, taught_online - 1), "awarded_at": None, "source": "auto"})
 
     # ── Rank / flags ──
     grade = member.rank_grade or ""
