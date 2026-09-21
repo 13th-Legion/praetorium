@@ -238,7 +238,23 @@ async def activity_feed(request: Request):
                 cats = EVENT_DERIVED.get(code)
                 if not cats:
                     continue  # cert/TRADOC/rank derived: no event date, not an event
-                if code.startswith("instructor_"):
+                if code == "instructor_online":
+                    # online_training records its instructor on the EVENT, not
+                    # on a schedule block -- those events have no blocks at
+                    # all, so a block join would always return None and this
+                    # ribbon would never appear in the feed.
+                    latest = (await db.execute(
+                        select(func.max(Event.date_start))
+                        .where(
+                            Event.instructor_id == m.id,
+                            Event.category.in_(cats),
+                            Event.status != "cancelled",
+                            func.coalesce(Event.date_end, Event.date_start) < datetime.now(),
+                        )
+                    )).scalar()
+                elif code.startswith("instructor_"):
+                    # ftx/mcftx instructors live on schedule blocks;
+                    # events.instructor_id is NULL for every ftx row.
                     latest = (await db.execute(
                         select(func.max(Event.date_start))
                         .select_from(EventScheduleBlock)

@@ -183,14 +183,25 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
         # base + one device per additional MCFTX beyond the first
         out.append({"code": "mcftx", "device_count": max(0, mcftx_count - 1), "awarded_at": None, "source": "auto"})
 
-    # ── Instructor (classes taught), split by event category ──
-    # This used to count EVERY class block regardless of category, so teaching
-    # an online_training session silently counted toward the FTX instructor
-    # ribbon. The two ribbons must mean distinct things, so instructor_ftx is
-    # now ftx/mcftx only and instructor_online covers online_training.
-    # Decided with Cav 2026-09-21; this intentionally REDUCES existing device
-    # counts for anyone who had taught online sessions.
-    async def _taught(categories) -> int:
+    # ── Instructor, split by event category ──
+    # The two categories record their instructor in COMPLETELY DIFFERENT
+    # PLACES, which is easy to get wrong:
+    #
+    #   ftx / mcftx      -> event_schedule_blocks.instructor_id (a day has
+    #                       several class blocks, each with its own
+    #                       instructor). events.instructor_id is NULL for
+    #                       every ftx/mcftx row.
+    #   online_training  -> events.instructor_id (one instructor per session;
+    #                       these events carry no schedule blocks at all).
+    #
+    # Counting only schedule blocks -- as the first version of this split did
+    # -- meant instructor_online could never fire for anyone, because no
+    # online_training event has a single schedule block.
+    #
+    # Cav's rule: the instructor is rewarded AFTER the session finishes, so
+    # future occurrences of a recurring series must not count. Most
+    # online_training rows are future recurrences.
+    async def _taught_blocks(categories) -> int:
         return (await db.execute(
             select(func.count()).select_from(EventScheduleBlock)
             .join(Event, Event.id == EventScheduleBlock.event_id)
@@ -201,11 +212,22 @@ async def derive_ribbons(db: AsyncSession, member: Member) -> list[dict]:
             )
         )).scalar() or 0
 
-    taught_ftx = await _taught(("ftx", "mcftx"))
+    taught_ftx = await _taught_blocks(("ftx", "mcftx"))
     if taught_ftx:
         out.append({"code": "instructor_ftx", "device_count": max(0, taught_ftx - 1), "awarded_at": None, "source": "auto"})
 
-    taught_online = await _taught(("online_training",))
+    # date_start/date_end are naive wall-clock CT, so compare against local
+    # now() rather than utcnow() -- utcnow() runs ~5-6h ahead of CT and would
+    # credit sessions that have not happened yet.
+    taught_online = (await db.execute(
+        select(func.count()).select_from(Event)
+        .where(
+            Event.instructor_id == mid,
+            Event.category == "online_training",
+            Event.status != "cancelled",
+            func.coalesce(Event.date_end, Event.date_start) < datetime.now(),
+        )
+    )).scalar() or 0
     if taught_online:
         out.append({"code": "instructor_online", "device_count": max(0, taught_online - 1), "awarded_at": None, "source": "auto"})
 
