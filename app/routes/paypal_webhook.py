@@ -46,6 +46,35 @@ DECK_BOARD_ID = 5
 DECK_PAYMENT_STACKS = {14, 13, 12, 11}  # Documents & Payment first, then earlier stages
 
 
+async def _set_outcome(transaction_id: str, outcome: str) -> None:
+    """Record the terminal disposition of a webhook on its audit row.
+
+    The dedup row is inserted as "processing" before any matching so a retry
+    can be short-circuited. Nothing ever wrote the final state back, so every
+    row sat at "processing" forever and the audit trail could not say what
+    happened to a payment. Best-effort: an audit write must never break
+    payment handling, so failures are logged and swallowed.
+    """
+    if not transaction_id:
+        return
+    try:
+        async with database.async_session() as db:
+            row = (await db.execute(
+                select(WebhookEvent).where(
+                    WebhookEvent.provider == "paypal",
+                    WebhookEvent.transaction_id == transaction_id,
+                )
+            )).scalar_one_or_none()
+            if row is None:
+                return
+            row.outcome = outcome
+            await db.commit()
+    except Exception:
+        logger.exception(
+            "Failed to record outcome=%s for txn=%s", outcome, transaction_id
+        )
+
+
 # ─── PayPal signature verification ──────────────────────────────────────────
 
 async def _verify_webhook(request: Request, body: bytes) -> bool:
@@ -441,6 +470,7 @@ async def paypal_webhook(request: Request):
     # Non-USD payments are ignored
     if currency != "USD":
         logger.info(f"Payment ${amount_value:.2f} {currency} — non-USD, ignoring")
+        await _set_outcome(transaction_id, "ignored_currency")
         return JSONResponse({"status": "ignored", "reason": "currency_mismatch"})
 
     # Determine if this looks like an application fee
@@ -477,6 +507,7 @@ async def paypal_webhook(request: Request):
                 )
         except Exception:
             pass
+        await _set_outcome(transaction_id, "needs_review")
         return JSONResponse({
             "status": "needs_review",
             "source": "deck",
@@ -532,6 +563,7 @@ async def paypal_webhook(request: Request):
             except Exception:
                 pass
 
+        await _set_outcome(transaction_id, "matched_deck")
         return JSONResponse({
             "status": "matched",
             "source": "deck",
@@ -607,6 +639,7 @@ async def paypal_webhook(request: Request):
             except Exception:
                 pass
 
+            await _set_outcome(transaction_id, "matched_member")
             return JSONResponse({
                 "status": "matched",
                 "source": "members",
@@ -639,6 +672,7 @@ async def paypal_webhook(request: Request):
     except Exception:
         pass
 
+    await _set_outcome(transaction_id, "unmatched")
     return JSONResponse({
         "status": "unmatched",
         "payer_email": payer_email,

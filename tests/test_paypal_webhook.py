@@ -218,3 +218,76 @@ class TestVerificationBody:
         evt = _event()
         ok = await pw._verify_webhook(_make_request(evt), json.dumps(evt).encode())
         assert ok is False
+
+
+class TestOutcomeRecorded:
+    """The audit row must record what actually happened to a payment.
+
+    The dedup row is inserted as "processing" before matching so retries can be
+    short-circuited, but nothing ever wrote the final state back. Every row sat
+    at "processing" forever, so the audit trail could not answer "what happened
+    to this payment?" -- confirmed in production on 2026-09-21, where all four
+    rows read "processing".
+    """
+
+    @staticmethod
+    async def _outcome_for(txn):
+        from sqlalchemy import select as _select
+        from app.models.webhook_event import WebhookEvent
+        from app import database
+        async with database.async_session() as db:
+            row = (await db.execute(
+                _select(WebhookEvent).where(WebhookEvent.transaction_id == txn)
+            )).scalar_one_or_none()
+            return row.outcome if row else None
+
+    async def test_unmatched_payment_records_unmatched(self, patch_global_session):
+        with mock.patch.object(pw, "_verify_webhook", new=mock.AsyncMock(return_value=True)), \
+             mock.patch.object(pw, "_find_deck_card", new=mock.AsyncMock(return_value=None)):
+            resp = await pw.paypal_webhook(_make_request(_event(txn="TXN-OUT-UNMATCHED")))
+
+        assert (await _body(resp))["status"] == "unmatched"
+        assert await self._outcome_for("TXN-OUT-UNMATCHED") == "unmatched"
+
+    async def test_needs_review_records_needs_review(self, patch_global_session):
+        name_match = {
+            "card_id": 99, "stack_id": 14, "name": "No Body",
+            "email": "nobody@example.com", "match_type": "name", "needs_review": True,
+        }
+        with mock.patch.object(pw, "_verify_webhook", new=mock.AsyncMock(return_value=True)), \
+             mock.patch.object(pw, "_find_deck_card", new=mock.AsyncMock(return_value=name_match)), \
+             mock.patch.object(pw, "_annotate_deck_card", new=mock.AsyncMock(return_value=True)):
+            resp = await pw.paypal_webhook(_make_request(_event(txn="TXN-OUT-REVIEW")))
+
+        assert (await _body(resp))["status"] == "needs_review"
+        assert await self._outcome_for("TXN-OUT-REVIEW") == "needs_review"
+
+    async def test_outcome_never_left_as_processing(self, patch_global_session):
+        """The exact production symptom."""
+        with mock.patch.object(pw, "_verify_webhook", new=mock.AsyncMock(return_value=True)), \
+             mock.patch.object(pw, "_find_deck_card", new=mock.AsyncMock(return_value=None)):
+            await pw.paypal_webhook(_make_request(_event(txn="TXN-OUT-TERMINAL")))
+
+        assert await self._outcome_for("TXN-OUT-TERMINAL") != "processing"
+
+    async def test_audit_write_failure_is_swallowed(self, patch_global_session, monkeypatch):
+        """An audit-trail problem must never cost us a payment.
+
+        Breaks the DB session rather than mocking _set_outcome: the protection
+        lives INSIDE that function, so replacing it would remove the very thing
+        under test.
+        """
+        def _boom(*a, **kw):
+            raise RuntimeError("db exploded")
+
+        monkeypatch.setattr(pw.database, "async_session", _boom)
+        # Must not raise.
+        await pw._set_outcome("TXN-OUT-BOOM", "unmatched")
+
+    async def test_blank_transaction_id_is_a_noop(self, patch_global_session):
+        """No txn id means no audit row to update; must not error."""
+        await pw._set_outcome("", "unmatched")
+
+    async def test_unknown_transaction_id_is_a_noop(self, patch_global_session):
+        """A txn with no row (e.g. insert was skipped) must not error."""
+        await pw._set_outcome("TXN-DOES-NOT-EXIST", "unmatched")
