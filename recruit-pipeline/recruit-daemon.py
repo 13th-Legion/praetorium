@@ -1635,6 +1635,69 @@ def add_to_nc_groups(username, groups):
     return failed
 
 
+def _load_address_parser():
+    """Load the portal's stdlib-only address parser by PATH.
+
+    The daemon runs on the host, where the portal's dependencies
+    (sqlalchemy, httpx) are not installed, so `from app.geo import ...`
+    would fail. app/address_parse.py is deliberately stdlib-only and is
+    loaded directly so the daemon and the portal share one parser and
+    cannot drift apart.
+    """
+    import importlib.util
+
+    candidates = [
+        "/opt/praetorium/app/address_parse.py",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "address_parse.py"),
+    ]
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location("praetorium_address_parse", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod.parse_oneline_address
+        except Exception as e:
+            log.warning(f"Could not load address parser from {path}: {e}")
+    log.error(
+        "Address parser not found (looked in %s). Falling back to comma-split, "
+        "which leaves city/zip empty for one-line addresses." % ", ".join(candidates)
+    )
+    return None
+
+
+def _parse_address_fields(raw_addr):
+    """Return (street, city, state, zip) from a one-line address.
+
+    Application cards hold the whole address on ONE LINE and usually with
+    NO commas. The original code did "Street, City, State ZIP".split(","),
+    so a comma-less line put everything in street and left city/state/zip
+    empty on every single onboard.
+    """
+    raw_addr = (raw_addr or "").strip()
+    if not raw_addr:
+        return "", "", "", ""
+
+    parser = _load_address_parser()
+    if parser is not None:
+        p = parser(raw_addr)
+        return (
+            p["street"] or raw_addr,
+            p["city"] or "",
+            p["state"] or "",
+            p["zip"] or "",
+        )
+
+    # Last-resort legacy behaviour if the parser file is missing.
+    parts = [p.strip() for p in raw_addr.split(",")]
+    street = parts[0] if parts else ""
+    city = parts[1] if len(parts) >= 2 else ""
+    state_zip = parts[2] if len(parts) >= 3 else ""
+    bits = state_zip.split()
+    return street, city, (bits[0] if bits else ""), (bits[1] if len(bits) > 1 else "")
+
+
 def create_portal_member(info, nc_username, team):
     """Insert a member record into the Praetorium portal database."""
     try:
@@ -1660,23 +1723,33 @@ def create_portal_member(info, nc_username, team):
         next_seq = cur.fetchone()[0]
         serial_number = f"XIII-{next_seq:04d}"
 
-        # Parse address if available (format: "Street, City, State ZIP")
+        # Parse the one-line address from the application card.
         raw_addr = info.get("Address", "")
-        addr_parts = [p.strip() for p in raw_addr.split(",")]
-        street = addr_parts[0] if len(addr_parts) >= 1 else ""
-        city = addr_parts[1] if len(addr_parts) >= 2 else ""
-        state_zip = addr_parts[2] if len(addr_parts) >= 3 else ""
-        state_code = state_zip.split()[0] if state_zip else ""
-        zip_code = state_zip.split()[1] if len(state_zip.split()) > 1 else ""
+        street, city, state_code, zip_code = _parse_address_fields(raw_addr)
+        if not state_code:
+            state_code = "TX"
+        if raw_addr and not city:
+            # Not fatal -- the geocoders handle free-form text -- but the
+            # city/zip columns drive roster display and filtering, so say so.
+            log.warning(
+                f"Address for {first_name} {last_name} yielded no city: {raw_addr!r} "
+                f"(stored street only; city/zip left empty for S1 to complete)"
+            )
 
         is_vet = info.get("Veteran", "").lower() in ("yes", "true")
 
-        # Geocode address for portal map
-        geo_addr = f"{street}, {city}, TX {zip_code}" if street else (f"{city}, TX {zip_code}" if city else "")
-        geo_lat, geo_lon = geocode_address(geo_addr) if geo_addr else (None, None)
+        # Geocode from the STRUCTURED fields via the portal geocoder (Census
+        # -> Nominatim -> zip centroid), so the daemon and portal agree on
+        # placement. Falls back to the raw one-liner, which the geocoders
+        # parse fine even without commas.
+        geo_lat, geo_lon = (None, None)
+        if street or city or zip_code:
+            geo_lat, geo_lon = _portal_geocode(street, city, state_code, zip_code)
+        if geo_lat is None and raw_addr:
+            geo_lat, geo_lon = geocode_address(raw_addr)
         if geo_lat is None and city:
             # Fallback: geocode just city + zip
-            geo_lat, geo_lon = geocode_address(f"{city}, TX {zip_code}")
+            geo_lat, geo_lon = geocode_address(f"{city}, {state_code} {zip_code}".strip())
         if geo_lat:
             log.info(f"Geocoded {first_name} {last_name}: {geo_lat:.4f}, {geo_lon:.4f}")
         else:

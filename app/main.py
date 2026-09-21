@@ -463,6 +463,57 @@ async def submit_verify_contact(
         member.emergency_phone = emergency_phone.strip()
         member.contact_verified_at = datetime.utcnow()
 
+        # Split a full one-line address, then geocode and place the member.
+        # This route used to write the raw fields and commit, unlike
+        # member_edit and contact_edit which both run the full pipeline. A
+        # recruit who completed contact verification therefore kept no
+        # lat/lon and no geo team until somebody edited their profile by
+        # hand.
+        import logging as _vc_logging
+        from app.geo import split_oneline_into_fields, geocode_member_fields, assign_zone
+
+        _vc_log = _vc_logging.getLogger("uvicorn.error")
+
+        _split = split_oneline_into_fields(
+            member.address, member.city, member.state, member.zip_code
+        )
+        if _split:
+            member.address = _split["address"]
+            member.city = _split["city"]
+            member.state = _split["state"]
+            member.zip_code = _split["zip_code"]
+
+        if member.address or member.zip_code:
+            try:
+                lat, lon = geocode_member_fields(
+                    member.address, member.city, member.state, member.zip_code
+                )
+                if lat is not None:
+                    member.latitude = lat
+                    member.longitude = lon
+                    from app.services import teams as _teams
+                    geo_team, bearing = assign_zone(lat, lon, await _teams.geo_zone_teams())
+                    if member.team_locked:
+                        _vc_log.info(
+                            f"Geo: {member.last_name} team LOCKED to {member.team} — "
+                            f"coords updated, geo suggests {geo_team} "
+                            f"(bearing {bearing:.1f}°) but not applied"
+                        )
+                    elif geo_team != member.team:
+                        _vc_log.info(
+                            f"Geo-assigned {member.last_name}: {member.team} → "
+                            f"{geo_team} (bearing {bearing:.1f}°)"
+                        )
+                        member.team = geo_team
+                else:
+                    _vc_log.warning(
+                        f"Geocode returned no match for {member.last_name} "
+                        f"(address={member.address!r} zip={member.zip_code!r})"
+                    )
+            except Exception as e:
+                # Never block contact verification on a geocoder outage.
+                _vc_log.warning(f"Geocode failed during contact verify for {member.last_name}: {e}")
+
         await db.commit()
 
     request.session["contact_verified"] = True
