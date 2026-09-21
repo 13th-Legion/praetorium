@@ -66,11 +66,48 @@ def _can_edit(user: dict) -> bool:
 ALL_RANK_NC_GROUPS = {"Rank - Recruit", "Rank - Enlisted", "Rank - NCO", "Rank - Officer"}
 
 
-async def _sync_leadership_groups(username: str, leadership_title: str | None, team: str | None, billets: str | None = None):
-    """Sync NC group membership based on leadership title.
+def _is_leader_rank(rank_grade: str | None) -> bool:
+    """NCOs (E-5 and above) plus all warrants and officers.
 
-    - Add to 'Leaders' group if TL/ATL/CO/XO/1SG/PltSGT, remove if cleared.
+    The Leaders room is labelled "Leaders (NCOs + Officers)" in constants.py and
+    Nextcloud already carries 'Rank - NCO' / 'Rank - Officer' groups, but the
+    sync used to key off six hardcoded leadership titles only. An E-5 with no
+    title therefore failed the check, which is how SGT Gonzalez was evicted from
+    T1 - Leaders on 2026-09-17 simply because his profile was saved.
+
+    Ranks are stored hyphenated ('E-5', 'O-1', 'W-2'), so normalise before
+    comparing -- matching on 'E5' silently matches nothing.
+    """
+    if not rank_grade:
+        return False
+    r = rank_grade.strip().upper().replace("-", "").replace(" ", "")
+    if not r:
+        return False
+    if r[0] == "E":
+        try:
+            return int(r[1:]) >= 5
+        except ValueError:
+            return False
+    return r[0] in ("O", "W")
+
+
+async def _sync_leadership_groups(
+    username: str,
+    leadership_title: str | None,
+    team: str | None,
+    billets: str | None = None,
+    rank_grade: str | None = None,
+    allow_remove: bool = True,
+):
+    """Sync NC group membership based on rank, leadership title and billets.
+
+    - Add to 'Leaders' if NCO/officer by rank, or a leadership title, or a
+      '(Lead)' billet. Remove only when `allow_remove` is set.
     - Add to correct 'Team-{name}' group, remove from old team groups.
+
+    `allow_remove=False` is passed when the edit did not touch rank, title or
+    billets. Without that, saving an unrelated field -- the founder checkbox,
+    a phone number -- could silently evict someone from the Leaders chat.
     """
     if not username:
         return
@@ -81,7 +118,11 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
 
     leader_titles = {"Team Leader", "Assistant Team Leader", "Commanding Officer",
                      "Executive Officer", "First Sergeant", "Platoon Sergeant, Training NCO"}
-    is_leader = (leadership_title in leader_titles) or (bool(billets) and "(Lead)" in billets)
+    is_leader = (
+        _is_leader_rank(rank_grade)
+        or (leadership_title in leader_titles)
+        or (bool(billets) and "(Lead)" in billets)
+    )
 
     async with httpx.AsyncClient() as client:
         try:
@@ -106,7 +147,7 @@ async def _sync_leadership_groups(username: str, leadership_title: str | None, t
                 log.info(f"Added {username} to Leaders group")
             except Exception as e:
                 log.error(f"Failed to add {username} to Leaders: {e}")
-        elif not is_leader and "Leaders" in current_groups:
+        elif not is_leader and "Leaders" in current_groups and allow_remove:
             try:
                 await client.request(
                         "DELETE",
@@ -496,6 +537,7 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     # Assignment — track old rank for promotion logic
     old_rank = member.rank_grade
     old_billets = member.primary_billet
+    old_leadership_title = member.leadership_title
     prev_team = member.team  # team stored before this save (for override detection)
     member.rank_grade = form.get("rank_grade", member.rank_grade)
     member.status = form.get("status", member.status)
@@ -663,7 +705,12 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
             old_tl.leadership_title = None
             old_tl.updated_at = datetime.utcnow()
             if old_tl.nc_username:
-                await _sync_leadership_groups(old_tl.nc_username, None, old_tl.team)
+                # Pass rank: clearing a TL title must not evict an NCO from
+                # Leaders, which is exactly the bug this fixes.
+                await _sync_leadership_groups(
+                    old_tl.nc_username, None, old_tl.team,
+                    billets=old_tl.primary_billet, rank_grade=old_tl.rank_grade,
+                )
 
     # Same for ATL
     if new_title == "Assistant Team Leader" and new_team:
@@ -682,11 +729,29 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
             old_atl.leadership_title = None
             old_atl.updated_at = datetime.utcnow()
             if old_atl.nc_username:
-                await _sync_leadership_groups(old_atl.nc_username, None, old_atl.team)
+                await _sync_leadership_groups(
+                    old_atl.nc_username, None, old_atl.team,
+                    billets=old_atl.primary_billet, rank_grade=old_atl.rank_grade,
+                )
 
     # Sync current member's leadership + team groups in NC
     if member.nc_username:
-        await _sync_leadership_groups(member.nc_username, member.leadership_title, member.team, member.primary_billet)
+        # Only permit removal when the edit actually touched something that
+        # feeds the Leaders decision. Saving an unrelated field (the founder
+        # checkbox, a phone number) must never silently evict anyone.
+        leader_inputs_changed = (
+            old_leadership_title != member.leadership_title
+            or old_billets != member.primary_billet
+            or old_rank != member.rank_grade
+        )
+        await _sync_leadership_groups(
+            member.nc_username,
+            member.leadership_title,
+            member.team,
+            member.primary_billet,
+            rank_grade=member.rank_grade,
+            allow_remove=leader_inputs_changed,
+        )
         await _sync_shop_groups(member.nc_username, old_billets, member.primary_billet)
 
     member.updated_at = datetime.utcnow()
