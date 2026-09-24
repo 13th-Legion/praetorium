@@ -36,7 +36,7 @@ import qrcode
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
@@ -173,10 +173,78 @@ async def s4_hub(request: Request, db: AsyncSession = Depends(get_db)):
     if not _can_view(user):
         return _denied()
     member = await _current_member(request, db)
+
+    # ── At-a-glance metrics (single grouped aggregates) ────────────────────
+    exp_agg = (await db.execute(select(
+        func.count(S4Expense.id),
+        func.coalesce(func.sum(S4Expense.amount), 0.0),
+    ))).one()
+    exp_pending = (await db.execute(select(
+        func.count(S4Expense.id),
+        func.coalesce(func.sum(S4Expense.amount), 0.0),
+    ).where(S4Expense.status == "pending"))).one()
+    exp_approved = (await db.execute(select(
+        func.count(S4Expense.id),
+        func.coalesce(func.sum(S4Expense.amount), 0.0),
+    ).where(S4Expense.status == "approved"))).one()
+    exp_reimbursed = (await db.execute(select(
+        func.coalesce(func.sum(S4Expense.amount), 0.0),
+    ).where(S4Expense.status == "reimbursed"))).scalar_one()
+
+    pr_pending = (await db.execute(select(
+        func.count(S4PurchaseRequest.id),
+        func.coalesce(func.sum(S4PurchaseRequest.estimated_cost), 0.0),
+    ).where(S4PurchaseRequest.status == "pending"))).one()
+    pr_open = (await db.execute(select(
+        func.count(S4PurchaseRequest.id),
+        func.coalesce(func.sum(S4PurchaseRequest.estimated_cost), 0.0),
+    ).where(S4PurchaseRequest.status.in_(["approved", "purchased"])))).one()
+
+    dn_pending = (await db.execute(select(
+        func.count(S4EquipmentDonation.id),
+    ).where(S4EquipmentDonation.status == "submitted"))).scalar_one()
+
+    inv_total = (await db.execute(select(func.count(S4InventoryItem.id)))).scalar_one()
+    inv_out = (await db.execute(select(
+        func.count(S4InventoryItem.id),
+    ).where(S4InventoryItem.status == "checked_out"))).scalar_one()
+
+    # Next FTX headcount for the meals strip.
+    next_ftx = (await db.execute(
+        select(Event).where(Event.category.in_(FTX_CATEGORIES))
+        .order_by(desc(Event.date_start)).limit(1)
+    )).scalar_one_or_none()
+    next_headcount = 0
+    if next_ftx:
+        rows = (await db.execute(
+            select(EventRSVP).where(EventRSVP.event_id == next_ftx.id, EventRSVP.status == "attending")
+        )).scalars().all()
+        next_headcount = sum(1 for _ in rows) + sum(r.guest_count or 0 for r in rows)
+
+    metrics = {
+        "expense_total": exp_agg[0],
+        "expense_total_amount": float(exp_agg[1]),
+        "expense_pending_count": exp_pending[0],
+        "expense_pending_amount": float(exp_pending[1]),
+        "expense_approved_count": exp_approved[0],
+        "expense_approved_amount": float(exp_approved[1]),
+        "expense_reimbursed_amount": float(exp_reimbursed),
+        "purchase_pending_count": pr_pending[0],
+        "purchase_pending_amount": float(pr_pending[1]),
+        "purchase_open_count": pr_open[0],
+        "purchase_open_amount": float(pr_open[1]),
+        "donation_pending_count": dn_pending,
+        "inventory_total": inv_total,
+        "inventory_out": inv_out,
+        "next_ftx_title": next_ftx.title if next_ftx else None,
+        "next_headcount": next_headcount,
+    }
+
     return templates.TemplateResponse("pages/s4_hub.html", {
         "request": request,
         "user": user,
         "can_approve": _can_approve(user, member),
+        "metrics": metrics,
     })
 
 

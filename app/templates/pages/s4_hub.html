@@ -5,10 +5,61 @@
 {% block content %}
 {% include "partials/s4_styles.html" %}
 
+<style>
+    .s4-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .s4-stat {
+        background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 14px 16px;
+    }
+    .s4-stat .num { font-size: 26px; font-weight: 700; color: #e0e0e0; font-family: 'Oswald', sans-serif; }
+    .s4-stat .num.warn { color: #ffc107; }
+    .s4-stat .num.good { color: #28a745; }
+    .s4-stat .num.info { color: #17a2b8; }
+    .s4-stat .lbl { font-size: 12px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .s4-stat .sub { font-size: 11px; color: #666; margin-top: 2px; }
+</style>
+
 <div class="s4-wrap">
     <div class="s4-header">
         <h2>📦 S4 — Logistics</h2>
         <div class="subtitle">Meals, money, gear, and inventory.</div>
+    </div>
+
+    <div class="s4-stats">
+        <div class="s4-stat">
+            <div class="num {% if metrics.expense_pending_count > 0 %}warn{% endif %}">{{ metrics.expense_pending_count }}</div>
+            <div class="lbl">Expenses pending</div>
+            <div class="sub">${{ '%.2f'|format(metrics.expense_pending_amount) }} awaiting review</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num good">${{ '%.2f'|format(metrics.expense_approved_amount) }}</div>
+            <div class="lbl">Approved, unpaid</div>
+            <div class="sub">{{ metrics.expense_approved_count }} awaiting reimbursement</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num {% if metrics.purchase_pending_count > 0 %}warn{% endif %}">{{ metrics.purchase_pending_count }}</div>
+            <div class="lbl">Purchase requests</div>
+            <div class="sub">${{ '%.2f'|format(metrics.purchase_pending_amount) }} pending approval</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num info">${{ '%.2f'|format(metrics.purchase_open_amount) }}</div>
+            <div class="lbl">Approved / in flight</div>
+            <div class="sub">{{ metrics.purchase_open_count }} open purchases</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num {% if metrics.donation_pending_count > 0 %}warn{% endif %}">{{ metrics.donation_pending_count }}</div>
+            <div class="lbl">Donations pending</div>
+            <div class="sub">awaiting S4 review</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num">{{ metrics.inventory_total }}</div>
+            <div class="lbl">Inventory items</div>
+            <div class="sub">{{ metrics.inventory_out }} checked out</div>
+        </div>
+        <div class="s4-stat">
+            <div class="num info">{{ metrics.next_headcount }}</div>
+            <div class="lbl">Next FTX headcount</div>
+            <div class="sub">{% if metrics.next_ftx_title %}{{ metrics.next_ftx_title }}{% else %}No FTX scheduled{% endif %}</div>
+        </div>
     </div>
 
     <div class="s4-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
