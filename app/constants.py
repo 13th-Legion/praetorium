@@ -128,6 +128,13 @@ LEADERSHIP_TITLES = [
 
 STATUS_OPTIONS: list[str] = ["recruit", "active", "separated", "inactive", "blacklisted"]
 
+# S4 supply inventory — canonical category + condition values (dropdowns).
+S4_INVENTORY_CATEGORIES: list[str] = [
+    "Comms", "Medical", "Camp", "Training", "Weapons", "Ammo",
+    "Tools", "Food/Water", "Vehicle", "PPE", "Other",
+]
+S4_CONDITIONS: list[str] = ["New", "Good", "Fair", "Poor"]
+
 
 # ─── Recipient Groups (shared between Email Blast and Events) ────────────────
 

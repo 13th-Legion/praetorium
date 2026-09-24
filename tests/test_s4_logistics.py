@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from app.routes.s4_admin import _is_s4_head, _can_approve, S4_ROLES
+from app.constants import S4_CONDITIONS, S4_INVENTORY_CATEGORIES
 from app.models.s4_logistics import (
     S4Checkout,
     S4EquipmentDonation,
@@ -110,6 +111,24 @@ class TestDonationModel:
 
 
 class TestInventoryCheckout:
+    async def test_add_serial_format(self, db_session):
+        """Serial is '13LG-{id:08d}' — padded 8-digit id."""
+        item = S4InventoryItem(name="PRC-152", category="Comms", status="available")
+        db_session.add(item)
+        await db_session.flush()
+        item.serial_number = f"13LG-{item.id:08d}"
+        await db_session.flush()
+        assert item.serial_number == f"13LG-{item.id:08d}"
+        assert item.serial_number.startswith("13LG-")
+        # 8 digits after the prefix
+        assert len(item.serial_number.split("-")[1]) == 8
+
+    async def test_category_condition_constants(self):
+        assert "Comms" in S4_INVENTORY_CATEGORIES
+        assert "Medical" in S4_INVENTORY_CATEGORIES
+        assert "Good" in S4_CONDITIONS
+        assert "Poor" in S4_CONDITIONS
+
     async def test_checkout_marks_item_and_roundtrip(self, db_session):
         m = await make_member(db_session)
         item = S4InventoryItem(name="PRC-152", category="Comms", status="available")

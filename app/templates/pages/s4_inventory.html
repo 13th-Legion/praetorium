@@ -18,12 +18,23 @@
         <form method="post" action="/api/s4/inventory">
             <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
                 <div class="s4-field"><label>Name</label><input name="name" class="s4-input" required></div>
-                <div class="s4-field"><label>Category</label><input name="category" class="s4-input" placeholder="Comms, Medical, Camp…" required></div>
+                <div class="s4-field">
+                    <label>Category</label>
+                    <select name="category" class="s4-select" required>
+                        <option value="">— select —</option>
+                        {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="s4-grid" style="grid-template-columns:1fr 1fr 1fr;">
-                <div class="s4-field"><label>Serial # (optional)</label><input name="serial_number" class="s4-input"></div>
-                <div class="s4-field"><label>Condition</label><input name="condition" class="s4-input" value="Good"></div>
+                <div class="s4-field">
+                    <label>Condition</label>
+                    <select name="condition" class="s4-select">
+                        {% for c in conditions %}<option value="{{ c }}" {% if c == 'Good' %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                    </select>
+                </div>
                 <div class="s4-field"><label>Location (optional)</label><input name="location" class="s4-input" placeholder="S4 Connex"></div>
+                <div class="s4-field"><label>Serial #</label><input class="s4-input" value="auto-assigned" disabled style="color:#666;"></div>
             </div>
             <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
             <button class="s4-btn">Add item</button>
@@ -43,7 +54,7 @@
                 <td>{{ item.condition }}</td>
                 <td><span class="s4-badge badge-{{ item.status }}">{{ item.status|replace('_',' ') }}</span></td>
                 <td>{{ item.location or '—' }}</td>
-                <td><a href="/api/s4/inventory/{{ item.id }}/qr" target="_blank" class="s4-receipt">QR ↗</a></td>
+                <td><a href="/api/s4/inventory/{{ item.id }}/label" target="_blank" class="s4-receipt">QR / label ↗</a></td>
                 {% if can_approve %}
                 <td>
                     <a href="/api/s4/inventory/{{ item.id }}/checkout" class="s4-btn s4-btn-sm" style="text-decoration:none;display:inline-block;">Check in/out</a>

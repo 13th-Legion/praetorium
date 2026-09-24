@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Label — {{ item.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .no-print { margin-bottom: 16px; }
+        .no-print button {
+            background: #d4a537; color: #1a1a2e; border: none; font-weight: 700;
+            padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 15px;
+        }
+        .label {
+            background: #fff; color: #111; border-radius: 10px;
+            padding: 28px 32px; width: 360px; text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .label .serial {
+            font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 30px;
+            letter-spacing: 1px; margin: 6px 0;
+        }
+        .label .name { font-size: 20px; font-weight: 700; margin: 4px 0; }
+        .label .meta { font-size: 13px; color: #444; margin: 2px 0 14px; }
+        .label img { display: block; margin: 0 auto; width: 200px; height: 200px; }
+        .label .brand { font-size: 11px; color: #777; margin-top: 12px; letter-spacing: 1px; text-transform: uppercase; }
+
+        @media print {
+            .no-print { display: none; }
+            body { background: #fff; padding: 0; }
+            .label { box-shadow: none; border: 1px dashed #ccc; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Print label</button>
+    </div>
+    <div class="label">
+        <div class="serial">{{ item.serial_number or '—' }}</div>
+        <div class="name">{{ item.name }}</div>
+        <div class="meta">{{ item.category }} · {{ item.condition }}</div>
+        <img src="/api/s4/inventory/{{ item.id }}/qr" alt="QR code for {{ item.name }}">
+        <div class="brand">13th Legion · Texas State Militia</div>
+    </div>
+</body>
+</html>
