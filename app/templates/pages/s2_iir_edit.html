@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if iir else 'New' }} IIR — S2{% endblock %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+<style>
+    #iir-editor { background:#0f1626; min-height:200px; }
+    #iir-editor .ql-toolbar { background:#16213e; border:1px solid #333; border-radius:4px 4px 0 0; }
+    #iir-editor .ql-container { border:1px solid #333; border-radius:0 0 4px 4px; color:#e0e0e0; font-size:14px; }
+</style>
+
+<div class="s2-wrap">
+    <a href="/api/s2/iir" class="s2-back">← IIR Reports</a>
+    <div class="s2-header">
+        <h2>{% if iir %}Edit {{ iir.report_number }}{% else %}New IIR{% endif %}</h2>
+        <div class="subtitle">Intelligence Information Report.</div>
+    </div>
+
+    <div class="s2-card">
+        <form method="post" action="/api/s2/iir/save" enctype="multipart/form-data" id="iir-form">
+            {% if iir %}<input type="hidden" name="iir_id" value="{{ iir.id }}">{% endif %}
+            <div class="s2-grid" style="grid-template-columns:2fr 1fr;">
+                <div class="s2-field"><label>Subject / title</label><input name="subject" class="s2-input" value="{{ iir.subject if iir else '' }}" required></div>
+                <div class="s2-field"><label>Country / area</label><input name="country_area" class="s2-input" value="{{ iir.country_area if iir else '' }}" placeholder="AO, city, region" required></div>
+            </div>
+            <div class="s2-field"><label>Source (who/where)</label><input name="source" class="s2-input" value="{{ iir.source or '' if iir else '' }}"></div>
+            <div class="s2-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="s2-field"><label>Reliability (A–F / high-med-low)</label><input name="reliability_rating" class="s2-input" value="{{ iir.reliability_rating or '' if iir else '' }}"></div>
+                <div class="s2-field"><label>Credibility / confidence</label><input name="credibility" class="s2-input" value="{{ iir.credibility or '' if iir else '' }}"></div>
+                <div class="s2-field">
+                    <label>Dissemination</label>
+                    <select name="dissemination_tier" class="s2-select">
+                        <option value="command_only" {% if iir and iir.dissemination_tier == 'command_only' %}selected{% endif %}>S2 / Command only</option>
+                        <option value="unit_wide" {% if iir and iir.dissemination_tier == 'unit_wide' %}selected{% endif %}>Unit-wide</option>
+                    </select>
+                </div>
+            </div>
+            <div class="s2-field">
+                <label>Details / body</label>
+                <div id="iir-editor"></div>
+            </div>
+            <div class="s2-field">
+                <label>Assessment</label>
+                <div id="assessment-editor"></div>
+            </div>
+            <div class="s2-field"><label>Remarks / dissemination caveats</label><input name="remarks" class="s2-input" value="{{ iir.remarks or '' if iir else '' }}" placeholder="e.g. unevaluated information, not finally evaluated intelligence"></div>
+            <button type="button" class="s2-btn" onclick="submitIir()">{% if iir %}Save changes{% else %}Publish IIR{% endif %}</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+    var iirQuill = new Quill('#iir-editor', {
+        theme: 'snow',
+        modules: { toolbar: [
+            [{ header: [1,2,3,false] }], ['bold','italic','underline','strike'],
+            [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote'],
+            ['link','image'], ['clean']
+        ]}
+    });
+    var assessQuill = new Quill('#assessment-editor', {
+        theme: 'snow',
+        modules: { toolbar: [['bold','italic'], [{ list: 'bullet' }], ['link','clean']] }
+    });
+    {% if iir and iir.details %}iirQuill.root.innerHTML = {{ (iir.details or '') | tojson }};{% endif %}
+    {% if iir and iir.assessment %}assessQuill.root.innerHTML = {{ (iir.assessment or '') | tojson }};{% endif %}
+
+    // attachQuillImageUpload is loaded by base.html (shared Quill helper).
+    attachQuillImageUpload(iirQuill, '/api/media/image-upload');
+    attachQuillImageUpload(assessQuill, '/api/media/image-upload');
+
+    function submitIir() {
+        var fd = new FormData();
+        var iirId = document.querySelector('input[name=iir_id]');
+        if (iirId) fd.append('iir_id', iirId.value);
+        fd.append('subject', document.querySelector('input[name=subject]').value);
+        fd.append('country_area', document.querySelector('input[name=country_area]').value);
+        fd.append('source', document.querySelector('input[name=source]').value);
+        fd.append('reliability_rating', document.querySelector('input[name=reliability_rating]').value);
+        fd.append('credibility', document.querySelector('input[name=credibility]').value);
+        fd.append('dissemination_tier', document.querySelector('select[name=dissemination_tier]').value);
+        fd.append('remarks', document.querySelector('input[name=remarks]').value);
+        fd.append('details', iirQuill.root.innerHTML);
+        fd.append('assessment', assessQuill.root.innerHTML);
+        fetch('/api/s2/iir/save', { method: 'POST', body: fd }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            return res.text().then(function(t) { document.querySelector('.s2-wrap').insertAdjacentHTML('afterbegin', t); });
+        });
+    }
+</script>
+{% endblock %}

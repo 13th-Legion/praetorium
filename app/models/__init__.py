@@ -14,6 +14,9 @@ from app.models.s4_logistics import (  # noqa: F401
     S4MealPlan, S4Expense, S4PurchaseRequest, 
     S4EquipmentDonation, S4InventoryItem, S4Checkout
 )
+from app.models.s2_intel import (  # noqa: F401
+    IIR, S2ChallengePassword, S2TrainingSite, S2TrainingSiteMap
+)
 from app.models.rank_history import RankHistory  # noqa: F401
 from app.models.promotion_stage import PromotionStage  # noqa: F401
 from app.models.conduct import ConductViolation  # noqa: F401

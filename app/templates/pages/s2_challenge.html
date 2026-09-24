@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Challenge / Password — S2{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+
+<div class="s2-wrap">
+    <a href="/api/s2" class="s2-back">← S2 Dashboard</a>
+    <div class="s2-header">
+        <h2>🔐 Challenge / Password / Running Password</h2>
+        <div class="subtitle">Recognition signals — per-mission and/or time-windowed sets.</div>
+    </div>
+
+    <div class="s2-card">
+        <h3>Add a set</h3>
+        <form method="post" action="/api/s2/challenge/save">
+            <div class="s2-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="s2-field"><label>Challenge (sentry asks)</label><input name="challenge" class="s2-input" placeholder="Texas" required></div>
+                <div class="s2-field"><label>Password (reply)</label><input name="password" class="s2-input" placeholder="Star" required></div>
+                <div class="s2-field"><label>Running password (optional)</label><input name="running_password" class="s2-input" placeholder="for returning patrols"></div>
+            </div>
+            <div class="s2-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="s2-field"><label>Label (optional)</label><input name="label" class="s2-input" placeholder="Sat 0600–1200"></div>
+                <div class="s2-field"><label>Valid from (optional)</label><input name="valid_from" type="datetime-local" class="s2-input"></div>
+                <div class="s2-field"><label>Valid until (optional)</label><input name="valid_until" type="datetime-local" class="s2-input"></div>
+            </div>
+            <div class="s2-field">
+                <label>Mission / FTX (optional)</label>
+                <select name="event_id" class="s2-select">
+                    <option value="">— none (standing) —</option>
+                    {% for ev in events %}
+                    <option value="{{ ev.id }}">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="s2-btn">Add set</button>
+        </form>
+    </div>
+
+    <div class="s2-card">
+        <h3>Active sets</h3>
+        {% if sets %}
+        <table class="s2-table">
+            <tr><th>Challenge</th><th>Password</th><th>Running</th><th>Label / window</th><th>Status</th><th></th></tr>
+            {% for s in sets %}
+            <tr>
+                <td>{{ s.challenge }}</td>
+                <td>{{ s.password }}</td>
+                <td>{{ s.running_password or '—' }}</td>
+                <td>
+                    {{ s.label or '' }}
+                    {% if s.valid_from or s.valid_until %}
+                    <div class="s2-muted">
+                        {% if s.valid_from %}{{ s.valid_from.strftime('%d %b %H%M') }}{% endif %}
+                        {% if s.valid_until %} → {{ s.valid_until.strftime('%d %b %H%M') }}{% endif %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td>{% if s.active %}<span class="s2-badge badge-active">active</span>{% else %}<span class="s2-badge badge-archived">inactive</span>{% endif %}</td>
+                <td>{% if s.active %}<form method="post" action="/api/s2/challenge/{{ s.id }}/deactivate" class="s2-inline"><button class="s2-btn s2-btn-sm s2-btn-mut">Deactivate</button></form>{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s2-empty">No challenge/password sets yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

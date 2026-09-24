@@ -11,6 +11,7 @@ from app import database
 from app.models.elections import Election, ElectionBallot
 from app.models.member import Member
 from app.models.events import Event
+from app.models.s2_intel import IIR
 from app.models.rank_history import RankHistory
 from app.models.ribbons import MemberRibbon, RibbonCatalog
 from app.routes.elections import _auto_advance
@@ -126,6 +127,24 @@ async def dashboard(request: Request):
                 "snippet": _intent[:120] + ("\u2026" if len(_intent) > 120 else ""),
             })
 
+    # Latest unit-wide IIRs for the intel card (S2 — front page shows last 2-3).
+    latest_iirs = []
+    async with database.async_session() as db3:
+        _iirs = (await db3.execute(
+            select(IIR)
+            .where(IIR.status == "active", IIR.dissemination_tier == "unit_wide")
+            .order_by(IIR.created_at.desc())
+            .limit(3)
+        )).scalars().all()
+        for _i in _iirs:
+            latest_iirs.append({
+                "id": _i.id,
+                "report_number": _i.report_number,
+                "subject": _i.subject,
+                "country_area": _i.country_area,
+                "dtg": _i.dtg,
+            })
+
     return templates.TemplateResponse("pages/dashboard.html", {
         "request": request,
         "user": user,
@@ -134,6 +153,7 @@ async def dashboard(request: Request):
         "active_election": active_election,
         "election_winner_name": election_winner_name,
         "latest_aars": latest_aars,
+        "latest_iirs": latest_iirs,
     })
 
 

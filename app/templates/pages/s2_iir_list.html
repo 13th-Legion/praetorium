@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}IIR Reports — S2{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+
+<div class="s2-wrap">
+    <a href="/api/s2" class="s2-back">← S2 Dashboard</a>
+    <div class="s2-header">
+        <h2>📡 IIR Reports</h2>
+        <div class="subtitle">Intelligence Information Reports. Unit-wide or S2/Command-only.</div>
+    </div>
+
+    {% if is_s2 %}
+    <div class="s2-card" style="padding:10px 16px;">
+        <a href="/api/s2/iir/new" class="s2-btn" style="text-decoration:none;display:inline-block;">✏️ New IIR</a>
+    </div>
+    {% endif %}
+
+    {% if iirs %}
+    {% for i in iirs %}
+    <div class="s2-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+                <div style="font-size:16px;font-weight:700;color:#e0e0e0;">{{ i.report_number }} — {{ i.subject }}</div>
+                <div class="s2-muted" style="margin-top:2px;">{{ i.dtg }} · {{ i.country_area }} · by {{ names.get(i.author_id, '—') }}</div>
+            </div>
+            <div>
+                <span class="s2-badge badge-{{ i.dissemination_tier }}">{{ 'unit-wide' if i.dissemination_tier == 'unit_wide' else 'S2/Command' }}</span>
+                <span class="s2-badge badge-{{ i.status }}">{{ i.status }}</span>
+            </div>
+        </div>
+        {% if i.source %}<div class="s2-muted" style="margin-top:6px;">Source: {{ i.source }}{% if i.reliability_rating %} · Reliability {{ i.reliability_rating }}{% endif %}{% if i.credibility %} · Credibility {{ i.credibility }}{% endif %}</div>{% endif %}
+        <div style="margin-top:10px;color:#ddd;font-size:14px;line-height:1.5;">{{ i.details | safe }}</div>
+        {% if i.assessment %}
+        <div style="margin-top:10px;padding:10px 12px;background:rgba(212,165,55,0.08);border-left:3px solid #d4a537;border-radius:4px;color:#e0e0e0;font-size:13px;">
+            <strong style="color:#d4a537;">Assessment:</strong> {{ i.assessment | safe }}
+        </div>
+        {% endif %}
+        {% if i.remarks %}<div class="s2-muted" style="margin-top:8px;">{{ i.remarks }}</div>{% endif %}
+        {% if is_s2 %}
+        <div style="margin-top:12px;display:flex;gap:6px;">
+            <a href="/api/s2/iir/{{ i.id }}/edit" class="s2-btn s2-btn-sm" style="text-decoration:none;">Edit</a>
+            {% if i.status == 'active' %}
+            <form method="post" action="/api/s2/iir/{{ i.id }}/archive" class="s2-inline"><button class="s2-btn s2-btn-sm">Archive</button></form>
+            {% endif %}
+            <form method="post" action="/api/s2/iir/{{ i.id }}/delete" class="s2-inline" onsubmit="return confirm('Delete this IIR permanently?');"><button class="s2-btn s2-btn-sm s2-btn-mut">Delete</button></form>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="s2-card"><div class="s2-empty">No IIRs yet.</div></div>
+    {% endif %}
+</div>
+{% endblock %}

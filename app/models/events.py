@@ -54,6 +54,12 @@ class Event(Base):
 
     rally_point_url: Mapped[Optional[str]] = mapped_column(Text)  # Optional Google Maps link
 
+    # S2 FTX responsibilities (beyond rally point) — S2-owned fields
+    code_words: Mapped[Optional[str]] = mapped_column(Text)        # recognition/ops code words
+    weather_report: Mapped[Optional[str]] = mapped_column(Text)    # S2 weather summary for the FTX
+    route: Mapped[Optional[str]] = mapped_column(Text)             # RP → AO route description
+    route_url: Mapped[Optional[str]] = mapped_column(Text)         # Optional Google Maps link for the route
+
     # Radio frequencies (S6 assigns, manual for now)
     fob_callsign: Mapped[Optional[str]] = mapped_column(String(32))            # FOB / base station callsign
     freq_convoy_primary: Mapped[Optional[str]] = mapped_column(String(16))     # Primary convoy HAM freq

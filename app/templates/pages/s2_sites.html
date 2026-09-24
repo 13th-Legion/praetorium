@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Training Sites — S2{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+
+<div class="s2-wrap">
+    <a href="/api/s2" class="s2-back">← S2 Dashboard</a>
+    <div class="s2-header">
+        <h2>🗺️ Training Sites</h2>
+        <div class="subtitle">Field training locations + maps. Populates the FTX builder's training-site dropdown.</div>
+    </div>
+
+    <div class="s2-card">
+        <h3>Add / edit site</h3>
+        <form method="post" action="/api/s2/sites/save">
+            <input type="hidden" name="site_id" id="site-id" value="">
+            <div class="s2-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="s2-field"><label>Name</label><input name="name" id="site-name" class="s2-input" placeholder="Able" required></div>
+                <div class="s2-field"><label>Slug (new sites only)</label><input name="key" id="site-key" class="s2-input" placeholder="able" style="text-transform:lowercase;"></div>
+                <div class="s2-field"><label>Nickname</label><input name="nickname" id="site-nickname" class="s2-input" placeholder="Camp's"></div>
+            </div>
+            <div class="s2-field"><label>Address</label><input name="address" id="site-address" class="s2-input" placeholder="1925 E FM 4, Cleburne, TX 76031"></div>
+            <button class="s2-btn" id="site-save-btn">Add site</button>
+            <button type="button" class="s2-btn s2-btn-sm" onclick="clearSiteForm()" style="margin-left:8px;">Clear</button>
+        </form>
+    </div>
+
+    {% if sites %}
+    {% for s in sites %}
+    <div class="s2-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+                <div style="font-size:16px;font-weight:700;color:#e0e0e0;">{{ s.name }}{% if s.nickname %} <span class="s2-muted">({{ s.nickname }})</span>{% endif %}</div>
+                {% if s.address %}<div class="s2-muted">📍 {{ s.address }}</div>{% endif %}
+                {% if not s.is_active %}<span class="s2-badge badge-archived">inactive</span>{% endif %}
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button type="button" class="s2-btn s2-btn-sm" onclick="editSite({{ s.id }}, '{{ s.name|e }}', '{{ (s.nickname or '')|e }}', '{{ (s.address or '')|e }}')">Edit</button>
+                {% if s.is_active %}
+                <form method="post" action="/api/s2/sites/{{ s.id }}/deactivate" class="s2-inline"><button class="s2-btn s2-btn-sm s2-btn-mut">Remove</button></form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-top:12px;">
+            <div class="s2-muted" style="margin-bottom:6px;">Maps:</div>
+            {% set site_maps = maps_by_site.get(s.id, []) %}
+            {% if site_maps %}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                {% for m in site_maps %}
+                <span style="display:inline-flex;align-items:center;gap:6px;">
+                    <a href="https://cloud.13thlegion.org{{ m.url }}" target="_blank" class="s2-btn s2-btn-sm" style="text-decoration:none;">🗺️ {{ m.label }}</a>
+                    <form method="post" action="/api/s2/sites/maps/{{ m.id }}/delete" class="s2-inline" style="margin:0;"><button class="s2-btn s2-btn-sm s2-btn-mut" title="Remove map">✕</button></form>
+                </span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="s2-muted">No maps uploaded yet.</div>
+            {% endif %}
+        </div>
+
+        <form method="post" action="/api/s2/sites/{{ s.id }}/maps" enctype="multipart/form-data" style="margin-top:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="s2-field" style="margin:0;"><label>Label</label><input name="label" class="s2-input" placeholder="1:25,000" style="width:140px;" required></div>
+            <div class="s2-field" style="margin:0;"><label>Map file (PDF/image)</label><input type="file" name="map_file" class="s2-input" style="width:220px;padding:6px;" accept=".pdf,.png,.jpg,.jpeg,.webp" required></div>
+            <button class="s2-btn s2-btn-sm">Upload map</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="s2-card"><div class="s2-empty">No training sites. Add the first one above.</div></div>
+    {% endif %}
+</div>
+
+<script>
+function editSite(id, name, nickname, address) {
+    document.getElementById('site-id').value = id;
+    document.getElementById('site-name').value = name;
+    document.getElementById('site-nickname').value = nickname;
+    document.getElementById('site-address').value = address;
+    document.getElementById('site-key').value = '';
+    document.getElementById('site-key').disabled = true;
+    document.getElementById('site-save-btn').textContent = 'Save changes';
+}
+function clearSiteForm() {
+    document.getElementById('site-id').value = '';
+    document.getElementById('site-name').value = '';
+    document.getElementById('site-nickname').value = '';
+    document.getElementById('site-address').value = '';
+    document.getElementById('site-key').value = '';
+    document.getElementById('site-key').disabled = false;
+    document.getElementById('site-save-btn').textContent = 'Add site';
+}
+</script>
+{% endblock %}

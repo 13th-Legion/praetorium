@@ -17,7 +17,7 @@ from sqlalchemy import select
 from config import get_settings
 from app import database
 from app.database import engine, Base
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin, s2_admin
 
 
 @asynccontextmanager
@@ -401,6 +401,7 @@ app.include_router(aars.router)
 app.include_router(newsletter.router)
 app.include_router(media.router)
 app.include_router(s4_admin.router)
+app.include_router(s2_admin.router)
 
 
 # ─── Contact Verification Routes ────────────────────────────────────────────

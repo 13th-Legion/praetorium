@@ -79,6 +79,23 @@
                 </div>
             </div>
 
+            <!-- Intel (IIR) — S2 front-page card -->
+            {% if latest_iirs %}
+            <div class="card">
+                <h2 class="card-title">📡 Intel</h2>
+                <div class="card-body">
+                    {% for iir in latest_iirs %}
+                    <div style="padding:8px 0;{% if not loop.last %}border-bottom:1px solid rgba(255,255,255,0.08);{% endif %}">
+                        <a href="/api/s2/iir" style="font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;color:#d4a537;font-size:0.9rem;text-decoration:none;">{{ iir.report_number }} — {{ iir.subject }}</a>
+                        <span style="color:#888;font-size:12px;margin-left:6px;">{{ iir.country_area }}</span>
+                        <div style="color:#aaa;font-size:12px;margin-top:2px;">{{ iir.dtg }}</div>
+                    </div>
+                    {% endfor %}
+                    <div style="margin-top:8px;"><a href="/api/s2/iir" style="color:#888;text-decoration:none;font-size:12px;">View all IIRs →</a></div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Latest AARs -->
             {% if latest_aars %}
             <div class="card">

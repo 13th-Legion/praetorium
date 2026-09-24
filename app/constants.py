@@ -71,6 +71,7 @@ MEDIA_UPLOAD_ROLES: set[str] = (
     | S1_ROLES
     | {"command", "s3", "admin", "leader"}
     | {"command", "s3", "admin"}
+    | {"command", "s2", "admin"}
 )
 
 # ─── Team / Element Constants ────────────────────────────────────────────────

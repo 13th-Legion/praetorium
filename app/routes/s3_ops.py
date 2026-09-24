@@ -16,7 +16,7 @@ from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem
 from app.constants import FIELD_TASKS_BLOCK
-from app.training_sites import TRAINING_SITES, get_site_maps
+from app.services import training_sites as _ts
 from fastapi.templating import Jinja2Templates
 from app.services import ranks as _ranks
 
@@ -246,7 +246,7 @@ async def ftx_builder(request: Request, event_id: int, db: AsyncSession = Depend
     member_lookup = {m.id: m for m in members}
 
     # Training site maps
-    site_maps = get_site_maps(event.training_site) if event.training_site else []
+    site_maps = await _ts.get_site_maps(event.training_site) if event.training_site else []
 
     # Get TRADOC items for dropdowns
     tradoc_result = await db.execute(
@@ -275,7 +275,7 @@ async def ftx_builder(request: Request, event_id: int, db: AsyncSession = Depend
         "activity_types": ACTIVITY_TYPES,
         "block_labels": BLOCK_LABELS,
         "rank_abbr": _ranks.abbr_map(),
-        "training_sites": TRAINING_SITES,
+        "training_sites": await _ts.site_map(),
         "site_maps": site_maps,
         "tradoc_items": tradoc_for_block,
     })
@@ -294,7 +294,7 @@ async def set_training_site(
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
 
     site_key = training_site.strip() if training_site else None
-    if site_key and site_key not in TRAINING_SITES:
+    if site_key and not await _ts.get_site(site_key):
         site_key = None
 
     async with database.async_session() as db:
@@ -307,8 +307,8 @@ async def set_training_site(
 
     # Return updated maps section via HTMX
     if site_key:
-        maps = get_site_maps(site_key)
-        site = TRAINING_SITES[site_key]
+        maps = await _ts.get_site_maps(site_key)
+        site = await _ts.get_site(site_key)
         html = f'<div style="margin-top:8px;">'
         html += f'<div style="color:#999;font-size:13px;">📍 {site["address"]}</div>'
         html += '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">'
@@ -532,8 +532,8 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
     rows = []
     for ev in events:
         days_out = (ev.date_start - now).days
-        site = TRAINING_SITES.get(ev.training_site, {})
-        site_name = f"Site {site.get('name', ev.training_site)}" if site else ev.training_site
+        site = await _ts.get_site(ev.training_site) if ev.training_site else None
+        site_name = f"Site {site['name']}" if site else ev.training_site
         rows.append(f'''
             <div style="padding:12px;border-bottom:1px solid #2a2a3e;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">

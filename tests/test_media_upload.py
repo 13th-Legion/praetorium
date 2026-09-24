@@ -246,6 +246,7 @@ def test_media_upload_roles_do_not_widen_beyond_existing_editors():
         | S1_ROLES
         | {"command", "s3", "admin", "leader"}   # events create/edit
         | {"command", "s3", "admin"}             # training_library TRADOC_MANAGE_ROLES
+        | {"command", "s2", "admin"}             # s2_admin IIR editor (S2 intel reports)
     )
     assert MEDIA_UPLOAD_ROLES == expected
     assert "enlisted" not in MEDIA_UPLOAD_ROLES

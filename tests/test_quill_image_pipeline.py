@@ -104,6 +104,7 @@ EDITOR_TEMPLATES = {
     "pages/event_detail.html": "/api/media/image-upload",
     "pages/newsletter_edit.html": "/api/s1/newsletter/image-upload",
     "pages/s1_email_blast.html": "/api/s1/newsletter/image-upload",
+    "pages/s2_iir_edit.html": "/api/media/image-upload",
 }
 
 

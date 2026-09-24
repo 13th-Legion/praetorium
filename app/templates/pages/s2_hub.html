@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}S2 Intelligence & Security — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+
+<div class="s2-wrap">
+    <div class="s2-header">
+        <h2>🔍 S2 — Intelligence &amp; Security</h2>
+        <div class="subtitle">FTX intel, reporting, and the training-site map library.</div>
+    </div>
+
+    <div class="s2-nav">
+        <a href="/api/s2/iir">📡 IIR Reports</a>
+        <a href="/api/s2/challenge">🔐 Challenge / Password</a>
+        <a href="/api/s2/sites">🗺️ Training Sites</a>
+    </div>
+
+    <div class="s2-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="s2-card">
+            <h3>📡 IIR Reports</h3>
+            <div style="font-size:26px;font-weight:700;color:#e0e0e0;font-family:'Oswald',sans-serif;">{{ active_iirs }}</div>
+            <div class="s2-muted">active reports</div>
+        </div>
+        <div class="s2-card">
+            <h3>🔐 Challenge / Password</h3>
+            <div style="font-size:26px;font-weight:700;color:#e0e0e0;font-family:'Oswald',sans-serif;">{{ active_cp }}</div>
+            <div class="s2-muted">active sets</div>
+        </div>
+        <div class="s2-card">
+            <h3>🗺️ Training Sites</h3>
+            <div style="font-size:26px;font-weight:700;color:#e0e0e0;font-family:'Oswald',sans-serif;">{{ site_count }}</div>
+            <div class="s2-muted">sites in the library</div>
+        </div>
+    </div>
+
+    <div class="s2-card">
+        <h3>FTX responsibilities</h3>
+        <p class="s2-muted" style="font-size:13px;color:#999;">Rally point, RP→AO route, weather, code words, challenge/password — S2 sets these per FTX. Rally point is set in the FTX builder; challenge/password rotation is under <a href="/api/s2/challenge" style="color:#d4a537;">Challenge / Password</a>.</p>
+    </div>
+</div>
+{% endblock %}
