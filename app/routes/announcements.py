@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import escape
 
 import httpx
@@ -408,6 +408,7 @@ async def get_announcements(request: Request):
         # Filter out announcements older than 30 days
         cutoff = datetime.utcnow().timestamp() - (30 * 86400)
         items = [a for a in items if int(a.get("time", 0)) >= cutoff]
+        archive_date = (datetime.utcnow() + timedelta(days=30)).strftime("%b %d, %Y")
 
         if not items:
             return HTMLResponse('<p class="text-muted">No announcements.</p>')
@@ -451,6 +452,7 @@ async def get_announcements(request: Request):
                     <input type="text" id="edit-subject-{ann_id}" value="{subject_escaped}" required
                         style="width:100%;padding:4px 6px;font-size:13px;background:#2a2a3e;color:#eee;border:1px solid #444;border-radius:4px;margin-bottom:6px;box-sizing:border-box;">
                     {_quill_editor_html(f"edit-editor-{ann_id}", f"edit-toolbar-{ann_id}")}
+                    <div style="font-size:11px;color:#888;margin-top:6px;">📦 Auto-archives from the front page after 30 days (on {archive_date}).</div>
                     <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">
                         <button type="button" onclick="cancelEdit({ann_id})" style="padding:2px 10px;background:transparent;color:#888;border:1px solid #555;border-radius:3px;cursor:pointer;font-size:11px;">Cancel</button>
                         <button type="button" onclick="submitEdit({ann_id})" style="padding:2px 10px;background:#d4a537;color:#1a1a2e;border:none;border-radius:3px;font-weight:600;cursor:pointer;font-size:11px;">Save</button>
@@ -553,6 +555,7 @@ async def compose_form(request: Request):
 
     # Build the optional "link to event" picker from upcoming events.
     events = await _upcoming_events()
+    archive_date = (datetime.utcnow() + timedelta(days=30)).strftime("%b %d, %Y")
     event_options = '<option value="">\u2014 No event (links to dashboard) \u2014</option>'
     for ev in events:
         try:
@@ -580,6 +583,7 @@ async def compose_form(request: Request):
         <div style="margin-bottom:8px;">
             {_quill_editor_html("compose-editor", "compose-toolbar")}
         </div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px;">📦 Auto-archives from the front page after 30 days (on {archive_date}).</div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <label style="font-size:12px;color:#aaa;display:flex;align-items:center;gap:6px;">
                 <input type="checkbox" id="announce-notify" checked> Send notification
