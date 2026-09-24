@@ -20,10 +20,11 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
 from app import database
-from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, EventFrago
+from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, EventFrago, EventVexillation
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
+from app.models.ribbons import MemberRibbon
 from config import get_settings
 from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
 from app.services import ranks as _ranks
@@ -3490,12 +3491,20 @@ async def finalize_event(request: Request, event_id: int):
         elif event.category == "online_training" and event.block_list:
             credit_summary = await _auto_credit_tradoc(db, event)
 
+        # Auto-award Mission Leader ribbon to each vexillation commander
+        # (praepositus) on FTX/MCFTX finalization.
+        ml_summary = ""
+        if event.category in ("ftx", "mcftx"):
+            ml_summary = await _auto_award_mission_leader(db, event)
+
         await db.commit()
 
+    summary_bits = [s for s in (credit_summary, ml_summary) if s]
+    summary = " " + " ".join(summary_bits) if summary_bits else ""
     return HTMLResponse(
         f'<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
         f'✅ Event finalized by {username}.'
-        f'{" " + credit_summary if credit_summary else ""}'
+        f'{summary}'
         f'</div>'
         f'<script>setTimeout(()=>window.location.reload(),1500)</script>'
     )
@@ -3672,6 +3681,58 @@ async def _auto_credit_tradoc(db, event: Event) -> str:
         )
 
     return f"Credited {credited} items across {len(members_credited)} members."
+
+
+async def _auto_award_mission_leader(db, event: Event) -> str:
+    """Auto-award the Mission Leader ribbon to each vexillation commander
+    (praepositus) when an FTX/MCFTX is finalized.
+
+    One ribbon per commander, with a +1 device per additional stint (the
+    mission_leader catalog row has device_increment=3, max_devices=0 = unlimited).
+    """
+    vex_result = await db.execute(
+        select(EventVexillation.commander_id).where(
+            and_(
+                EventVexillation.event_id == event.id,
+                EventVexillation.commander_id.isnot(None),
+            )
+        )
+    )
+    commander_ids = [r[0] for r in vex_result.all()]
+    if not commander_ids:
+        return "No vexillation commanders to award."
+
+    # De-dupe (a member can't command two vexillations in one event, but be safe).
+    commander_ids = list(dict.fromkeys(commander_ids))
+
+    awarded = 0
+    now = datetime.utcnow()
+    for cid in commander_ids:
+        existing = (await db.execute(
+            select(MemberRibbon).where(
+                and_(
+                    MemberRibbon.member_id == cid,
+                    MemberRibbon.ribbon_code == "mission_leader",
+                )
+            )
+        )).scalar_one_or_none()
+        if existing:
+            # Additional mission led -> increment device count.
+            existing.device_count = (existing.device_count or 0) + 1
+            existing.awarded_at = now
+        else:
+            db.add(MemberRibbon(
+                member_id=cid,
+                ribbon_code="mission_leader",
+                device_count=0,
+                awarded_at=now,
+                awarded_by="auto",
+                reason=f"Vexillation commander — {event.title}",
+                source="auto",
+            ))
+        awarded += 1
+
+    return f"Auto-awarded Mission Leader to {awarded} commander{'s' if awarded != 1 else ''}."
 
 
 # ─── After Action Review (PP-125) ────────────────────────────────────────────

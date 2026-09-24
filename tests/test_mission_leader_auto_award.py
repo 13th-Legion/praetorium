@@ -1,0 +1,107 @@
+"""Auto-award Mission Leader ribbon to vexillation commanders on FTX finalization."""
+
+import pytest
+from datetime import datetime
+
+from app.models.events import EventVexillation
+from app.models.ribbons import MemberRibbon
+from app.routes.events import _auto_award_mission_leader
+from tests.factories import make_member, make_event
+
+pytestmark = pytest.mark.integration
+
+
+async def _make_vex(db, event, commander_id=None, name="Alpha"):
+    v = EventVexillation(
+        event_id=event.id,
+        name=name,
+        commander_id=commander_id,
+        field_status="in_field",
+        created_by="test",
+    )
+    db.add(v)
+    await db.flush()
+    return v
+
+
+class TestMissionLeaderAutoAward:
+    async def test_awards_mission_leader_to_commander(self, db_session):
+        ev = await make_event(db_session, category="ftx", title="Monthly FTX")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev, commander_id=m.id)
+        await db_session.flush()
+
+        summary = await _auto_award_mission_leader(db_session, ev)
+        await db_session.commit()
+
+        from sqlalchemy import select
+        row = (await db_session.execute(
+            select(MemberRibbon).where(
+                MemberRibbon.member_id == m.id,
+                MemberRibbon.ribbon_code == "mission_leader",
+            )
+        )).scalar_one_or_none()
+
+        assert row is not None
+        assert row.device_count == 0
+        assert row.source == "auto"
+        assert "commander" in summary.lower()
+
+    async def test_increments_device_on_second_stint(self, db_session):
+        ev = await make_event(db_session, category="ftx", title="Monthly FTX")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev, commander_id=m.id)
+        db_session.add(MemberRibbon(
+            member_id=m.id,
+            ribbon_code="mission_leader",
+            device_count=0,
+            source="manual",
+        ))
+        await db_session.flush()
+
+        await _auto_award_mission_leader(db_session, ev)
+        await db_session.commit()
+
+        from sqlalchemy import select
+        row = (await db_session.execute(
+            select(MemberRibbon).where(
+                MemberRibbon.member_id == m.id,
+                MemberRibbon.ribbon_code == "mission_leader",
+            )
+        )).scalar_one_or_none()
+
+        assert row.device_count == 1
+
+    async def test_no_vexillations_returns_no_award(self, db_session):
+        ev = await make_event(db_session, category="ftx")
+        await db_session.flush()
+        summary = await _auto_award_mission_leader(db_session, ev)
+        assert "No vexillation commanders" in summary
+
+    async def test_dedupe_multiple_vexillations_same_commander(self, db_session):
+        from sqlalchemy import select
+        ev = await make_event(db_session, category="ftx", title="Monthly FTX")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev, commander_id=m.id, name="Alpha")
+        await _make_vex(db_session, ev, commander_id=m.id, name="Bravo")
+        await db_session.flush()
+
+        summary = await _auto_award_mission_leader(db_session, ev)
+        await db_session.commit()
+
+        rows = (await db_session.execute(
+            select(MemberRibbon).where(
+                MemberRibbon.member_id == m.id,
+                MemberRibbon.ribbon_code == "mission_leader",
+            )
+        )).scalars().all()
+
+        assert len(rows) == 1
+        assert "commander" in summary.lower()
+
+    async def test_skips_commanderless_vexillations(self, db_session):
+        ev = await make_event(db_session, category="ftx")
+        await _make_vex(db_session, ev, commander_id=None)
+        await db_session.flush()
+        summary = await _auto_award_mission_leader(db_session, ev)
+        assert "No vexillation commanders" in summary
