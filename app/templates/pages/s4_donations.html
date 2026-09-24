@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Equipment Donations — S4{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <a href="/api/s4" class="s4-back">← S4 Logistics</a>
+    <div class="s4-header">
+        <h2>🎁 Equipment Donations</h2>
+        <div class="subtitle">Offer personal gear to unit supply. S4 reviews and brings it on the books once received.</div>
+    </div>
+
+    <div class="s4-card">
+        <h3>Offer a donation</h3>
+        <form method="post" action="/api/s4/donations">
+            <div class="s4-field"><label>Item name</label><input name="item_name" class="s4-input" required></div>
+            <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                <div class="s4-field">
+                    <label>Condition</label>
+                    <select name="condition" class="s4-select">
+                        <option>New</option><option>Good</option><option>Fair</option><option>Poor</option>
+                    </select>
+                </div>
+                <div class="s4-field"><label>Quantity</label><input name="quantity" type="number" min="1" value="1" class="s4-input"></div>
+            </div>
+            <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+            <button class="s4-btn">Submit</button>
+        </form>
+    </div>
+
+    <div class="s4-card">
+        <h3>{% if can_manage %}All donations{% else %}My donations{% endif %}</h3>
+        {% if donations %}
+        <table class="s4-table">
+            <tr><th>Item</th>{% if can_manage %}<th>Donor</th>{% endif %}<th>Condition</th><th>Qty</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for d in donations %}
+            <tr>
+                <td>{{ d.item_name }}{% if d.description %}<div class="s4-muted">{{ d.description }}</div>{% endif %}</td>
+                {% if can_manage %}<td>{{ names.get(d.donor_id, '—') }}</td>{% endif %}
+                <td>{{ d.condition }}</td>
+                <td>{{ d.quantity }}</td>
+                <td><span class="s4-badge badge-{{ d.status }}">{{ d.status|replace('_',' ') }}</span></td>
+                {% if can_approve %}
+                <td>
+                    {% if d.status == 'submitted' %}
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/accept" class="s4-inline"><button class="s4-btn s4-btn-sm">Accept</button></form>
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/reject" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Reject</button></form>
+                    {% elif d.status == 'accepted_pending_dropoff' %}
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/received" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark received</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No donations yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

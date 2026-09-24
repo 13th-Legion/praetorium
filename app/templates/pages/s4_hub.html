@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}S4 Logistics — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <div class="s4-header">
+        <h2>📦 S4 — Logistics</h2>
+        <div class="subtitle">Meals, money, gear, and inventory.</div>
+    </div>
+
+    <div class="s4-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <a href="/api/s4/meals" style="text-decoration:none;">
+            <div class="s4-card" style="height:100%;">
+                <h3>🍽️ Meals &amp; Headcount</h3>
+                <p class="s4-muted" style="color:#999;font-size:13px;">Per-FTX meal plans with RSVP-derived headcount.</p>
+            </div>
+        </a>
+        <a href="/api/s4/expenses" style="text-decoration:none;">
+            <div class="s4-card" style="height:100%;">
+                <h3>💵 Expenses</h3>
+                <p class="s4-muted" style="color:#999;font-size:13px;">Submit receipts, review, approve, reimburse.</p>
+            </div>
+        </a>
+        <a href="/api/s4/purchases" style="text-decoration:none;">
+            <div class="s4-card" style="height:100%;">
+                <h3>🛒 Purchase Requests</h3>
+                <p class="s4-muted" style="color:#999;font-size:13px;">Request unit funds for gear and supplies.</p>
+            </div>
+        </a>
+        <a href="/api/s4/donations" style="text-decoration:none;">
+            <div class="s4-card" style="height:100%;">
+                <h3>🎁 Equipment Donations</h3>
+                <p class="s4-muted" style="color:#999;font-size:13px;">Offer personal gear to unit supply.</p>
+            </div>
+        </a>
+        <a href="/api/s4/inventory" style="text-decoration:none;">
+            <div class="s4-card" style="height:100%;">
+                <h3>📋 Inventory &amp; Possession</h3>
+                <p class="s4-muted" style="color:#999;font-size:13px;">QR-tracked gear + who has what.</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

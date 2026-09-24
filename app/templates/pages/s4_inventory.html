@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory — S4{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <a href="/api/s4" class="s4-back">← S4 Logistics</a>
+    <div class="s4-header">
+        <h2>📋 Supply Inventory</h2>
+        <div class="subtitle">Master unit property list with QR check-in/out and a possession log.</div>
+    </div>
+
+    {% if can_approve %}
+    <div class="s4-card">
+        <h3>Add item</h3>
+        <form method="post" action="/api/s4/inventory">
+            <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                <div class="s4-field"><label>Name</label><input name="name" class="s4-input" required></div>
+                <div class="s4-field"><label>Category</label><input name="category" class="s4-input" placeholder="Comms, Medical, Camp…" required></div>
+            </div>
+            <div class="s4-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                <div class="s4-field"><label>Serial # (optional)</label><input name="serial_number" class="s4-input"></div>
+                <div class="s4-field"><label>Condition</label><input name="condition" class="s4-input" value="Good"></div>
+                <div class="s4-field"><label>Location (optional)</label><input name="location" class="s4-input" placeholder="S4 Connex"></div>
+            </div>
+            <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+            <button class="s4-btn">Add item</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="s4-card">
+        <h3>Inventory</h3>
+        {% if inventory %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Category</th><th>Condition</th><th>Status</th><th>Location</th><th>QR</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for item in inventory %}
+            <tr>
+                <td>{{ item.name }}{% if item.serial_number %}<div class="s4-muted">SN {{ item.serial_number }}</div>{% endif %}</td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.condition }}</td>
+                <td><span class="s4-badge badge-{{ item.status }}">{{ item.status|replace('_',' ') }}</span></td>
+                <td>{{ item.location or '—' }}</td>
+                <td><a href="/api/s4/inventory/{{ item.id }}/qr" target="_blank" class="s4-receipt">QR ↗</a></td>
+                {% if can_approve %}
+                <td>
+                    <a href="/api/s4/inventory/{{ item.id }}/checkout" class="s4-btn s4-btn-sm" style="text-decoration:none;display:inline-block;">Check in/out</a>
+                    {% if item.status != 'retired' %}
+                    <form method="post" action="/api/s4/inventory/{{ item.id }}/retire" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Retire</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No inventory items.</div>
+        {% endif %}
+    </div>
+
+    <div class="s4-card">
+        <h3>🔁 Possession Log</h3>
+        {% if checkouts %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Held by</th><th>Checked out</th><th>Returned</th><th>Condition</th></tr>
+            {% for c in checkouts %}
+            <tr>
+                <td>{% if c.item %}{{ c.item.name }}{% else %}#{{ c.item_id }}{% endif %}</td>
+                <td>{{ names.get(c.member_id, '—') }}</td>
+                <td>{{ c.checked_out_at.strftime('%d %b %Y') }}</td>
+                <td>{% if c.checked_in_at %}{{ c.checked_in_at.strftime('%d %b %Y') }}{% else %}<span class="s4-badge badge-checked_out">out</span>{% endif %}</td>
+                <td>{{ c.return_condition or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">Nothing has been checked out yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

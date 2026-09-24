@@ -1,19 +1,22 @@
 """S4 Logistics dashboard — meals, expenses, purchasing, donations, inventory.
 
-Five feature areas per the approved spec (`projects/s4-dashboard.md`):
+Five feature areas per the approved spec (`projects/s4-dashboard.md`), each its
+own page (hub at `/api/s4`):
 
-1. Meals & Headcount — per-FTX meal plan (Sat B/L/D + Sun B), headcount from RSVPs.
-2. Expense Reimbursement — members submit receipts; S4 reviews → approves →
-   marks reimbursed (or rejects). Formalized queue.
-3. Purchase Requests — Leaders/S4 request funds; Command or S4 head approves.
-4. Equipment Donations — members offer gear; S4 accepts → pending drop-off → received.
-5. Supply Inventory — master list with QR codes + a possession log (checkout/check-in).
+  * /api/s4/meals       — Meals & Headcount (per-FTX meal plan)
+  * /api/s4/expenses    — Expense Reimbursement (formalized queue)
+  * /api/s4/purchases   — Purchase Requests
+  * /api/s4/donations   — Equipment Donations (submission open to ALL members)
+  * /api/s4/inventory   — Supply Inventory + possession log
 
 RBAC:
-  * View + submit (expenses, donations, purchase requests): any S4 member,
-    Command, or admin (`S4_ROLES`).
-  * Approve / reimburse / deny / accept / inventory mutations:
+  * Expenses + donations **submission** is open to any member (a member must be
+    able to submit a receipt or offer gear without holding an S4 billet).
+  * Members see only their own expense submissions; S4/Command see the full
+    queue.
+  * Approvals (expense, purchase, donation) and inventory mutations are
     Command + admin + the S4 *shop head* only (`_can_approve`).
+  * Meals + purchases + inventory pages are S4/Command/admin only.
 
 Receipts are stored in Nextcloud under the S4 group folder
 (`13th Legion Shared/[S-4] Logistics/Receipts/`) via the service account, same
@@ -124,106 +127,94 @@ def _display_name(m: Member) -> str:
     return base
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dashboard
-# ─────────────────────────────────────────────────────────────────────────────
-
-@router.get("", response_class=HTMLResponse)
-@require_auth
-async def s4_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
-    user = get_current_user(request)
-    if not _can_view(user):
-        return _denied()
-    member = await _current_member(request, db)
-    can_approve = _can_approve(user, member)
-
-    # FTX/MCFTX events, most recent first (for meals + expense event picker).
-    events = (await db.execute(
-        select(Event).where(Event.category.in_(FTX_CATEGORIES)).order_by(desc(Event.date_start))
-    )).scalars().all()
-
-    # Meals: existing plans keyed by event id.
-    plans = {
-        p.event_id: p for p in (await db.execute(select(S4MealPlan))).scalars().all()
-    }
-    # Headcount per event = attending RSVPs + guest_count.
-    headcounts: dict[int, int] = {}
-    for ev in events:
-        rows = (await db.execute(
-            select(EventRSVP).where(
-                EventRSVP.event_id == ev.id,
-                EventRSVP.status == "attending",
-            )
-        )).scalars().all()
-        headcounts[ev.id] = sum(1 for _ in rows) + sum(r.guest_count or 0 for r in rows)
-
-    # Expenses (all, newest first).
-    expenses = (await db.execute(
-        select(S4Expense).order_by(desc(S4Expense.created_at))
-    )).scalars().all()
-
-    # Purchase requests.
-    purchases = (await db.execute(
-        select(S4PurchaseRequest).order_by(desc(S4PurchaseRequest.created_at))
-    )).scalars().all()
-
-    # Donations.
-    donations = (await db.execute(
-        select(S4EquipmentDonation).order_by(desc(S4EquipmentDonation.created_at))
-    )).scalars().all()
-
-    # Inventory + possession log.
-    inventory = (await db.execute(
-        select(S4InventoryItem).order_by(S4InventoryItem.name)
-    )).scalars().all()
-    checkouts = (await db.execute(
-        select(S4Checkout).order_by(desc(S4Checkout.checked_out_at))
-    )).scalars().all()
-
-    # Member id → display name map (one query, avoid N+1 in templates).
-    member_ids = set()
-    for e in expenses:
-        member_ids.add(e.member_id); member_ids.add(e.reimbursed_by_id)
-    for p in purchases:
-        member_ids.add(p.requester_id); member_ids.add(p.approved_by_id)
-    for d in donations:
-        member_ids.add(d.donor_id); member_ids.add(d.reviewed_by_id)
-    for c in checkouts:
-        member_ids.add(c.member_id); member_ids.add(c.checked_out_by_id); member_ids.add(c.checked_in_by_id)
+async def _names_for(db: AsyncSession, member_ids: set[int]) -> dict[int, str]:
+    """Member id → display name map (one query, avoid N+1 in templates)."""
     member_ids.discard(None)
     names: dict[int, str] = {}
     if member_ids:
         for m in (await db.execute(select(Member).where(Member.id.in_(member_ids)))).scalars().all():
             names[m.id] = _display_name(m)
+    return names
 
-    # Active members for the meal-plan assignee dropdown.
-    members = (await db.execute(
+
+async def _ftx_events(db: AsyncSession) -> list[Event]:
+    return (await db.execute(
+        select(Event).where(Event.category.in_(FTX_CATEGORIES)).order_by(desc(Event.date_start))
+    )).scalars().all()
+
+
+async def _active_members(db: AsyncSession) -> list[Member]:
+    return (await db.execute(
         select(Member).where(Member.status == "active").order_by(Member.last_name, Member.first_name)
     )).scalars().all()
-    for m in members:
-        names.setdefault(m.id, _display_name(m))
 
-    return templates.TemplateResponse("pages/s4_dashboard.html", {
+
+async def _notify_approvers(db: AsyncSession, title: str, body: str, link: str):
+    from app.routes.notifications import create_notification
+    rows = (await db.execute(select(Member).where(Member.status == "active"))).scalars().all()
+    notified: set[int] = set()
+    for m in rows:
+        roles = set((m.portal_roles or "").split(",")) if m.portal_roles else set()
+        is_command = bool(roles & {"command", "admin"})
+        if (is_command or _is_s4_head(m)) and m.id not in notified:
+            notified.add(m.id)
+            await create_notification(db, m.id, "shop", f"📦 {title}", body=body, link=link, icon="📦")
+    await db.commit()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hub
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("", response_class=HTMLResponse)
+@require_auth
+async def s4_hub(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    return templates.TemplateResponse("pages/s4_hub.html", {
         "request": request,
         "user": user,
-        "member": member,
-        "can_approve": can_approve,
-        "events": events,
-        "plans": plans,
-        "headcounts": headcounts,
-        "expenses": expenses,
-        "purchases": purchases,
-        "donations": donations,
-        "inventory": inventory,
-        "checkouts": checkouts,
-        "members": members,
-        "names": names,
+        "can_approve": _can_approve(user, member),
     })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Meals & Headcount
 # ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/meals", response_class=HTMLResponse)
+@require_auth
+async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+
+    events = await _ftx_events(db)
+    plans = {p.event_id: p for p in (await db.execute(select(S4MealPlan))).scalars().all()}
+    headcounts: dict[int, int] = {}
+    for ev in events:
+        rows = (await db.execute(
+            select(EventRSVP).where(EventRSVP.event_id == ev.id, EventRSVP.status == "attending")
+        )).scalars().all()
+        headcounts[ev.id] = sum(1 for _ in rows) + sum(r.guest_count or 0 for r in rows)
+
+    members = await _active_members(db)
+    names = {m.id: _display_name(m) for m in members}
+
+    return templates.TemplateResponse("pages/s4_meals.html", {
+        "request": request,
+        "user": user,
+        "can_approve": _can_approve(user, member),
+        "events": events,
+        "plans": plans,
+        "headcounts": headcounts,
+        "members": members,
+        "names": names,
+    })
+
 
 @router.post("/meals/{event_id}")
 @require_auth
@@ -256,7 +247,7 @@ async def save_meal_plan(request: Request, event_id: int, db: AsyncSession = Dep
     plan.assigned_to_id = int(assigned) if assigned.isdigit() else None
 
     await db.commit()
-    return RedirectResponse(url="/api/s4#meals", status_code=302)
+    return RedirectResponse(url="/api/s4/meals", status_code=302)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -270,26 +261,47 @@ async def _store_receipt(filename: str, data: bytes) -> str | None:
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     path = f"{NC_S4_BASE}/Receipts/{date_str}_{safe}"
     async with httpx.AsyncClient(timeout=20) as client:
-        # Ensure the Receipts folder exists (MKCOL is idempotent).
         folder = f"{NC_S4_BASE}/Receipts"
         await client.request("MKCOL", f"{settings.nc_url}{folder}/", auth=(NC_SVC_USER, NC_SVC_PASS))
-        resp = await client.put(
-            f"{settings.nc_url}{path}",
-            content=data,
-            auth=(NC_SVC_USER, NC_SVC_PASS),
-        )
+        resp = await client.put(f"{settings.nc_url}{path}", content=data, auth=(NC_SVC_USER, NC_SVC_PASS))
         if resp.status_code in (201, 204):
             return path
         log.warning("S4 receipt upload returned %s for %s", resp.status_code, safe)
         return None
 
 
+@router.get("/expenses", response_class=HTMLResponse)
+@require_auth
+async def expenses_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    can_manage = _can_view(user) or _can_approve(user, member)
+
+    all_expenses = (await db.execute(
+        select(S4Expense).order_by(desc(S4Expense.created_at))
+    )).scalars().all()
+    my_expenses = [e for e in all_expenses if e.member_id == (member.id if member else -1)]
+
+    events = await _ftx_events(db)
+    ids = {e.member_id for e in all_expenses} | {e.reimbursed_by_id for e in all_expenses}
+    names = await _names_for(db, ids)
+
+    return templates.TemplateResponse("pages/s4_expenses.html", {
+        "request": request,
+        "user": user,
+        "member": member,
+        "can_manage": can_manage,
+        "can_approve": _can_approve(user, member),
+        "expenses": all_expenses if can_manage else my_expenses,
+        "events": events,
+        "names": names,
+    })
+
+
 @router.post("/expenses")
 @require_auth
 async def submit_expense(request: Request, db: AsyncSession = Depends(get_db)):
     user = get_current_user(request)
-    if not _can_view(user):
-        return _denied()
     member = await _current_member(request, db)
     if not member:
         return _denied()
@@ -321,47 +333,25 @@ async def submit_expense(request: Request, db: AsyncSession = Depends(get_db)):
         status="pending",
     )
 
-    # Optional receipt upload.
     file = form.get("receipt")
     if isinstance(file, UploadFile) and getattr(file, "filename", None):
         data = await file.read(MAX_RECEIPT_BYTES + 1)
         if len(data) > MAX_RECEIPT_BYTES:
             return _err("Receipt exceeds the 10MB limit.")
         if data:
-            mime = (file.content_type or "").strip().lower()
-            if mime in RECEIPT_MIMES:
-                path = await _store_receipt(file.filename or "receipt", data)
-                if path:
-                    exp.receipt_url = path
-            else:
-                # Fall back to a generic extension but still store.
-                path = await _store_receipt((file.filename or "receipt"), data)
-                if path:
-                    exp.receipt_url = path
+            path = await _store_receipt(file.filename or "receipt", data)
+            if path:
+                exp.receipt_url = path
 
     db.add(exp)
     await db.commit()
     await db.refresh(exp)
 
-    # Notify S4 head + Command.
-    await _notify_approvers(db, "📄 Expense submitted", f"{_display_name(member)} submitted \"{title}\" (${amount:.2f}).", "/api/s4#expenses")
+    await _notify_approvers(db, "Expense submitted",
+                            f"{_display_name(member)} submitted \"{title}\" (${amount:.2f}).",
+                            "/api/s4/expenses")
 
-    return RedirectResponse(url="/api/s4#expenses", status_code=302)
-
-
-async def _notify_approvers(db: AsyncSession, title: str, body: str, link: str):
-    from app.routes.notifications import create_notification
-    rows = (await db.execute(select(Member).where(Member.status == "active"))).scalars().all()
-    notified: set[int] = set()
-    for m in rows:
-        # Command members carry 'command' or 'admin' role; S4 head carries the lead billet.
-        roles = set((m.portal_roles or "").split(",")) if m.portal_roles else set()
-        is_command = bool(roles & {"command", "admin"})
-        is_s4_head = _is_s4_head(m)
-        if (is_command or is_s4_head) and m.id not in notified:
-            notified.add(m.id)
-            await create_notification(db, m.id, "shop", f"📦 {title}", body=body, link=link, icon="📦")
-    await db.commit()
+    return RedirectResponse(url="/api/s4/expenses", status_code=302)
 
 
 @router.post("/expenses/{expense_id}/approve")
@@ -376,7 +366,7 @@ async def approve_expense(request: Request, expense_id: int, db: AsyncSession = 
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     exp.status = "approved"
     await db.commit()
-    return RedirectResponse(url="/api/s4#expenses", status_code=302)
+    return RedirectResponse(url="/api/s4/expenses", status_code=302)
 
 
 @router.post("/expenses/{expense_id}/reimburse")
@@ -393,7 +383,7 @@ async def reimburse_expense(request: Request, expense_id: int, db: AsyncSession 
     exp.reimbursed_at = datetime.now(timezone.utc)
     exp.reimbursed_by_id = member.id
     await db.commit()
-    return RedirectResponse(url="/api/s4#expenses", status_code=302)
+    return RedirectResponse(url="/api/s4/expenses", status_code=302)
 
 
 @router.post("/expenses/{expense_id}/reject")
@@ -408,12 +398,33 @@ async def reject_expense(request: Request, expense_id: int, db: AsyncSession = D
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     exp.status = "rejected"
     await db.commit()
-    return RedirectResponse(url="/api/s4#expenses", status_code=302)
+    return RedirectResponse(url="/api/s4/expenses", status_code=302)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Purchase Requests
 # ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/purchases", response_class=HTMLResponse)
+@require_auth
+async def purchases_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    purchases = (await db.execute(
+        select(S4PurchaseRequest).order_by(desc(S4PurchaseRequest.created_at))
+    )).scalars().all()
+    ids = {p.requester_id for p in purchases} | {p.approved_by_id for p in purchases}
+    names = await _names_for(db, ids)
+    return templates.TemplateResponse("pages/s4_purchases.html", {
+        "request": request,
+        "user": user,
+        "can_approve": _can_approve(user, member),
+        "purchases": purchases,
+        "names": names,
+    })
+
 
 @router.post("/purchases")
 @require_auth
@@ -459,9 +470,11 @@ async def submit_purchase(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(pr)
 
-    await _notify_approvers(db, "Purchase request", f"{_display_name(member)} requested {qty}× {item_name} (${cost:.2f}).", "/api/s4#purchases")
+    await _notify_approvers(db, "Purchase request",
+                            f"{_display_name(member)} requested {qty}× {item_name} (${cost:.2f}).",
+                            "/api/s4/purchases")
 
-    return RedirectResponse(url="/api/s4#purchases", status_code=302)
+    return RedirectResponse(url="/api/s4/purchases", status_code=302)
 
 
 @router.post("/purchases/{pr_id}/approve")
@@ -478,7 +491,7 @@ async def approve_purchase(request: Request, pr_id: int, db: AsyncSession = Depe
     pr.approved_by_id = member.id
     pr.approved_at = datetime.now(timezone.utc)
     await db.commit()
-    return RedirectResponse(url="/api/s4#purchases", status_code=302)
+    return RedirectResponse(url="/api/s4/purchases", status_code=302)
 
 
 @router.post("/purchases/{pr_id}/deny")
@@ -495,7 +508,7 @@ async def deny_purchase(request: Request, pr_id: int, db: AsyncSession = Depends
     pr.status = "denied"
     pr.denial_reason = (form.get("denial_reason") or "").strip() or None
     await db.commit()
-    return RedirectResponse(url="/api/s4#purchases", status_code=302)
+    return RedirectResponse(url="/api/s4/purchases", status_code=302)
 
 
 @router.post("/purchases/{pr_id}/advance")
@@ -515,29 +528,48 @@ async def advance_purchase(request: Request, pr_id: int, db: AsyncSession = Depe
     elif pr.status == "purchased":
         pr.status = "received"
         pr.received_at = datetime.now(timezone.utc)
-        # Auto-create an inventory item so received gear lands on the books.
         db.add(S4InventoryItem(
-            name=pr.item_name,
-            category="Purchased",
-            description=pr.justification,
-            source_type="purchase",
-            source_purchase_id=pr.id,
-            status="available",
+            name=pr.item_name, category="Purchased", description=pr.justification,
+            source_type="purchase", source_purchase_id=pr.id, status="available",
         ))
     await db.commit()
-    return RedirectResponse(url="/api/s4#purchases", status_code=302)
+    return RedirectResponse(url="/api/s4/purchases", status_code=302)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Equipment Donations
 # ─────────────────────────────────────────────────────────────────────────────
 
+@router.get("/donations", response_class=HTMLResponse)
+@require_auth
+async def donations_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    can_manage = _can_view(user) or _can_approve(user, member)
+
+    all_donations = (await db.execute(
+        select(S4EquipmentDonation).order_by(desc(S4EquipmentDonation.created_at))
+    )).scalars().all()
+    my_donations = [d for d in all_donations if d.donor_id == (member.id if member else -1)]
+
+    ids = {d.donor_id for d in all_donations} | {d.reviewed_by_id for d in all_donations}
+    names = await _names_for(db, ids)
+
+    return templates.TemplateResponse("pages/s4_donations.html", {
+        "request": request,
+        "user": user,
+        "member": member,
+        "can_manage": can_manage,
+        "can_approve": _can_approve(user, member),
+        "donations": all_donations if can_manage else my_donations,
+        "names": names,
+    })
+
+
 @router.post("/donations")
 @require_auth
 async def submit_donation(request: Request, db: AsyncSession = Depends(get_db)):
     user = get_current_user(request)
-    if not _can_view(user):
-        return _denied()
     member = await _current_member(request, db)
     if not member:
         return _denied()
@@ -571,9 +603,11 @@ async def submit_donation(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(dn)
 
-    await _notify_approvers(db, "Equipment donation", f"{_display_name(member)} offered {qty}× {item_name} ({condition}).", "/api/s4#donations")
+    await _notify_approvers(db, "Equipment donation",
+                            f"{_display_name(member)} offered {qty}× {item_name} ({condition}).",
+                            "/api/s4/donations")
 
-    return RedirectResponse(url="/api/s4#donations", status_code=302)
+    return RedirectResponse(url="/api/s4/donations", status_code=302)
 
 
 @router.post("/donations/{dn_id}/accept")
@@ -590,13 +624,12 @@ async def accept_donation(request: Request, dn_id: int, db: AsyncSession = Depen
     dn.reviewed_by_id = member.id
     dn.reviewed_at = datetime.now(timezone.utc)
     await db.commit()
-    return RedirectResponse(url="/api/s4#donations", status_code=302)
+    return RedirectResponse(url="/api/s4/donations", status_code=302)
 
 
 @router.post("/donations/{dn_id}/received")
 @require_auth
 async def receive_donation(request: Request, dn_id: int, db: AsyncSession = Depends(get_db)):
-    """Mark a donation physically received; create inventory item(s)."""
     user = get_current_user(request)
     member = await _current_member(request, db)
     if not _can_approve(user, member):
@@ -607,16 +640,12 @@ async def receive_donation(request: Request, dn_id: int, db: AsyncSession = Depe
     dn.status = "received"
     dn.received_at = datetime.now(timezone.utc)
     db.add(S4InventoryItem(
-        name=dn.item_name,
-        category="Donated",
-        description=dn.description,
-        condition=dn.condition,
-        source_type="donation",
-        source_donation_id=dn.id,
+        name=dn.item_name, category="Donated", description=dn.description,
+        condition=dn.condition, source_type="donation", source_donation_id=dn.id,
         status="available",
     ))
     await db.commit()
-    return RedirectResponse(url="/api/s4#donations", status_code=302)
+    return RedirectResponse(url="/api/s4/donations", status_code=302)
 
 
 @router.post("/donations/{dn_id}/reject")
@@ -633,12 +662,40 @@ async def reject_donation(request: Request, dn_id: int, db: AsyncSession = Depen
     dn.reviewed_by_id = member.id
     dn.reviewed_at = datetime.now(timezone.utc)
     await db.commit()
-    return RedirectResponse(url="/api/s4#donations", status_code=302)
+    return RedirectResponse(url="/api/s4/donations", status_code=302)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Inventory + Possession Log
 # ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/inventory", response_class=HTMLResponse)
+@require_auth
+async def inventory_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+
+    inventory = (await db.execute(
+        select(S4InventoryItem).order_by(S4InventoryItem.name)
+    )).scalars().all()
+    checkouts = (await db.execute(
+        select(S4Checkout).order_by(desc(S4Checkout.checked_out_at))
+    )).scalars().all()
+
+    ids = {c.member_id for c in checkouts} | {c.checked_out_by_id for c in checkouts} | {c.checked_in_by_id for c in checkouts}
+    names = await _names_for(db, ids)
+
+    return templates.TemplateResponse("pages/s4_inventory.html", {
+        "request": request,
+        "user": user,
+        "can_approve": _can_approve(user, member),
+        "inventory": inventory,
+        "checkouts": checkouts,
+        "names": names,
+    })
+
 
 @router.post("/inventory")
 @require_auth
@@ -659,8 +716,7 @@ async def add_inventory_item(request: Request, db: AsyncSession = Depends(get_db
         return _err("Name and category are required.")
 
     item = S4InventoryItem(
-        name=name,
-        category=category,
+        name=name, category=category,
         description=(form.get("description") or "").strip() or None,
         serial_number=(form.get("serial_number") or "").strip() or None,
         condition=(form.get("condition") or "Good").strip(),
@@ -670,7 +726,7 @@ async def add_inventory_item(request: Request, db: AsyncSession = Depends(get_db
     db.add(item)
     await db.commit()
     await db.refresh(item)
-    return RedirectResponse(url="/api/s4#inventory", status_code=302)
+    return RedirectResponse(url="/api/s4/inventory", status_code=302)
 
 
 @router.post("/inventory/{item_id}/edit")
@@ -691,7 +747,7 @@ async def edit_inventory_item(request: Request, item_id: int, db: AsyncSession =
     item.condition = (form.get("condition") or item.condition).strip()
     item.location = (form.get("location") or "").strip() or None
     await db.commit()
-    return RedirectResponse(url="/api/s4#inventory", status_code=302)
+    return RedirectResponse(url="/api/s4/inventory", status_code=302)
 
 
 @router.post("/inventory/{item_id}/retire")
@@ -706,13 +762,12 @@ async def retire_inventory_item(request: Request, item_id: int, db: AsyncSession
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     item.status = "retired"
     await db.commit()
-    return RedirectResponse(url="/api/s4#inventory", status_code=302)
+    return RedirectResponse(url="/api/s4/inventory", status_code=302)
 
 
 @router.get("/inventory/{item_id}/qr", response_class=Response)
 @require_auth
 async def inventory_qr(request: Request, item_id: int, db: AsyncSession = Depends(get_db)):
-    """Return a QR PNG encoding this item's check-in/out URL."""
     user = get_current_user(request)
     if not _can_view(user):
         return _denied()
@@ -738,18 +793,14 @@ async def checkout_page(request: Request, item_id: int, db: AsyncSession = Depen
     item = (await db.execute(select(S4InventoryItem).where(S4InventoryItem.id == item_id))).scalar_one_or_none()
     if not item:
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
-    # Current open checkout for this item, if any.
     open_co = (await db.execute(
         select(S4Checkout).where(
-            S4Checkout.item_id == item_id,
-            S4Checkout.checked_in_at.is_(None),
+            S4Checkout.item_id == item_id, S4Checkout.checked_in_at.is_(None),
         ).order_by(desc(S4Checkout.checked_out_at))
     )).scalars().first()
 
-    members = (await db.execute(
-        select(Member).where(Member.status == "active").order_by(Member.last_name, Member.first_name)
-    )).scalars().all()
-    names: dict[int, str] = {m.id: _display_name(m) for m in members}
+    members = await _active_members(db)
+    names = {m.id: _display_name(m) for m in members}
 
     return templates.TemplateResponse("pages/s4_checkout.html", {
         "request": request,
@@ -781,10 +832,8 @@ async def checkout_item(request: Request, item_id: int, db: AsyncSession = Depen
     holder_id = int(holder_raw)
 
     co = S4Checkout(
-        item_id=item_id,
-        member_id=holder_id,
-        checked_out_by_id=member.id,
-        checked_out_at=datetime.now(timezone.utc),
+        item_id=item_id, member_id=holder_id,
+        checked_out_by_id=member.id, checked_out_at=datetime.now(timezone.utc),
     )
     db.add(co)
     item.status = "checked_out"
@@ -804,8 +853,7 @@ async def checkin_item(request: Request, item_id: int, db: AsyncSession = Depend
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     open_co = (await db.execute(
         select(S4Checkout).where(
-            S4Checkout.item_id == item_id,
-            S4Checkout.checked_in_at.is_(None),
+            S4Checkout.item_id == item_id, S4Checkout.checked_in_at.is_(None),
         ).order_by(desc(S4Checkout.checked_out_at))
     )).scalars().first()
     if open_co:

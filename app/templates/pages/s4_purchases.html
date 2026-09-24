@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Purchase Requests — S4{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <a href="/api/s4" class="s4-back">← S4 Logistics</a>
+    <div class="s4-header">
+        <h2>🛒 Purchase Requests</h2>
+        <div class="subtitle">Request unit funds for gear and supplies. Command or S4 head approves.</div>
+    </div>
+
+    <div class="s4-card">
+        <h3>Request a purchase</h3>
+        <form method="post" action="/api/s4/purchases">
+            <div class="s4-field"><label>Item name</label><input name="item_name" class="s4-input" required></div>
+            <div class="s4-field"><label>URL (optional)</label><input name="url" class="s4-input" placeholder="https://…"></div>
+            <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                <div class="s4-field"><label>Estimated cost ($)</label><input name="estimated_cost" type="number" step="0.01" min="0.01" class="s4-input" required></div>
+                <div class="s4-field"><label>Quantity</label><input name="quantity" type="number" min="1" value="1" class="s4-input"></div>
+            </div>
+            <div class="s4-field"><label>Justification</label><textarea name="justification" class="s4-textarea" required></textarea></div>
+            <button class="s4-btn">Submit</button>
+        </form>
+    </div>
+
+    <div class="s4-card">
+        <h3>Requests</h3>
+        {% if purchases %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Requester</th><th>Cost</th><th>Qty</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for p in purchases %}
+            <tr>
+                <td>{{ p.item_name }}{% if p.url %}<div><a class="s4-receipt" href="{{ p.url }}" target="_blank">{{ p.url[:40] }}</a></div>{% endif %}</td>
+                <td>{{ names.get(p.requester_id, '—') }}</td>
+                <td>${{ '%.2f'|format(p.estimated_cost) }}</td>
+                <td>{{ p.quantity }}</td>
+                <td><span class="s4-badge badge-{{ p.status }}">{{ p.status }}</span>{% if p.denial_reason %}<div class="s4-muted">{{ p.denial_reason }}</div>{% endif %}</td>
+                {% if can_approve %}
+                <td>
+                    {% if p.status == 'pending' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/approve" class="s4-inline"><button class="s4-btn s4-btn-sm">Approve</button></form>
+                    <details class="s4-inline"><summary class="s4-btn s4-btn-sm s4-btn-mut" style="display:inline-block;">Deny</summary>
+                        <form method="post" action="/api/s4/purchases/{{ p.id }}/deny" style="margin-top:6px;">
+                            <input name="denial_reason" class="s4-input" placeholder="Reason" style="margin-bottom:4px;">
+                            <button class="s4-btn s4-btn-sm s4-btn-mut">Confirm deny</button>
+                        </form>
+                    </details>
+                    {% elif p.status == 'approved' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/advance" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-warn">Mark purchased</button></form>
+                    {% elif p.status == 'purchased' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/advance" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark received</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No purchase requests.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

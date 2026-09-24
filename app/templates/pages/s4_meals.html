@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Meals & Headcount — S4{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <a href="/api/s4" class="s4-back">← S4 Logistics</a>
+    <div class="s4-header">
+        <h2>🍽️ Meals &amp; Headcount</h2>
+        <div class="subtitle">Per-FTX meal plan. Headcount auto-derives from attending RSVPs + guests.</div>
+    </div>
+
+    {% if events %}
+    <div class="s4-grid">
+        {% for ev in events %}
+        {% set plan = plans.get(ev.id) %}
+        {% set hc = headcounts.get(ev.id, 0) %}
+        <div class="s4-card">
+            <h3 style="margin-bottom:6px;">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}</h3>
+            <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong></div>
+            {% if can_approve %}
+            <form method="post" action="/api/s4/meals/{{ ev.id }}">
+                <div class="s4-check"><input type="checkbox" name="sat_breakfast" {% if plan and plan.sat_breakfast %}checked{% endif %}> Sat Breakfast</div>
+                <div class="s4-check"><input type="checkbox" name="sat_lunch" {% if plan and plan.sat_lunch %}checked{% endif %}> Sat Lunch</div>
+                <div class="s4-check"><input type="checkbox" name="sat_dinner" {% if plan and plan.sat_dinner %}checked{% endif %}> Sat Dinner</div>
+                <div class="s4-check" style="margin-bottom:8px;"><input type="checkbox" name="sun_breakfast" {% if plan and plan.sun_breakfast %}checked{% endif %}> Sun Breakfast</div>
+                <div class="s4-field">
+                    <label>Menu / shopping notes</label>
+                    <textarea name="menu_notes" class="s4-textarea" style="min-height:50px;">{{ plan.menu_notes or '' if plan else '' }}</textarea>
+                </div>
+                <div class="s4-field">
+                    <label>Assigned cook / buyer</label>
+                    <select name="assigned_to" class="s4-select">
+                        <option value="">— none —</option>
+                        {% for m in members %}
+                        <option value="{{ m.id }}" {% if plan and plan.assigned_to_id == m.id %}selected{% endif %}>{{ names.get(m.id, m.last_name) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="s4-btn s4-btn-sm">Save meal plan</button>
+            </form>
+            {% else %}
+            <div class="s4-muted">
+                {% if plan %}
+                    {% set meals = [] %}
+                    {% if plan.sat_breakfast %}{% set _ = meals.append('Sat B') %}{% endif %}
+                    {% if plan.sat_lunch %}{% set _ = meals.append('Sat L') %}{% endif %}
+                    {% if plan.sat_dinner %}{% set _ = meals.append('Sat D') %}{% endif %}
+                    {% if plan.sun_breakfast %}{% set _ = meals.append('Sun B') %}{% endif %}
+                    {{ meals|join(', ') or 'No meals planned' }}
+                {% else %}No meal plan yet.{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="s4-card"><div class="s4-empty">No upcoming FTX/MCFTX events.</div></div>
+    {% endif %}
+</div>
+{% endblock %}

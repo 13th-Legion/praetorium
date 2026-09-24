@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses — S4{% endblock %}
+
+{% block content %}
+{% include "partials/s4_styles.html" %}
+
+<div class="s4-wrap">
+    <a href="/api/s4" class="s4-back">← S4 Logistics</a>
+    <div class="s4-header">
+        <h2>💵 Expense Reimbursement</h2>
+        <div class="subtitle">Submit receipts for out-of-pocket unit expenses. S4 reviews → approves → marks reimbursed.</div>
+    </div>
+
+    <div class="s4-card">
+        <h3>Submit an expense</h3>
+        <form method="post" action="/api/s4/expenses" enctype="multipart/form-data">
+            <div class="s4-field"><label>Title</label><input name="title" class="s4-input" placeholder="March FTX Groceries" required></div>
+            <div class="s4-field"><label>Amount ($)</label><input name="amount" type="number" step="0.01" min="0.01" class="s4-input" required></div>
+            <div class="s4-field">
+                <label>Event (optional)</label>
+                <select name="event_id" class="s4-select">
+                    <option value="">— none —</option>
+                    {% for ev in events %}
+                    <option value="{{ ev.id }}">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+            <div class="s4-field"><label>Receipt (photo or PDF)</label><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic" class="s4-input" style="padding:6px;"></div>
+            <button class="s4-btn">Submit</button>
+        </form>
+    </div>
+
+    <div class="s4-card">
+        <h3>{% if can_manage %}All expenses{% else %}My expenses{% endif %}</h3>
+        {% if expenses %}
+        <table class="s4-table">
+            <tr><th>Title</th>{% if can_manage %}<th>Member</th>{% endif %}<th>Amount</th><th>Receipt</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for e in expenses %}
+            <tr>
+                <td>{{ e.title }}{% if e.description %}<div class="s4-muted">{{ e.description }}</div>{% endif %}</td>
+                {% if can_manage %}<td>{{ names.get(e.member_id, '—') }}</td>{% endif %}
+                <td>${{ '%.2f'|format(e.amount) }}</td>
+                <td>{% if e.receipt_url %}<a class="s4-receipt" href="https://cloud.13thlegion.org{{ e.receipt_url }}" target="_blank">View ↗</a>{% else %}<span class="s4-muted">—</span>{% endif %}</td>
+                <td><span class="s4-badge badge-{{ e.status }}">{{ e.status }}</span></td>
+                {% if can_approve %}
+                <td>
+                    {% if e.status == 'pending' %}
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/approve" class="s4-inline"><button class="s4-btn s4-btn-sm">Approve</button></form>
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/reject" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Reject</button></form>
+                    {% elif e.status == 'approved' %}
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/reimburse" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark reimbursed</button></form>
+                    {% elif e.status == 'reimbursed' %}
+                    <span class="s4-muted">Paid {{ e.reimbursed_at.strftime('%d %b') if e.reimbursed_at else '' }}</span>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No expenses yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
