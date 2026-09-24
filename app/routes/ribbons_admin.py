@@ -139,6 +139,8 @@ async def grant_ribbon(request: Request, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Unknown ribbon code")
     if cat.section == "tenure":
         return HTMLResponse('<p style="color:#ef6c00;">⚠️ Tenure discs are auto-computed from join date, not granted.</p>')
+    if cat.section == "tab":
+        return HTMLResponse('<p style="color:#ef6c00;">⚠️ Tabs are awarded automatically from qualifications, not granted here.</p>')
 
     # clamp device count
     if cat.max_devices and device_count > cat.max_devices:

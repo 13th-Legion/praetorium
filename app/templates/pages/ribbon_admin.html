@@ -4,7 +4,7 @@
 {% block content %}
 <div style="max-width:900px;margin:0 auto;">
     <h1>🎖️ Award Ribbons &amp; Decorations</h1>
-    <p style="color:#aaa;margin-bottom:20px;">Grant decorations, ribbons, and tabs to members. Tenure discs (Anni Stipendiorum) are computed automatically from join date and are not granted here.</p>
+    <p style="color:#aaa;margin-bottom:20px;">Grant decorations and ribbons to members. Tabs (Sabre, Marksman, Sharpshooter, Equites) are awarded automatically from qualifications, and tenure discs (Anni Stipendiorum) are computed from join date — neither is granted here.</p>
 
     <!-- Member selector -->
     <div class="card" style="margin-bottom:20px;">
@@ -28,12 +28,12 @@
                       hx-on::after-request="if(event.detail.successful){refreshCurrent();}">
                     <input type="hidden" name="member_id" id="grant-member-id">
 
-                    <label style="font-size:12px;color:#aaa;">Ribbon / Decoration / Tab</label>
+                    <label style="font-size:12px;color:#aaa;">Ribbon / Decoration</label>
                     <select name="code" id="code-select" class="edit-input" style="width:100%;margin-bottom:10px;"
                             onchange="onCode(this)">
                         <option value="">— Select —</option>
                         {% for sec in section_order %}
-                        {% if grouped[sec] and sec != 'tenure' %}
+                        {% if grouped[sec] and sec not in ('tenure', 'tab') %}
                         <optgroup label="{{ section_labels[sec] }}">
                             {% for c in grouped[sec] %}
                             <option value="{{ c.code }}" data-dev="{{ c.device_increment }}" data-max="{{ c.max_devices }}"
