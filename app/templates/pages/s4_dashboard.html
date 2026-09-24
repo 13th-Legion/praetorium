@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}S4 Logistics — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .s4-wrap { max-width: 1080px; margin: 0 auto; }
+    .s4-header { margin-bottom: 24px; }
+    .s4-header h2 { color: #d4a537; margin: 0 0 4px; }
+    .s4-header .subtitle { color: #888; font-size: 13px; }
+
+    .s4-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .s4-nav a {
+        padding: 7px 14px; border-radius: 4px; font-size: 13px; font-weight: 600;
+        color: #ccc; text-decoration: none; background: #16213e; border: 1px solid #333;
+    }
+    .s4-nav a:hover { border-color: #d4a537; color: #d4a537; }
+
+    .s4-card {
+        background: #16213e; border: 1px solid #333; border-radius: 8px;
+        margin-bottom: 24px; padding: 16px 20px;
+    }
+    .s4-card h3 {
+        margin: 0 0 12px; font-family: 'Oswald', sans-serif; font-size: 0.95rem;
+        text-transform: uppercase; letter-spacing: 0.05em; color: #d4a537;
+    }
+    .s4-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+
+    .s4-flash {
+        background: rgba(40,167,69,0.15); border: 1px solid rgba(40,167,69,0.4);
+        color: #28a745; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;
+        font-size: 14px; font-weight: 600;
+    }
+    .s4-err {
+        background: rgba(220,53,69,0.15); border: 1px solid rgba(220,53,69,0.4); color: #dc3545;
+    }
+
+    .s4-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .s4-table th { text-align: left; color: #888; font-weight: 600; padding: 8px 8px; border-bottom: 1px solid #333; }
+    .s4-table td { padding: 8px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e0e0e0; vertical-align: top; }
+    .s4-table tr:last-child td { border-bottom: none; }
+
+    .s4-input, .s4-select, .s4-textarea {
+        background: #0f1626; border: 1px solid #333; color: #e0e0e0;
+        padding: 8px 12px; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box;
+    }
+    .s4-textarea { min-height: 70px; resize: vertical; }
+    .s4-field { margin-bottom: 10px; }
+    .s4-field label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+
+    .s4-btn {
+        padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;
+        border: 1px solid rgba(40,167,69,0.4); background: rgba(40,167,69,0.15); color: #28a745;
+    }
+    .s4-btn:hover { background: rgba(40,167,69,0.3); }
+    .s4-btn-sm { padding: 4px 10px; font-size: 12px; }
+    .s4-btn-mut { background: rgba(220,53,69,0.15); border-color: rgba(220,53,69,0.4); color: #dc3545; }
+    .s4-btn-mut:hover { background: rgba(220,53,69,0.3); }
+    .s4-btn-warn { background: rgba(255,193,7,0.15); border-color: rgba(255,193,7,0.4); color: #ffc107; }
+    .s4-btn-warn:hover { background: rgba(255,193,7,0.3); }
+
+    .s4-inline { display: inline-block; }
+    .s4-muted { color: #777; font-size: 12px; }
+    .s4-badge {
+        display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+    }
+    .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+    .badge-approved { background: rgba(40,167,69,0.15); color: #28a745; }
+    .badge-reimbursed { background: rgba(40,167,69,0.3); color: #7ee2a0; }
+    .badge-rejected, .badge-denied { background: rgba(220,53,69,0.15); color: #dc3545; }
+    .badge-purchased { background: rgba(23,162,184,0.15); color: #17a2b8; }
+    .badge-received { background: rgba(40,167,69,0.3); color: #7ee2a0; }
+    .badge-available { background: rgba(40,167,69,0.15); color: #28a745; }
+    .badge-checked_out { background: rgba(255,193,7,0.15); color: #ffc107; }
+    .badge-retired, .badge-maintenance { background: #333; color: #999; }
+
+    .s4-check { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; font-size: 13px; color: #aaa; }
+    .s4-check input { accent-color: #d4a537; }
+
+    .s4-empty { text-align: center; padding: 20px; color: #555; font-size: 13px; font-style: italic; }
+    .s4-receipt { color: #17a2b8; text-decoration: none; font-size: 12px; }
+</style>
+
+<div class="s4-wrap">
+    <div class="s4-header">
+        <h2>📦 S4 — Logistics</h2>
+        <div class="subtitle">Meals, money, gear, and inventory.</div>
+    </div>
+
+    <div class="s4-nav">
+        <a href="#meals">🍽️ Meals</a>
+        <a href="#expenses">💵 Expenses</a>
+        <a href="#purchases">🛒 Purchases</a>
+        <a href="#donations">🎁 Donations</a>
+        <a href="#inventory">📋 Inventory</a>
+    </div>
+
+    <!-- ── 1. Meals & Headcount ─────────────────────────────────────────── -->
+    <div class="s4-card" id="meals">
+        <h3>🍽️ Meals &amp; Headcount</h3>
+        {% if events %}
+        <div class="s4-grid">
+            {% for ev in events %}
+            {% set plan = plans.get(ev.id) %}
+            {% set hc = headcounts.get(ev.id, 0) %}
+            <div>
+                <div style="font-size:14px;font-weight:600;color:#e0e0e0;margin-bottom:6px;">
+                    {{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}
+                </div>
+                <div class="s4-muted" style="margin-bottom:8px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong> (attending RSVPs + guests)</div>
+                {% if can_approve %}
+                <form method="post" action="/api/s4/meals/{{ ev.id }}">
+                    <div class="s4-check"><input type="checkbox" name="sat_breakfast" {% if plan and plan.sat_breakfast %}checked{% endif %}> Sat Breakfast</div>
+                    <div class="s4-check"><input type="checkbox" name="sat_lunch" {% if plan and plan.sat_lunch %}checked{% endif %}> Sat Lunch</div>
+                    <div class="s4-check"><input type="checkbox" name="sat_dinner" {% if plan and plan.sat_dinner %}checked{% endif %}> Sat Dinner</div>
+                    <div class="s4-check" style="margin-bottom:8px;"><input type="checkbox" name="sun_breakfast" {% if plan and plan.sun_breakfast %}checked{% endif %}> Sun Breakfast</div>
+                    <div class="s4-field">
+                        <label>Menu / shopping notes</label>
+                        <textarea name="menu_notes" class="s4-textarea" style="min-height:50px;">{{ plan.menu_notes or '' if plan else '' }}</textarea>
+                    </div>
+                    <div class="s4-field">
+                        <label>Assigned cook / buyer</label>
+                        <select name="assigned_to" class="s4-select">
+                            <option value="">— none —</option>
+                            {% for m in members %}
+                            <option value="{{ m.id }}" {% if plan and plan.assigned_to_id == m.id %}selected{% endif %}>{{ names.get(m.id, m.last_name) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="s4-btn s4-btn-sm">Save meal plan</button>
+                </form>
+                {% else %}
+                <div class="s4-muted">
+                    {% if plan %}
+                        {% set meals = [] %}
+                        {% if plan.sat_breakfast %}{% set _ = meals.append('Sat B') %}{% endif %}
+                        {% if plan.sat_lunch %}{% set _ = meals.append('Sat L') %}{% endif %}
+                        {% if plan.sat_dinner %}{% set _ = meals.append('Sat D') %}{% endif %}
+                        {% if plan.sun_breakfast %}{% set _ = meals.append('Sun B') %}{% endif %}
+                        {{ meals|join(', ') or 'No meals planned' }}
+                    {% else %}No meal plan yet.{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="s4-empty">No upcoming FTX/MCFTX events.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── 2. Expenses ──────────────────────────────────────────────────── -->
+    <div class="s4-card" id="expenses">
+        <h3>💵 Expense Reimbursement</h3>
+        <details style="margin-bottom:16px;">
+            <summary style="cursor:pointer;color:#d4a537;font-size:13px;font-weight:600;">+ Submit an expense</summary>
+            <form method="post" action="/api/s4/expenses" enctype="multipart/form-data" style="margin-top:12px;">
+                <div class="s4-field"><label>Title</label><input name="title" class="s4-input" placeholder="March FTX Groceries" required></div>
+                <div class="s4-field"><label>Amount ($)</label><input name="amount" type="number" step="0.01" min="0.01" class="s4-input" required></div>
+                <div class="s4-field">
+                    <label>Event (optional)</label>
+                    <select name="event_id" class="s4-select">
+                        <option value="">— none —</option>
+                        {% for ev in events %}
+                        <option value="{{ ev.id }}">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+                <div class="s4-field"><label>Receipt (photo or PDF)</label><input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic" class="s4-input" style="padding:6px;"></div>
+                <button class="s4-btn">Submit</button>
+            </form>
+        </details>
+
+        {% if expenses %}
+        <table class="s4-table">
+            <tr><th>Title</th><th>Member</th><th>Amount</th><th>Receipt</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for e in expenses %}
+            <tr>
+                <td>{{ e.title }}{% if e.description %}<div class="s4-muted">{{ e.description }}</div>{% endif %}</td>
+                <td>{{ names.get(e.member_id, '—') }}</td>
+                <td>${{ '%.2f'|format(e.amount) }}</td>
+                <td>{% if e.receipt_url %}<a class="s4-receipt" href="https://cloud.13thlegion.org{{ e.receipt_url }}" target="_blank">View ↗</a>{% else %}<span class="s4-muted">—</span>{% endif %}</td>
+                <td><span class="s4-badge badge-{{ e.status }}">{{ e.status }}</span></td>
+                {% if can_approve %}
+                <td>
+                    {% if e.status == 'pending' %}
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/approve" class="s4-inline"><button class="s4-btn s4-btn-sm">Approve</button></form>
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/reject" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Reject</button></form>
+                    {% elif e.status == 'approved' %}
+                    <form method="post" action="/api/s4/expenses/{{ e.id }}/reimburse" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark reimbursed</button></form>
+                    {% elif e.status == 'reimbursed' %}
+                    <span class="s4-muted">Paid {{ e.reimbursed_at.strftime('%d %b') if e.reimbursed_at else '' }}</span>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No expenses yet.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── 3. Purchase Requests ─────────────────────────────────────────── -->
+    <div class="s4-card" id="purchases">
+        <h3>🛒 Purchase Requests</h3>
+        <details style="margin-bottom:16px;">
+            <summary style="cursor:pointer;color:#d4a537;font-size:13px;font-weight:600;">+ Request a purchase</summary>
+            <form method="post" action="/api/s4/purchases" style="margin-top:12px;">
+                <div class="s4-field"><label>Item name</label><input name="item_name" class="s4-input" required></div>
+                <div class="s4-field"><label>URL (optional)</label><input name="url" class="s4-input" placeholder="https://…"></div>
+                <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="s4-field"><label>Estimated cost ($)</label><input name="estimated_cost" type="number" step="0.01" min="0.01" class="s4-input" required></div>
+                    <div class="s4-field"><label>Quantity</label><input name="quantity" type="number" min="1" value="1" class="s4-input"></div>
+                </div>
+                <div class="s4-field"><label>Justification</label><textarea name="justification" class="s4-textarea" required></textarea></div>
+                <button class="s4-btn">Submit</button>
+            </form>
+        </details>
+
+        {% if purchases %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Requester</th><th>Cost</th><th>Qty</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for p in purchases %}
+            <tr>
+                <td>{{ p.item_name }}{% if p.url %}<div><a class="s4-receipt" href="{{ p.url }}" target="_blank">{{ p.url[:40] }}</a></div>{% endif %}</td>
+                <td>{{ names.get(p.requester_id, '—') }}</td>
+                <td>${{ '%.2f'|format(p.estimated_cost) }}</td>
+                <td>{{ p.quantity }}</td>
+                <td><span class="s4-badge badge-{{ p.status }}">{{ p.status }}</span>{% if p.denial_reason %}<div class="s4-muted">{{ p.denial_reason }}</div>{% endif %}</td>
+                {% if can_approve %}
+                <td>
+                    {% if p.status == 'pending' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/approve" class="s4-inline"><button class="s4-btn s4-btn-sm">Approve</button></form>
+                    <details class="s4-inline"><summary class="s4-btn s4-btn-sm s4-btn-mut" style="display:inline-block;">Deny</summary>
+                        <form method="post" action="/api/s4/purchases/{{ p.id }}/deny" style="margin-top:6px;">
+                            <input name="denial_reason" class="s4-input" placeholder="Reason" style="margin-bottom:4px;">
+                            <button class="s4-btn s4-btn-sm s4-btn-mut">Confirm deny</button>
+                        </form>
+                    </details>
+                    {% elif p.status == 'approved' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/advance" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-warn">Mark purchased</button></form>
+                    {% elif p.status == 'purchased' %}
+                    <form method="post" action="/api/s4/purchases/{{ p.id }}/advance" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark received</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No purchase requests.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── 4. Equipment Donations ───────────────────────────────────────── -->
+    <div class="s4-card" id="donations">
+        <h3>🎁 Equipment Donations</h3>
+        <details style="margin-bottom:16px;">
+            <summary style="cursor:pointer;color:#d4a537;font-size:13px;font-weight:600;">+ Offer a donation</summary>
+            <form method="post" action="/api/s4/donations" style="margin-top:12px;">
+                <div class="s4-field"><label>Item name</label><input name="item_name" class="s4-input" required></div>
+                <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="s4-field">
+                        <label>Condition</label>
+                        <select name="condition" class="s4-select">
+                            <option>New</option><option>Good</option><option>Fair</option><option>Poor</option>
+                        </select>
+                    </div>
+                    <div class="s4-field"><label>Quantity</label><input name="quantity" type="number" min="1" value="1" class="s4-input"></div>
+                </div>
+                <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+                <button class="s4-btn">Submit</button>
+            </form>
+        </details>
+
+        {% if donations %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Donor</th><th>Condition</th><th>Qty</th><th>Status</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for d in donations %}
+            <tr>
+                <td>{{ d.item_name }}</td>
+                <td>{{ names.get(d.donor_id, '—') }}</td>
+                <td>{{ d.condition }}</td>
+                <td>{{ d.quantity }}</td>
+                <td><span class="s4-badge badge-{{ d.status }}">{{ d.status|replace('_',' ') }}</span></td>
+                {% if can_approve %}
+                <td>
+                    {% if d.status == 'submitted' %}
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/accept" class="s4-inline"><button class="s4-btn s4-btn-sm">Accept</button></form>
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/reject" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Reject</button></form>
+                    {% elif d.status == 'accepted_pending_dropoff' %}
+                    <form method="post" action="/api/s4/donations/{{ d.id }}/received" class="s4-inline"><button class="s4-btn s4-btn-sm">Mark received</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No donations.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── 5. Inventory + Possession Log ────────────────────────────────── -->
+    <div class="s4-card" id="inventory">
+        <h3>📋 Supply Inventory</h3>
+        {% if can_approve %}
+        <details style="margin-bottom:16px;">
+            <summary style="cursor:pointer;color:#d4a537;font-size:13px;font-weight:600;">+ Add item</summary>
+            <form method="post" action="/api/s4/inventory" style="margin-top:12px;">
+                <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="s4-field"><label>Name</label><input name="name" class="s4-input" required></div>
+                    <div class="s4-field"><label>Category</label><input name="category" class="s4-input" placeholder="Comms, Medical, Camp…" required></div>
+                </div>
+                <div class="s4-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                    <div class="s4-field"><label>Serial # (optional)</label><input name="serial_number" class="s4-input"></div>
+                    <div class="s4-field"><label>Condition</label><input name="condition" class="s4-input" value="Good"></div>
+                    <div class="s4-field"><label>Location (optional)</label><input name="location" class="s4-input" placeholder="S4 Connex"></div>
+                </div>
+                <div class="s4-field"><label>Description (optional)</label><textarea name="description" class="s4-textarea"></textarea></div>
+                <button class="s4-btn">Add item</button>
+            </form>
+        </details>
+        {% endif %}
+
+        {% if inventory %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Category</th><th>Condition</th><th>Status</th><th>Location</th><th>QR</th>{% if can_approve %}<th>Actions</th>{% endif %}</tr>
+            {% for item in inventory %}
+            <tr>
+                <td>{{ item.name }}{% if item.serial_number %}<div class="s4-muted">SN {{ item.serial_number }}</div>{% endif %}</td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.condition }}</td>
+                <td><span class="s4-badge badge-{{ item.status }}">{{ item.status|replace('_',' ') }}</span></td>
+                <td>{{ item.location or '—' }}</td>
+                <td><a href="/api/s4/inventory/{{ item.id }}/qr" target="_blank" class="s4-receipt">QR ↗</a></td>
+                {% if can_approve %}
+                <td>
+                    <a href="/api/s4/inventory/{{ item.id }}/checkout" class="s4-btn s4-btn-sm" style="text-decoration:none;display:inline-block;">Check in/out</a>
+                    {% if item.status != 'retired' %}
+                    <form method="post" action="/api/s4/inventory/{{ item.id }}/retire" class="s4-inline"><button class="s4-btn s4-btn-sm s4-btn-mut">Retire</button></form>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">No inventory items.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Possession Log ───────────────────────────────────────────────── -->
+    <div class="s4-card" id="possession">
+        <h3>🔁 Possession Log</h3>
+        {% if checkouts %}
+        <table class="s4-table">
+            <tr><th>Item</th><th>Held by</th><th>Checked out</th><th>Returned</th><th>Condition</th></tr>
+            {% for c in checkouts %}
+            <tr>
+                <td>{% if c.item %}{{ c.item.name }}{% else %}#{{ c.item_id }}{% endif %}</td>
+                <td>{{ names.get(c.member_id, '—') }}</td>
+                <td>{{ c.checked_out_at.strftime('%d %b %Y') }}</td>
+                <td>{% if c.checked_in_at %}{{ c.checked_in_at.strftime('%d %b %Y') }}{% else %}<span class="s4-badge badge-checked_out">out</span>{% endif %}</td>
+                <td>{{ c.return_condition or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="s4-empty">Nothing has been checked out yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
