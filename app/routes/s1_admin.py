@@ -773,14 +773,14 @@ async def recruiter_dashboard(request: Request, db: AsyncSession = Depends(get_d
             roster_members.append(m)
 
     # Fetch applicants from Deck pipeline (not portal DB recruits)
-    applicants = await _fetch_pipeline_applicants()
+    # (Removed 2026-09-23: the pipeline table was deleted from s1_recruiters.html;
+    #  card movement now lives only on the /s1/pipeline kanban board.)
 
     return templates.TemplateResponse("pages/s1_recruiters.html", {
         "request": request,
         "user": user,
         "recruiters": recruiters,
         "roster_members": roster_members,
-        "applicants": applicants,
     })
 
 
