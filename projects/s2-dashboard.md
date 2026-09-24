@@ -24,7 +24,10 @@ S2 generally provides, per FTX:
 - Coordinate early arrival and security
 - **OPEN:** anything else?
 
-**De-flocked routes — OPEN:** preferred app?
+**De-flocked routes (Harpoon, 2026-09-24):** routes are built in **Flock Hopper**
+(navigation points) and then manually **transferred into Google Maps**. Pain
+point: the manual re-entry. S2 may want the dashboard to hold the route
+(nav points) so it doesn't have to be hand-copied — format/open question below.
 
 ### Challenge / Password / Running Password
 Classic recognition/OPSEC signals, distinct from the code words above:
@@ -55,6 +58,14 @@ report). Include in the dashboard.
 **LOCKED (Cav, 2026-09-24):** dissemination = **BOTH tiers** (unit-wide front-page
 alert + S2/Command-only), and include **all IIR fields**.
 
+**Harpoon (2026-09-24):**
+- **Both reporting types may be needed** — IIR (finished intel) *and* SALUTE-style
+  combat info. Can't think of a current example, but don't rule it out.
+- **Dissemination leans wide** — no current example of security intel that *shouldn't*
+  go to the whole company; if it's important enough to share, it probably needs to
+  be disseminated. Keep the tiered option (S2/Command-only) available, but default
+  thinking is: share it.
+
 Standard IIR fields to model (doctrine format defers to DIAM 58-12, which is
 classified and not on hand; these are the well-established IIR sections):
 1. **Report number / DTG** — unique id + date-time-group
@@ -76,21 +87,32 @@ intelligence"** — this should render on unit-wide IIR alerts.
 ## Other S2 features — OPEN
 Awaiting S2 feedback.
 
+## Training Site Maps (NEW — Harpoon, 2026-09-24)
+S2 should **own the training-site map library**:
+- Add / remove **training sites**.
+- **Upload maps** per training site.
+- These then **populate the FTX event builder's "training site" dropdown**, and the
+  selected site's map(s) **auto-populate into the FTX**. (Today there is no interface
+  to manage training sites or upload maps — this is a gap.)
+
 ---
 
 ## Open questions (for S2 feedback, dropped 2026-09-24)
 1. FTX responsibilities: anything beyond RP / RP→AO route / weather / code words /
    challenge/password/running-password / early-arrival+security coordination?
-2. De-flocked routes: preferred app?
+2. ~~De-flocked routes: preferred app?~~ → **Flock Hopper for nav points, then
+   manually transferred to Google Maps.** OPEN: should the dashboard store the
+   route (nav points / GPX / Google Maps link) so it isn't hand-copied?
 3. Challenge/password/running-password: how should rotation work — per time
    interval, per mission, or both? Who consumes it (sentry roster, guard duty, all
    leaders)?
 4. Intel products: area studies get their own repo, linked into the dashboard
    (not folded in). Content is ~7 months stale + not version-controlled — needs
    a git repo + refresh.
-5. Reporting system: **IIR** (not SALUTE). LOCKED: both tiers + all IIR fields
-   (see field list above).
-6. Other S2 features wanted in the dashboard?
+5. Reporting system: **IIR** (not SALUTE). LOCKED: both tiers + all IIR fields.
+   Harpoon: both IIR + SALUTE may be needed; dissemination leans wide.
+6. Other S2 features wanted in the dashboard? → **Training-site map library**
+   (S2 manages sites + maps; populates FTX training-site dropdown + auto-maps).
 
 ---
 
