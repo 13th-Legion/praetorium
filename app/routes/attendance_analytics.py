@@ -126,7 +126,7 @@ async def attendance_analytics(request: Request):
             attended = len([r for r in evt_rsvps if r.attended])
             rsvp_attending = len([r for r in evt_rsvps if r.status in POSITIVE_RSVP])
             declined = len([r for r in evt_rsvps if r.status == "declined"])
-            no_show = len([r for r in evt_rsvps if r.status in POSITIVE_RSVP and not r.attended])
+            no_show = len([r for r in evt_rsvps if r.no_show or (r.status in POSITIVE_RSVP and not r.attended)])
 
             from app.routes.events import _to_cdt
             local_dt = _to_cdt(evt.date_start)
@@ -171,7 +171,7 @@ async def attendance_analytics(request: Request):
             # "missed" month must never register as a no-show.
             no_show_count = len([
                 r for r in m_rsvps
-                if r.status in POSITIVE_RSVP and not r.attended
+                if (r.no_show or (r.status in POSITIVE_RSVP and not r.attended))
                 and r.event_id in thirteenth_event_ids
             ])
 

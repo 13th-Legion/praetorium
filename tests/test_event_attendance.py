@@ -217,3 +217,131 @@ async def test_uncheckin_endpoint_clears_ops_and_official(
         )).scalar_one()
         assert got.checked_in is False
         assert got.attended is False
+
+
+# ─── First-class no-show flag ────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_mark_no_show_clears_checkin_and_attendance(db_session):
+    event = await make_event(db_session, title="Field Training Exercise",
+                             date_start=datetime(2026, 9, 11, 19, 0))
+    older = await make_event(db_session, title="Older FTX",
+                             date_start=datetime(2026, 7, 10, 19, 0))
+    m = await make_member(db_session, ftx_count=2, last_ftx=date(2026, 9, 11))
+    rsvp = await make_rsvp(db_session, event, m, attended=True, checked_in=True,
+                           checked_in_by="levi.kavadas", status="attending")
+    await make_rsvp(db_session, older, m, attended=True, checked_in=True)
+    await db_session.commit()
+
+    await attendance_svc.mark_no_show(db_session, event, rsvp)
+    await db_session.commit()
+    await db_session.refresh(rsvp)
+    await db_session.refresh(m)
+
+    assert rsvp.no_show is True
+    assert rsvp.checked_in is False
+    assert rsvp.attended is False
+    assert rsvp.checked_in_by is None
+    assert m.ftx_count == 1
+    assert m.last_ftx == date(2026, 7, 10)
+
+
+@pytest.mark.asyncio
+async def test_clear_no_show_only_clears_flag(db_session):
+    event = await make_event(db_session)
+    m = await make_member(db_session)
+    rsvp = await make_rsvp(db_session, event, m, attended=False, checked_in=False,
+                           status="attending", no_show=True)
+    await db_session.commit()
+
+    await attendance_svc.clear_no_show(rsvp)
+    await db_session.commit()
+    await db_session.refresh(rsvp)
+
+    assert rsvp.no_show is False
+    assert rsvp.attended is False
+    assert rsvp.checked_in is False
+
+
+@pytest.mark.asyncio
+async def test_toggle_no_show_endpoint_marks_and_clears(
+    auth_client, db_session, patch_global_session, db_sessionmaker
+):
+    event = await make_event(db_session, title="FTX No-Show Toggle")
+    m = await make_member(db_session, last_name="Ghost")
+    rsvp = await make_rsvp(db_session, event, m, attended=False, checked_in=False,
+                           status="attending")
+    await db_session.commit()
+
+    tok = _csrf(auth_client)
+    # Mark no-show
+    resp = auth_client.post(
+        f"/api/events/{event.id}/no-show/{rsvp.id}",
+        data={"csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+    )
+    assert resp.status_code == 200, resp.text
+    async with db_sessionmaker() as s:
+        got = (await s.execute(
+            select(EventRSVP).where(EventRSVP.id == rsvp.id)
+        )).scalar_one()
+        assert got.no_show is True
+
+    # Clear no-show
+    resp = auth_client.post(
+        f"/api/events/{event.id}/no-show/{rsvp.id}",
+        data={"csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+    )
+    assert resp.status_code == 200, resp.text
+    async with db_sessionmaker() as s:
+        got = (await s.execute(
+            select(EventRSVP).where(EventRSVP.id == rsvp.id)
+        )).scalar_one()
+        assert got.no_show is False
+
+
+@pytest.mark.asyncio
+async def test_marking_present_clears_no_show(
+    auth_client, db_session, patch_global_session, db_sessionmaker
+):
+    event = await make_event(db_session, title="FTX Present Overrides No-Show")
+    m = await make_member(db_session)
+    rsvp = await make_rsvp(db_session, event, m, attended=False, checked_in=False,
+                           status="attending", no_show=True)
+    await db_session.commit()
+
+    tok = _csrf(auth_client)
+    resp = auth_client.post(
+        f"/api/events/{event.id}/attendance/{rsvp.id}",
+        data={"csrf_token": tok},
+        headers={"X-CSRF-Token": tok},
+    )
+    assert resp.status_code == 200, resp.text
+    async with db_sessionmaker() as s:
+        got = (await s.execute(
+            select(EventRSVP).where(EventRSVP.id == rsvp.id)
+        )).scalar_one()
+        assert got.attended is True
+        assert got.no_show is False
+
+
+@pytest.mark.asyncio
+async def test_roster_shows_no_show_bucket(
+    auth_client, db_session, patch_global_session
+):
+    event = await make_event(db_session)
+    ghost = await make_member(db_session, last_name="Ghost")
+    present = await make_member(db_session, last_name="Present")
+    await make_rsvp(db_session, event, ghost, attended=False, checked_in=False,
+                    status="attending", no_show=True)
+    await make_rsvp(db_session, event, present, attended=False, checked_in=True,
+                    status="attending")
+    await db_session.commit()
+
+    resp = auth_client.get(f"/api/events/{event.id}/attendance-roster")
+    assert resp.status_code == 200, resp.text
+    body = resp.text
+    assert 'id="att-no-show"' in body
+    assert "Ghost" in body
+    assert "No-show" in body

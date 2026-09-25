@@ -21,6 +21,33 @@ def is_present(rsvp: EventRSVP) -> bool:
     return bool(rsvp.attended or rsvp.checked_in)
 
 
+def is_no_show(rsvp: EventRSVP) -> bool:
+    """Explicit no-show flag (attending RSVP, confirmed absent)."""
+    return bool(rsvp.no_show)
+
+
+async def mark_no_show(db, event: Event, rsvp: EventRSVP) -> None:
+    """Mark a member as a no-show: clears any check-in/attendance and sets the flag.
+
+    No-show means they never scanned AND are not present; clear both day-of and
+    official attendance so Finalize cannot resurrect them, then set no_show.
+    """
+    rsvp.no_show = True
+    rsvp.checked_in = False
+    rsvp.checked_in_at = None
+    rsvp.checked_in_by = None
+    rsvp.attended = False
+    rsvp.updated_at = datetime.utcnow()
+    await reverse_auto_credits(db, event, rsvp.member_id)
+    await recompute_ftx_counters(db, rsvp.member_id)
+
+
+async def clear_no_show(rsvp: EventRSVP) -> None:
+    """Clear the no-show flag (e.g. when S1 later marks them present)."""
+    rsvp.no_show = False
+    rsvp.updated_at = datetime.utcnow()
+
+
 def event_ftx_date(event: Event):
     ds = event.date_start
     return ds.date() if ds is not None and hasattr(ds, "date") else ds

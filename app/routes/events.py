@@ -3309,7 +3309,43 @@ async def toggle_attendance(request: Request, event_id: int, rsvp_id: int):
             await attendance_svc.revoke_rsvp_attendance(db, event, rsvp)
         else:
             rsvp.attended = True
+            if rsvp.no_show:
+                rsvp.no_show = False
             rsvp.updated_at = datetime.utcnow()
+        await db.commit()
+
+        return await _attendance_roster_response(request, db, event_id)
+
+
+@router.post("/api/events/{event_id}/no-show/{rsvp_id}", response_class=HTMLResponse)
+@require_role("command", "s3", "s1", "admin")
+async def toggle_no_show(request: Request, event_id: int, rsvp_id: int):
+    """Toggle the explicit no-show flag on a member's RSVP.
+
+    Marking no-show clears check-in + attendance (they never showed); clearing
+    it just removes the flag (they revert to 'expected, not confirmed').
+    """
+    async with database.async_session() as db:
+        result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.id == rsvp_id, EventRSVP.event_id == event_id)
+            )
+        )
+        rsvp = result.scalar_one_or_none()
+        if not rsvp:
+            return HTMLResponse("RSVP not found", status_code=404)
+
+        ev_result = await db.execute(select(Event).where(Event.id == event_id))
+        event = ev_result.scalar_one_or_none()
+        if event and event.finalized_at:
+            return HTMLResponse(
+                '<div style="color:#ef5350;font-size:13px;">🔒 Event is finalized — attendance locked.</div>'
+            )
+
+        if attendance_svc.is_no_show(rsvp):
+            await attendance_svc.clear_no_show(rsvp)
+        else:
+            await attendance_svc.mark_no_show(db, event, rsvp)
         await db.commit()
 
         return await _attendance_roster_response(request, db, event_id)
@@ -3393,10 +3429,12 @@ async def _attendance_roster_response(request: Request, db, event_id: int):
     )
     roster_rows = roster_result.all()
 
-    present, expected, other = [], [], []
+    present, no_shows, expected, other = [], [], [], []
     for rsvp, member in roster_rows:
         if attendance_svc.is_present(rsvp):
             present.append((rsvp, member))
+        elif attendance_svc.is_no_show(rsvp):
+            no_shows.append((rsvp, member))
         elif rsvp.status == "attending":
             expected.append((rsvp, member))
         else:
@@ -3417,6 +3455,7 @@ async def _attendance_roster_response(request: Request, db, event_id: int):
         "request": request,
         "event": event,
         "present": present,
+        "no_shows": no_shows,
         "expected": expected,
         "other": other,
         "available": available,

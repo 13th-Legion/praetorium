@@ -174,6 +174,10 @@ class EventRSVP(Base):
     # Post-event confirmed attendance
     attended: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # First-class no-show: RSVP'd attending but did not attend (S1/Command marks
+    # post-event, distinct from "attendance not yet confirmed").
+    no_show: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
     # Event-scoped extra-duty exemption (PP-324). Not a standing member-profile flag.
     immunes: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 

@@ -35,7 +35,9 @@
       <td data-label="Callsign">{{ member.callsign or '—' }}</td>
       <td data-label="Team">{{ member.team or '—' }}</td>
       <td data-label="Status">
-        {% if rsvp.checked_in %}
+        {% if rsvp.no_show %}
+          <span class="badge-no-show">❌ No-show</span>
+        {% elif rsvp.checked_in %}
           <span class="badge-checkedin">✅ Checked In</span>
         {% else %}
           {% if can_checkin %}
