@@ -3,11 +3,30 @@
 import pytest
 
 from app.models.events import EventVexillation
-from app.models.ribbons import MemberRibbon
+from app.models.ribbons import MemberRibbon, RibbonCatalog
 from app.routes.events import _auto_award_mission_leader
 from tests.factories import make_member, make_event
 
 pytestmark = pytest.mark.integration
+
+
+async def _seed_mission_leader_catalog(db):
+    """Ensure the mission_leader code exists in ribbon_catalog (FK target).
+
+    CI builds its test schema via Base.metadata.create_all (no seed data), so
+    the migration-0011 seed never reaches it. Prod carries the row; tests must
+    insert their own.
+    """
+    from sqlalchemy import select
+    exists = (await db.execute(
+        select(RibbonCatalog).where(RibbonCatalog.code == "mission_leader")
+    )).scalar_one_or_none()
+    if not exists:
+        db.add(RibbonCatalog(
+            code="mission_leader", section="rack", name="Mission Leader",
+            precedence=8, claimable=True,
+        ))
+        await db.flush()
 
 
 async def _make_vex(db, event, commander_id=None, name="Alpha"):
@@ -24,6 +43,10 @@ async def _make_vex(db, event, commander_id=None, name="Alpha"):
 
 
 class TestMissionLeaderAutoAward:
+    @pytest.fixture(autouse=True)
+    async def _seed_catalog(self, db_session):
+        await _seed_mission_leader_catalog(db_session)
+
     async def test_awards_mission_leader_to_commander(self, db_session):
         ev = await make_event(db_session, category="ftx", title="Monthly FTX")
         m = await make_member(db_session)

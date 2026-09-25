@@ -1,7 +1,7 @@
 """S4 Logistics — RBAC helpers + model behavior."""
 
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 
@@ -104,7 +104,7 @@ class TestExpenseModel:
         await db_session.flush()
         e.status = "approved"
         e.status = "reimbursed"
-        e.reimbursed_at = datetime.now(timezone.utc)
+        e.reimbursed_at = datetime.utcnow()
         e.reimbursed_by_id = m.id
         await db_session.flush()
         assert e.status == "reimbursed"
@@ -172,7 +172,7 @@ class TestInventoryCheckout:
         assert open_co.member_id == m.id
 
         # Check back in.
-        open_co.checked_in_at = datetime.now(timezone.utc)
+        open_co.checked_in_at = datetime.utcnow()
         open_co.return_condition = "Good"
         item.status = "available"
         await db_session.flush()
