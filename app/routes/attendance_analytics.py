@@ -150,6 +150,8 @@ async def attendance_analytics(request: Request):
         avg_rate = round(sum(e["rate"] for e in event_stats) / n_event_stats) if n_event_stats else 0
 
         # === Per-Member Stats ===
+        event_map = {e.id: e for e in events}
+        from app.routes.events import _to_cdt
         member_stats = []
         for m in all_members:
             # Eligible events = finalized events on or after this member's join date
@@ -169,11 +171,24 @@ async def attendance_analytics(request: Request):
             # No-shows ONLY count for 13th Legion events. Pre-13th attendance is
             # historical *credit* with no real RSVP/check-in data, so a backfilled
             # "missed" month must never register as a no-show.
-            no_show_count = len([
+            no_show_rsvps = [
                 r for r in m_rsvps
                 if (r.no_show or (r.status in POSITIVE_RSVP and not r.attended))
                 and r.event_id in thirteenth_event_ids
-            ])
+            ]
+            no_show_count = len(no_show_rsvps)
+
+            # Missed-event detail for the clickable no-show modal.
+            no_show_events = []
+            for r in no_show_rsvps:
+                ev = event_map.get(r.event_id)
+                if ev:
+                    no_show_events.append({
+                        "id": ev.id,
+                        "title": ev.title,
+                        "date": _to_cdt(ev.date_start).strftime("%d %b %Y"),
+                    })
+            no_show_events.sort(key=lambda x: x["id"], reverse=True)
 
             # Attendance rate = attended (in eligible window) / eligible events.
             rate = min(round(attended_count / eligible_count * 100), 100) if eligible_count else 0
@@ -184,7 +199,6 @@ async def attendance_analytics(request: Request):
             if attended_event_ids:
                 last_evt = next((e for e in events if e.id in attended_event_ids), None)
                 if last_evt:
-                    from app.routes.events import _to_cdt
                     last_attended = _to_cdt(last_evt.date_start).strftime("%b %Y")
 
             rank = _ranks.abbr_map().get(m.rank_grade, "")
@@ -200,6 +214,7 @@ async def attendance_analytics(request: Request):
                 "total": eligible_count,
                 "rate": rate,
                 "no_shows": no_show_count,
+                "no_show_events": no_show_events,
                 "last_attended": last_attended or "Never",
                 "status": m.status,
                 "join_date": m.join_date,

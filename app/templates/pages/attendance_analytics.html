@@ -263,7 +263,9 @@
                         <td style="padding: 8px; text-align: center;">
                             <span style="font-weight: 600; color: {% if m.rate >= 60 %}#4caf50{% elif m.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ m.rate }}%</span>
                         </td>
-                        <td style="padding: 8px; text-align: center; color: {% if m.no_shows > 0 %}#ef5350{% else %}#4caf50{% endif %};">{{ m.no_shows }}</td>
+                        <td style="padding: 8px; text-align: center; color: {% if m.no_shows > 0 %}#ef5350{% else %}#4caf50{% endif %};">
+                            {% if m.no_shows > 0 %}<button type="button" onclick="openNoShowModal(this)" data-name="{{ m.name }}" data-events='{{ m.no_show_events | tojson }}' style="background:none;border:none;padding:0;color:#ef5350;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-size:13px;">{{ m.no_shows }}</button>{% else %}{{ m.no_shows }}{% endif %}
+                        </td>
                         <td style="padding: 8px; text-align: center; color: #888; font-size: 12px;">{{ m.last_attended }}</td>
                     </tr>
                     {% endfor %}
@@ -292,7 +294,9 @@
                     <tr style="border-bottom: 1px solid #2a2a3e;">
                         <td style="padding: 8px;"><a href="/profile/{{ m.id }}" style="color: #d4a537; text-decoration: none;">{{ m.name }}</a>{% if m.callsign %}<span style="color: #666; font-size: 11px;"> ({{ m.callsign }})</span>{% endif %}</td>
                         <td style="padding: 8px; text-align: center; color: #ccc; font-size: 12px;">{{ m.team }}</td>
-                        <td style="padding: 8px; text-align: center; color: #ef5350; font-weight: 700;">{{ m.no_shows }}</td>
+                        <td style="padding: 8px; text-align: center; color: #ef5350; font-weight: 700;">
+                            {% if m.no_shows > 0 %}<button type="button" onclick="openNoShowModal(this)" data-name="{{ m.name }}" data-events='{{ m.no_show_events | tojson }}' style="background:none;border:none;padding:0;color:#ef5350;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-size:13px;">{{ m.no_shows }}</button>{% else %}{{ m.no_shows }}{% endif %}
+                        </td>
                         <td style="padding: 8px; text-align: center; color: {% if m.rate >= 60 %}#4caf50{% elif m.rate >= 40 %}#f39c12{% else %}#ef5350{% endif %};">{{ m.rate }}%</td>
                     </tr>
                     {% endfor %}
@@ -302,6 +306,44 @@
     </div>
     {% endif %}
 
-    {% endif %}
+    <!-- No-Show Detail Modal -->
+    <div id="no-show-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;" onclick="if(event.target===this)closeNoShowModal()">
+        <div style="background:#1a1a2e; border:1px solid #333; border-radius:10px; padding:22px; width:min(460px, calc(100vw - 32px)); box-sizing:border-box; max-height:80vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h3 style="font-family:'Oswald',sans-serif; color:#ef5350; margin:0; font-size:17px;" id="no-show-modal-title">Missed FTXs</h3>
+                <button type="button" onclick="closeNoShowModal()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div id="no-show-modal-body"></div>
+        </div>
+    </div>
+
+{% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openNoShowModal(el) {
+    var name = el.getAttribute('data-name');
+    var events = [];
+    try { events = JSON.parse(el.getAttribute('data-events')); } catch (e) { events = []; }
+    document.getElementById('no-show-modal-title').textContent = name + ' — missed FTXs';
+    var body = document.getElementById('no-show-modal-body');
+    if (!events.length) {
+        body.innerHTML = '<div style="color:#888;font-size:13px;">No missed FTX records.</div>';
+    } else {
+        body.innerHTML = events.map(function(ev) {
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #2a2a3e;">' +
+                '<a href="/events/' + ev.id + '" style="color:#d4a537;text-decoration:none;font-size:13px;">' + ev.title + '</a>' +
+                '<span style="color:#888;font-size:12px;">' + ev.date + '</span>' +
+                '</div>';
+        }).join('');
+    }
+    var modal = document.getElementById('no-show-modal');
+    modal.style.display = 'flex';
+}
+function closeNoShowModal() {
+    document.getElementById('no-show-modal').style.display = 'none';
+}
+</script>
 {% endblock %}
