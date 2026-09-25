@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}FTX Responsibilities — S2{% endblock %}
+
+{% block content %}
+{% include "partials/s2_styles.html" %}
+
+<div class="s2-wrap">
+    <a href="/api/s2" class="s2-back">← S2 Dashboard</a>
+    <div class="s2-header">
+        <h2>🏁 FTX Responsibilities</h2>
+        <div class="subtitle">Rally point, route, weather, and code words — set per FTX/MCFTX once the WARNO is out.</div>
+    </div>
+
+    {% if items %}
+    {% for it in items %}
+    {% set ev = it.event %}
+    <div class="s2-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+                <div style="font-size:16px;font-weight:700;color:#e0e0e0;">{{ ev.title }}</div>
+                <div class="s2-muted">{{ ev.category | upper }} · {{ ev.date_start.strftime('%d %b %Y') }} {% if it.site_name %}· 📍 {{ it.site_name }}{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Rally Point -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #2a2a3e;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="s2-muted" style="font-weight:600;">🏁 Rally Point</span>
+                {% if ev.rally_point %}
+                <a href="{% if ev.rally_point_url %}{{ ev.rally_point_url }}{% else %}https://www.google.com/maps?q={{ ev.rally_point | urlencode }}{% endif %}" target="_blank" style="color:#d4a537;font-size:13px;text-decoration:none;">{{ ev.rally_point }} ↗</a>
+                {% if ev.rally_point_time %}<span style="color:#d4a537;font-size:13px;font-weight:600;">@ {{ ev.rally_point_time }}</span>{% endif %}
+                {% endif %}
+            </div>
+            <form hx-post="/api/s2/rally-point/{{ ev.id }}" hx-target="#rp-result-{{ ev.id }}" hx-swap="innerHTML" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input name="rally_point" value="{{ ev.rally_point or '' }}" placeholder="Rally point address / description" style="flex:1;min-width:200px;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+                    <input name="rally_point_time" value="{{ ev.rally_point_time or '' }}" placeholder="Time (HHMM)" maxlength="4" style="width:90px;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+                    <button type="submit" class="s2-btn s2-btn-sm">Save</button>
+                </div>
+                <input name="rally_point_url" value="{{ ev.rally_point_url or '' }}" placeholder="Google Maps link (optional)" style="background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+            </form>
+            <div id="rp-result-{{ ev.id }}"></div>
+        </div>
+
+        <!-- Route -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2a2a3e;">
+            <span class="s2-muted" style="font-weight:600;">🧭 Route (RP → AO)</span>
+            <form hx-post="/api/s2/route/{{ ev.id }}" hx-target="#route-result-{{ ev.id }}" hx-swap="innerHTML" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;">
+                <textarea name="route" placeholder="Route description (turn-by-turn, checkpoints, etc.)" style="min-height:56px;background:#12121e;border:1px solid #444;color:#fff;padding:8px 10px;border-radius:4px;font-size:13px;width:100%;box-sizing:border-box;">{{ ev.route or '' }}</textarea>
+                <div style="display:flex;gap:8px;">
+                    <input name="route_url" value="{{ ev.route_url or '' }}" placeholder="Google Maps link (optional)" style="flex:1;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+                    <button type="submit" class="s2-btn s2-btn-sm">Save</button>
+                </div>
+            </form>
+            <div id="route-result-{{ ev.id }}"></div>
+        </div>
+
+        <!-- Weather -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2a2a3e;">
+            <span class="s2-muted" style="font-weight:600;">🌦️ Weather</span>
+            <form hx-post="/api/s2/weather/{{ ev.id }}" hx-target="#weather-result-{{ ev.id }}" hx-swap="innerHTML" style="margin-top:6px;display:flex;gap:8px;">
+                <textarea name="weather_report" placeholder="Forecast summary for the FTX window" style="flex:1;min-height:48px;background:#12121e;border:1px solid #444;color:#fff;padding:8px 10px;border-radius:4px;font-size:13px;resize:vertical;">{{ ev.weather_report or '' }}</textarea>
+                <button type="submit" class="s2-btn s2-btn-sm">Save</button>
+            </form>
+            <div id="weather-result-{{ ev.id }}"></div>
+        </div>
+
+        <!-- Code Words -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2a2a3e;">
+            <span class="s2-muted" style="font-weight:600;">🔑 Code Words</span>
+            <form hx-post="/api/s2/code-words/{{ ev.id }}" hx-target="#cw-result-{{ ev.id }}" hx-swap="innerHTML" style="margin-top:6px;display:flex;gap:8px;">
+                <input name="code_words" value="{{ ev.code_words or '' }}" placeholder="Recognition / ops code words" style="flex:1;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+                <button type="submit" class="s2-btn s2-btn-sm">Save</button>
+            </form>
+            <div id="cw-result-{{ ev.id }}"></div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="s2-card"><div class="s2-empty">No FTX/MCFTX with an issued WARNO yet. FTX responsibilities will appear here once the WARNO goes out.</div></div>
+    {% endif %}
+</div>
+{% endblock %}

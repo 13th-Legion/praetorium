@@ -155,6 +155,7 @@ async def set_rally_point(
     event_id: int,
     rally_point: str = Form(...),
     rally_point_url: str = Form(""),
+    rally_point_time: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
     """S2 sets the rally point for an event."""
@@ -170,6 +171,7 @@ async def set_rally_point(
     event.rally_point_set_at = datetime.utcnow()
     event.updated_at = datetime.utcnow()
     event.rally_point_url = rally_point_url.strip() or None
+    event.rally_point_time = rally_point_time.strip() if rally_point_time.strip() else None
     await db.commit()
 
     if event.rally_point:
@@ -186,7 +188,7 @@ async def set_rally_point(
 @router.get("/events-needing-rally-point", response_class=HTMLResponse)
 @require_auth
 async def events_needing_rally_point(request: Request, db: AsyncSession = Depends(get_db)):
-    """HTMX partial: upcoming FTXs with training site set but no rally point."""
+    """HTMX partial: upcoming FTX/MCFTX with an issued WARNO but no rally point."""
     user = get_current_user(request)
     if not _can_rally(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
@@ -196,8 +198,8 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
         select(Event)
         .where(
             Event.date_start > now,
-            Event.category.in_(["ftx"]),
-            Event.training_site.isnot(None),
+            Event.category.in_(["ftx", "mcftx"]),
+            Event.warno_issued_at.isnot(None),
             Event.rally_point.is_(None),
             Event.status.notin_(["cancelled"]),
         )
@@ -212,7 +214,7 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
     for ev in events:
         days_out = (ev.date_start - now).days
         site = await _ts.get_site(ev.training_site) if ev.training_site else None
-        site_name = f"Site {site['name']}" if site else ev.training_site
+        site_name = f"Site {site['name']}" if site else (ev.training_site or "site TBD")
         rows.append(f'''
             <div style="padding:12px;border-bottom:1px solid #2a2a3e;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -260,6 +262,125 @@ async def set_rally_time(
         '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Rally time updated.</div>'
         '<script>setTimeout(()=>window.location.reload(),500)</script>'
     )
+
+
+@router.post("/route/{event_id}")
+@require_auth
+async def set_route(
+    request: Request,
+    event_id: int,
+    route: str = Form(""),
+    route_url: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the RP→AO route for an event."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+    if not event:
+        return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+    event.route = route.strip() if route.strip() else None
+    event.route_url = route_url.strip() or None
+    event.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Route updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+@router.post("/weather/{event_id}")
+@require_auth
+async def set_weather(
+    request: Request,
+    event_id: int,
+    weather_report: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the S2 weather report for an event."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+    if not event:
+        return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+    event.weather_report = weather_report.strip() if weather_report.strip() else None
+    event.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Weather updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+@router.post("/code-words/{event_id}")
+@require_auth
+async def set_code_words(
+    request: Request,
+    event_id: int,
+    code_words: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the recognition/ops code words for an event."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+    if not event:
+        return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+    event.code_words = code_words.strip() if code_words.strip() else None
+    event.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Code words updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FTX Responsibilities (S2 sets these per FTX/MCFTX once the WARNO is out)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/ftx", response_class=HTMLResponse)
+@require_auth
+async def ftx_responsibilities(request: Request, db: AsyncSession = Depends(get_db)):
+    """S2 FTX responsibilities: per-event rally point, route, weather, code words."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return _denied()
+
+    now = datetime.utcnow()
+    events = (await db.execute(
+        select(Event)
+        .where(
+            Event.date_start > now,
+            Event.category.in_(["ftx", "mcftx"]),
+            Event.warno_issued_at.isnot(None),
+            Event.status.notin_(["cancelled"]),
+        )
+        .order_by(Event.date_start)
+        .limit(10)
+    )).scalars().all()
+
+    sites = await _ts.site_map()
+    enriched = []
+    for ev in events:
+        site_name = None
+        if ev.training_site:
+            s = sites.get(ev.training_site)
+            site_name = s["name"] if s else ev.training_site
+        enriched.append({"event": ev, "site_name": site_name})
+
+    return templates.TemplateResponse("pages/s2_ftx.html", {
+        "request": request, "user": user, "items": enriched,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
