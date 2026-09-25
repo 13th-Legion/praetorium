@@ -76,7 +76,7 @@
                 <span style="color: #d4a537; font-size: 13px; font-weight: 600;">{{ event.rally_point_time }}</span>
                 {% endif %}
             </div>
-            <form hx-post="/api/s3/rally-time/{{ event.id }}" hx-target="#rt-result" hx-swap="innerHTML" style="margin-top: 6px; display: flex; gap: 8px;">
+            <form hx-post="/api/s2/rally-time/{{ event.id }}" hx-target="#rt-result" hx-swap="innerHTML" style="margin-top: 6px; display: flex; gap: 8px;">
                 <input name="rally_time" value="{{ event.rally_point_time or '' }}" placeholder="e.g. 0600"
                        style="width: 100px; background: #12121e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px;" maxlength="4">
                 <button hx-disabled-elt="this" type="submit" style="background: #d4a537; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px;">Set Time</button>

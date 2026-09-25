@@ -140,6 +140,129 @@ async def s2_hub(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Rally Point (S2 FTX responsibility) — moved home from s3_ops.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _can_rally(user: dict) -> bool:
+    """S2 owns the rally point; S3 (FTX builder) + Command/admin also set it."""
+    return bool(user and set(user.get("roles", [])) & {"s2", "s3", "command", "admin"})
+
+
+@router.post("/rally-point/{event_id}")
+@require_auth
+async def set_rally_point(
+    request: Request,
+    event_id: int,
+    rally_point: str = Form(...),
+    rally_point_url: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """S2 sets the rally point for an event."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied — S2/Command only.</div>', status_code=403)
+
+    event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+    if not event:
+        return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+    event.rally_point = rally_point.strip() if rally_point.strip() else None
+    event.rally_point_set_by = user.get("username", "unknown")
+    event.rally_point_set_at = datetime.utcnow()
+    event.updated_at = datetime.utcnow()
+    event.rally_point_url = rally_point_url.strip() or None
+    await db.commit()
+
+    if event.rally_point:
+        return HTMLResponse(
+            '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Rally point set.</div>'
+            f'<script>setTimeout(()=>window.location.reload(),500)</script>'
+        )
+    return HTMLResponse(
+        '<div style="color:#d4a537;padding:8px;font-size:13px;">Rally point cleared.</div>'
+        f'<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+@router.get("/events-needing-rally-point", response_class=HTMLResponse)
+@require_auth
+async def events_needing_rally_point(request: Request, db: AsyncSession = Depends(get_db)):
+    """HTMX partial: upcoming FTXs with training site set but no rally point."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    now = datetime.utcnow()
+    events = (await db.execute(
+        select(Event)
+        .where(
+            Event.date_start > now,
+            Event.category.in_(["ftx"]),
+            Event.training_site.isnot(None),
+            Event.rally_point.is_(None),
+            Event.status.notin_(["cancelled"]),
+        )
+        .order_by(Event.date_start)
+        .limit(10)
+    )).scalars().all()
+
+    if not events:
+        return HTMLResponse('<div style="color:#999;font-size:14px;padding:8px 0;">No events need rally points right now. 👍</div>')
+
+    rows = []
+    for ev in events:
+        days_out = (ev.date_start - now).days
+        site = await _ts.get_site(ev.training_site) if ev.training_site else None
+        site_name = f"Site {site['name']}" if site else ev.training_site
+        rows.append(f'''
+            <div style="padding:12px;border-bottom:1px solid #2a2a3e;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <span style="color:#e0e0e0;font-weight:500;font-size:14px;">{ev.title}</span>
+                        <div style="color:#999;font-size:12px;">{ev.date_start.strftime("%b %d, %Y")} · {site_name} · {days_out}d out</div>
+                    </div>
+                    <span style="background:#b71c1c;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Needs RP</span>
+                </div>
+                <form hx-post="/api/s2/rally-point/{ev.id}" hx-target="#rp-result-{ev.id}" hx-swap="innerHTML" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:8px;">
+                        <input name="rally_point" placeholder="Rally point address / description" style="flex:1;background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;" required>
+                        <button type="submit" style="background:#d4a537;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;font-size:13px;">Set RP</button>
+                    </div>
+                    <input name="rally_point_url" placeholder="Google Maps link (optional)" style="background:#12121e;border:1px solid #444;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;">
+                </form>
+                <div id="rp-result-{ev.id}" style="margin-top:4px;"></div>
+            </div>
+        ''')
+
+    return HTMLResponse("".join(rows))
+
+
+@router.post("/rally-time/{event_id}")
+@require_auth
+async def set_rally_time(
+    request: Request,
+    event_id: int,
+    rally_time: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the rally point time for an event (HHMM format)."""
+    user = get_current_user(request)
+    if not _can_rally(user):
+        return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
+
+    event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+    if not event:
+        return HTMLResponse('<div style="color:#b71c1c;">Event not found.</div>', status_code=404)
+    event.rally_point_time = rally_time.strip() if rally_time.strip() else None
+    event.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return HTMLResponse(
+        '<div style="color:#1b5e20;padding:8px;font-size:13px;">✅ Rally time updated.</div>'
+        '<script>setTimeout(()=>window.location.reload(),500)</script>'
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # IIR — Intelligence Information Report
 # ─────────────────────────────────────────────────────────────────────────────
 

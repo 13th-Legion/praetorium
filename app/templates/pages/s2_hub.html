@@ -37,7 +37,14 @@
 
     <div class="s2-card">
         <h3>FTX responsibilities</h3>
-        <p class="s2-muted" style="font-size:13px;color:#999;">Rally point, RP→AO route, weather, code words, challenge/password — S2 sets these per FTX. Rally point is set in the FTX builder; challenge/password rotation is under <a href="/api/s2/challenge" style="color:#d4a537;">Challenge / Password</a>.</p>
+        <p class="s2-muted" style="font-size:13px;color:#999;">Rally point, RP→AO route, weather, code words, challenge/password — S2 sets these per FTX. Challenge/password rotation is under <a href="/api/s2/challenge" style="color:#d4a537;">Challenge / Password</a>.</p>
+    </div>
+
+    <div class="s2-card">
+        <h3>🏁 Rally points needed</h3>
+        <div id="s2-needs-rp" hx-get="/api/s2/events-needing-rally-point" hx-trigger="load" hx-swap="innerHTML">
+            <div class="s2-muted" style="font-size:13px;">Loading…</div>
+        </div>
     </div>
 </div>
 {% endblock %}
