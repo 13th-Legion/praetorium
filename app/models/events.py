@@ -78,6 +78,11 @@ class Event(Base):
     rsvp_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     rsvp_deadline: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
+    # Meal planning (S4): per-FTX toggle. Some FTX/MCFTX events (e.g. a one-day
+    # urban evasion in downtown FW) have no meal plan, so S4 can switch it off
+    # and the RSVP flow stops requiring a $15 meal opt-in for that event.
+    meal_planning_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
     # CalDAV sync (PP-070g)
     caldav_uid: Mapped[Optional[str]] = mapped_column(String(255), unique=True)
 

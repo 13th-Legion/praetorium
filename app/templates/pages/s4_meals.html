@@ -21,8 +21,19 @@
         {% set roster = meal_roster.get(ev.id, []) %}
         <div class="s4-card">
             <h3 style="margin-bottom:6px;">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}</h3>
+            {% if ev.meal_planning_enabled %}
             <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong> · Meal plan: <strong style="color:#d4a537;">{{ mhc }}</strong> opted in ($15 each)</div>
+            {% else %}
+            <div class="s4-muted" style="margin-bottom:10px;">Meal planning <strong style="color:#ef5350;">disabled</strong> for this event.</div>
+            {% endif %}
 
+            {% if can_approve %}
+            <form method="post" action="/api/s4/meals/{{ ev.id }}/toggle-meal-planning" style="margin-bottom:12px;">
+                <button class="s4-btn s4-btn-sm" type="submit">{% if ev.meal_planning_enabled %}Disable meal planning{% else %}Enable meal planning{% endif %}</button>
+            </form>
+            {% endif %}
+
+            {% if ev.meal_planning_enabled %}
             {% if can_approve %}
             <div style="margin-bottom:14px;border-top:1px solid #2a2a3e;padding-top:10px;">
                 <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Meal payments ({{ mhc }} opted in)</div>
@@ -109,6 +120,7 @@
                     {{ meals|join(', ') or 'No meals planned' }}
                 {% else %}No meal plan yet.{% endif %}
             </div>
+            {% endif %}
             {% endif %}
         </div>
         {% endfor %}

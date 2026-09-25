@@ -1370,8 +1370,9 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">RSVP deadline has passed.</div>'
             )
 
-        # Meal plan applies to FTX/MCFTX. Attending members MUST choose in/out.
-        meal_event = event.category in ("ftx", "mcftx")
+        # Meal plan applies to FTX/MCFTX (when S4 has it enabled for the event).
+        # Attending members MUST choose in/out.
+        meal_event = event.category in ("ftx", "mcftx") and event.meal_planning_enabled
         if meal_event and new_status == "attending" and raw_meal not in ("in", "out"):
             return HTMLResponse(
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">Please choose whether you\'re opting into the meal plan (in or out).</div>',
@@ -1399,6 +1400,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         # Only honor guest count when it makes sense (social/family events)
         guests_allowed = event.category in ("family_day", "social")
         event_category = event.category  # capture before session closes
+        meal_planning_enabled = event.meal_planning_enabled  # capture before session closes
 
         if rsvp:
             rsvp.status = new_status
@@ -1614,7 +1616,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         event_id, new_status,
         guests_allowed=(event_category in ("family_day", "social")),
         guest_count=(rsvp_guest_count if new_status == "attending" else 0),
-        meal_event=(event_category in ("ftx", "mcftx")),
+        meal_event=(event_category in ("ftx", "mcftx") and meal_planning_enabled),
         meal_plan=(rsvp_meal_plan if new_status == "attending" else False),
     )
 
@@ -2777,13 +2779,16 @@ async def warno_banner(request: Request):
         if rsvp_locked:
             rsvp_buttons = '<div style="font-size:12px;color:#ef5350;">🔒 RSVP closed</div>'
         else:
+            meal_radios = ""
+            if event.meal_planning_enabled:
+                meal_radios = f"""
+                    <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal ($15):</span>
+                    <label style="font-size:12px;color:#bbb;cursor:pointer;"><input type="radio" name="meal_plan" value="in" {'checked' if my_meal_plan else ''} style="accent-color:#4caf50;"> In</label>
+                    <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if not my_meal_plan else ''} style="accent-color:#888;"> Out</label>"""
             rsvp_buttons = f"""
             <div id="warno-rsvp" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <form onclick="event.stopPropagation();event.preventDefault();" hx-post="/api/events/{event.id}/rsvp" hx-swap="none" hx-on::after-request="htmx.ajax('GET','/api/events/warno-banner','#warno-banner-area')" style="display:inline;">
-                    <input type="hidden" name="status" value="attending">
-                    <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal ($15):</span>
-                    <label style="font-size:12px;color:#bbb;cursor:pointer;"><input type="radio" name="meal_plan" value="in" {'checked' if my_meal_plan else ''} style="accent-color:#4caf50;"> In</label>
-                    <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if not my_meal_plan else ''} style="accent-color:#888;"> Out</label>
+                    <input type="hidden" name="status" value="attending">{meal_radios}
                     <button type="submit" onclick="event.stopPropagation();" style="padding:6px 16px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;border:2px solid #2e7d32;background:transparent;color:#2e7d32;{attending_cls}">
                         ✓ Attending
                     </button>

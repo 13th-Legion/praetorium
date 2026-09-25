@@ -135,3 +135,49 @@ class TestMealPlanNonFTX:
         )).scalar_one()
         assert row.status == "attending"
         assert row.meal_plan is False  # never set for non-FTX
+
+
+# ─── Per-FTX meal-planning toggle ───────────────────────────────────────────
+
+class TestMealPlanningToggle:
+    async def test_event_defaults_to_meal_planning_enabled(self, db_session):
+        ev = await make_event(db_session, category="ftx")
+        assert ev.meal_planning_enabled is True
+
+    async def test_disabled_ftx_does_not_require_meal_choice(self, auth_client, db_session, patch_global_session):
+        """FTX with meal planning disabled: attending without meal_plan is OK."""
+        m = await make_member(db_session, nc_username="test.soldier")
+        ev = await make_event(
+            db_session, category="ftx", title="Urban Evasion",
+            rsvp_enabled=True, meal_planning_enabled=False,
+        )
+        await db_session.commit()
+
+        tok = _csrf(auth_client)
+        resp = auth_client.post(
+            f"/api/events/{ev.id}/rsvp",
+            data={"status": "attending", "csrf_token": tok},
+            headers={"X-CSRF-Token": tok},
+        )
+        assert resp.status_code == 200, resp.text
+
+        row = (await db_session.execute(
+            select(EventRSVP).where(
+                EventRSVP.event_id == ev.id, EventRSVP.member_id == m.id
+            )
+        )).scalar_one()
+        assert row.status == "attending"
+        assert row.meal_plan is False  # no meal opt-in when planning disabled
+
+    async def test_enabled_ftx_still_requires_meal_choice(self, auth_client, db_session, patch_global_session):
+        m = await make_member(db_session, nc_username="test.soldier")
+        ev = await make_event(db_session, category="ftx", title="Meal FTX", rsvp_enabled=True)
+        await db_session.commit()
+
+        tok = _csrf(auth_client)
+        resp = auth_client.post(
+            f"/api/events/{ev.id}/rsvp",
+            data={"status": "attending", "csrf_token": tok},
+            headers={"X-CSRF-Token": tok},
+        )
+        assert resp.status_code == 400  # meal choice still required when enabled

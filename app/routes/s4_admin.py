@@ -138,10 +138,13 @@ async def _names_for(db: AsyncSession, member_ids: set[int]) -> dict[int, str]:
     return names
 
 
-async def _ftx_events(db: AsyncSession) -> list[Event]:
-    return (await db.execute(
-        select(Event).where(Event.category.in_(FTX_CATEGORIES)).order_by(desc(Event.date_start))
-    )).scalars().all()
+async def _ftx_events(db: AsyncSession, upcoming_only: bool = False) -> list[Event]:
+    stmt = select(Event).where(Event.category.in_(FTX_CATEGORIES))
+    if upcoming_only:
+        # Meal planning is a forward-looking activity — don't list years of
+        # historical FTXs. Show only events that haven't started yet.
+        stmt = stmt.where(Event.date_start >= datetime.utcnow())
+    return (await db.execute(stmt.order_by(desc(Event.date_start)))).scalars().all()
 
 
 async def _active_members(db: AsyncSession) -> list[Member]:
@@ -261,7 +264,7 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
         return _denied()
     member = await _current_member(request, db)
 
-    events = await _ftx_events(db)
+    events = await _ftx_events(db, upcoming_only=True)
     plans = {p.event_id: p for p in (await db.execute(select(S4MealPlan))).scalars().all()}
     headcounts: dict[int, int] = {}
     meal_headcounts: dict[int, int] = {}
@@ -331,6 +334,31 @@ async def save_meal_plan(request: Request, event_id: int, db: AsyncSession = Dep
     plan.cook_id = int(cook) if cook.isdigit() else None
     plan.buyer_id = int(buyer) if buyer.isdigit() else None
 
+    await db.commit()
+    return RedirectResponse(url="/api/s4/meals", status_code=302)
+
+
+@router.post("/meals/{event_id}/toggle-meal-planning")
+@require_auth
+async def toggle_meal_planning(request: Request, event_id: int, db: AsyncSession = Depends(get_db)):
+    """Enable/disable meal planning for an FTX/MCFTX event.
+
+    Some events (e.g. a one-day urban evasion in downtown FW) have no meal
+    plan. Toggling off flips Event.meal_planning_enabled, which the RSVP flow
+    reads so attending members aren't forced into a $15 meal opt-in.
+    """
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    if not _can_approve(user, member):
+        return _denied()
+
+    event = await _get_event_or_none(db, event_id)
+    if not event:
+        return HTMLResponse("<h2>Event not found</h2>", status_code=404)
+
+    event.meal_planning_enabled = not event.meal_planning_enabled
     await db.commit()
     return RedirectResponse(url="/api/s4/meals", status_code=302)
 
