@@ -12,6 +12,7 @@ from app.models.s4_logistics import (
     S4EquipmentDonation,
     S4Expense,
     S4InventoryItem,
+    S4MealPlan,
     S4PurchaseRequest,
 )
 from app.models.member import Member
@@ -65,6 +66,27 @@ class TestCanApprove:
 
 
 # ─── Model behaviour ─────────────────────────────────────────────────────────
+
+class TestMealPlanModel:
+    async def test_cook_and_buyer_independent(self, db_session):
+        ev = await make_event(db_session, category="ftx")
+        cook = await make_member(db_session)
+        buyer = await make_member(db_session)
+        plan = S4MealPlan(event_id=ev.id, cook_id=cook.id, buyer_id=buyer.id)
+        db_session.add(plan)
+        await db_session.flush()
+        assert plan.cook_id == cook.id
+        assert plan.buyer_id == buyer.id
+        assert plan.cook_id != plan.buyer_id
+
+    async def test_cook_buyer_optional(self, db_session):
+        ev = await make_event(db_session, category="ftx")
+        plan = S4MealPlan(event_id=ev.id)
+        db_session.add(plan)
+        await db_session.flush()
+        assert plan.cook_id is None
+        assert plan.buyer_id is None
+
 
 class TestExpenseModel:
     async def test_expense_defaults_pending(self, db_session):

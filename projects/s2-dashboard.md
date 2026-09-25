@@ -59,8 +59,8 @@ report). Include in the dashboard.
 alert + S2/Command-only), and include **all IIR fields**.
 
 **Harpoon (2026-09-24):**
-- **Both reporting types may be needed** — IIR (finished intel) *and* SALUTE-style
-  combat info. Can't think of a current example, but don't rule it out.
+- **SALUTE-style combat info is OUT OF SCOPE** (Cav, 2026-09-24): this dashboard
+  is not the place for field combat-info reports. IIR only.
 - **Dissemination leans wide** — no current example of security intel that *shouldn't*
   go to the whole company; if it's important enough to share, it probably needs to
   be disseminated. Keep the tiered option (S2/Command-only) available, but default
@@ -110,7 +110,8 @@ S2 should **own the training-site map library**:
    (not folded in). Content is ~7 months stale + not version-controlled — needs
    a git repo + refresh.
 5. Reporting system: **IIR** (not SALUTE). LOCKED: both tiers + all IIR fields.
-   Harpoon: both IIR + SALUTE may be needed; dissemination leans wide.
+   Harpoon: dissemination leans wide. SALUTE-style combat info is OUT OF SCOPE
+   (Cav 2026-09-24).
 6. Other S2 features wanted in the dashboard? → **Training-site map library**
    (S2 manages sites + maps; populates FTX training-site dropdown + auto-maps).
 

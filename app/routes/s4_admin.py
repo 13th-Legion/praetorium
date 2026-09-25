@@ -312,8 +312,10 @@ async def save_meal_plan(request: Request, event_id: int, db: AsyncSession = Dep
     plan.sat_dinner = form.get("sat_dinner") == "on"
     plan.sun_breakfast = form.get("sun_breakfast") == "on"
     plan.menu_notes = (form.get("menu_notes") or "").strip() or None
-    assigned = (form.get("assigned_to") or "").strip()
-    plan.assigned_to_id = int(assigned) if assigned.isdigit() else None
+    cook = (form.get("cook") or "").strip()
+    buyer = (form.get("buyer") or "").strip()
+    plan.cook_id = int(cook) if cook.isdigit() else None
+    plan.buyer_id = int(buyer) if buyer.isdigit() else None
 
     await db.commit()
     return RedirectResponse(url="/api/s4/meals", status_code=302)

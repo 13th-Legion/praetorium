@@ -158,6 +158,23 @@
     </div>
   </div>
 
+  <!-- ── Challenge / Password (S2, FTX only) ── -->
+  {% if challenge_sets %}
+  <div class="card" style="margin-bottom:16px;border-left:4px solid #d4a537;">
+    <h2 class="card-title" style="font-size:0.9rem;margin:0 0 8px;">🔐 Challenge / Password</h2>
+    {% for cs in challenge_sets %}
+    <div style="display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;">
+      <span><span style="color:#888;font-size:12px;">Challenge</span> <strong style="color:#e0e0e0;">{{ cs.challenge }}</strong></span>
+      <span><span style="color:#888;font-size:12px;">Password</span> <strong style="color:#e0e0e0;">{{ cs.password }}</strong></span>
+      {% if cs.running_password %}
+      <span><span style="color:#888;font-size:12px;">Running</span> <strong style="color:#e0e0e0;">{{ cs.running_password }}</strong></span>
+      {% endif %}
+      {% if cs.label %}<span style="color:#777;font-size:12px;">{{ cs.label }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- ── QR Code Section ── -->
   <div class="card" id="qr-section" style="margin-bottom:16px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">

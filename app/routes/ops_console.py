@@ -34,6 +34,7 @@ from app.models.events import (
     EventDutyAssignment,
 )
 from app.models.member import Member
+from app.models.s2_intel import S2ChallengePassword
 from app.services import teams as teams_svc
 from config import get_settings
 
@@ -158,6 +159,11 @@ async def ops_console(request: Request, event_id: int):
         member_map = await _get_member_map(db, event_id)
         guest_map = await _get_guest_map(db, event_id)
         duty_assignments = await _get_duty_assignments(db, event_id)
+        challenge_sets = (await db.execute(
+            select(S2ChallengePassword)
+            .where(S2ChallengePassword.event_id == event_id, S2ChallengePassword.active.is_(True))
+            .order_by(S2ChallengePassword.created_at)
+        )).scalars().all()
         sponsor_ids = {g.sponsor_id for g in guest_map.values()} - set(member_map)
         if sponsor_ids:
             extra = await db.execute(select(Member).where(Member.id.in_(sponsor_ids)))
@@ -189,6 +195,7 @@ async def ops_console(request: Request, event_id: int):
         "checked_in_members": checked_in_members,
         "guest_map": guest_map,
         "duty_assignments": duty_assignments,
+        "challenge_sets": challenge_sets,
         "team_options": team_options,
         "qr_svg": qr_svg,
         "qr_url": qr_url,

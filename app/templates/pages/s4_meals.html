@@ -30,14 +30,25 @@
                     <label>Menu / shopping notes</label>
                     <textarea name="menu_notes" class="s4-textarea" style="min-height:50px;">{{ plan.menu_notes or '' if plan else '' }}</textarea>
                 </div>
-                <div class="s4-field">
-                    <label>Assigned cook / buyer</label>
-                    <select name="assigned_to" class="s4-select">
-                        <option value="">— none —</option>
-                        {% for m in members %}
-                        <option value="{{ m.id }}" {% if plan and plan.assigned_to_id == m.id %}selected{% endif %}>{{ names.get(m.id, m.last_name) }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="s4-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="s4-field">
+                        <label>Cook</label>
+                        <select name="cook" class="s4-select">
+                            <option value="">— none —</option>
+                            {% for m in members %}
+                            <option value="{{ m.id }}" {% if plan and plan.cook_id == m.id %}selected{% endif %}>{{ names.get(m.id, m.last_name) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="s4-field">
+                        <label>Buyer</label>
+                        <select name="buyer" class="s4-select">
+                            <option value="">— none —</option>
+                            {% for m in members %}
+                            <option value="{{ m.id }}" {% if plan and plan.buyer_id == m.id %}selected{% endif %}>{{ names.get(m.id, m.last_name) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <button class="s4-btn s4-btn-sm">Save meal plan</button>
             </form>

@@ -21,14 +21,17 @@ class S4MealPlan(Base):
     # Menu notes and shopping lists
     menu_notes = Column(Text, nullable=True)
     
-    # Assigned cook/buyer (usually S4 head or Matos)
-    assigned_to_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
+    # Assigned cook and buyer (independent — buyer isn't always the cook; either
+    # can be any member, not just S4)
+    cook_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
+    buyer_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     event = relationship("Event", backref="meal_plan")
-    assigned_to = relationship("Member", foreign_keys=[assigned_to_id])
+    cook = relationship("Member", foreign_keys=[cook_id])
+    buyer = relationship("Member", foreign_keys=[buyer_id])
 
 
 class S4Expense(Base):

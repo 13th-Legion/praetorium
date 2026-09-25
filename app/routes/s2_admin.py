@@ -314,7 +314,7 @@ async def challenge_page(request: Request, db: AsyncSession = Depends(get_db)):
         select(S2ChallengePassword).order_by(desc(S2ChallengePassword.created_at))
     )).scalars().all()
     events = (await db.execute(
-        select(Event).order_by(desc(Event.date_start)).limit(30)
+        select(Event).where(Event.category.in_(("ftx", "mcftx"))).order_by(desc(Event.date_start)).limit(30)
     )).scalars().all()
 
     return templates.TemplateResponse("pages/s2_challenge.html", {
