@@ -194,6 +194,31 @@ async def _upcoming_events(limit: int = 25) -> list[dict]:
         return []
 
 
+async def _event_link_html(event_id: str) -> tuple[str, str]:
+    """Resolve an event id to (html_line, plain_line) for embedding in the
+    announcement body + Talk cross-post. Returns ('', '') when not found.
+    """
+    if not event_id.isdigit():
+        return "", ""
+    try:
+        from sqlalchemy import select
+        from app.database import async_session as ev_session
+        from app.models.events import Event
+        async with ev_session() as db:
+            ev = (await db.execute(select(Event).where(Event.id == int(event_id)))).scalar_one_or_none()
+        if not ev:
+            return "", ""
+        dt = ev.date_start.strftime("%b %d, %Y") if ev.date_start else ""
+        label = f"{ev.title}" + (f" — {dt}" if dt else "")
+        url = f"https://portal.13thlegion.org/events/{ev.id}"
+        html_line = f'<p>📅 <a href="{url}" target="_blank">{escape(label)}</a></p>'
+        plain_line = f"📅 {label}\n{url}"
+        return html_line, plain_line
+    except Exception:
+        log.warning("Failed to resolve event link for announcement", exc_info=True)
+        return "", ""
+
+
 def _parse_author(message: str, fallback_author: str) -> tuple[str, str]:
     """Extract real author from '[Posted by Name]' tag at end of message.
     Returns (clean_message, author_name).
@@ -662,17 +687,20 @@ async def post_announcement(request: Request):
     if not subject:
         raise HTTPException(status_code=400, detail="Subject is required")
 
-    # If an event was chosen, deep-link the notification to that event page.
+    # Resolve the linked event (if any) and EMBED it in the announcement body
+    # so it's visible on the front page, the Talk cross-post, and the
+    # notification. The notification itself links to the dashboard (where the
+    # full announcement is read), not straight to the event.
+    event_html, event_plain = await _event_link_html(event_id)
     notif_link = "/dashboard"
-    if event_id.isdigit():
-        notif_link = f"/events/{event_id}"
 
     poster_name = user.get("display_name", user.get("username", "Unknown"))
     author_tag = f"\n<p>[Posted by {poster_name}]</p>"
-    message_with_author = f"{message}{author_tag}" if message else f"<p>[Posted by {poster_name}]</p>"
+    body_with_event = f"{message}{event_html}" if event_html else message
+    message_with_author = f"{body_with_event}{author_tag}" if body_with_event else f"<p>[Posted by {poster_name}]</p>"
 
     # Generate plain text version
-    plain_message = _strip_html(message)
+    plain_message = _strip_html(body_with_event)
     plain_with_author = f"{plain_message}\n[Posted by {poster_name}]" if plain_message else f"[Posted by {poster_name}]"
 
     settings = get_settings()
@@ -699,7 +727,7 @@ async def post_announcement(request: Request):
 
         # Cross-post to NC Talk Announcements channel (Markdown-formatted).
         try:
-            talk_body = _html_to_markdown(message)
+            talk_body = _html_to_markdown(body_with_event)
             talk_msg = f"📢 **{subject}**"
             if talk_body:
                 talk_msg += f"\n\n{talk_body}"
@@ -719,7 +747,7 @@ async def post_announcement(request: Request):
         async with notif_session() as ndb:
             await create_notification_for_all(
                 ndb, "announcement", f"📢 {subject}",
-                body=_strip_html(message)[:200] if message else None,
+                body=_strip_html(body_with_event)[:200] if body_with_event else None,
                 link=notif_link,
                 icon="📢"
             )
