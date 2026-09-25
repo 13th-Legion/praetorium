@@ -241,7 +241,7 @@ class EventFrago(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
 
     # Per-event sequence, starting at 1 ("FRAGO 1", "FRAGO 2", ...).
     number: Mapped[int] = mapped_column(Integer)
@@ -432,7 +432,7 @@ class EventDutyAssignment(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
     duty_label: Mapped[str] = mapped_column(String(32))
     source: Mapped[str] = mapped_column(String(16), default="ad_hoc")  # ad_hoc | geo_team

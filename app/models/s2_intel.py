@@ -14,7 +14,7 @@ Three S2-owned feature areas (see `projects/s2-dashboard.md`):
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -47,8 +47,8 @@ class IIR(Base):
     author_id = Column(Integer, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
     author = relationship("Member", foreign_keys=[author_id])
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow, onupdate=datetime.utcnow)
     archived_at = Column(DateTime, nullable=True)
 
 
@@ -73,7 +73,7 @@ class S2ChallengePassword(Base):
     active = Column(Boolean, default=True, nullable=False)
 
     created_by = Column(String(64), nullable=True)  # NC username
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow)
 
     event = relationship("Event")
 
@@ -89,8 +89,8 @@ class S2TrainingSite(Base):
     address = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow, onupdate=datetime.utcnow)
 
     maps = relationship("S2TrainingSiteMap", back_populates="site",
                         cascade="all, delete-orphan", order_by="S2TrainingSiteMap.id")
@@ -105,6 +105,6 @@ class S2TrainingSiteMap(Base):
     label = Column(String(64), nullable=False)  # e.g. "1:10,000", "1:25,000 (Marked)"
     url = Column(Text, nullable=False)          # WebDAV path or static URL
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, server_default=func.now(), default=datetime.utcnow)
 
     site = relationship("S2TrainingSite", back_populates="maps")
