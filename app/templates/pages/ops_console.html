@@ -32,6 +32,10 @@
     border-bottom: 1px solid #2a2a4a; position: sticky; top: 0; z-index: 2;
   }
   .ops-roster-table td { padding: 8px 10px; border-bottom: 1px solid #1e1e35; vertical-align: middle; }
+  .ops-roster-table tr.ops-row-noshow td { border-top: 2px solid #ef5350; border-bottom: 2px solid #ef5350; }
+  .ops-roster-table tr.ops-row-noshow td:first-child { border-left: 2px solid #ef5350; }
+  .ops-roster-table tr.ops-row-noshow td:last-child { border-right: 2px solid #ef5350; }
+  .ops-roster-table tr.ops-row-noshow:hover td { background: rgba(239,83,80,0.06); }
   .ops-roster-table tr:hover td { background: rgba(255,255,255,0.03); }
 
   /* Status badges */
@@ -85,6 +89,8 @@
       border: 1px solid #2a2a4a; border-radius: 8px;
       margin-bottom: 10px; padding: 8px 10px; background: #111122;
     }
+    .ops-roster-table tr.ops-row-noshow { border: 2px solid #ef5350; }
+    .ops-roster-table tr.ops-row-noshow td { border-top: none; border-bottom: none; border-left: none; border-right: none; }
     .ops-roster-table td {
       display: flex; justify-content: space-between; align-items: flex-start;
       gap: 8px; border-bottom: none; padding: 4px 0; width: 100%;

@@ -1296,7 +1296,11 @@ async def _build_roster(db, event: Event) -> list[dict]:
                 Member.status.in_(("active", "recruit")),
             )
         )
-        .order_by(EventRSVP.checked_in_at.desc().nullslast(), Member.last_name)
+        .order_by(
+            EventRSVP.checked_in_at.desc().nullslast(),
+            EventRSVP.no_show.desc(),
+            Member.last_name,
+        )
     )
     rsvp_rows = rsvp_result.all()
 
