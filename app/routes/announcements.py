@@ -321,7 +321,6 @@ async def create_announcement(
 # ─── Quill Editor HTML ──────────────────────────────────────────────────────
 
 QUILL_CSS = """
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <style>
 .ql-toolbar.ql-snow {
     background: #2a2a3e;
@@ -369,7 +368,7 @@ QUILL_CSS = """
 </style>
 """
 
-QUILL_JS = '<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>'
+QUILL_JS = ''  # Quill is vendored locally and loaded globally in base.html
 
 
 def _quill_editor_html(editor_id: str, toolbar_id: str, placeholder: str = "Message body...") -> str:

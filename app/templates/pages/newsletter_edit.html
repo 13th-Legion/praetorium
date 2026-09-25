@@ -84,7 +84,6 @@
                     <div id="outline-list"></div>
                 </div>
             </div>
-            <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
             <style>
             .ql-toolbar.ql-snow { background:#2a2a3e; border:1px solid #444 !important; border-radius:4px 4px 0 0; }
             .ql-toolbar .ql-stroke { stroke:#ccc !important; }
@@ -185,8 +184,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 <script>
 var CRESTS = {{ crests | tojson }};
 var nlQuill = new Quill('#nl-editor', {

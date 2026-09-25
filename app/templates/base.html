@@ -75,6 +75,13 @@
         };
       })();
     </script>
+    <!-- Quill rich-text editor: vendored locally (no third-party CDN) so every
+         page that builds an editor has it available regardless of CDN reachability.
+         A flaky jsdelivr load was leaving editors uninitialized (bare toolbar "dots")
+         and, worse, a Quill-init throw was killing the whole inline script
+         block on the newsletter page, so "Send Now" silently did nothing. -->
+    <link rel="stylesheet" href="/static/css/quill.snow.css">
+    <script src="/static/js/quill.js"></script>
     <!-- Shared Quill image upload-on-paste/drop helper. Defines
          window.attachQuillImageUpload(quill, endpoint); every template that
          constructs a Quill editor calls it. Loading it here (rather than per

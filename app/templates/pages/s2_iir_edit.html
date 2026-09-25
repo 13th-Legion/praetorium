@@ -3,7 +3,6 @@
 {% block title %}{{ 'Edit' if iir else 'New' }} IIR — S2{% endblock %}
 
 {% block head %}
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -78,7 +77,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
     var iirQuill = new Quill('#iir-editor', {
         theme: 'snow',
