@@ -1,7 +1,6 @@
 """Auto-award Mission Leader ribbon to vexillation commanders on FTX finalization."""
 
 import pytest
-from datetime import datetime
 
 from app.models.events import EventVexillation
 from app.models.ribbons import MemberRibbon

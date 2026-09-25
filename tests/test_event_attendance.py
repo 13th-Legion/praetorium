@@ -12,7 +12,6 @@ import pytest
 from sqlalchemy import select
 
 from app.models.events import EventRSVP
-from app.models.member import Member
 from app.models.training import MemberTradoc, TradocItem
 from app.services import attendance as attendance_svc
 from tests.factories import make_event, make_member, make_rsvp

@@ -27,7 +27,6 @@ What regressed was the call placement, so that is what is asserted.
 import inspect
 import re
 
-import pytest
 
 from app.models.member import Member
 from app.routes import member_edit

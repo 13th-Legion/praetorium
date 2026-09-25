@@ -12,7 +12,6 @@ from app.models.s2_intel import (
     S2TrainingSite,
     S2TrainingSiteMap,
 )
-from app.models.member import Member
 from tests.factories import make_member, make_event
 
 pytestmark = pytest.mark.integration

@@ -18,7 +18,7 @@ import pytest_asyncio
 
 from sqlalchemy import select
 
-from app.models.events import Event, EventFrago
+from app.models.events import EventFrago
 from app.models.notifications import Notification
 from tests.factories import make_event, make_member, make_rsvp
 
@@ -297,5 +297,4 @@ async def test_requires_authentication(client, frago_env):
     )
     assert resp.status_code in (302, 303, 401, 403)
     # And nothing was written.
-    from app.models.events import EventFrago as _EF
     assert "FRAGO 1 issued" not in resp.text
