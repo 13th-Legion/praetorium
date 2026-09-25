@@ -264,11 +264,23 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
     events = await _ftx_events(db)
     plans = {p.event_id: p for p in (await db.execute(select(S4MealPlan))).scalars().all()}
     headcounts: dict[int, int] = {}
+    meal_headcounts: dict[int, int] = {}
+    meal_roster: dict[int, list] = {}
     for ev in events:
         rows = (await db.execute(
             select(EventRSVP).where(EventRSVP.event_id == ev.id, EventRSVP.status == "attending")
         )).scalars().all()
         headcounts[ev.id] = sum(1 for _ in rows) + sum(r.guest_count or 0 for r in rows)
+        # Meal plan: only opted-in attending members owe the $15 (guests are not
+        # billed a separate meal fee — they're covered by the member's opt-in).
+        meal_opted = [r for r in rows if r.meal_plan]
+        meal_headcounts[ev.id] = len(meal_opted)
+        meal_roster[ev.id] = [
+            {"member_id": r.member_id, "meal_paid": bool(r.meal_paid),
+             "meal_payment_method": r.meal_payment_method or "",
+             "meal_paid_at": r.meal_paid_at}
+            for r in meal_opted
+        ]
 
     members = await _active_members(db)
     names = {m.id: _display_name(m) for m in members}
@@ -280,6 +292,8 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
         "events": events,
         "plans": plans,
         "headcounts": headcounts,
+        "meal_headcounts": meal_headcounts,
+        "meal_roster": meal_roster,
         "members": members,
         "names": names,
     })
@@ -317,6 +331,71 @@ async def save_meal_plan(request: Request, event_id: int, db: AsyncSession = Dep
     plan.cook_id = int(cook) if cook.isdigit() else None
     plan.buyer_id = int(buyer) if buyer.isdigit() else None
 
+    await db.commit()
+    return RedirectResponse(url="/api/s4/meals", status_code=302)
+
+
+@router.post("/meals/{event_id}/mark-paid")
+@require_auth
+async def mark_meal_paid(request: Request, event_id: int, db: AsyncSession = Depends(get_db)):
+    """Mark a member's meal-plan payment as paid (manual: venmo/cash; PayPal auto)."""
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    if not _can_approve(user, member):
+        return _denied()
+
+    form = await request.form()
+    member_id = (form.get("member_id") or "").strip()
+    method = (form.get("method") or "").strip() or "cash"
+    if method not in ("paypal", "venmo", "cash"):
+        method = "cash"
+    if not member_id.isdigit():
+        return HTMLResponse("<div style='color:#ef5350;'>Invalid member.</div>", status_code=400)
+
+    rsvp = (await db.execute(
+        select(EventRSVP).where(
+            EventRSVP.event_id == event_id, EventRSVP.member_id == int(member_id)
+        )
+    )).scalar_one_or_none()
+    if not rsvp:
+        return HTMLResponse("<div style='color:#ef5350;'>No RSVP found.</div>", status_code=404)
+
+    rsvp.meal_paid = True
+    rsvp.meal_payment_method = method
+    rsvp.meal_paid_at = datetime.utcnow()
+    await db.commit()
+    return RedirectResponse(url="/api/s4/meals", status_code=302)
+
+
+@router.post("/meals/{event_id}/mark-unpaid")
+@require_auth
+async def mark_meal_unpaid(request: Request, event_id: int, db: AsyncSession = Depends(get_db)):
+    """Clear a member's meal-plan payment (mistaken mark)."""
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    if not _can_approve(user, member):
+        return _denied()
+
+    form = await request.form()
+    member_id = (form.get("member_id") or "").strip()
+    if not member_id.isdigit():
+        return HTMLResponse("<div style='color:#ef5350;'>Invalid member.</div>", status_code=400)
+
+    rsvp = (await db.execute(
+        select(EventRSVP).where(
+            EventRSVP.event_id == event_id, EventRSVP.member_id == int(member_id)
+        )
+    )).scalar_one_or_none()
+    if not rsvp:
+        return HTMLResponse("<div style='color:#ef5350;'>No RSVP found.</div>", status_code=404)
+
+    rsvp.meal_paid = False
+    rsvp.meal_payment_method = None
+    rsvp.meal_paid_at = None
     await db.commit()
     return RedirectResponse(url="/api/s4/meals", status_code=302)
 

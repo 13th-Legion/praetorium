@@ -1350,6 +1350,11 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         except ValueError:
             guest_count = None
 
+    # Meal plan opt-in/out (FTX/MCFTX only). The choice is REQUIRED when
+    # attending — this is not optional per Cav (2026-09-24).
+    raw_meal = (form.get("meal_plan") or "").strip()
+    meal_plan = raw_meal == "in"
+
     async with database.async_session() as db:
         # Check event exists and RSVP is enabled/open
         event_result = await db.execute(select(Event).where(Event.id == event_id))
@@ -1363,6 +1368,14 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         if event.rsvp_deadline and _now_ct() > event.rsvp_deadline:
             return HTMLResponse(
                 '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">RSVP deadline has passed.</div>'
+            )
+
+        # Meal plan applies to FTX/MCFTX. Attending members MUST choose in/out.
+        meal_event = event.category in ("ftx", "mcftx")
+        if meal_event and new_status == "attending" and raw_meal not in ("in", "out"):
+            return HTMLResponse(
+                '<div style="padding:8px;background:#b71c1c;color:#fff;border-radius:6px;font-size:13px;">Please choose whether you\'re opting into the meal plan (in or out).</div>',
+                status_code=400,
             )
 
         # Get member
@@ -1395,6 +1408,12 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                 rsvp.guest_count = guest_count
             if new_status == "declined":
                 rsvp.guest_count = 0
+                rsvp.meal_plan = False
+                rsvp.meal_paid = False
+                rsvp.meal_payment_method = None
+                rsvp.meal_paid_at = None
+            elif meal_event:
+                rsvp.meal_plan = meal_plan
         else:
             rsvp = EventRSVP(
                 event_id=event_id,
@@ -1402,6 +1421,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
                 status=new_status,
                 responded_at=datetime.utcnow(),
                 guest_count=(guest_count or 0) if (guests_allowed and new_status == "attending") else 0,
+                meal_plan=(meal_plan if meal_event else False),
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
@@ -1535,6 +1555,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 
         await db.commit()
         rsvp_guest_count = rsvp.guest_count  # capture after commit, before session closes
+        rsvp_meal_plan = rsvp.meal_plan
 
     # Background: send catch-up email
     if send_opord_catchup and catchup_email:
@@ -1593,6 +1614,8 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         event_id, new_status,
         guests_allowed=(event_category in ("family_day", "social")),
         guest_count=(rsvp_guest_count if new_status == "attending" else 0),
+        meal_event=(event_category in ("ftx", "mcftx")),
+        meal_plan=(rsvp_meal_plan if new_status == "attending" else False),
     )
 
 
@@ -1601,6 +1624,8 @@ def _render_rsvp_controls(
     current_status: str,
     guests_allowed: bool = False,
     guest_count: int = 0,
+    meal_event: bool = False,
+    meal_plan: bool = False,
 ) -> HTMLResponse:
     """Render inline RSVP buttons (+ optional guest-count stepper for social events)."""
     attending_cls = "rsvp-btn-active" if current_status == "attending" else ""
@@ -1623,11 +1648,29 @@ def _render_rsvp_controls(
             </form>
         </div>"""
 
+    meal_html = ""
+    if meal_event:
+        meal_html = f"""
+        <div style="margin-top:8px;font-size:13px;color:#bbb;">
+            <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>$15</strong> (Sat dinner + Sun breakfast). Required.</div>
+            <div style="display:flex;gap:14px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <input type="radio" name="meal_plan" value="in" {'checked' if meal_plan else ''} style="accent-color:#4caf50;">
+                    <span>Opt in (+$15)</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <input type="radio" name="meal_plan" value="out" {'checked' if not meal_plan else ''} style="accent-color:#888;">
+                    <span>Opt out</span>
+                </label>
+            </div>
+        </div>"""
+
     html = f"""
     <div class="rsvp-controls" id="rsvp-controls-{event_id}">
-        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:inline;">
+        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:block;">
             <input type="hidden" name="status" value="attending">
-            <button type="submit" class="rsvp-btn rsvp-btn-attend {attending_cls}">
+            {meal_html}
+            <button type="submit" class="rsvp-btn rsvp-btn-attend {attending_cls}" style="margin-top:8px;">
                 ✅ Attending
             </button>
         </form>
@@ -2669,6 +2712,7 @@ async def warno_banner(request: Request):
         member_row = member_result.first()
         my_rsvp = "pending"
         my_responded = ""
+        my_meal_plan = False
         if member_row:
             rsvp_result = await db.execute(
                 select(EventRSVP).where(
@@ -2678,6 +2722,7 @@ async def warno_banner(request: Request):
             rsvp = rsvp_result.scalar_one_or_none()
             if rsvp:
                 my_rsvp = rsvp.status
+                my_meal_plan = bool(rsvp.meal_plan)
                 if rsvp.responded_at:
                     local_responded = _to_cdt(rsvp.responded_at)
                     my_responded = local_responded.strftime("RSVP'd %b %d at %H%M %Z")
@@ -2736,6 +2781,9 @@ async def warno_banner(request: Request):
             <div id="warno-rsvp" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <form onclick="event.stopPropagation();event.preventDefault();" hx-post="/api/events/{event.id}/rsvp" hx-swap="none" hx-on::after-request="htmx.ajax('GET','/api/events/warno-banner','#warno-banner-area')" style="display:inline;">
                     <input type="hidden" name="status" value="attending">
+                    <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal ($15):</span>
+                    <label style="font-size:12px;color:#bbb;cursor:pointer;"><input type="radio" name="meal_plan" value="in" {'checked' if my_meal_plan else ''} style="accent-color:#4caf50;"> In</label>
+                    <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if not my_meal_plan else ''} style="accent-color:#888;"> Out</label>
                     <button type="submit" onclick="event.stopPropagation();" style="padding:6px 16px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;border:2px solid #2e7d32;background:transparent;color:#2e7d32;{attending_cls}">
                         ✓ Attending
                     </button>

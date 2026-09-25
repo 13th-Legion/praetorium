@@ -166,6 +166,14 @@ class EventRSVP(Base):
     # Self-reported guest count (e.g. Family Day headcount) — PP guests-in-rsvp
     guest_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
+    # Meal plan (FTX/MCFTX): opted-in = $15 for Sat dinner + Sun breakfast.
+    # Required choice at RSVP time — attending members must opt in or out.
+    meal_plan: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    # Payment tracking for meal plan. meal_payment_method: paypal | venmo | cash.
+    meal_paid: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    meal_payment_method: Mapped[Optional[str]] = mapped_column(String(16))
+    meal_paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
     # Check-in (event day)
     checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
     checked_in_at: Mapped[Optional[datetime]] = mapped_column(DateTime)

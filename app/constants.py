@@ -170,3 +170,10 @@ RECIPIENT_GROUPS: dict[str, dict] = {
     "s6": {"label": "S6 — Communications", "roles": ["s6"]},
     "command": {"label": "Command", "roles": ["command"]},
 }
+
+
+# ─── FTX Meal Plan ──────────────────────────────────────────────────────────
+# Flat per-FTX meal-plan cost (Sat dinner + Sun breakfast). Attending members
+# must opt in/out at RSVP; opted-in members owe this amount.
+MEAL_PLAN_COST = 15.00
+MEAL_PAYMENT_METHODS = ("paypal", "venmo", "cash")

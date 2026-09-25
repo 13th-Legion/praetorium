@@ -17,9 +17,55 @@
         {% for ev in events %}
         {% set plan = plans.get(ev.id) %}
         {% set hc = headcounts.get(ev.id, 0) %}
+        {% set mhc = meal_headcounts.get(ev.id, 0) %}
+        {% set roster = meal_roster.get(ev.id, []) %}
         <div class="s4-card">
             <h3 style="margin-bottom:6px;">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}</h3>
-            <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong></div>
+            <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong> · Meal plan: <strong style="color:#d4a537;">{{ mhc }}</strong> opted in ($15 each)</div>
+
+            {% if can_approve %}
+            <div style="margin-bottom:14px;border-top:1px solid #2a2a3e;padding-top:10px;">
+                <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Meal payments ({{ mhc }} opted in)</div>
+                {% if roster %}
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                    {% for r in roster %}
+                    <tr style="border-bottom:1px solid #1e1e35;">
+                        <td style="padding:4px 6px 4px 0;">{{ names.get(r.member_id, 'Member ' ~ r.member_id) }}</td>
+                        <td style="padding:4px 6px;">
+                            {% if r.meal_paid %}
+                            <span style="color:#4caf50;font-weight:600;">✓ paid{% if r.meal_payment_method %} · {{ r.meal_payment_method }}{% endif %}</span>
+                            {% else %}
+                            <span style="color:#ef5350;font-weight:600;">unpaid</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:4px 0;text-align:right;white-space:nowrap;">
+                            {% if r.meal_paid %}
+                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-unpaid" style="display:inline;">
+                                <input type="hidden" name="member_id" value="{{ r.member_id }}">
+                                <button class="s4-btn s4-btn-sm" type="submit">Unmark</button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-paid" style="display:inline;">
+                                <input type="hidden" name="member_id" value="{{ r.member_id }}">
+                                <input type="hidden" name="method" value="cash">
+                                <button class="s4-btn s4-btn-sm" type="submit">Paid (cash)</button>
+                            </form>
+                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-paid" style="display:inline;">
+                                <input type="hidden" name="member_id" value="{{ r.member_id }}">
+                                <input type="hidden" name="method" value="venmo">
+                                <button class="s4-btn s4-btn-sm" type="submit">Paid (venmo)</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <div class="s4-muted">No one has opted into the meal plan yet.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if can_approve %}
             <form method="post" action="/api/s4/meals/{{ ev.id }}">
                 <div class="s4-check"><input type="checkbox" name="sat_breakfast" {% if plan and plan.sat_breakfast %}checked{% endif %}> Sat Breakfast</div>

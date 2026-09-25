@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import database
 from app.models.member import Member
+from app.models.events import Event, EventRSVP
 from app.models.webhook_event import WebhookEvent
 from config import get_settings
 from app.settings import (
@@ -38,6 +39,12 @@ APP_FEE_AMOUNT = 50.00
 # let a $49.50 payment clear a $50 fee). Ceiling covers $50 + PayPal fee (~$51.80).
 APP_FEE_MIN = 50.00
 APP_FEE_MAX = 53.00   # ceiling — $50 + PayPal fee covered (~$51.80) with margin
+
+# FTX meal plan: flat $15 (Sat dinner + Sun breakfast). Match incoming $15
+# payments to a member's unpaid meal-plan RSVP (PayPal fee ~$15.76 covered).
+MEAL_FEE_AMOUNT = 15.00
+MEAL_FEE_MIN = 15.00
+MEAL_FEE_MAX = 16.00
 
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
 NC_URL = "https://cloud.13thlegion.org"
@@ -475,6 +482,8 @@ async def paypal_webhook(request: Request):
 
     # Determine if this looks like an application fee
     is_app_fee = APP_FEE_MIN <= amount_value <= APP_FEE_MAX
+    # Determine if this looks like a $15 FTX meal-plan payment
+    is_meal_fee = MEAL_FEE_MIN <= amount_value <= MEAL_FEE_MAX
 
     # ── Strategy 1: Match against Deck pipeline cards (app fees only) ────
     deck_match = None
@@ -598,27 +607,89 @@ async def paypal_webhook(request: Request):
             matched_member = result.scalars().first()
 
         if matched_member:
-            # If this is an app fee and they haven't paid yet, mark it.
-            # IMPORTANT: only recruits/applicants owe an app fee. An active or
-            # patched member sending $50 is a DONATION, never an app fee — even
-            # if their app_fee_status was never tracked (true for pre-system OGs).
-            member_owes_app_fee = (
-                matched_member.status == "recruit"
-                and matched_member.patch_date is None
-            )
-            if is_app_fee and member_owes_app_fee and matched_member.app_fee_status in ("pending", None):
-                matched_member.app_fee_status = "paid"
-                matched_member.app_fee_method = "paypal"
-                matched_member.app_fee_paid_at = datetime.utcnow()
-                await db.commit()
-                notif_body = "$50 application fee received via PayPal (matched from member record)."
-                notif_title = f"💰 App fee verified — {matched_member.first_name} {matched_member.last_name}"
+            match_type = "donation"
+            # ── Meal-plan payment ($15) — mark the member's unpaid meal RSVP ──
+            # A $15 payment from an active/patched member is a meal-plan fee,
+            # not a donation. Match it to their most recent unpaid meal RSVP.
+            if is_meal_fee and not is_app_fee:
+                meal_rsvp = (await db.execute(
+                    select(EventRSVP, Event)
+                    .join(Event, EventRSVP.event_id == Event.id)
+                    .where(
+                        EventRSVP.member_id == matched_member.id,
+                        EventRSVP.meal_plan.is_(True),
+                        EventRSVP.meal_paid.is_(False),
+                    )
+                    .order_by(Event.date_start.desc())
+                )).first()
+                if meal_rsvp:
+                    rsvp_row, meal_evt = meal_rsvp
+                    rsvp_row.meal_paid = True
+                    rsvp_row.meal_payment_method = "paypal"
+                    rsvp_row.meal_paid_at = datetime.utcnow()
+                    await db.commit()
+                    match_type = "meal"
+                    notif_body = (
+                        f"$15 meal-plan payment received via PayPal for "
+                        f"{meal_evt.title}. Marked paid automatically."
+                    )
+                    notif_title = f"🍽️ Meal plan paid — {matched_member.first_name} {matched_member.last_name}"
+                    logger.info(
+                        f"🍽️ Meal match: {matched_member.first_name} "
+                        f"{matched_member.last_name} paid ${amount_value:.2f} "
+                        f"for {meal_evt.title} txn={transaction_id}"
+                    )
+                else:
+                    # $15 from a member but no unpaid meal RSVP — needs S4 review.
+                    notif_body = (
+                        f"${amount_value:.2f} received via PayPal from "
+                        f"{matched_member.first_name} {matched_member.last_name} — "
+                        f"looks like a meal-plan payment but no unpaid meal RSVP found."
+                    )
+                    notif_title = f"🍽️ Meal payment needs review — {matched_member.first_name} {matched_member.last_name}"
+                    logger.warning(
+                        f"⚠️ $15 from {matched_member.first_name} {matched_member.last_name} "
+                        f"but no unpaid meal RSVP. txn={transaction_id}"
+                    )
+                    await _set_outcome(transaction_id, "needs_review")
+                    try:
+                        from app.routes.notifications import create_notification_for_roles
+                        await create_notification_for_roles(
+                            db, ["s4", "command", "admin"],
+                            "payment", notif_title, body=notif_body,
+                            link="/api/s4/meals", icon="🍽️",
+                        )
+                    except Exception:
+                        pass
+                    return JSONResponse({
+                        "status": "needs_review", "source": "members",
+                        "member_id": matched_member.id,
+                        "name": f"{matched_member.first_name} {matched_member.last_name}",
+                        "type": "meal",
+                    })
             else:
-                notif_body = (
-                    f"${amount_value:.2f} donation received via PayPal from "
-                    f"{matched_member.first_name} {matched_member.last_name}."
+                # If this is an app fee and they haven't paid yet, mark it.
+                # IMPORTANT: only recruits/applicants owe an app fee. An active or
+                # patched member sending $50 is a DONATION, never an app fee — even
+                # if their app_fee_status was never tracked (true for pre-system OGs).
+                member_owes_app_fee = (
+                    matched_member.status == "recruit"
+                    and matched_member.patch_date is None
                 )
-                notif_title = f"💰 Donation received — {matched_member.first_name} {matched_member.last_name}"
+                if is_app_fee and member_owes_app_fee and matched_member.app_fee_status in ("pending", None):
+                    matched_member.app_fee_status = "paid"
+                    matched_member.app_fee_method = "paypal"
+                    matched_member.app_fee_paid_at = datetime.utcnow()
+                    await db.commit()
+                    match_type = "app_fee"
+                    notif_body = "$50 application fee received via PayPal (matched from member record)."
+                    notif_title = f"💰 App fee verified — {matched_member.first_name} {matched_member.last_name}"
+                else:
+                    notif_body = (
+                        f"${amount_value:.2f} donation received via PayPal from "
+                        f"{matched_member.first_name} {matched_member.last_name}."
+                    )
+                    notif_title = f"💰 Donation received — {matched_member.first_name} {matched_member.last_name}"
 
             logger.info(
                 f"✅ Member match: {matched_member.first_name} "
@@ -645,7 +716,7 @@ async def paypal_webhook(request: Request):
                 "source": "members",
                 "member_id": matched_member.id,
                 "name": f"{matched_member.first_name} {matched_member.last_name}",
-                "type": "app_fee" if (is_app_fee and member_owes_app_fee and matched_member.app_fee_status == "paid") else "donation",
+                "type": match_type,
             })
 
     # ── Strategy 3: No match — alert S1 for manual resolution ────────────
