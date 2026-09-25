@@ -54,6 +54,16 @@ router = APIRouter(prefix="/api/s2", tags=["s2-admin"])
 
 S2_ROLES = {"s2", "command", "admin"}
 
+# NATO standard source-reliability (A–F) and information-credibility (1–6) scales.
+_RELIABILITY_LABELS = {
+    "A": "Completely reliable", "B": "Usually reliable", "C": "Fairly reliable",
+    "D": "Not usually reliable", "E": "Unreliable", "F": "Cannot be judged",
+}
+_CREDIBILITY_LABELS = {
+    "1": "Confirmed", "2": "Probably true", "3": "Possibly true",
+    "4": "Doubtful", "5": "Improbable", "6": "Cannot be judged",
+}
+
 # Bleach allowlist mirrors the announcement/newsletter editors (Quill HTML).
 _ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS) | {
     "p", "br", "strong", "em", "u", "s", "ol", "ul", "li", "h1", "h2", "h3",
@@ -161,6 +171,8 @@ async def iir_list(request: Request, db: AsyncSession = Depends(get_db)):
         "is_s2": is_s2,
         "iirs": visible,
         "names": names,
+        "reliability_labels": _RELIABILITY_LABELS,
+        "credibility_labels": _CREDIBILITY_LABELS,
     })
 
 
@@ -226,7 +238,11 @@ async def iir_save(request: Request, db: AsyncSession = Depends(get_db)):
     iir.country_area = country_area
     iir.source = (form.get("source") or "").strip() or None
     iir.reliability_rating = (form.get("reliability_rating") or "").strip() or None
+    if iir.reliability_rating not in _RELIABILITY_LABELS:
+        iir.reliability_rating = None
     iir.credibility = (form.get("credibility") or "").strip() or None
+    if iir.credibility not in _CREDIBILITY_LABELS:
+        iir.credibility = None
     iir.details = details
     iir.assessment = _clean_html(form.get("assessment") or "") or None
     iir.remarks = (form.get("remarks") or "").strip() or None

@@ -30,8 +30,30 @@
             </div>
             <div class="s2-field"><label>Source (who/where)</label><input name="source" class="s2-input" value="{{ iir.source or '' if iir else '' }}"></div>
             <div class="s2-grid" style="grid-template-columns:1fr 1fr 1fr;">
-                <div class="s2-field"><label>Reliability (A–F / high-med-low)</label><input name="reliability_rating" class="s2-input" value="{{ iir.reliability_rating or '' if iir else '' }}"></div>
-                <div class="s2-field"><label>Credibility / confidence</label><input name="credibility" class="s2-input" value="{{ iir.credibility or '' if iir else '' }}"></div>
+                <div class="s2-field">
+                    <label>Reliability (source)</label>
+                    <select name="reliability_rating" class="s2-select">
+                        <option value="">— select —</option>
+                        <option value="A" {% if iir and iir.reliability_rating == 'A' %}selected{% endif %}>A — Completely reliable</option>
+                        <option value="B" {% if iir and iir.reliability_rating == 'B' %}selected{% endif %}>B — Usually reliable</option>
+                        <option value="C" {% if iir and iir.reliability_rating == 'C' %}selected{% endif %}>C — Fairly reliable</option>
+                        <option value="D" {% if iir and iir.reliability_rating == 'D' %}selected{% endif %}>D — Not usually reliable</option>
+                        <option value="E" {% if iir and iir.reliability_rating == 'E' %}selected{% endif %}>E — Unreliable</option>
+                        <option value="F" {% if iir and iir.reliability_rating == 'F' %}selected{% endif %}>F — Cannot be judged</option>
+                    </select>
+                </div>
+                <div class="s2-field">
+                    <label>Credibility (information)</label>
+                    <select name="credibility" class="s2-select">
+                        <option value="">— select —</option>
+                        <option value="1" {% if iir and iir.credibility == '1' %}selected{% endif %}>1 — Confirmed</option>
+                        <option value="2" {% if iir and iir.credibility == '2' %}selected{% endif %}>2 — Probably true</option>
+                        <option value="3" {% if iir and iir.credibility == '3' %}selected{% endif %}>3 — Possibly true</option>
+                        <option value="4" {% if iir and iir.credibility == '4' %}selected{% endif %}>4 — Doubtful</option>
+                        <option value="5" {% if iir and iir.credibility == '5' %}selected{% endif %}>5 — Improbable</option>
+                        <option value="6" {% if iir and iir.credibility == '6' %}selected{% endif %}>6 — Cannot be judged</option>
+                    </select>
+                </div>
                 <div class="s2-field">
                     <label>Dissemination</label>
                     <select name="dissemination_tier" class="s2-select">
@@ -84,8 +106,8 @@
         fd.append('subject', document.querySelector('input[name=subject]').value);
         fd.append('country_area', document.querySelector('input[name=country_area]').value);
         fd.append('source', document.querySelector('input[name=source]').value);
-        fd.append('reliability_rating', document.querySelector('input[name=reliability_rating]').value);
-        fd.append('credibility', document.querySelector('input[name=credibility]').value);
+        fd.append('reliability_rating', document.querySelector('select[name=reliability_rating]').value);
+        fd.append('credibility', document.querySelector('select[name=credibility]').value);
         fd.append('dissemination_tier', document.querySelector('select[name=dissemination_tier]').value);
         fd.append('remarks', document.querySelector('input[name=remarks]').value);
         fd.append('details', iirQuill.root.innerHTML);

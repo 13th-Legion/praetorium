@@ -31,7 +31,7 @@
                 <span class="s2-badge badge-{{ i.status }}">{{ i.status }}</span>
             </div>
         </div>
-        {% if i.source %}<div class="s2-muted" style="margin-top:6px;">Source: {{ i.source }}{% if i.reliability_rating %} · Reliability {{ i.reliability_rating }}{% endif %}{% if i.credibility %} · Credibility {{ i.credibility }}{% endif %}</div>{% endif %}
+        {% if i.source %}<div class="s2-muted" style="margin-top:6px;">Source: {{ i.source }}{% if i.reliability_rating %} · Reliability {{ i.reliability_rating }} ({{ reliability_labels.get(i.reliability_rating, '') }}){% endif %}{% if i.credibility %} · Credibility {{ i.credibility }} ({{ credibility_labels.get(i.credibility, '') }}){% endif %}</div>{% endif %}
         <div style="margin-top:10px;color:#ddd;font-size:14px;line-height:1.5;">{{ i.details | safe }}</div>
         {% if i.assessment %}
         <div style="margin-top:10px;padding:10px 12px;background:rgba(212,165,55,0.08);border-left:3px solid #d4a537;border-radius:4px;color:#e0e0e0;font-size:13px;">
