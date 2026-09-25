@@ -104,6 +104,15 @@ async def attendance_analytics(request: Request):
         roster_strength = len(all_members)
         active_member_ids = {m.id for m in all_members}
 
+        # True roster strength (all active+recruit, incl. on-leave) — shown on the
+        # summary card. Rates still divide by `roster_strength` (on-leave exempt),
+        # so on-leave members don't drag attendance rates down while away.
+        total_roster_result = await db.execute(
+            select(func.count(Member.id)).where(Member.status.in_(["active", "recruit"]))
+        )
+        total_roster = total_roster_result.scalar_one()
+        on_leave_count = total_roster - roster_strength
+
         # Get all RSVPs for finalized events, then drop RSVPs from non-active members
         # so per-event/team/headline stats never count people no longer in the unit.
         rsvps_result = await db.execute(
@@ -276,8 +285,10 @@ async def attendance_analytics(request: Request):
             key=lambda e: e.date_start,
         )
         att_by_evt = {}
+        rsvp_by_evt = {}
         for e in viz_events:
             att_by_evt[e.id] = len([r for r in all_rsvps if r.event_id == e.id and r.attended])
+            rsvp_by_evt[e.id] = len([r for r in all_rsvps if r.event_id == e.id and r.status in POSITIVE_RSVP])
 
         # --- 1) Monthly trend line (headcount over time) ---
         trend = []
@@ -287,13 +298,14 @@ async def attendance_analytics(request: Request):
                 "label": ld.strftime("%b %y"),
                 "full_date": ld.strftime("%d %b %Y").lstrip("0"),
                 "count": att_by_evt[e.id],
+                "rsvp": rsvp_by_evt[e.id],
                 "is_mcftx": e.category == "mcftx",
                 "id": e.id,
             })
-        trend_max = max([t["count"] for t in trend], default=0)
+        trend_max = max([max(t["count"], t["rsvp"]) for t in trend], default=0)
 
         # Build an SVG polyline path for the trend (viewBox 1000x260, padding 40)
-        trend_svg = {"points": [], "max": trend_max, "w": 1000, "h": 260, "pad": 40}
+        trend_svg = {"points": [], "rsvp_points": [], "max": trend_max, "w": 1000, "h": 260, "pad": 40}
         n_pts = len(trend)
         if n_pts > 1 and trend_max > 0:
             plot_w = trend_svg["w"] - 2 * trend_svg["pad"]
@@ -301,12 +313,19 @@ async def attendance_analytics(request: Request):
             for i, t in enumerate(trend):
                 x = trend_svg["pad"] + (plot_w * i / (n_pts - 1))
                 y = trend_svg["pad"] + plot_h - (plot_h * t["count"] / trend_max)
+                ry = trend_svg["pad"] + plot_h - (plot_h * t["rsvp"] / trend_max)
                 trend_svg["points"].append({
                     "x": round(x, 1), "y": round(y, 1),
                     "count": t["count"], "label": t["label"],
                     "full_date": t["full_date"], "is_mcftx": t["is_mcftx"],
                 })
+                trend_svg["rsvp_points"].append({
+                    "x": round(x, 1), "y": round(ry, 1),
+                    "rsvp": t["rsvp"], "full_date": t["full_date"],
+                    "is_mcftx": t["is_mcftx"],
+                })
             trend_svg["polyline"] = " ".join(f"{p['x']},{p['y']}" for p in trend_svg["points"])
+            trend_svg["rsvp_polyline"] = " ".join(f"{p['x']},{p['y']}" for p in trend_svg["rsvp_points"])
             # area path (close down to baseline)
             base_y = trend_svg["pad"] + plot_h
             first = trend_svg["points"][0]; last = trend_svg["points"][-1]
@@ -436,6 +455,8 @@ async def attendance_analytics(request: Request):
         "avg_attendance": avg_attendance,
         "avg_rate": avg_rate,
         "roster_strength": roster_strength,
+        "total_roster": total_roster,
+        "on_leave_count": on_leave_count,
         "no_shows": no_shows,
         "trend": trend,
         "trend_svg": trend_svg,

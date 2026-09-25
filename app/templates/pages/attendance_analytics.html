@@ -33,8 +33,9 @@
             <div style="font-size: 12px; color: #888; text-transform: uppercase;">Avg Attendance Rate</div>
         </div>
         <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; text-align: center;">
-            <div style="font-size: 32px; font-weight: 700; color: #42a5f5;">{{ roster_strength }}</div>
+            <div style="font-size: 32px; font-weight: 700; color: #42a5f5;">{{ total_roster }}</div>
             <div style="font-size: 12px; color: #888; text-transform: uppercase;">Roster Strength</div>
+            {% if on_leave_count > 0 %}<div style="font-size: 11px; color: #666; margin-top: 4px;">{{ roster_strength }} counted · {{ on_leave_count }} on leave</div>{% endif %}
         </div>
     </div>
 
@@ -82,8 +83,8 @@
     <!-- ===== ATTENDANCE TREND LINE ===== -->
     {% if trend_svg.points %}
     <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">📈 Attendance Trend</h2>
-        <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Headcount per FTX over time. <span style="color:#d4a537;">◆</span> = MCFTX (multi-company).</p>
+        <h2 style="font-family: 'Oswald', sans-serif; color: #e0e0e0; margin: 0 0 4px; font-size: 18px;">📈 Attendance &amp; RSVP Trend</h2>
+        <p style="color: #888; font-size: 12px; margin: 0 0 16px;">Headcount per FTX over time. <span style="color:#4caf50;">—</span> present · <span style="color:#42a5f5;">—</span> RSVP'd · <span style="color:#d4a537;">◆</span> = MCFTX (multi-company).</p>
         <div style="overflow-x: auto;">
         <svg viewBox="0 0 {{ trend_svg.w }} {{ trend_svg.h }}" style="width: 100%; min-width: 700px; height: auto;" font-family="sans-serif">
             {% for g in trend_svg.gridlines %}
@@ -91,13 +92,17 @@
             <text x="{{ trend_svg.pad - 8 }}" y="{{ g.y + 4 }}" fill="#666" font-size="11" text-anchor="end">{{ g.val }}</text>
             {% endfor %}
             <path d="{{ trend_svg.area }}" fill="rgba(212,165,55,0.12)" stroke="none"/>
-            <polyline points="{{ trend_svg.polyline }}" fill="none" stroke="#d4a537" stroke-width="2.5" stroke-linejoin="round"/>
+            <polyline points="{{ trend_svg.rsvp_polyline }}" fill="none" stroke="#42a5f5" stroke-width="2" stroke-linejoin="round" stroke-dasharray="5,4"/>
+            <polyline points="{{ trend_svg.polyline }}" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linejoin="round"/>
             {% for p in trend_svg.points %}
             {% if p.is_mcftx %}
             <rect x="{{ p.x - 4 }}" y="{{ p.y - 4 }}" width="8" height="8" transform="rotate(45 {{ p.x }} {{ p.y }})" fill="#d4a537" stroke="#1a1a2e" stroke-width="1.5"><title>{{ p.full_date }} — {{ p.count }} present (MCFTX)</title></rect>
             {% else %}
             <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="#4caf50" stroke="#1a1a2e" stroke-width="1.5"><title>{{ p.full_date }} — {{ p.count }} present</title></circle>
             {% endif %}
+            {% endfor %}
+            {% for p in trend_svg.rsvp_points %}
+            <circle cx="{{ p.x }}" cy="{{ p.y }}" r="2.5" fill="#42a5f5" stroke="#1a1a2e" stroke-width="1"><title>{{ p.full_date }} — {{ p.rsvp }} RSVP'd</title></circle>
             {% endfor %}
         </svg>
         </div>
