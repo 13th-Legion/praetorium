@@ -21,11 +21,11 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column(
         "event_rsvps",
-        sa.Column("meal_plan", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("meal_plan", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.add_column(
         "event_rsvps",
-        sa.Column("meal_paid", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("meal_paid", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.add_column(
         "event_rsvps",
