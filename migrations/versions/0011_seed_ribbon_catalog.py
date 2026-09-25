@@ -65,7 +65,7 @@ ROWS = [
 
 def upgrade() -> None:
     # Parameterized single-row INSERT ... ON CONFLICT DO NOTHING (safe on prod).
-    # Loop op.execute per row: unambiguous executemany-free, works with asyncpg.
+    # op.execute() takes only the statement, so bind and execute directly.
     from sqlalchemy import text
 
     stmt = text(
@@ -83,8 +83,9 @@ def upgrade() -> None:
         "code", "section", "name", "precedence", "base_points",
         "device_increment", "max_devices", "is_auto", "claimable",
     )
+    bind = op.get_bind()
     for r in ROWS:
-        op.execute(stmt, dict(zip(keys, r)))
+        bind.execute(stmt, dict(zip(keys, r)))
 
 
 def downgrade() -> None:
