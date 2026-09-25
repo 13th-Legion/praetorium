@@ -28,7 +28,7 @@ from __future__ import annotations
 import io
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import quote
 
 import httpx
@@ -329,7 +329,7 @@ async def _store_receipt(filename: str, data: bytes) -> str | None:
     """Upload a receipt to NC S4 folder; returns the WebDAV path or None."""
     settings = get_settings()
     safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in filename).strip() or "receipt"
-    date_str = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    date_str = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     path = f"{NC_S4_BASE}/Receipts/{date_str}_{safe}"
     async with httpx.AsyncClient(timeout=20) as client:
         folder = f"{NC_S4_BASE}/Receipts"
@@ -451,7 +451,7 @@ async def reimburse_expense(request: Request, expense_id: int, db: AsyncSession 
     if not exp:
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     exp.status = "reimbursed"
-    exp.reimbursed_at = datetime.now(timezone.utc)
+    exp.reimbursed_at = datetime.utcnow()
     exp.reimbursed_by_id = member.id
     await db.commit()
     return RedirectResponse(url="/api/s4/expenses", status_code=302)
@@ -560,7 +560,7 @@ async def approve_purchase(request: Request, pr_id: int, db: AsyncSession = Depe
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     pr.status = "approved"
     pr.approved_by_id = member.id
-    pr.approved_at = datetime.now(timezone.utc)
+    pr.approved_at = datetime.utcnow()
     await db.commit()
     return RedirectResponse(url="/api/s4/purchases", status_code=302)
 
@@ -595,10 +595,10 @@ async def advance_purchase(request: Request, pr_id: int, db: AsyncSession = Depe
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     if pr.status == "approved":
         pr.status = "purchased"
-        pr.purchased_at = datetime.now(timezone.utc)
+        pr.purchased_at = datetime.utcnow()
     elif pr.status == "purchased":
         pr.status = "received"
-        pr.received_at = datetime.now(timezone.utc)
+        pr.received_at = datetime.utcnow()
         db.add(S4InventoryItem(
             name=pr.item_name, category="Purchased", description=pr.justification,
             source_type="purchase", source_purchase_id=pr.id, status="available",
@@ -693,7 +693,7 @@ async def accept_donation(request: Request, dn_id: int, db: AsyncSession = Depen
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     dn.status = "accepted_pending_dropoff"
     dn.reviewed_by_id = member.id
-    dn.reviewed_at = datetime.now(timezone.utc)
+    dn.reviewed_at = datetime.utcnow()
     await db.commit()
     return RedirectResponse(url="/api/s4/donations", status_code=302)
 
@@ -709,7 +709,7 @@ async def receive_donation(request: Request, dn_id: int, db: AsyncSession = Depe
     if not dn:
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     dn.status = "received"
-    dn.received_at = datetime.now(timezone.utc)
+    dn.received_at = datetime.utcnow()
     db.add(S4InventoryItem(
         name=dn.item_name, category="Donated", description=dn.description,
         condition=dn.condition, source_type="donation", source_donation_id=dn.id,
@@ -731,7 +731,7 @@ async def reject_donation(request: Request, dn_id: int, db: AsyncSession = Depen
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     dn.status = "rejected"
     dn.reviewed_by_id = member.id
-    dn.reviewed_at = datetime.now(timezone.utc)
+    dn.reviewed_at = datetime.utcnow()
     await db.commit()
     return RedirectResponse(url="/api/s4/donations", status_code=302)
 
@@ -934,7 +934,7 @@ async def checkout_item(request: Request, item_id: int, db: AsyncSession = Depen
 
     co = S4Checkout(
         item_id=item_id, member_id=holder_id,
-        checked_out_by_id=member.id, checked_out_at=datetime.now(timezone.utc),
+        checked_out_by_id=member.id, checked_out_at=datetime.utcnow(),
     )
     db.add(co)
     item.status = "checked_out"
@@ -959,7 +959,7 @@ async def checkin_item(request: Request, item_id: int, db: AsyncSession = Depend
     )).scalars().first()
     if open_co:
         form = await request.form()
-        open_co.checked_in_at = datetime.now(timezone.utc)
+        open_co.checked_in_at = datetime.utcnow()
         open_co.checked_in_by_id = member.id
         open_co.return_condition = (form.get("return_condition") or "").strip() or None
     item.status = "available"
