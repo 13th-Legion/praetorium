@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import bleach
 from fastapi import APIRouter, Depends, Form, Request
@@ -493,6 +494,10 @@ async def iir_save(request: Request, db: AsyncSession = Depends(get_db)):
     iir.dissemination_tier = tier
     if is_new:
         iir.author_id = member.id if member else None
+        # report_number is NOT NULL + unique, but the sequential number needs the
+        # auto-assigned id. Give it a unique placeholder so the INSERT succeeds,
+        # then stamp the real "IIR-000N" once flush() has issued the id.
+        iir.report_number = f"IIR-PENDING-{uuid4().hex[:12]}"
         db.add(iir)
         await db.flush()
         iir.report_number = f"IIR-{iir.id:04d}"
