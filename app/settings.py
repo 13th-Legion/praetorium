@@ -29,7 +29,7 @@ REAPPLY_URL = os.getenv("REAPPLY_URL", "https://cloud.13thlegion.org/apps/forms/
 # card on the Inbox stack. Forms itself cannot create Deck cards.
 FEEDBACK_FORM_URL = os.getenv(
     "FEEDBACK_FORM_URL",
-    "https://cloud.13thlegion.org/apps/forms/s/7dcrKqMENnCjdjaG",
+    "https://cloud.13thlegion.org/apps/forms/s/YQYiQwMMWymAg3ARiNz8mJRd",
 )
 FEEDBACK_FORM_ID = int(os.getenv("FEEDBACK_FORM_ID", "9"))
 FEEDBACK_BOARD_ID = int(os.getenv("FEEDBACK_BOARD_ID", "47"))

@@ -15,7 +15,7 @@ def test_feedback_page_is_public(client):
     resp = client.get("/feedback")
     assert resp.status_code == 200
     assert "Do not paste" in resp.text
-    assert "apps/forms/s/7dcrKqMENnCjdjaG" in resp.text
+    assert "apps/forms/s/YQYiQwMMWymAg3ARiNz8mJRd" in resp.text
     assert 'class="feedback-fab"' in resp.text
 
 
