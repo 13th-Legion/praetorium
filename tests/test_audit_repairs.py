@@ -153,3 +153,43 @@ class TestMealPaymentPicksSoonestFuture:
             unpaid_upcoming_meal_stmt(member.id, datetime(2026, 9, 25, 12, 0))
         )).first()
         assert row is None
+
+
+from decimal import Decimal
+from app.services.meals import (
+    amount_covers,
+    default_slots,
+    effective_price,
+    menu_label,
+    pick_meal_payment,
+)
+
+
+def test_april_and_october_default_to_the_long_meal_list():
+    april = default_slots(datetime(2026, 4, 18))
+    october = default_slots(datetime(2026, 10, 17))
+    june = default_slots(datetime(2026, 6, 6))
+    assert "thu_dinner" in april and "fri_lunch" in april and "sun_breakfast" in april
+    assert october == april
+    assert june == frozenset({"sat_dinner", "sun_breakfast"})
+    assert menu_label(None, datetime(2026, 6, 6)) == "Sat Dinner, Sun Breakfast"
+    assert "Thu Dinner" in menu_label(None, datetime(2026, 4, 18))
+
+
+def test_override_price_beats_the_standard(monkeypatch):
+    monkeypatch.setattr("app.services.meals.standard_price", lambda: Decimal("15.00"))
+    overridden = SimpleNamespace(meal_price_override=Decimal("25"))
+    plain = SimpleNamespace(meal_price_override=None)
+    assert effective_price(overridden) == Decimal("25.00")
+    assert effective_price(plain) == Decimal("15.00")
+
+
+def test_payment_matches_the_event_whose_price_fits():
+    soon = SimpleNamespace(title="Soon", meal_price_override=Decimal("15.00"))
+    later = SimpleNamespace(title="Later", meal_price_override=Decimal("25.00"))
+    rows = [(SimpleNamespace(), soon), (SimpleNamespace(), later)]
+    assert pick_meal_payment(rows, Decimal("25.40"))[1].title == "Later"
+    assert pick_meal_payment(rows, Decimal("15.76"))[1].title == "Soon"
+    assert pick_meal_payment(rows, Decimal("40.00")) is None
+    assert amount_covers(Decimal("16.50"), Decimal("15.00")) is True
+    assert amount_covers(Decimal("16.51"), Decimal("15.00")) is False

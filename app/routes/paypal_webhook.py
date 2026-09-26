@@ -19,6 +19,12 @@ from sqlalchemy import select, or_, func
 from sqlalchemy.exc import IntegrityError
 
 from app.clock import now_ct
+from app.services.meals import (
+    amount_covers,
+    effective_price,
+    pick_meal_payment,
+    standard_price,
+)
 
 from app import database
 from app.models.member import Member
@@ -42,15 +48,12 @@ APP_FEE_AMOUNT = 50.00
 APP_FEE_MIN = 50.00
 APP_FEE_MAX = 53.00   # ceiling — $50 + PayPal fee covered (~$51.80) with margin
 
-# FTX meal plan: flat $15 (Sat dinner + Sun breakfast). Match incoming $15
-# payments to a member's unpaid meal-plan RSVP (PayPal fee ~$15.76 covered).
-MEAL_FEE_AMOUNT = 15.00
-MEAL_FEE_MIN = 15.00
-MEAL_FEE_MAX = 16.00
+# Meal payments match the event's price (standard, or that FTX's override)
+# plus a small PayPal-fee slack. See app.services.meals.
 
 
 def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
-    """Soonest future unpaid meal RSVP. A past one is not a donation sink."""
+    """Future unpaid meal RSVPs, soonest first. A past one is not a donation sink."""
     return (
         select(EventRSVP, Event)
         .join(Event, EventRSVP.event_id == Event.id)
@@ -64,7 +67,6 @@ def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
             Event.status.notin_(["cancelled"]),
         )
         .order_by(Event.date_start.asc())
-        .limit(1)
     )
 
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
@@ -503,8 +505,6 @@ async def paypal_webhook(request: Request):
 
     # Determine if this looks like an application fee
     is_app_fee = APP_FEE_MIN <= amount_value <= APP_FEE_MAX
-    # Determine if this looks like a $15 FTX meal-plan payment
-    is_meal_fee = MEAL_FEE_MIN <= amount_value <= MEAL_FEE_MAX
 
     # ── Strategy 1: Match against Deck pipeline cards (app fees only) ────
     deck_match = None
@@ -633,10 +633,11 @@ async def paypal_webhook(request: Request):
             # A $15–$16 payment from a member is a meal-plan fee, not a donation.
             # Attach it to the soonest future unpaid RSVP. A past RSVP stays unpaid
             # so a donation cannot settle a stale meal.
-            if is_meal_fee and not is_app_fee:
-                meal_rsvp = (await db.execute(
+            if not is_app_fee:
+                meal_rows = (await db.execute(
                     unpaid_upcoming_meal_stmt(matched_member.id, now_ct())
-                )).first()
+                )).all()
+                meal_rsvp = pick_meal_payment(meal_rows, amount_value)
                 if meal_rsvp:
                     rsvp_row, meal_evt = meal_rsvp
                     rsvp_row.meal_paid = True
@@ -645,7 +646,7 @@ async def paypal_webhook(request: Request):
                     await db.commit()
                     match_type = "meal"
                     notif_body = (
-                        f"$15 meal-plan payment received via PayPal for "
+                        f"${effective_price(meal_evt):.2f} meal-plan payment received via PayPal for "
                         f"{meal_evt.title}. Marked paid automatically."
                     )
                     notif_title = f"🍽️ Meal plan paid — {matched_member.first_name} {matched_member.last_name}"
@@ -655,33 +656,57 @@ async def paypal_webhook(request: Request):
                         f"for {meal_evt.title} txn={transaction_id}"
                     )
                 else:
-                    # $15 from a member but no unpaid meal RSVP — needs S4 review.
-                    notif_body = (
-                        f"${amount_value:.2f} received via PayPal from "
-                        f"{matched_member.first_name} {matched_member.last_name} — "
-                        f"looks like a meal-plan payment but no unpaid meal RSVP found."
-                    )
-                    notif_title = f"🍽️ Meal payment needs review — {matched_member.first_name} {matched_member.last_name}"
-                    logger.warning(
-                        f"⚠️ $15 from {matched_member.first_name} {matched_member.last_name} "
-                        f"but no unpaid meal RSVP. txn={transaction_id}"
-                    )
-                    await _set_outcome(transaction_id, "needs_review")
-                    try:
-                        from app.routes.notifications import create_notification_for_roles
-                        await create_notification_for_roles(
-                            db, ["s4", "command", "admin"],
-                            "payment", notif_title, body=notif_body,
-                            link="/api/s4/meals", icon="🍽️",
+                    # Only amounts that match the standard price, or one of this
+                    # member's upcoming FTX prices, are meal payments with nowhere
+                    # to land. Anything else is a donation.
+                    priced = (await db.execute(
+                        select(Event)
+                        .join(EventRSVP, EventRSVP.event_id == Event.id)
+                        .where(
+                            EventRSVP.member_id == matched_member.id,
+                            Event.date_start >= now_ct(),
+                            Event.category.in_(["ftx", "mcftx"]),
+                            Event.meal_planning_enabled.is_(True),
                         )
-                    except Exception:
-                        pass
-                    return JSONResponse({
-                        "status": "needs_review", "source": "members",
-                        "member_id": matched_member.id,
-                        "name": f"{matched_member.first_name} {matched_member.last_name}",
-                        "type": "meal",
-                    })
+                    )).scalars().all()
+                    looks_like_meal = any(
+                        amount_covers(amount_value, price)
+                        for price in (standard_price(), *(effective_price(e) for e in priced))
+                    )
+                    if not looks_like_meal:
+                        match_type = "donation"
+                        notif_body = (
+                            f"${amount_value:.2f} donation received via PayPal from "
+                            f"{matched_member.first_name} {matched_member.last_name}."
+                        )
+                        notif_title = f"💰 Donation received — {matched_member.first_name} {matched_member.last_name}"
+                    else:
+                        notif_body = (
+                            f"${amount_value:.2f} received via PayPal from "
+                            f"{matched_member.first_name} {matched_member.last_name} — "
+                            f"looks like a meal-plan payment but no unpaid meal RSVP matched that price."
+                        )
+                        notif_title = f"🍽️ Meal payment needs review — {matched_member.first_name} {matched_member.last_name}"
+                        logger.warning(
+                            f"⚠️ ${amount_value:.2f} from {matched_member.first_name} {matched_member.last_name} "
+                            f"looks like a meal but no unpaid RSVP matched. txn={transaction_id}"
+                        )
+                        await _set_outcome(transaction_id, "needs_review")
+                        try:
+                            from app.routes.notifications import create_notification_for_roles
+                            await create_notification_for_roles(
+                                db, ["s4", "command", "admin"],
+                                "payment", notif_title, body=notif_body,
+                                link="/api/s4/meals", icon="🍽️",
+                            )
+                        except Exception:
+                            pass
+                        return JSONResponse({
+                            "status": "needs_review", "source": "members",
+                            "member_id": matched_member.id,
+                            "name": f"{matched_member.first_name} {matched_member.last_name}",
+                            "type": "meal",
+                        })
             else:
                 # If this is an app fee and they haven't paid yet, mark it.
                 # IMPORTANT: only recruits/applicants owe an app fee. An active or

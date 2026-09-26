@@ -1,10 +1,11 @@
 """Events & Attendance models — PP-060 / PP-070."""
 
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
-    String, Text, DateTime, Boolean, Integer,
+    String, Text, DateTime, Boolean, Integer, Numeric,
     ForeignKey, UniqueConstraint
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -80,8 +81,10 @@ class Event(Base):
 
     # Meal planning (S4): per-FTX toggle. Some FTX/MCFTX events (e.g. a one-day
     # urban evasion in downtown FW) have no meal plan, so S4 can switch it off
-    # and the RSVP flow stops requiring a $15 meal opt-in for that event.
+    # and the RSVP flow stops requiring a meal opt-in for that event.
     meal_planning_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # NULL = the unit standard (app setting meal_plan_price, default $15).
+    meal_price_override: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
 
     # CalDAV sync (PP-070g)
     caldav_uid: Mapped[Optional[str]] = mapped_column(String(255), unique=True)
@@ -171,7 +174,7 @@ class EventRSVP(Base):
     # Self-reported guest count (e.g. Family Day headcount) — PP guests-in-rsvp
     guest_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
-    # Meal plan (FTX/MCFTX): opted-in = $15 for Sat dinner + Sun breakfast.
+    # Meal plan (FTX/MCFTX): opted in at the event's price (standard or override).
     # Required choice at RSVP time — attending members must opt in or out.
     meal_plan: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     # Payment tracking for meal plan. meal_payment_method: paypal | venmo | cash.

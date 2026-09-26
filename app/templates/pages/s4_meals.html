@@ -9,8 +9,19 @@
     <a href="/api/s4" class="s4-back">← S4 Logistics</a>
     <div class="s4-header">
         <h2>🍽️ Meals &amp; Headcount</h2>
-        <div class="subtitle">Per-FTX meal plan. Headcount auto-derives from attending RSVPs + guests.</div>
+        <div class="subtitle">Per-FTX meal plan. Headcount auto-derives from attending RSVPs + guests. April and October MCFTXs run Thursday–Sunday.</div>
     </div>
+
+    {% if can_approve %}
+    <div class="s4-card" style="margin-bottom:16px;">
+        <h3 style="margin-bottom:6px;">Standard meal price</h3>
+        <div class="s4-muted" style="margin-bottom:8px;">Used for every FTX unless that event has an override. Currently <strong style="color:#e0e0e0;">${{ '%.2f'|format(standard_price) }}</strong>.</div>
+        <form method="post" action="/api/s4/meals/standard-price" style="display:flex;gap:8px;align-items:center;">
+            <input name="price" class="s4-input" inputmode="decimal" value="{{ '%.2f'|format(standard_price) }}" style="max-width:120px;" required>
+            <button class="s4-btn s4-btn-sm" type="submit">Save standard</button>
+        </form>
+    </div>
+    {% endif %}
 
     {% if events %}
     <div class="s4-grid">
@@ -22,7 +33,7 @@
         <div class="s4-card">
             <h3 style="margin-bottom:6px;">{{ ev.title }} — {{ ev.date_start.strftime('%d %b %Y') }}{% if ev.category == 'mcftx' %} (MCFTX){% endif %}</h3>
             {% if ev.meal_planning_enabled %}
-            <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong> · Meal plan: <strong style="color:#d4a537;">{{ mhc }}</strong> opted in ($15 each)</div>
+            <div class="s4-muted" style="margin-bottom:10px;">Headcount: <strong style="color:#e0e0e0;">{{ hc }}</strong> · Meal plan: <strong style="color:#d4a537;">{{ mhc }}</strong> opted in (${{ '%.2f'|format(prices[ev.id]) }} each{% if ev.meal_price_override is not none %}, override{% else %}, standard{% endif %}){% if ev.id in long_ids %} · Thu–Sun{% endif %}</div>
             {% else %}
             <div class="s4-muted" style="margin-bottom:10px;">Meal planning <strong style="color:#ef5350;">disabled</strong> for this event.</div>
             {% endif %}
@@ -79,10 +90,13 @@
 
             {% if can_approve %}
             <form method="post" action="/api/s4/meals/{{ ev.id }}">
-                <div class="s4-check"><input type="checkbox" name="sat_breakfast" {% if plan and plan.sat_breakfast %}checked{% endif %}> Sat Breakfast</div>
-                <div class="s4-check"><input type="checkbox" name="sat_lunch" {% if plan and plan.sat_lunch %}checked{% endif %}> Sat Lunch</div>
-                <div class="s4-check"><input type="checkbox" name="sat_dinner" {% if plan and plan.sat_dinner %}checked{% endif %}> Sat Dinner</div>
-                <div class="s4-check" style="margin-bottom:8px;"><input type="checkbox" name="sun_breakfast" {% if plan and plan.sun_breakfast %}checked{% endif %}> Sun Breakfast</div>
+                <div class="s4-field">
+                    <label>Price override <span style="color:#666;font-weight:400;">(blank = standard ${{ '%.2f'|format(standard_price) }})</span></label>
+                    <input name="price_override" class="s4-input" inputmode="decimal" placeholder="{{ '%.2f'|format(standard_price) }}" value="{% if ev.meal_price_override is not none %}{{ '%.2f'|format(ev.meal_price_override) }}{% endif %}" style="max-width:140px;">
+                </div>
+                {% for field, label, short in meal_slots %}
+                <div class="s4-check"><input type="checkbox" name="{{ field }}" {% if field in checks[ev.id] %}checked{% endif %}> {{ label }}</div>
+                {% endfor %}
                 <div class="s4-field">
                     <label>Menu / shopping notes</label>
                     <textarea name="menu_notes" class="s4-textarea" style="min-height:50px;">{{ plan.menu_notes or '' if plan else '' }}</textarea>
@@ -113,10 +127,9 @@
             <div class="s4-muted">
                 {% if plan %}
                     {% set meals = [] %}
-                    {% if plan.sat_breakfast %}{% set _ = meals.append('Sat B') %}{% endif %}
-                    {% if plan.sat_lunch %}{% set _ = meals.append('Sat L') %}{% endif %}
-                    {% if plan.sat_dinner %}{% set _ = meals.append('Sat D') %}{% endif %}
-                    {% if plan.sun_breakfast %}{% set _ = meals.append('Sun B') %}{% endif %}
+                    {% for field, label, short in meal_slots %}
+                    {% if field in checks[ev.id] %}{% set _ = meals.append(short) %}{% endif %}
+                    {% endfor %}
                     {{ meals|join(', ') or 'No meals planned' }}
                 {% else %}No meal plan yet.{% endif %}
             </div>

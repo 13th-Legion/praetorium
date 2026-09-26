@@ -140,3 +140,8 @@ def tenure_points() -> dict[str, int]:
 
 def ftx_device_thresholds() -> list[int]:
     return get_json("ftx_device_thresholds", [5, 10, 25, 50])
+
+
+def meal_plan_price() -> float:
+    """Unit-wide default FTX meal price. Per-event overrides live on Event."""
+    return get_float("meal_plan_price", 15.0)

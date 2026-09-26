@@ -1,7 +1,7 @@
 """Database models for S4 Logistics (Meals, Expenses, Purchasing, Donations, Inventory)."""
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -12,7 +12,12 @@ class S4MealPlan(Base):
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, unique=True)
     
-    # Which meals are S4 providing for this FTX
+    # Which meals S4 is providing. April/October MCFTXs add Thu dinner and
+    # Friday; a normal FTX is Sat dinner + Sun breakfast.
+    thu_dinner = Column(Boolean, default=False)
+    fri_breakfast = Column(Boolean, default=False)
+    fri_lunch = Column(Boolean, default=False)
+    fri_dinner = Column(Boolean, default=False)
     sat_breakfast = Column(Boolean, default=False)
     sat_lunch = Column(Boolean, default=False)
     sat_dinner = Column(Boolean, default=True)  # Usually true

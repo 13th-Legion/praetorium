@@ -1401,6 +1401,8 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         guests_allowed = event.category in ("family_day", "social")
         event_category = event.category  # capture before session closes
         meal_planning_enabled = event.meal_planning_enabled  # capture before session closes
+        from app.services.meals import meal_offer
+        meal_price_txt, meal_menu_txt = await meal_offer(db, event)
 
         if rsvp:
             rsvp.status = new_status
@@ -1618,6 +1620,8 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
         guest_count=(rsvp_guest_count if new_status == "attending" else 0),
         meal_event=(event_category in ("ftx", "mcftx") and meal_planning_enabled),
         meal_plan=(rsvp_meal_plan if new_status == "attending" else False),
+        meal_price=meal_price_txt,
+        meal_menu=meal_menu_txt,
     )
 
 
@@ -1628,8 +1632,11 @@ def _render_rsvp_controls(
     guest_count: int = 0,
     meal_event: bool = False,
     meal_plan: bool = False,
+    meal_price: str = "15.00",
+    meal_menu: str = "Sat Dinner, Sun Breakfast",
 ) -> HTMLResponse:
     """Render inline RSVP buttons (+ optional guest-count stepper for social events)."""
+    import html as _html
     attending_cls = "rsvp-btn-active" if current_status == "attending" else ""
     declined_cls = "rsvp-btn-active-danger" if current_status == "declined" else ""
 
@@ -1654,11 +1661,11 @@ def _render_rsvp_controls(
     if meal_event:
         meal_html = f"""
         <div style="margin-top:8px;font-size:13px;color:#bbb;">
-            <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>$15</strong> (Sat dinner + Sun breakfast). Required.</div>
+            <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>${_html.escape(meal_price)}</strong> ({_html.escape(meal_menu)}). Required.</div>
             <div style="display:flex;gap:14px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <input type="radio" name="meal_plan" value="in" {'checked' if meal_plan else ''} style="accent-color:#4caf50;">
-                    <span>Opt in (+$15)</span>
+                    <span>Opt in (+${_html.escape(meal_price)})</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <input type="radio" name="meal_plan" value="out" {'checked' if not meal_plan else ''} style="accent-color:#888;">
@@ -2729,6 +2736,9 @@ async def warno_banner(request: Request):
                     local_responded = _to_cdt(rsvp.responded_at)
                     my_responded = local_responded.strftime("RSVP'd %b %d at %H%M %Z")
 
+        from app.services.meals import meal_offer
+        meal_price_txt, meal_menu_txt = await meal_offer(db, event)
+
     # Calculate days until event
     delta_days = (event.date_start.date() - _now_ct().date()).days
 
@@ -2781,8 +2791,9 @@ async def warno_banner(request: Request):
         else:
             meal_radios = ""
             if event.meal_planning_enabled:
+                import html as _html
                 meal_radios = f"""
-                    <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal ($15):</span>
+                    <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal (${_html.escape(meal_price_txt)} — {_html.escape(meal_menu_txt)}):</span>
                     <label style="font-size:12px;color:#bbb;cursor:pointer;"><input type="radio" name="meal_plan" value="in" {'checked' if my_meal_plan else ''} style="accent-color:#4caf50;"> In</label>
                     <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if not my_meal_plan else ''} style="accent-color:#888;"> Out</label>"""
             rsvp_buttons = f"""

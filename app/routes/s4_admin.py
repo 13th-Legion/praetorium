@@ -43,6 +43,14 @@ from starlette.datastructures import UploadFile
 
 from app.auth import get_current_user, is_guest, require_auth
 from app.clock import now_ct
+from app.services.meals import (
+    MEAL_SLOTS,
+    checked_slots,
+    effective_price,
+    is_long_ftx,
+    set_standard_price,
+    standard_price,
+)
 from app.constants import S4_CONDITIONS, S4_INVENTORY_CATEGORIES
 from app.database import get_db
 from app.models.events import Event, EventRSVP
@@ -324,6 +332,8 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
 
     members = await _active_members(db)
     names = {m.id: _display_name(m) for m in members}
+    checks = {ev.id: checked_slots(plans.get(ev.id), ev.date_start) for ev in events}
+    prices = {ev.id: effective_price(ev) for ev in events}
 
     return templates.TemplateResponse("pages/s4_meals.html", {
         "request": request,
@@ -336,7 +346,32 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
         "meal_roster": meal_roster,
         "members": members,
         "names": names,
+        "meal_slots": MEAL_SLOTS,
+        "checks": checks,
+        "prices": prices,
+        "standard_price": standard_price(),
+        "long_ids": {ev.id for ev in events if is_long_ftx(ev.date_start)},
     })
+
+
+@router.post("/meals/standard-price")
+@require_auth
+async def save_standard_meal_price(request: Request, db: AsyncSession = Depends(get_db)):
+    """Unit-wide meal price. A blank per-FTX override uses this."""
+    user = get_current_user(request)
+    if not _can_view(user):
+        return _denied()
+    member = await _current_member(request, db)
+    if not _can_approve(user, member):
+        return _denied()
+    form = await request.form()
+    try:
+        amount = _money((form.get("price") or "").strip())
+    except ValueError:
+        return HTMLResponse("<div style='color:#ef5350;'>Enter a price greater than zero.</div>", status_code=400)
+    await set_standard_price(db, amount)
+    await db.commit()
+    return RedirectResponse(url="/api/s4/meals", status_code=302)
 
 
 @router.post("/meals/{event_id}")
@@ -361,10 +396,16 @@ async def save_meal_plan(request: Request, event_id: int, db: AsyncSession = Dep
         plan = S4MealPlan(event_id=event_id)
         db.add(plan)
 
-    plan.sat_breakfast = form.get("sat_breakfast") == "on"
-    plan.sat_lunch = form.get("sat_lunch") == "on"
-    plan.sat_dinner = form.get("sat_dinner") == "on"
-    plan.sun_breakfast = form.get("sun_breakfast") == "on"
+    for field, _label, _short in MEAL_SLOTS:
+        setattr(plan, field, form.get(field) == "on")
+    raw_price = (form.get("price_override") or "").strip()
+    if raw_price:
+        try:
+            event.meal_price_override = _money(raw_price)
+        except ValueError:
+            return HTMLResponse("<div style='color:#ef5350;'>Price override must be greater than zero, or blank to use the standard.</div>", status_code=400)
+    else:
+        event.meal_price_override = None
     plan.menu_notes = (form.get("menu_notes") or "").strip() or None
     cook = (form.get("cook") or "").strip()
     buyer = (form.get("buyer") or "").strip()
@@ -382,7 +423,7 @@ async def toggle_meal_planning(request: Request, event_id: int, db: AsyncSession
 
     Some events (e.g. a one-day urban evasion in downtown FW) have no meal
     plan. Toggling off flips Event.meal_planning_enabled, which the RSVP flow
-    reads so attending members aren't forced into a $15 meal opt-in.
+    reads so attending members aren't forced into a meal opt-in.
     """
     user = get_current_user(request)
     if not _can_view(user):
