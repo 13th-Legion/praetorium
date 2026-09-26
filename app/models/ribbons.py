@@ -44,6 +44,25 @@ class RibbonCatalog(Base):
         return f"<RibbonCatalog {self.code} sec={self.section} prec={self.precedence}>"
 
 
+class MissionLeaderGrant(Base):
+    """One Mission Leader auto-award for one commander on one event.
+
+    Finalize is guarded by ``finalized_at``, and unfinalize clears that stamp.
+    Without a per-event row, reopening an FTX and finalizing it again increments
+    ``device_count`` for the same stint.
+    """
+
+    __tablename__ = "mission_leader_grants"
+    __table_args__ = (
+        UniqueConstraint("event_id", "member_id", name="uq_mission_leader_grant"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class MemberRibbon(Base):
     """A ribbon/decoration/tab bestowed on a member.
 

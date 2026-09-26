@@ -24,7 +24,7 @@ from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, Eve
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
-from app.models.ribbons import MemberRibbon
+from app.models.ribbons import MemberRibbon, MissionLeaderGrant
 from config import get_settings
 from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
 from app.services import ranks as _ranks
@@ -3628,7 +3628,11 @@ async def unfinalize_event(request: Request, event_id: int):
 
         username = user.get("username", "unknown")
 
-        # Clear finalization
+        # Clear finalization. Also pull back the Mission Leader grants this
+        # finalize wrote, or the next finalize treats the same stint as a new one.
+        if event.category in ("ftx", "mcftx"):
+            await _reverse_mission_leader(db, event)
+
         event.finalized_at = None
         event.finalized_by = None
         event.status = "active"
@@ -3798,8 +3802,20 @@ async def _auto_award_mission_leader(db, event: Event) -> str:
     commander_ids = list(dict.fromkeys(commander_ids))
 
     awarded = 0
+    already = 0
     now = datetime.utcnow()
     for cid in commander_ids:
+        grant = (await db.execute(
+            select(MissionLeaderGrant).where(
+                and_(
+                    MissionLeaderGrant.event_id == event.id,
+                    MissionLeaderGrant.member_id == cid,
+                )
+            )
+        )).scalar_one_or_none()
+        if grant:
+            already += 1
+            continue
         existing = (await db.execute(
             select(MemberRibbon).where(
                 and_(
@@ -3809,9 +3825,9 @@ async def _auto_award_mission_leader(db, event: Event) -> str:
             )
         )).scalar_one_or_none()
         if existing:
-            # Additional mission led -> increment device count.
+            # Additional mission led -> increment device count. Leave awarded_at
+            # alone so a later stint does not erase the original date.
             existing.device_count = (existing.device_count or 0) + 1
-            existing.awarded_at = now
         else:
             db.add(MemberRibbon(
                 member_id=cid,
@@ -3822,9 +3838,46 @@ async def _auto_award_mission_leader(db, event: Event) -> str:
                 reason=f"Vexillation commander — {event.title}",
                 source="auto",
             ))
+        db.add(MissionLeaderGrant(event_id=event.id, member_id=cid))
         awarded += 1
 
+    if awarded == 0 and already:
+        return f"Mission Leader already recorded for {already} commander{'s' if already != 1 else ''}."
     return f"Auto-awarded Mission Leader to {awarded} commander{'s' if awarded != 1 else ''}."
+
+
+async def _reverse_mission_leader(db, event: Event) -> None:
+    """Undo Mission Leader grants this event wrote, and nothing else.
+
+    A ribbon that was only the base auto-award (device_count 0, source auto,
+    no grants left) is deleted. Anything else — a later stint, or a manual
+    grant we incremented — loses exactly one device.
+    """
+    grants = (await db.execute(
+        select(MissionLeaderGrant).where(MissionLeaderGrant.event_id == event.id)
+    )).scalars().all()
+    for grant in grants:
+        ribbon = (await db.execute(
+            select(MemberRibbon).where(
+                and_(
+                    MemberRibbon.member_id == grant.member_id,
+                    MemberRibbon.ribbon_code == "mission_leader",
+                )
+            )
+        )).scalar_one_or_none()
+        await db.delete(grant)
+        await db.flush()
+        if ribbon is None:
+            continue
+        remaining = (await db.execute(
+            select(func.count(MissionLeaderGrant.id)).where(
+                MissionLeaderGrant.member_id == grant.member_id
+            )
+        )).scalar_one()
+        if remaining == 0 and ribbon.source == "auto" and (ribbon.device_count or 0) == 0:
+            await db.delete(ribbon)
+        else:
+            ribbon.device_count = max(0, (ribbon.device_count or 0) - 1)
 
 
 # ─── After Action Review (PP-125) ────────────────────────────────────────────

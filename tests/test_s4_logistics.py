@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-from app.routes.s4_admin import _is_s4_head, _can_approve, S4_ROLES
+from app.routes.s4_admin import _is_s4_head, _can_approve, _can_view, S4_ROLES
 from app.constants import S4_CONDITIONS, S4_INVENTORY_CATEGORIES
 from app.models.s4_logistics import (
     S4Checkout,
@@ -47,6 +47,11 @@ class TestS4Head:
 class TestCanApprove:
     def test_command_approves_without_member(self):
         assert _can_approve({"roles": ["command"]}, None) is True
+
+    def test_guest_bundle_cannot_view_or_approve(self):
+        guest = {"roles": ["guest", "s4", "command", "admin"]}
+        assert _can_view(guest) is False
+        assert _can_approve(guest, None) is False
 
     def test_admin_approves(self):
         assert _can_approve({"roles": ["admin"]}, None) is True

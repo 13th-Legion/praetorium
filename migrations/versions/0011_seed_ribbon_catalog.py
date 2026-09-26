@@ -89,13 +89,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Remove exactly the seeded codes (leave any prod-added ones alone).
+    # member_ribbons.ribbon_code FKs the catalog, so the catalog delete fails
+    # if any award still points at a seeded code. Drop those awards first.
+    # Codes are the constant list above, not request input.
     from sqlalchemy import text
 
-    op.execute(
-        text(
-            "DELETE FROM ribbon_catalog WHERE code IN ("
-            + ", ".join(f"'{c}'" for c, *_ in ROWS)
-            + ")"
-        )
-    )
+    codes = ", ".join(f"'{c}'" for c, *_ in ROWS)
+    op.execute(text(f"DELETE FROM member_ribbons WHERE ribbon_code IN ({codes})"))
+    op.execute(text(f"DELETE FROM ribbon_catalog WHERE code IN ({codes})"))

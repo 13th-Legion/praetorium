@@ -26,6 +26,16 @@ def is_no_show(rsvp: EventRSVP) -> bool:
     return bool(rsvp.no_show)
 
 
+def counts_as_no_show(rsvp: EventRSVP) -> bool:
+    """Analytics count. The explicit flag only.
+
+    A positive RSVP that was never marked attended is not a no-show — that
+    also describes every upcoming event and every finalize that simply never
+    confirmed the person.
+    """
+    return is_no_show(rsvp)
+
+
 async def mark_no_show(db, event: Event, rsvp: EventRSVP) -> None:
     """Mark a member as a no-show: clears any check-in/attendance and sets the flag.
 

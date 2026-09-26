@@ -166,9 +166,12 @@
   </div>
 
   <!-- ── Challenge / Password (S2, FTX only) ── -->
-  {% if challenge_sets %}
+  {% if challenge_sets or event.code_words %}
   <div class="card" style="margin-bottom:16px;border-left:4px solid #d4a537;">
     <h2 class="card-title" style="font-size:0.9rem;margin:0 0 8px;">🔐 Challenge / Password</h2>
+    {% if event.code_words %}
+    <div style="font-size:14px;margin-bottom:8px;"><span style="color:#888;font-size:12px;">Code words</span> <strong style="color:#e0e0e0;">{{ event.code_words }}</strong></div>
+    {% endif %}
     {% for cs in challenge_sets %}
     <div style="display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;">
       <span><span style="color:#888;font-size:12px;">Challenge</span> <strong style="color:#e0e0e0;">{{ cs.challenge }}</strong></span>

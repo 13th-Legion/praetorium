@@ -18,6 +18,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, or_, func
 from sqlalchemy.exc import IntegrityError
 
+from app.clock import now_ct
+
 from app import database
 from app.models.member import Member
 from app.models.events import Event, EventRSVP
@@ -45,6 +47,25 @@ APP_FEE_MAX = 53.00   # ceiling — $50 + PayPal fee covered (~$51.80) with marg
 MEAL_FEE_AMOUNT = 15.00
 MEAL_FEE_MIN = 15.00
 MEAL_FEE_MAX = 16.00
+
+
+def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
+    """Soonest future unpaid meal RSVP. A past one is not a donation sink."""
+    return (
+        select(EventRSVP, Event)
+        .join(Event, EventRSVP.event_id == Event.id)
+        .where(
+            EventRSVP.member_id == member_id,
+            EventRSVP.meal_plan.is_(True),
+            EventRSVP.meal_paid.is_(False),
+            Event.date_start >= now,
+            Event.category.in_(["ftx", "mcftx"]),
+            Event.meal_planning_enabled.is_(True),
+            Event.status.notin_(["cancelled"]),
+        )
+        .order_by(Event.date_start.asc())
+        .limit(1)
+    )
 
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
 NC_URL = "https://cloud.13thlegion.org"
@@ -609,18 +630,12 @@ async def paypal_webhook(request: Request):
         if matched_member:
             match_type = "donation"
             # ── Meal-plan payment ($15) — mark the member's unpaid meal RSVP ──
-            # A $15 payment from an active/patched member is a meal-plan fee,
-            # not a donation. Match it to their most recent unpaid meal RSVP.
+            # A $15–$16 payment from a member is a meal-plan fee, not a donation.
+            # Attach it to the soonest future unpaid RSVP. A past RSVP stays unpaid
+            # so a donation cannot settle a stale meal.
             if is_meal_fee and not is_app_fee:
                 meal_rsvp = (await db.execute(
-                    select(EventRSVP, Event)
-                    .join(Event, EventRSVP.event_id == Event.id)
-                    .where(
-                        EventRSVP.member_id == matched_member.id,
-                        EventRSVP.meal_plan.is_(True),
-                        EventRSVP.meal_paid.is_(False),
-                    )
-                    .order_by(Event.date_start.desc())
+                    unpaid_upcoming_meal_stmt(matched_member.id, now_ct())
                 )).first()
                 if meal_rsvp:
                     rsvp_row, meal_evt = meal_rsvp
@@ -699,13 +714,21 @@ async def paypal_webhook(request: Request):
 
             try:
                 from app.routes.notifications import create_notification_for_roles
+                if match_type == "meal":
+                    notify_roles = ["s4", "command", "admin"]
+                    notify_link = "/api/s4/meals"
+                    notify_icon = "🍽️"
+                else:
+                    notify_roles = ["s1", "command", "admin"]
+                    notify_link = "/api/s1/payments"
+                    notify_icon = "💰"
                 await create_notification_for_roles(
-                    db, ["s1", "command", "admin"],
+                    db, notify_roles,
                     "payment",
                     notif_title,
                     body=notif_body,
-                    link="/api/s1/payments",
-                    icon="💰",
+                    link=notify_link,
+                    icon=notify_icon,
                 )
             except Exception:
                 pass
@@ -721,7 +744,7 @@ async def paypal_webhook(request: Request):
 
     # ── Strategy 3: No match — alert S1 for manual resolution ────────────
     logger.warning(
-        f"⚠️ $50 PayPal payment from {payer_email} ({payer_first} {payer_last}) "
+        f"⚠️ ${amount_value:.2f} PayPal payment from {payer_email} ({payer_first} {payer_last}) "
         f"did not match any pipeline card or member record. txn={transaction_id}"
     )
 

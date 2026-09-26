@@ -23,10 +23,11 @@ import qrcode.image.svg
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, and_, delete
+from sqlalchemy import select, and_, delete, or_
 from sqlalchemy.orm import selectinload
 
 from app.auth import require_auth, require_role, get_current_user
+from app.clock import now_ct
 from app import database
 from app.models.events import (
     Event, EventRSVP, EventGuest, EventBuddyPair,
@@ -159,11 +160,24 @@ async def ops_console(request: Request, event_id: int):
         member_map = await _get_member_map(db, event_id)
         guest_map = await _get_guest_map(db, event_id)
         duty_assignments = await _get_duty_assignments(db, event_id)
-        challenge_sets = (await db.execute(
+        now = now_ct()
+        event_sets = (await db.execute(
             select(S2ChallengePassword)
             .where(S2ChallengePassword.event_id == event_id, S2ChallengePassword.active.is_(True))
             .order_by(S2ChallengePassword.created_at)
         )).scalars().all()
+        # Standing sets (no event) that are inside their window, if they have one.
+        standing_sets = (await db.execute(
+            select(S2ChallengePassword)
+            .where(
+                S2ChallengePassword.event_id.is_(None),
+                S2ChallengePassword.active.is_(True),
+                or_(S2ChallengePassword.valid_from.is_(None), S2ChallengePassword.valid_from <= now),
+                or_(S2ChallengePassword.valid_until.is_(None), S2ChallengePassword.valid_until >= now),
+            )
+            .order_by(S2ChallengePassword.created_at)
+        )).scalars().all()
+        challenge_sets = list(event_sets) + list(standing_sets)
         sponsor_ids = {g.sponsor_id for g in guest_map.values()} - set(member_map)
         if sponsor_ids:
             extra = await db.execute(select(Member).where(Member.id.in_(sponsor_ids)))

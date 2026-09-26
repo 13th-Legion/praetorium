@@ -35,6 +35,10 @@ class TestS2RBAC:
     def test_no_user_cannot_manage(self):
         assert _can_manage(None) is False
 
+    def test_guest_bundle_cannot_manage(self):
+        # Guests are handed s2/command/admin so pages render. That is not S2.
+        assert _can_manage({"roles": ["guest", "s2", "command", "admin"]}) is False
+
 
 class TestHelpers:
     def test_dtg_format(self):

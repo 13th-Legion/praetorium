@@ -29,7 +29,8 @@ import io
 import logging
 import re
 from datetime import datetime
-from urllib.parse import quote
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from uuid import uuid4
 
 import httpx
 import qrcode
@@ -40,7 +41,8 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
-from app.auth import get_current_user, require_auth
+from app.auth import get_current_user, is_guest, require_auth
+from app.clock import now_ct
 from app.constants import S4_CONDITIONS, S4_INVENTORY_CATEGORIES
 from app.database import get_db
 from app.models.events import Event, EventRSVP
@@ -79,8 +81,35 @@ RECEIPT_MIMES = {
 }
 
 
+def _money(raw: str) -> Decimal:
+    """Parse a positive currency amount to cents. Rejects floats' binary dust."""
+    try:
+        amount = Decimal(raw)
+    except (InvalidOperation, ValueError):
+        raise ValueError
+    if not amount.is_finite() or amount <= 0:
+        raise ValueError
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _sniff_receipt(data: bytes) -> str | None:
+    if data.startswith(b"%PDF"):
+        return "application/pdf"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if len(data) >= 12 and data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    if len(data) >= 12 and data[4:8] == b"ftyp" and data[8:12] in (b"heic", b"heix", b"mif1", b"hevc"):
+        return "image/heic"
+    return None
+
+
 def _can_view(user: dict) -> bool:
-    return bool(user and set(user.get("roles", [])) & S4_ROLES)
+    if not user or is_guest(user):
+        return False
+    return bool(set(user.get("roles", [])) & S4_ROLES)
 
 
 async def _current_member(request: Request, db: AsyncSession) -> Member | None:
@@ -104,6 +133,8 @@ def _is_s4_head(member: Member | None) -> bool:
 
 
 def _can_approve(user: dict, member: Member | None) -> bool:
+    if not user or is_guest(user):
+        return False
     roles = set(user.get("roles", []))
     if roles & {"command", "admin"}:
         return True
@@ -142,8 +173,8 @@ async def _ftx_events(db: AsyncSession, upcoming_only: bool = False) -> list[Eve
     stmt = select(Event).where(Event.category.in_(FTX_CATEGORIES))
     if upcoming_only:
         # Meal planning is a forward-looking activity — don't list years of
-        # historical FTXs. Show only events that haven't started yet.
-        stmt = stmt.where(Event.date_start >= datetime.utcnow())
+        # historical FTXs. date_start is naive Central, not UTC.
+        stmt = stmt.where(Event.date_start >= now_ct())
     return (await db.execute(stmt.order_by(desc(Event.date_start)))).scalars().all()
 
 
@@ -213,17 +244,23 @@ async def s4_hub(request: Request, db: AsyncSession = Depends(get_db)):
         func.count(S4InventoryItem.id),
     ).where(S4InventoryItem.status == "checked_out"))).scalar_one()
 
-    # Next FTX headcount for the meals strip.
+    # Next FTX is the soonest one that has not started, not the furthest date.
     next_ftx = (await db.execute(
-        select(Event).where(Event.category.in_(FTX_CATEGORIES))
-        .order_by(desc(Event.date_start)).limit(1)
+        select(Event).where(
+            Event.category.in_(FTX_CATEGORIES),
+            Event.date_start >= now_ct(),
+            Event.status.notin_(["cancelled"]),
+        ).order_by(Event.date_start.asc()).limit(1)
     )).scalar_one_or_none()
     next_headcount = 0
     if next_ftx:
-        rows = (await db.execute(
-            select(EventRSVP).where(EventRSVP.event_id == next_ftx.id, EventRSVP.status == "attending")
-        )).scalars().all()
-        next_headcount = sum(1 for _ in rows) + sum(r.guest_count or 0 for r in rows)
+        head = (await db.execute(
+            select(
+                func.count(EventRSVP.id),
+                func.coalesce(func.sum(EventRSVP.guest_count), 0),
+            ).where(EventRSVP.event_id == next_ftx.id, EventRSVP.status == "attending")
+        )).one()
+        next_headcount = int(head[0] or 0) + int(head[1] or 0)
 
     metrics = {
         "expense_total": exp_agg[0],
@@ -432,19 +469,21 @@ async def mark_meal_unpaid(request: Request, event_id: int, db: AsyncSession = D
 # 2. Expense Reimbursement
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def _store_receipt(filename: str, data: bytes) -> str | None:
-    """Upload a receipt to NC S4 folder; returns the WebDAV path or None."""
+async def _store_receipt(ext: str, data: bytes) -> str | None:
+    """Upload a receipt to NC S4 folder; returns the WebDAV path or None.
+
+    ``ext`` is the sniffed MIME's extension, never the uploaded filename.
+    """
     settings = get_settings()
-    safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in filename).strip() or "receipt"
     date_str = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    path = f"{NC_S4_BASE}/Receipts/{date_str}_{safe}"
+    path = f"{NC_S4_BASE}/Receipts/{date_str}_{uuid4().hex[:8]}{ext}"
     async with httpx.AsyncClient(timeout=20) as client:
         folder = f"{NC_S4_BASE}/Receipts"
         await client.request("MKCOL", f"{settings.nc_url}{folder}/", auth=(NC_SVC_USER, NC_SVC_PASS))
         resp = await client.put(f"{settings.nc_url}{path}", content=data, auth=(NC_SVC_USER, NC_SVC_PASS))
         if resp.status_code in (201, 204):
             return path
-        log.warning("S4 receipt upload returned %s for %s", resp.status_code, safe)
+        log.warning("S4 receipt upload returned %s", resp.status_code)
         return None
 
 
@@ -455,13 +494,14 @@ async def expenses_page(request: Request, db: AsyncSession = Depends(get_db)):
     member = await _current_member(request, db)
     can_manage = _can_view(user) or _can_approve(user, member)
 
-    all_expenses = (await db.execute(
-        select(S4Expense).order_by(desc(S4Expense.created_at))
-    )).scalars().all()
-    my_expenses = [e for e in all_expenses if e.member_id == (member.id if member else -1)]
+    # Non-approvers never load the rest of the queue into the process.
+    expense_stmt = select(S4Expense).order_by(desc(S4Expense.created_at))
+    if not can_manage:
+        expense_stmt = expense_stmt.where(S4Expense.member_id == (member.id if member else -1))
+    expenses = (await db.execute(expense_stmt)).scalars().all()
 
     events = await _ftx_events(db)
-    ids = {e.member_id for e in all_expenses} | {e.reimbursed_by_id for e in all_expenses}
+    ids = {e.member_id for e in expenses} | {e.reimbursed_by_id for e in expenses}
     names = await _names_for(db, ids)
 
     return templates.TemplateResponse("pages/s4_expenses.html", {
@@ -470,7 +510,7 @@ async def expenses_page(request: Request, db: AsyncSession = Depends(get_db)):
         "member": member,
         "can_manage": can_manage,
         "can_approve": _can_approve(user, member),
-        "expenses": all_expenses if can_manage else my_expenses,
+        "expenses": expenses,
         "events": events,
         "names": names,
     })
@@ -496,9 +536,7 @@ async def submit_expense(request: Request, db: AsyncSession = Depends(get_db)):
     if not title:
         return _err("A title is required.")
     try:
-        amount = float(amount_raw)
-        if amount <= 0:
-            raise ValueError
+        amount = _money(amount_raw)
     except ValueError:
         return _err("Enter a valid amount.")
 
@@ -517,9 +555,14 @@ async def submit_expense(request: Request, db: AsyncSession = Depends(get_db)):
         if len(data) > MAX_RECEIPT_BYTES:
             return _err("Receipt exceeds the 10MB limit.")
         if data:
-            path = await _store_receipt(file.filename or "receipt", data)
-            if path:
-                exp.receipt_url = path
+            sniffed = _sniff_receipt(data)
+            ext = RECEIPT_MIMES.get(sniffed or "")
+            if not ext:
+                return _err("Receipt must be a PDF or an image (PNG, JPEG, WebP, HEIC).")
+            path = await _store_receipt(ext, data)
+            if not path:
+                return _err("Could not store the receipt.")
+            exp.receipt_url = path
 
     db.add(exp)
     await db.commit()
@@ -626,9 +669,7 @@ async def submit_purchase(request: Request, db: AsyncSession = Depends(get_db)):
     if not item_name or not justification:
         return _err("Item name and justification are required.")
     try:
-        cost = float(cost_raw)
-        if cost <= 0:
-            raise ValueError
+        cost = _money(cost_raw)
         qty = int(qty_raw)
         if qty < 1:
             raise ValueError

@@ -1,7 +1,7 @@
 """Database models for S4 Logistics (Meals, Expenses, Purchasing, Donations, Inventory)."""
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -44,7 +44,7 @@ class S4Expense(Base):
     
     title = Column(String(100), nullable=False)  # "March FTX Groceries"
     description = Column(Text, nullable=True)
-    amount = Column(Float, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
     receipt_url = Column(String(255), nullable=True)  # Nextcloud link
     
     # pending, approved, reimbursed, rejected
@@ -69,7 +69,7 @@ class S4PurchaseRequest(Base):
     
     item_name = Column(String(100), nullable=False)
     url = Column(String(255), nullable=True)
-    estimated_cost = Column(Float, nullable=False)
+    estimated_cost = Column(Numeric(12, 2), nullable=False)
     quantity = Column(Integer, default=1)
     justification = Column(Text, nullable=False)
     

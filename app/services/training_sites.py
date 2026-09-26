@@ -17,7 +17,7 @@ import time
 import logging
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app import database
 from app.models.s2_intel import S2TrainingSite, S2TrainingSiteMap
@@ -62,43 +62,61 @@ def invalidate() -> None:
     _cache_ts = 0.0
 
 
-async def _load() -> list[dict]:
+def choose_site_list(total_rows: int, active: list[dict]) -> list[dict]:
+    """Seed only when the table has never been filled.
+
+    An empty *active* list with rows present means S2 deactivated every site.
+    Returning the hardcoded Able–Easy catalog there undoes that.
+    """
+    if total_rows == 0:
+        return _seed()
+    return active
+
+
+async def _load() -> tuple[list[dict], bool]:
+    """Return (sites, cacheable). A database error is not cacheable."""
     try:
         async with database.async_session() as db:
+            total = (await db.execute(
+                select(func.count(S2TrainingSite.id))
+            )).scalar_one()
             sites = (await db.execute(
                 select(S2TrainingSite)
                 .where(S2TrainingSite.is_active.is_(True))
                 .order_by(S2TrainingSite.id)
             )).scalars().all()
-            if not sites:
-                return _seed()
             site_ids = [s.id for s in sites]
-            maps_rows = (await db.execute(
-                select(S2TrainingSiteMap).where(S2TrainingSiteMap.site_id.in_(site_ids))
-            )).scalars().all()
+            maps_rows = []
+            if site_ids:
+                maps_rows = (await db.execute(
+                    select(S2TrainingSiteMap).where(S2TrainingSiteMap.site_id.in_(site_ids))
+                )).scalars().all()
         maps_by_site: dict[int, list[dict]] = {}
         for m in maps_rows:
             maps_by_site.setdefault(m.site_id, []).append({"label": m.label, "url": m.url})
-        out = []
+        active = []
         for s in sites:
-            out.append({
+            active.append({
                 "key": s.key, "name": s.name, "nickname": s.nickname,
                 "address": s.address, "is_active": s.is_active,
                 "maps": maps_by_site.get(s.id, []),
             })
-        return out
+        return choose_site_list(int(total or 0), active), True
     except Exception:
         log.exception("training_sites service: falling back to constants seed")
-        return _seed()
+        return _seed(), False
 
 
 async def _cached() -> list[dict]:
     global _cache, _cache_ts
     now = time.monotonic()
-    if _cache is None or (now - _cache_ts) > _CACHE_TTL:
-        _cache = await _load()
+    if _cache is not None and (now - _cache_ts) <= _CACHE_TTL:
+        return _cache
+    loaded, cacheable = await _load()
+    if cacheable:
+        _cache = loaded
         _cache_ts = now
-    return _cache
+    return loaded
 
 
 async def all_sites() -> list[dict]:

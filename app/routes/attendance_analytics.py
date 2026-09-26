@@ -12,6 +12,7 @@ from app.auth import require_auth, get_current_user
 from app import database
 from app.models.events import Event, EventRSVP
 from app.models.member import Member
+from app.services.attendance import counts_as_no_show
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -135,7 +136,7 @@ async def attendance_analytics(request: Request):
             attended = len([r for r in evt_rsvps if r.attended])
             rsvp_attending = len([r for r in evt_rsvps if r.status in POSITIVE_RSVP])
             declined = len([r for r in evt_rsvps if r.status == "declined"])
-            no_show = len([r for r in evt_rsvps if r.no_show or (r.status in POSITIVE_RSVP and not r.attended)])
+            no_show = len([r for r in evt_rsvps if counts_as_no_show(r)])
 
             from app.routes.events import _to_cdt
             local_dt = _to_cdt(evt.date_start)
@@ -182,8 +183,7 @@ async def attendance_analytics(request: Request):
             # "missed" month must never register as a no-show.
             no_show_rsvps = [
                 r for r in m_rsvps
-                if (r.no_show or (r.status in POSITIVE_RSVP and not r.attended))
-                and r.event_id in thirteenth_event_ids
+                if counts_as_no_show(r) and r.event_id in thirteenth_event_ids
             ]
             no_show_count = len(no_show_rsvps)
 

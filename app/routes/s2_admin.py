@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
+from html import escape
 from uuid import uuid4
 
 import bleach
@@ -36,7 +37,8 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
-from app.auth import get_current_user, require_auth
+from app.auth import get_current_user, is_guest, require_auth
+from app.clock import now_ct
 from app.database import get_db
 from app.models.events import Event
 from app.models.member import Member
@@ -54,6 +56,28 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/api/s2", tags=["s2-admin"])
 
 S2_ROLES = {"s2", "command", "admin"}
+
+_MAP_MIMES = {
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+
+
+def _sniff_map(data: bytes) -> str | None:
+    if data.startswith(b"%PDF"):
+        return "application/pdf"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    return None
 
 # NATO standard source-reliability (A–F) and information-credibility (1–6) scales.
 _RELIABILITY_LABELS = {
@@ -78,7 +102,10 @@ _ALLOWED_ATTRS = {
 
 
 def _can_manage(user: dict) -> bool:
-    return bool(user and set(user.get("roles", [])) & S2_ROLES)
+    # Guests carry s2/command/admin so pages render. That is not a billet.
+    if not user or is_guest(user):
+        return False
+    return bool(set(user.get("roles", [])) & S2_ROLES)
 
 
 def _denied() -> Response:
@@ -146,7 +173,9 @@ async def s2_hub(request: Request, db: AsyncSession = Depends(get_db)):
 
 def _can_rally(user: dict) -> bool:
     """S2 owns the rally point; S3 (FTX builder) + Command/admin also set it."""
-    return bool(user and set(user.get("roles", [])) & {"s2", "s3", "command", "admin"})
+    if not user or is_guest(user):
+        return False
+    return bool(set(user.get("roles", [])) & {"s2", "s3", "command", "admin"})
 
 
 @router.post("/rally-point/{event_id}")
@@ -194,7 +223,7 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
     if not _can_rally(user):
         return HTMLResponse('<div style="color:#b71c1c;">Access denied.</div>', status_code=403)
 
-    now = datetime.utcnow()
+    now = now_ct()
     events = (await db.execute(
         select(Event)
         .where(
@@ -215,13 +244,15 @@ async def events_needing_rally_point(request: Request, db: AsyncSession = Depend
     for ev in events:
         days_out = (ev.date_start - now).days
         site = await _ts.get_site(ev.training_site) if ev.training_site else None
-        site_name = f"Site {site['name']}" if site else (ev.training_site or "site TBD")
+        site_name = escape(f"Site {site['name']}" if site else (ev.training_site or "site TBD"))
+        title = escape(ev.title or "")
+        when = escape(ev.date_start.strftime("%b %d, %Y"))
         rows.append(f'''
             <div style="padding:12px;border-bottom:1px solid #2a2a3e;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                        <span style="color:#e0e0e0;font-weight:500;font-size:14px;">{ev.title}</span>
-                        <div style="color:#999;font-size:12px;">{ev.date_start.strftime("%b %d, %Y")} · {site_name} · {days_out}d out</div>
+                        <span style="color:#e0e0e0;font-weight:500;font-size:14px;">{title}</span>
+                        <div style="color:#999;font-size:12px;">{when} · {site_name} · {days_out}d out</div>
                     </div>
                     <span style="background:#b71c1c;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">Needs RP</span>
                 </div>
@@ -357,7 +388,7 @@ async def ftx_responsibilities(request: Request, db: AsyncSession = Depends(get_
     if not _can_rally(user):
         return _denied()
 
-    now = datetime.utcnow()
+    now = now_ct()
     events = (await db.execute(
         select(Event)
         .where(
@@ -471,10 +502,12 @@ async def iir_save(request: Request, db: AsyncSession = Depends(get_db)):
         tier = "command_only"
 
     is_new = False
+    previous_tier = None
     if iir_id.isdigit():
         iir = (await db.execute(select(IIR).where(IIR.id == int(iir_id)))).scalar_one_or_none()
         if not iir:
             return _err("IIR not found.")
+        previous_tier = iir.dissemination_tier
     else:
         iir = IIR(dtg=_dtg(datetime.now(timezone.utc)))
         is_new = True
@@ -505,8 +538,10 @@ async def iir_save(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(iir)
 
-    # Fan out bell notifications on create.
-    if is_new:
+    # Fan out on create, and again when an edit widens command-only to unit-wide.
+    # Narrowing cannot unsend the bell that already went out.
+    widened = (not is_new) and previous_tier != "unit_wide" and tier == "unit_wide"
+    if is_new or widened:
         from app.routes.notifications import create_notification_for_all, create_notification_for_roles
         title = f"📡 IIR {iir.report_number}: {iir.subject}"
         body = f"{iir.country_area} — {('unit-wide' if tier == 'unit_wide' else 'S2/Command')} intel report."
@@ -529,7 +564,8 @@ async def iir_archive(request: Request, iir_id: int, db: AsyncSession = Depends(
     if not iir:
         return HTMLResponse("<h2>Not found</h2>", status_code=404)
     iir.status = "archived"
-    iir.archived_at = datetime.now(timezone.utc)
+    # Column is naive. An aware value is the same class of write that broke S4.
+    iir.archived_at = datetime.utcnow()
     await db.commit()
     return RedirectResponse(url="/api/s2/iir", status_code=302)
 
@@ -737,8 +773,11 @@ async def site_map_upload(request: Request, site_id: int, db: AsyncSession = Dep
     data = await file.read(16 * 1024 * 1024 + 1)
     if len(data) > 16 * 1024 * 1024:
         return _err("Map exceeds the 16MB limit.")
+    sniffed = _sniff_map(data)
+    if sniffed not in _MAP_MIMES:
+        return _err("Map must be a PDF or an image (PNG, JPEG, WebP, GIF).")
 
-    url = await _store_map(site.key, file.filename or "map", label, data)
+    url = await _store_map(site.key, _MAP_MIMES[sniffed], label, data)
     if not url:
         return _err("Could not store the map in Nextcloud.")
 
@@ -763,8 +802,13 @@ async def site_map_delete(request: Request, map_id: int, db: AsyncSession = Depe
     return RedirectResponse(url="/api/s2/sites", status_code=302)
 
 
-async def _store_map(site_key: str, filename: str, label: str, data: bytes) -> str | None:
-    """Upload a map to NC S2 folder; returns the WebDAV path or None."""
+async def _store_map(site_key: str, ext: str, label: str, data: bytes) -> str | None:
+    """Upload a map to NC S2 folder; returns the WebDAV path or None.
+
+    ``ext`` comes from the sniffed MIME, never from the uploaded filename.
+    MKCOL the Maps folder and the site folder — a missing parent makes the
+    site MKCOL fail and the upload looks like a generic store error.
+    """
     import httpx
     from app.settings import NC_SVC_PASS, NC_SVC_USER
     from config import get_settings
@@ -772,14 +816,15 @@ async def _store_map(site_key: str, filename: str, label: str, data: bytes) -> s
     base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-2%5d%20Intel-Security/Maps"
     safe_key = "".join(c if c.isalnum() or c in "-_" else "_" for c in site_key)
     safe_label = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)
-    safe_fn = "".join(c if c.isalnum() or c in "._-" else "_" for c in filename).strip() or "map"
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    path = f"{base}/{safe_key}/{safe_label}_{date_str}_{safe_fn}"
+    path = f"{base}/{safe_key}/{safe_label}_{date_str}{ext}"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            auth = (NC_SVC_USER, NC_SVC_PASS)
+            await client.request("MKCOL", f"{settings.nc_url}{base}/", auth=auth)
             folder = f"{base}/{safe_key}"
-            await client.request("MKCOL", f"{settings.nc_url}{folder}/", auth=(NC_SVC_USER, NC_SVC_PASS))
-            resp = await client.put(f"{settings.nc_url}{path}", content=data, auth=(NC_SVC_USER, NC_SVC_PASS))
+            await client.request("MKCOL", f"{settings.nc_url}{folder}/", auth=auth)
+            resp = await client.put(f"{settings.nc_url}{path}", content=data, auth=auth)
             if resp.status_code in (201, 204):
                 return path
             log.warning("S2 map upload returned %s for %s/%s", resp.status_code, site_key, label)

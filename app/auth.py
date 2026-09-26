@@ -98,6 +98,18 @@ GUEST_VIEW_ROLES = [
 ]
 
 
+def is_guest(user: dict | None) -> bool:
+    """True when this session is the read-only guest bundle.
+
+    ``map_groups_to_roles`` hands guests s1–s6, command, and admin so ordinary
+    pages render. Those are not real billets. Sensitive reads (challenge words,
+    command-only IIRs, the S4 queues) must reject the bundle.
+    """
+    if not user:
+        return False
+    return "guest" in set(user.get("roles") or [])
+
+
 def map_groups_to_roles(nc_groups: list[str]) -> list[str]:
     """Convert NC group names to portal role strings.
 

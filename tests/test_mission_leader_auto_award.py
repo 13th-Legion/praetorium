@@ -4,7 +4,7 @@ import pytest
 
 from app.models.events import EventVexillation
 from app.models.ribbons import MemberRibbon, RibbonCatalog
-from app.routes.events import _auto_award_mission_leader
+from app.routes.events import _auto_award_mission_leader, _reverse_mission_leader
 from tests.factories import make_member, make_event
 
 pytestmark = pytest.mark.integration
@@ -120,6 +120,55 @@ class TestMissionLeaderAutoAward:
 
         assert len(rows) == 1
         assert "commander" in summary.lower()
+
+    async def test_second_pass_same_event_does_not_add_a_device(self, db_session):
+        from sqlalchemy import select
+        ev = await make_event(db_session, category="ftx", title="Monthly FTX")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev, commander_id=m.id)
+        await db_session.flush()
+
+        await _auto_award_mission_leader(db_session, ev)
+        summary = await _auto_award_mission_leader(db_session, ev)
+        await db_session.commit()
+
+        row = (await db_session.execute(
+            select(MemberRibbon).where(MemberRibbon.member_id == m.id)
+        )).scalar_one()
+        assert row.device_count == 0
+        assert "already recorded" in summary.lower()
+
+    async def test_reverse_deletes_the_only_auto_award(self, db_session):
+        from sqlalchemy import select
+        ev = await make_event(db_session, category="ftx")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev, commander_id=m.id)
+        await _auto_award_mission_leader(db_session, ev)
+        await _reverse_mission_leader(db_session, ev)
+        await db_session.commit()
+
+        row = (await db_session.execute(
+            select(MemberRibbon).where(MemberRibbon.member_id == m.id)
+        )).scalar_one_or_none()
+        assert row is None
+
+    async def test_reverse_one_stint_of_two_decrements(self, db_session):
+        from sqlalchemy import select
+        ev1 = await make_event(db_session, category="ftx", title="One")
+        ev2 = await make_event(db_session, category="ftx", title="Two")
+        m = await make_member(db_session)
+        await _make_vex(db_session, ev1, commander_id=m.id, name="Alpha")
+        await _make_vex(db_session, ev2, commander_id=m.id, name="Alpha")
+        await _auto_award_mission_leader(db_session, ev1)
+        await _auto_award_mission_leader(db_session, ev2)
+        await _reverse_mission_leader(db_session, ev2)
+        await db_session.commit()
+
+        row = (await db_session.execute(
+            select(MemberRibbon).where(MemberRibbon.member_id == m.id)
+        )).scalar_one()
+        assert row.device_count == 0
+        assert row.source == "auto"
 
     async def test_skips_commanderless_vexillations(self, db_session):
         ev = await make_event(db_session, category="ftx")
