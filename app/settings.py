@@ -25,6 +25,16 @@ SMTP_FROM = os.getenv("SMTP_FROM", "13th Legion <admin@13thlegion.org>")
 # Reapply URL
 REAPPLY_URL = os.getenv("REAPPLY_URL", "https://cloud.13thlegion.org/apps/forms/s/Sia3N7Bn7wCW3fLPLZRGP3Tm")
 
+# Praetorium feedback. The form is public; a poller files each submission as a
+# card on the Inbox stack. Forms itself cannot create Deck cards.
+FEEDBACK_FORM_URL = os.getenv(
+    "FEEDBACK_FORM_URL",
+    "https://cloud.13thlegion.org/apps/forms/s/7dcrKqMENnCjdjaG",
+)
+FEEDBACK_FORM_ID = int(os.getenv("FEEDBACK_FORM_ID", "9"))
+FEEDBACK_BOARD_ID = int(os.getenv("FEEDBACK_BOARD_ID", "47"))
+FEEDBACK_INBOX_STACK_ID = int(os.getenv("FEEDBACK_INBOX_STACK_ID", "175"))
+
 # Public base URL of the portal — used to build ABSOLUTE asset URLs that must
 # resolve from remote email clients (inline newsletter images, seasonal crests).
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://portal.13thlegion.org").rstrip("/")

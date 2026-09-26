@@ -17,7 +17,7 @@ from sqlalchemy import select
 from config import get_settings
 from app import database
 from app.database import engine, Base
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin, s2_admin
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin, s2_admin, feedback
 
 
 @asynccontextmanager
@@ -54,14 +54,18 @@ async def lifespan(app: FastAPI):
         import logging as _lg
         _lg.getLogger("uvicorn.error").warning(f"Newsletter section seed skipped: {_e}")
     _nl_task = asyncio.create_task(newsletter_scheduler_loop())
+    from app.services.feedback_deck import feedback_sync_loop
+    _fb_task = asyncio.create_task(feedback_sync_loop())
     try:
         yield
     finally:
         _nl_task.cancel()
-        try:
-            await _nl_task
-        except (asyncio.CancelledError, Exception):
-            pass
+        _fb_task.cancel()
+        for _task in (_nl_task, _fb_task):
+            try:
+                await _task
+            except (asyncio.CancelledError, Exception):
+                pass
         await engine.dispose()
 
 
@@ -402,6 +406,7 @@ app.include_router(newsletter.router)
 app.include_router(media.router)
 app.include_router(s4_admin.router)
 app.include_router(s2_admin.router)
+app.include_router(feedback.router)
 
 
 # ─── Contact Verification Routes ────────────────────────────────────────────

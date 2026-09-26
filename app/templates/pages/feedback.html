@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:32px auto;padding:0 16px 64px;">
+    <h1 style="font-family:'Oswald',sans-serif;color:#e0e0e0;font-weight:600;margin-bottom:8px;">Talk to us about Praetorium</h1>
+    <p style="color:#aaa;line-height:1.5;">Bug, feature, question, or install trouble. One form. We read it weekly, not as a helpdesk.</p>
+
+    <div style="background:#16213e;border:1px solid #333;border-radius:8px;padding:16px 18px;margin:18px 0;">
+        <div style="color:#d4a537;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">Do not paste</div>
+        <ul style="color:#ccc;margin:0;padding-left:18px;line-height:1.55;">
+            <li>Names, addresses, or anything that identifies a person</li>
+            <li>Weapon serials, conduct text, or a screenshot of a live roster</li>
+            <li>Your unit's Nextcloud groups. That stays on your install unless the docs were wrong.</li>
+        </ul>
+    </div>
+
+    <p style="color:#ccc;line-height:1.5;">Statewide product (a shop, the roster, the install) comes to us. We rewrite it without those details before it ever touches GitHub.</p>
+
+    <a href="{{ form_url }}" target="_blank" rel="noopener noreferrer"
+       style="display:inline-block;margin-top:8px;background:#d4a537;color:#1a1a2e;font-weight:700;text-decoration:none;padding:10px 16px;border-radius:6px;">
+        Open the feedback form
+    </a>
+    <div style="color:#777;font-size:12px;margin-top:8px;">Opens a Nextcloud Form. No account required.</div>
+</div>
+{% endblock %}

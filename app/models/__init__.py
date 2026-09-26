@@ -34,6 +34,7 @@ from app.models.newsletter import (  # noqa: F401
 from app.models.newsletter_section import NewsletterSectionTemplate  # noqa: F401
 from app.models.org import ShopReporting, ShopSignupRequest  # noqa: F401
 from app.models.ribbons import RibbonCatalog, MemberRibbon, MissionLeaderGrant  # noqa: F401
+from app.models.feedback import FeedbackDeckCard  # noqa: F401
 from app.models.team import Team  # noqa: F401
 from app.models.webhook_event import WebhookEvent  # noqa: F401
 from app.models.rank import Rank  # noqa: F401
