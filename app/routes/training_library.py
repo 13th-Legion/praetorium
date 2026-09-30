@@ -105,6 +105,27 @@ TRADOC_PAGES = {
         "block_name": "Weapons Qualification",
         "pdf_url": "/static/tradoc/course-of-fire.pdf",
     },
+    "radio-familiarity": {
+        "template": "tradoc/radio_familiarity.html",
+        "title": "Radio Familiarity",
+        "block_num": 3,
+        "block_name": "Supplemental Skills",
+        "pdf_url": "/static/tradoc/radio-familiarity.pdf",
+    },
+    "net-etiquette": {
+        "template": "tradoc/net_etiquette.html",
+        "title": "Net Etiquette",
+        "block_num": 3,
+        "block_name": "Supplemental Skills",
+        "pdf_url": "/static/tradoc/net-etiquette.pdf",
+    },
+    "reports": {
+        "template": "tradoc/reports.html",
+        "title": "Reports",
+        "block_num": 3,
+        "block_name": "Supplemental Skills",
+        "pdf_url": "/static/tradoc/reports.pdf",
+    },
     "landnav-basic": {
         "template": "tradoc/landnav_basic.html",
         "title": "Basic Land Navigation",
