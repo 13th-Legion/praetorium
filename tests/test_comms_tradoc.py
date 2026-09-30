@@ -10,7 +10,7 @@ def test_comms_pages_anonymous_redirect(client):
 def test_comms_pages_match_the_brm_wrapper(auth_client):
     expect = {
         "radio-familiarity": ("Radio Familiarity", "SCUBADIVER", "/static/tradoc/radio-familiarity.pdf"),
-        "net-etiquette": ("Net Etiquette", "NEVER SAY", "/static/tradoc/net-etiquette.pdf"),
+        "net-etiquette": ("Net Etiquette", "Niner", "/static/tradoc/net-etiquette.pdf"),
         "reports": ("Reports", "MIST", "/static/tradoc/reports.pdf"),
     }
     for slug, (title, phrase, pdf) in expect.items():
