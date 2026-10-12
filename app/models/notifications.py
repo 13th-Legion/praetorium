@@ -12,6 +12,10 @@ class Notification(Base):
     body = Column(Text, nullable=True)
     link = Column(String(512), nullable=True)
     icon = Column(String(8), nullable=True)
+    # Identifies the record that produced this notification, so a later delete
+    # of that record (e.g. an announcement) can purge the in-portal rows it
+    # fanned out. Nullable: older/other notifications have no source.
+    source_id = Column(String(64), nullable=True)
     read_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

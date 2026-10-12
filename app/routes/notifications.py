@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select, update, desc, or_, and_
+from sqlalchemy import select, update, desc, or_, and_, delete
 from app import database
 from app.models.notifications import Notification
 from app.models.member import Member
@@ -107,8 +107,8 @@ async def get_dropdown(request: Request):
                         
                 html += '>'
                 html += f'<div style="font-size: 20px;">{icon}</div>'
-                html += '<div style="flex: 1;">'
-                html += f'<div style="color: #e0e0e0; font-size: 14px; font-weight: {"bold" if unread else "normal"}; margin-bottom: 4px;">{n.title}</div>'
+                html += '<div style="flex: 1; min-width: 0;">'
+                html += f'<div style="color: #e0e0e0; font-size: 14px; font-weight: {"bold" if unread else "normal"}; margin-bottom: 4px; overflow-wrap: break-word; word-break: break-word;">{n.title}</div>'
                 if n.body:
                     html += f'<div style="color: #888; font-size: 12px; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{n.body}</div>'
                 html += f'<div style="color: #666; font-size: 11px;">{time_ago}</div>'
@@ -166,8 +166,8 @@ async def mark_read(request: Request, notification_id: int):
         html += '>'
         
         html += f'<div style="font-size: 20px;">{icon}</div>'
-        html += '<div style="flex: 1;">'
-        html += f'<div style="color: #e0e0e0; font-size: 14px; font-weight: normal; margin-bottom: 4px;">{n.title}</div>'
+        html += '<div style="flex: 1; min-width: 0;">'
+        html += f'<div style="color: #e0e0e0; font-size: 14px; font-weight: normal; margin-bottom: 4px; overflow-wrap: break-word; word-break: break-word;">{n.title}</div>'
         if n.body:
             html += f'<div style="color: #888; font-size: 12px; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{n.body}</div>'
         html += f'<div style="color: #666; font-size: 11px;">{time_ago}</div>'
@@ -203,7 +203,7 @@ async def mark_all_read(request: Request):
 
 
 # Helpers
-async def create_notification(db, member_id: int, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None):
+async def create_notification(db, member_id: int, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None, source_id: Optional[str] = None):
     # Dedup: skip if identical notification for this member exists within last 60s
     cutoff = datetime.utcnow() - timedelta(seconds=60)
     existing = await db.execute(
@@ -224,14 +224,15 @@ async def create_notification(db, member_id: int, category: str, title: str, bod
         title=title,
         body=body,
         link=link,
-        icon=icon
+        icon=icon,
+        source_id=source_id
     )
     db.add(new_notif)
     await db.commit()
     return new_notif
 
 
-async def create_notification_for_all(db, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None, status_filter: Optional[str] = None):
+async def create_notification_for_all(db, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None, status_filter: Optional[str] = None, source_id: Optional[str] = None):
     query = select(Member.id)
     if status_filter:
         query = query.where(Member.status == status_filter)
@@ -246,7 +247,8 @@ async def create_notification_for_all(db, category: str, title: str, body: Optio
             title=title,
             body=body,
             link=link,
-            icon=icon
+            icon=icon,
+            source_id=source_id
         )
         for mid in member_ids
     ]
@@ -254,6 +256,15 @@ async def create_notification_for_all(db, category: str, title: str, body: Optio
     if notifications:
         db.add_all(notifications)
         await db.commit()
+
+
+async def delete_notifications_by_source(db, source_id: str) -> int:
+    """Delete every notification carrying the given source_id and return the count."""
+    result = await db.execute(
+        delete(Notification).where(Notification.source_id == source_id)
+    )
+    await db.commit()
+    return result.rowcount or 0
 
 
 async def create_notification_for_roles(db, roles: list, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None):

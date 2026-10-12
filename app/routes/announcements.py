@@ -22,6 +22,18 @@ from app.constants import S1_ROLES as POSTER_ROLES
 
 log = logging.getLogger(__name__)
 
+
+def _nc_announcement_id(resp) -> str | None:
+    """NC announcement id, or None. str(None) must not become a source key."""
+    try:
+        raw = resp.json().get("ocs", {}).get("data", {}).get("id")
+    except Exception:
+        log.warning("Announcement created but NC id not parsed", exc_info=True)
+        return None
+    if raw is None or raw == "":
+        return None
+    return str(raw)
+
 # Simple URL regex for auto-linking plain text messages
 _URL_RE = re.compile(r'(https?://[^\s<>"\']+)')
 
@@ -286,6 +298,7 @@ async def create_announcement(
             },
         )
         resp.raise_for_status()
+        ann_id = _nc_announcement_id(resp)
 
     # Cross-post to NC Talk Announcements channel as the Tesserarius bot (Markdown).
     try:
@@ -313,6 +326,7 @@ async def create_announcement(
                 body=_strip_html(message_html)[:200] if message_html else None,
                 link=link,
                 icon="\ud83d\udce2",
+                source_id=f"announcement:{ann_id}" if ann_id else None,
             )
     except Exception:
         log.warning("Announcement portal notification failed", exc_info=True)
@@ -723,6 +737,7 @@ async def post_announcement(request: Request):
                 },
             )
             resp.raise_for_status()
+            ann_id = _nc_announcement_id(resp)
 
         # Cross-post to NC Talk Announcements channel (Markdown-formatted).
         try:
@@ -748,7 +763,8 @@ async def post_announcement(request: Request):
                 ndb, "announcement", f"📢 {subject}",
                 body=_strip_html(body_with_event)[:200] if body_with_event else None,
                 link=notif_link,
-                icon="📢"
+                icon="📢",
+                source_id=f"announcement:{ann_id}" if ann_id else None,
             )
     except Exception as e:
         return HTMLResponse(f'<p style="color:#c62828;">⚠️ Failed to post: {e}</p>')
@@ -759,7 +775,8 @@ async def post_announcement(request: Request):
 @router.delete("/{ann_id}", response_class=HTMLResponse)
 @require_auth
 async def delete_announcement(request: Request, ann_id: int):
-    """Delete an announcement from NC Announcement Center."""
+    """Delete an announcement from NC Announcement Center, then purge the
+    in-portal notifications it fanned out."""
     user = get_current_user(request)
     if not _can_post(user):
         raise HTTPException(status_code=403, detail="Command or S1 Lead access required")
@@ -777,6 +794,17 @@ async def delete_announcement(request: Request, ann_id: int):
             resp.raise_for_status()
     except Exception as e:
         return HTMLResponse(f'<p style="color:#c62828;">⚠️ Failed to delete: {e}</p>')
+
+    # Purge the in-portal notifications this announcement created. NC's delete
+    # does not touch them, so without this every member keeps a bell entry that
+    # points at a gone announcement.
+    try:
+        from app.routes.notifications import delete_notifications_by_source
+        from app.database import async_session as notif_session
+        async with notif_session() as ndb:
+            await delete_notifications_by_source(ndb, f"announcement:{ann_id}")
+    except Exception:
+        log.warning("Announcement notification purge failed", exc_info=True)
 
     return await get_announcements(request)
 
@@ -833,6 +861,17 @@ async def edit_announcement(request: Request, ann_id: int):
             )
     except Exception as e:
         return HTMLResponse(f'<p style="color:#c62828;">⚠️ Failed to edit: {e}</p>')
+
+    # The old announcement is gone; purge its in-portal notifications. The
+    # repost fires no notification (notifications=0), so this leaves the bell
+    # clear rather than dangling on the deleted original.
+    try:
+        from app.routes.notifications import delete_notifications_by_source
+        from app.database import async_session as notif_session
+        async with notif_session() as ndb:
+            await delete_notifications_by_source(ndb, f"announcement:{ann_id}")
+    except Exception:
+        log.warning("Announcement notification purge failed", exc_info=True)
 
     return await get_announcements(request)
 
