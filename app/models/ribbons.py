@@ -6,7 +6,14 @@ Four display tiers (see RIBBON_SYSTEM_SPEC.md):
   tab    — qualification tabs (Sabre/Marksman/Sharpshooter/Equites)
   tenure — Anni Stipendiorum service discs (computed from join_date; catalog
            rows exist only to hold point values)
+
+The catalog, the profile block, and the awards page are one unit-owned
+surface. A later creation UI lets another unit replace this whole set.
+Do not treat a single medal as the customization boundary.
 """
+
+# Marker for that future UI. Profile and /awards use the same value.
+UNIT_RIBBON_SURFACE = "ribbons"
 
 from datetime import datetime
 from typing import Optional
@@ -61,6 +68,29 @@ class MissionLeaderGrant(Base):
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RibbonCitation(Base):
+    """One comment for one award of a ribbon.
+
+    ``award_index`` 0 is the first award. 1 is the first device (the second
+    time the ribbon was given), and so on. A later award does not replace
+    an earlier comment.
+    """
+
+    __tablename__ = "ribbon_citations"
+    __table_args__ = (
+        UniqueConstraint("member_ribbon_id", "award_index", name="uq_ribbon_citation"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_ribbon_id: Mapped[int] = mapped_column(
+        ForeignKey("member_ribbons.id", ondelete="CASCADE"), index=True
+    )
+    award_index: Mapped[int] = mapped_column(Integer, default=0)
+    reason: Mapped[Optional[str]] = mapped_column(Text)
+    awarded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    awarded_by: Mapped[Optional[str]] = mapped_column(String(64))
 
 
 class MemberRibbon(Base):

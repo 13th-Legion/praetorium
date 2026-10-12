@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Awards{% endblock %}
+{% block head %}
+<style>
+  .awards { max-width: 980px; margin: 0 auto; color: #e8e6dc; }
+  .awards h1 { margin: 0; color: #d4a537; font-size: 1.6rem; letter-spacing: .04em; }
+  .awards .sub { color: #9a9788; margin: 6px 0 0; }
+  .awards .tier { margin-top: 28px; }
+  .awards .tier h2 { margin: 0; color: #d4a537; font-size: 1.05rem; }
+  .awards .latin { color: #9a9788; font-style: italic; font-weight: 400; margin-left: 8px; font-size: .9rem; }
+  .awards .blurb { color: #9a9788; font-size: .85rem; margin: 6px 0 12px; }
+  .awards .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .awards .card { display: flex; gap: 12px; align-items: center; background: #1a1a2e;
+    border: 1px solid #333; border-radius: 8px; padding: 10px 12px; }
+  .awards .art { flex: 0 0 92px; height: 64px; display: flex; align-items: center; justify-content: center; }
+  .awards .art img { max-width: 92px; max-height: 64px; object-fit: contain; }
+  .awards .tier-rack .art img { width: 92px; height: 24px; object-fit: fill; }
+  .awards .who { min-width: 0; }
+  .awards .name { font-weight: 600; }
+  .awards .pts { color: #d4a537; font-weight: 700; font-size: .92rem; }
+  .awards .meta { color: #9a9788; font-size: .78rem; margin-top: 2px; }
+  .awards .note { margin-top: 28px; border-left: 3px solid #d4a537; padding: 10px 14px;
+    color: #9a9788; font-size: .82rem; background: #1a1a2e; }
+  .awards .note b { color: #e8e6dc; }
+</style>
+{% endblock %}
+{% block content %}
+{# unit-surface:ribbons — same boundary as the profile decorations block. #}
+<div class="awards" id="unit-ribbons" data-unit-surface="ribbons">
+  <h1>Awards</h1>
+  <p class="sub">What each decoration is, and what it is worth toward promotion.</p>
+
+  {% for section in sections %}
+  {% if section["items"] %}
+  <section class="tier tier-{{ section.key }}">
+    <h2>{{ section.title }}{% if section.latin %}<span class="latin">{{ section.latin }}</span>{% endif %}</h2>
+    <p class="blurb">{{ section.blurb }}</p>
+    <div class="grid">
+      {% for item in section["items"] %}
+      <article class="card">
+        <div class="art"><img src="/static/img/ribbons/{{ item.image }}" alt=""></div>
+        <div class="who">
+          <div class="name">{{ item.name }}</div>
+          <div class="pts">{{ item.points }} promotion point{{ "s" if item.points != 1 else "" }}</div>
+          <div class="meta">
+            {% if item.device_increment %}+{{ item.device_increment }} for each extra award. {% endif %}
+            {% if item.is_auto %}Awarded automatically.{% else %}Awarded by hand.{% endif %}
+            {% if item.description %}<div>{{ item.description }}</div>{% endif %}
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  {% endfor %}
+
+  <div class="note">
+    <b>Promotion points</b> add up from everything on this page, including the service discs.
+    A profile shows the lifetime total, and the total earned since the last promotion.
+  </div>
+</div>
+{% endblock %}

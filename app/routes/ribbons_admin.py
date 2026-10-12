@@ -7,6 +7,7 @@ lists a member's current ribbons with a revoke control.
 All writes go to member_ribbons (source='manual').
 """
 import logging
+from html import escape as html_escape
 from datetime import datetime
 
 from fastapi import APIRouter, Request, Depends, HTTPException
@@ -21,6 +22,7 @@ from app.constants import AWARD_ROLES
 from app.services import ranks as _ranks
 from app.models.member import Member
 from app.models.ribbons import RibbonCatalog, MemberRibbon
+from app.services.ribbon_citations import citations_for, record_citation
 
 log = logging.getLogger("ribbons_admin")
 
@@ -99,19 +101,26 @@ async def member_current_ribbons(request: Request, member_id: int, db: AsyncSess
     if not rows:
         return HTMLResponse('<p style="color:#888;font-size:13px;">No ribbons awarded yet.</p>')
 
+    notes = await citations_for(db, [mr.id for mr, _c in rows])
     html = '<div style="display:flex;flex-direction:column;gap:6px;">'
     for mr, c in rows:
         dev = f' <span style="color:#f4d878;">+{mr.device_count} dev</span>' if mr.device_count else ''
+        cites = notes.get(mr.id) or ([mr.reason] if mr.reason else [])
+        cite_html = ''
+        if cites:
+            cite_html = '<div style="font-size:11px;color:#aaa;margin:2px 0 0 28px;">'
+            cite_html += '<br>'.join(html_escape(text) for text in cites)
+            cite_html += '</div>'
         html += (
-            f'<div style="display:flex;align-items:center;justify-content:space-between;'
-            f'gap:8px;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:4px;">'
+            f'<div style="padding:6px 8px;background:rgba(255,255,255,.04);border-radius:4px;">'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
             f'<span style="font-size:12px;color:#e8e6dc;">'
             f'<img src="/static/img/ribbons/{c.image}" style="height:18px;vertical-align:middle;margin-right:6px;">'
             f'{c.name}{dev} <span style="color:#888;">({mr.source})</span></span>'
             f'<button hx-post="/api/ribbons/revoke" hx-vals=\'{{"member_id":{member_id},"code":"{c.code}"}}\' '
             f'hx-target="#current-ribbons" hx-confirm="Revoke {c.name}?" '
             f'style="padding:2px 8px;background:#7a2020;color:#fff;border:none;border-radius:3px;font-size:11px;cursor:pointer;">Revoke</button>'
-            f'</div>'
+            f'</div>{cite_html}</div>'
         )
     html += '</div>'
     return HTMLResponse(html)
@@ -159,16 +168,21 @@ async def grant_ribbon(request: Request, db: AsyncSession = Depends(get_db)):
     )).scalar_one_or_none()
 
     if existing:
+        # The number is the device count, not a new row. The comment belongs
+        # to that award. Earlier comments stay where they are.
         existing.device_count = device_count
-        if reason:
+        if device_count == 0 and reason:
             existing.reason = reason
-        existing.awarded_by = awarder_name
+        await record_citation(db, existing, device_count, reason, awarder_name)
         msg = f"Updated {cat.name}"
     else:
-        db.add(MemberRibbon(
+        row = MemberRibbon(
             member_id=member_id, ribbon_code=code, device_count=device_count,
-            reason=reason or None, awarded_by=awarder_name, source="manual",
-        ))
+            reason=reason or None if device_count == 0 else None,
+            awarded_by=awarder_name, source="manual",
+        )
+        db.add(row)
+        await record_citation(db, row, device_count, reason, awarder_name)
         msg = f"Awarded {cat.name}"
     await db.commit()
     return HTMLResponse(f'<p style="color:#2e7d32;font-weight:600;">✅ {msg}</p>')

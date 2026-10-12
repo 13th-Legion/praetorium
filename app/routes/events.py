@@ -3835,20 +3835,27 @@ async def _auto_award_mission_leader(db, event: Event) -> str:
                 )
             )
         )).scalar_one_or_none()
+        cite = f"Vexillation commander — {event.title}"
         if existing:
             # Additional mission led -> increment device count. Leave awarded_at
-            # alone so a later stint does not erase the original date.
+            # and the earlier citation alone so a later stint does not erase them.
             existing.device_count = (existing.device_count or 0) + 1
+            ribbon = existing
+            index = existing.device_count
         else:
-            db.add(MemberRibbon(
+            ribbon = MemberRibbon(
                 member_id=cid,
                 ribbon_code="mission_leader",
                 device_count=0,
                 awarded_at=now,
                 awarded_by="auto",
-                reason=f"Vexillation commander — {event.title}",
+                reason=cite,
                 source="auto",
-            ))
+            )
+            db.add(ribbon)
+            index = 0
+        from app.services.ribbon_citations import record_citation
+        await record_citation(db, ribbon, index, cite, "auto", now)
         db.add(MissionLeaderGrant(event_id=event.id, member_id=cid))
         awarded += 1
 
@@ -3888,6 +3895,15 @@ async def _reverse_mission_leader(db, event: Event) -> None:
         if remaining == 0 and ribbon.source == "auto" and (ribbon.device_count or 0) == 0:
             await db.delete(ribbon)
         else:
+            from app.models.ribbons import RibbonCitation
+            dropped = (await db.execute(
+                select(RibbonCitation).where(
+                    RibbonCitation.member_ribbon_id == ribbon.id,
+                    RibbonCitation.award_index == (ribbon.device_count or 0),
+                )
+            )).scalar_one_or_none()
+            if dropped:
+                await db.delete(dropped)
             ribbon.device_count = max(0, (ribbon.device_count or 0) - 1)
 
 

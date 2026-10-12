@@ -155,9 +155,11 @@
 
     <!-- Decorations & Service (moved above the top cards) -->
     {% if ribbons and ribbons.has_any %}
-    <div class="profile-section" style="margin-bottom:16px;">
+    {# unit-surface:ribbons — the whole decorations block. A later per-unit
+       ribbon creation UI replaces this section, not individual medals. #}
+    <div class="profile-section" id="unit-ribbons" data-unit-surface="ribbons" style="margin-bottom:16px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <h2 class="section-title" style="margin-bottom:0;">Decorations &amp; Service</h2>
+            <h2 class="section-title" style="margin-bottom:0;">Decorations & Service <a href="/awards" style="font-size:12px;font-weight:500;color:#d4a537;margin-left:8px;text-transform:none;letter-spacing:0;">What these are</a></h2>
             <div style="font-size:12px;color:#b9bcc4;">
                 <span title="Total promotion points earned across all awards + tenure">
                     <strong style="color:#d4a537;">{{ ribbons.points.lifetime }}</strong> lifetime pts</span>

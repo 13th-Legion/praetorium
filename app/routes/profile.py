@@ -238,6 +238,7 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
       tenure — Anni Stipendiorum discs computed from join_date (not stored)
     """
     from app.models.ribbons import RibbonCatalog, MemberRibbon
+    from app.services.ribbon_citations import citations_for
     from app.services.ribbon_points import (
         compute_member_points, tenure_discs, years_of_service,
     )
@@ -251,10 +252,14 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
     mrs = (await db.execute(
         select(MemberRibbon).where(MemberRibbon.member_id == member.id)
     )).scalars().all()
+    notes = await citations_for(db, [mr.id for mr in mrs])
     held = {}  # code -> {device_count, reason, awarded_at}
     for mr in mrs:
+        cites = notes.get(mr.id) or ([mr.reason] if mr.reason else [])
         held[mr.ribbon_code] = {
-            "device_count": mr.device_count, "reason": mr.reason, "awarded_at": mr.awarded_at,
+            "device_count": mr.device_count,
+            "reason": " · ".join(cites) if cites else None,
+            "awarded_at": mr.awarded_at,
         }
     for d in await derive_ribbons(db, member):
         if d["code"] not in held:

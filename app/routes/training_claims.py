@@ -723,15 +723,19 @@ async def approve_claim(request: Request, claim_id: int, db: AsyncSession = Depe
                             derived_dc = max(derived_dc, d["device_count"])
             except Exception as e:
                 log.error(f"ribbon derive lookup failed for claim #{claim.id}: {e}")
+            cite = claim.description or f"Approved from claim #{claim.id}"
             if not existing_mr:
-                db.add(MemberRibbon(
+                row = MemberRibbon(
                     member_id=claim.member_id,
                     ribbon_code=cat.code,
                     device_count=derived_dc,
                     awarded_by=reviewer,
-                    reason=(claim.description or f"Approved from claim #{claim.id}"),
+                    reason=cite,
                     source="claim",
-                ))
+                )
+                db.add(row)
+                from app.services.ribbon_citations import record_citation
+                await record_citation(db, row, 0, cite, reviewer)
             elif derived_dc > (existing_mr.device_count or 0):
                 existing_mr.device_count = derived_dc
     elif claim.claim_type == "ftx_attendance":
