@@ -9,7 +9,7 @@ jinja2==3.1.*
 # Database
 sqlalchemy==2.0.*
 alembic==1.14.*
-asyncpg==0.30.*          # async PostgreSQL driver
+asyncpg==0.32.*          # 0.31+ publishes a Python 3.14 wheel; 0.30 had to compile
 psycopg2-binary==2.9.*   # sync driver (for alembic)
 
 # Auth
