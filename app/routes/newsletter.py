@@ -285,7 +285,7 @@ def _attachment_row_html(att: NewsletterAttachment, nl_id: int) -> str:
 # ─── Save (draft / schedule) ─────────────────────────────────────────────────
 @router.post("/save", response_class=JSONResponse, response_model=None)
 @require_auth
-async def newsletter_save(request: Request, db: AsyncSession = Depends(get_db)):
+async def newsletter_save(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     user = _user(request)
     _require_s1(user)
 
@@ -345,6 +345,11 @@ async def newsletter_save(request: Request, db: AsyncSession = Depends(get_db)):
     elif action == "draft":
         nl.status = "draft"
         nl.scheduled_at = None
+    elif action == "send":
+        # Keep status out of (sending|sent) so deliver_newsletter (queued below)
+        # is allowed to take it over: draft -> sending -> sent/failed.
+        nl.status = "draft"
+        nl.scheduled_at = None
 
     await db.commit()
     await db.refresh(nl)
@@ -360,6 +365,14 @@ async def newsletter_save(request: Request, db: AsyncSession = Depends(get_db)):
             if img.filename in (nl.body_html or ""):
                 img.newsletter_id = nl.id
         await db.commit()
+
+    # "Send now" saves the issue and queues delivery in one request. This is
+    # the single-request path (the old editor fired a separate /send-now after
+    # /save; if that second fetch never left the browser, the issue stayed a
+    # draft forever with no error).
+    if action == "send":
+        background_tasks.add_task(deliver_newsletter, nl.id)
+        return JSONResponse({"id": nl.id, "status": "queued"})
 
     return JSONResponse({"id": nl.id, "status": nl.status})
 

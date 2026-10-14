@@ -248,6 +248,27 @@ function saveNewsletter(action) {
             document.getElementById('nl-id').value = d.id;
             document.getElementById('att-hint').textContent = 'Max 15MB each, 18MB total.';
             return d;
+        })
+        .catch(function(err){
+            // Never let a save rejection silently swallow the follow-on send.
+            showResult('Save failed: ' + (err && err.message ? err.message : err), true);
+            return null;
+        });
+}
+
+function sendNow(id) {
+    // Legacy fallback for any callers still using the two-step flow.
+    showResult('⏳ Queuing delivery…', false);
+    return fetch('/api/s1/newsletter/' + id + '/send-now', { method:'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            if (res.error) { showResult(res.error, true); return false; }
+            showResult('✅ Newsletter queued for delivery. Archiving to Nextcloud after send.', false);
+            return true;
+        })
+        .catch(function(err){
+            showResult('Send failed: ' + (err && err.message ? err.message : err), true);
+            return false;
         });
 }
 
@@ -264,15 +285,12 @@ function primaryAction() {
         return;
     }
     if (!confirm('Send this newsletter now? This cannot be undone.')) return;
-    // Save first (persist body/crest/recipients), then fire send-now.
-    saveNewsletter('draft').then(function(d){
-        if (!d) return;
-        fetch('/api/s1/newsletter/' + d.id + '/send-now', { method:'POST' })
-            .then(function(r){ return r.json(); })
-            .then(function(res){
-                if (res.error) { showResult(res.error, true); return; }
-                showResult('✅ Newsletter queued for delivery. Archiving to Nextcloud after send.', false);
-            });
+    // Single-request send: /save with action=send persists the issue AND queues
+    // delivery in one fetch (no fragile save-then-send-now second hop).
+    showResult('⏳ Queuing delivery…', false);
+    saveNewsletter('send').then(function(d){
+        if (!d) { showResult('Could not queue delivery. Please try again.', true); return; }
+        showResult('✅ Newsletter queued for delivery. Archiving to Nextcloud after send.', false);
     });
 }
 
