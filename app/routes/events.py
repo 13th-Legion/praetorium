@@ -4018,10 +4018,18 @@ async def save_aar(request: Request, event_id: int):
             html_body = f'<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;line-height:1.6;max-width:650px;margin:0 auto;"><div style="background:#1a1a2e;padding:20px;text-align:center;"><table style="margin:0 auto;" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:15px;"><img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70"></td><td style="vertical-align:middle;text-align:center;"><h1 style="color:#d4a537;margin:0;font-size:28px;">13TH LEGION</h1><p style="color:#ccc;margin:5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p></td><td style="vertical-align:middle;padding-left:15px;"><img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70"></td></tr></table></div><div style="padding:20px;"><h2 style="color:#1a1a2e;">\U0001f4cb AFTER ACTION REVIEW \u2014 {_evt_title}</h2><p><strong>Date:</strong> {_date_str}<br><strong>Location:</strong> {_evt_location}</p>{_intent_html}{_summary_html}{_items_html}<p style="margin-top:20px;"><strong>Full details on the Portal:</strong><br><a href="https://portal.13thlegion.org/events/{_evt_eid}" style="color:#6fa8dc;">https://portal.13thlegion.org/events/{_evt_eid}</a></p><p style="margin-top:20px;"><em>Nunquam Non Paratus,</em><br><strong>S3 \u2014 Operations & Training</strong><br>13th Legion, Texas State Militia</p></div><div style="background:#1a1a2e;padding:10px;text-align:center;font-size:11px;color:#888;">13th Legion \u00b7 Texas State Militia \u00b7 DFW</div></body></html>'
             from app.integrations import email as _email_service
             _aar_subj = f"\U0001f4cb AAR \u2014 {_evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
-            _email_service.send_bulk([
-                _email_service.EmailMessage(to=email, subject=_aar_subj, html=html_body)
-                for email, _, _ in _attending_emails if email
-            ])
+            # The bulk SMTP send is blocking; run it in a worker thread so the
+            # event loop (and every other request) is not frozen for the ~125
+            # recipients. The OPORD/WARNO paths get this for free via
+            # background_tasks.add_task(sync_fn); the AAR path runs on the loop
+            # via ensure_future, so offload explicitly (2026-10-13 freeze).
+            await asyncio.to_thread(
+                _email_service.send_bulk,
+                [
+                    _email_service.EmailMessage(to=email, subject=_aar_subj, html=html_body)
+                    for email, _, _ in _attending_emails if email
+                ],
+            )
             try:
                 settings = get_settings()
                 talk_msg = f"\U0001f4cb **AFTER ACTION REVIEW \u2014 {_evt_title}**\n\n\U0001f4c5 {_date_str}\n"
