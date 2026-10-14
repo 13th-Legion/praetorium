@@ -7,6 +7,13 @@
 # two-heads migration failure was masked exactly this way.
 set -euo pipefail
 
+# Byte-order collation for every sort/comm/grep/awk below. Under en_US.UTF-8,
+# `sort` and `comm` disagree on hyphen/digit ordering (e.g.
+# `hero-formation-v2.jpg` sorts after `hero-formation.jpg` in sort but not in
+# comm), so the leak gate's `comm -23` aborts with "file 2 is not in sorted
+# order". C locale makes them byte-identical and deterministic.
+export LC_ALL=C
+
 SERVER="root@167.172.233.122"
 REMOTE_DIR="/opt/praetorium"
 LOCAL_DIR="$(dirname "$0")"

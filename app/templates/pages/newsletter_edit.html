@@ -256,22 +256,6 @@ function saveNewsletter(action) {
         });
 }
 
-function sendNow(id) {
-    // Legacy fallback for any callers still using the two-step flow.
-    showResult('⏳ Queuing delivery…', false);
-    return fetch('/api/s1/newsletter/' + id + '/send-now', { method:'POST' })
-        .then(function(r){ return r.json(); })
-        .then(function(res){
-            if (res.error) { showResult(res.error, true); return false; }
-            showResult('✅ Newsletter queued for delivery. Archiving to Nextcloud after send.', false);
-            return true;
-        })
-        .catch(function(err){
-            showResult('Send failed: ' + (err && err.message ? err.message : err), true);
-            return false;
-        });
-}
-
 function primaryAction() {
     var scheduled = document.getElementById('nl-schedule-toggle').checked;
     if (!document.getElementById('nl-title').value.trim()) { showResult('Title is required.', true); return; }
