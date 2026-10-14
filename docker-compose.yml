@@ -41,6 +41,7 @@ services:
     volumes:
       - library_data:/app/data/library
       - newsletter_data:/app/data/newsletter
+      - uploads_data:/app/uploads
     networks:
       - praetorium
     healthcheck:
@@ -84,6 +85,7 @@ volumes:
   pgdata:
   library_data:
   newsletter_data:
+  uploads_data:
 
 networks:
   praetorium:
