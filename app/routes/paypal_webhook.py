@@ -72,6 +72,7 @@ def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
 NC_URL = "https://cloud.13thlegion.org"
 DECK_BOARD_ID = 5
+NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
 # Stacks where an applicant could plausibly pay from
 DECK_PAYMENT_STACKS = {14, 13, 12, 11}  # Documents & Payment first, then earlier stages
 
@@ -203,7 +204,7 @@ def _parse_card_emails(description: str) -> list[str]:
 
 def _parse_card_name(title: str) -> str:
     """Extract clean name from a Deck card title (strip emoji prefixes)."""
-    return re.sub(r"^[📋✅🔍⚠️❌\s]+", "", title).strip()
+    return re.sub(r"^[📋✅🔍⚠️❌💵💰\s]+", "", title).strip()
 
 
 async def _find_deck_card(payer_email: str, payer_first: str, payer_last: str,
@@ -326,13 +327,17 @@ async def _annotate_deck_card(card_id: int, stack_id: int, transaction_id: str,
             if etag:
                 update_headers["If-Match"] = etag
 
+            title = card.get("title", "")
+            if "💵" not in title:
+                title = "💵 " + title
+
             put_resp = await client.put(
                 f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}"
                 f"/stacks/{stack_id}/cards/{card_id}",
                 headers=update_headers,
                 auth=(NC_SPOOKY_USER, NC_SPOOKY_PASS),
                 json={
-                    "title": card.get("title", ""),
+                    "title": title,
                     "description": updated_desc,
                     "type": card.get("type", "plain"),
                     "order": card.get("order", 0),
@@ -352,6 +357,28 @@ async def _annotate_deck_card(card_id: int, stack_id: int, transaction_id: str,
         logger.error(f"Error annotating Deck card #{card_id}: {e}")
         return False
 
+
+
+async def _notify_talk_payment(name: str, amount: float) -> bool:
+    """Post a payment-verified message to T1 · S1 - Admin as Tesserarius."""
+    try:
+        from app.settings import NC_TALK_USER, NC_TALK_PASS
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{NC_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NCTALK_S1_ROOM}",
+                headers={"OCS-APIRequest": "true"},
+                auth=(NC_TALK_USER, NC_TALK_PASS),
+                data={
+                    "message": (
+                        f"💰 Payment verified — **{name}** paid ${amount:.2f} via PayPal. "
+                        f"Application fee confirmed (auto-matched from the pipeline card)."
+                    )
+                },
+            )
+            return resp.status_code in (200, 201)
+    except Exception as e:
+        logger.error(f"Tesserarius payment notification failed: {e}")
+        return False
 
 
 async def _fetch_paypal_order(order_id: str) -> dict | None:
@@ -557,6 +584,9 @@ async def paypal_webhook(request: Request):
             deck_match["card_id"], deck_match["stack_id"],
             transaction_id, amount_value, payer_email,
         )
+
+        # Notify T1 · S1 - Admin via Tesserarius
+        await _notify_talk_payment(deck_match["name"], amount_value)
 
         # If a member record happens to exist already, update it too
         async with database.async_session() as db:
