@@ -4,7 +4,6 @@ Extends Unit Comms with full newsletters: hosted inline images, file
 attachments, seasonal crest mastheads, send-now + scheduled delivery, and a
 self-building Nextcloud archive.
 """
-from __future__ import annotations
 
 import html
 import uuid
