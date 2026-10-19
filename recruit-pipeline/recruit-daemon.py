@@ -48,6 +48,8 @@ import requests
 NC_URL = "https://cloud.13thlegion.org"
 NC_USER = "spooky"
 NC_PASS = os.environ.get("NC_SVC_PASS", "")
+TESSERARIUS_USER = "tesserarius"
+TESSERARIUS_PASS = os.environ.get("TESSERARIUS_PASS", "")
 
 # Service account for provisioning (NC admin)
 NC_SVC_USER = "portal-svc"
@@ -137,6 +139,7 @@ COMPANY_ROUTING = {
     "Guardians (Austin)": "jlacey2@protonmail.com",
     "Vikings (Houston)": "admin@tsmhouston.org",
     "Centurions (Brazoria)": "glassesM@protonmail.com",
+    "Brazos (Waco)": "TSMBrazos@proton.me",
 }
 STATE_S1_FALLBACK = "admin@texasstatemilitia.org"
 
@@ -192,6 +195,61 @@ PORTAL_DB_PORT = 5432
 PORTAL_DB_NAME = "praetorium"
 PORTAL_DB_USER = "praetorium"
 PORTAL_DB_PASS = os.environ.get("POSTGRES_PASSWORD", "")
+
+# Company routing now lives in the portal's company_routing table (managed via
+# the S1 admin UI at /api/s1/company-routing). This loader queries that table
+# and falls back to the hardcoded COMPANY_ROUTING above on any error, so a
+# portal outage or a not-yet-run migration degrades gracefully instead of
+# silently dropping routing. Cached for a short TTL so a burst of submissions
+# doesn't hammer the DB.
+_routing_cache = {"map": None, "fetched_at": 0.0}
+_ROUTING_CACHE_TTL = 60.0  # seconds
+
+
+def _load_company_routing():
+    """Return the current {unit_name: route} map, preferring the portal DB."""
+    now = time.monotonic()
+    if (
+        _routing_cache["map"] is not None
+        and now - _routing_cache["fetched_at"] < _ROUTING_CACHE_TTL
+    ):
+        return _routing_cache["map"]
+
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=_resolve_portal_db_host(),
+            port=PORTAL_DB_PORT,
+            dbname=PORTAL_DB_NAME,
+            user=PORTAL_DB_USER,
+            password=PORTAL_DB_PASS,
+        )
+        cur = conn.cursor()
+        cur.execute("SELECT unit_name, route_type, email FROM company_routing")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        mapping = {}
+        for unit_name, route_type, email in rows:
+            mapping[unit_name] = "deck" if route_type == "deck" else (email or None)
+        if mapping:
+            _routing_cache["map"] = mapping
+            _routing_cache["fetched_at"] = now
+            log.info(f"Loaded company routing from portal DB ({len(mapping)} units)")
+            return mapping
+        log.warning("company_routing table is empty — using hardcoded fallback")
+    except Exception as e:
+        log.error(
+            f"Failed to load company routing from portal DB "
+            f"({type(e).__name__}: {e}) — using hardcoded fallback"
+        )
+
+    _routing_cache["map"] = COMPANY_ROUTING
+    _routing_cache["fetched_at"] = now
+    return COMPANY_ROUTING
+
 
 # Paths are env-overridable so the module can be imported and unit-tested off
 # the server. Unset (i.e. in production) they resolve to the same values as
@@ -514,6 +572,28 @@ def generate_password(length=16):
     return "".join(pw)
 
 
+PROTON_DOMAINS = ("proton.me", "protonmail.com", "protonmail.ch", "pm.me")
+
+
+def is_valid_proton_email(address):
+    """Return True if address is a well-formed Proton Mail address.
+
+    Guards against the recurring 'welcome email bounces because the address
+    does not exist' failures, which are almost always a typo'd or non-Proton
+    value in the Proton Mail field. The SMTP bounce remains the final
+    authority (this only rejects obviously-wrong values before we create an
+    NC account + portal row).
+    """
+    address = (address or "").strip()
+    if not address or "@" not in address:
+        return False
+    local, _, domain = address.rpartition("@")
+    domain = domain.strip().lower()
+    if domain not in PROTON_DOMAINS:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z0-9._+\-]+", local))
+
+
 def parse_answer(answers, q_id):
     """Extract a clean string from a form answer.
     
@@ -644,6 +724,7 @@ def notify_s1_nctalk(message):
         resp = nc_request(
             "POST", f"/ocs/v2.php/apps/spreed/api/v1/chat/{NCTALK_S1_ROOM}",
             data={"message": message}, timeout=15,
+            user=TESSERARIUS_USER, passwd=TESSERARIUS_PASS,
             label="NC Talk S1 notification",
         )
         if resp.status_code in (200, 201):
@@ -1361,7 +1442,7 @@ def check_new_submissions(state, dry_run=False):
                 )
 
         # Route by company
-        route = COMPANY_ROUTING.get(company, None)
+        route = _load_company_routing().get(company, None)
 
         if dry_run:
             # --dry-run must have NO external side effects. This block used to
@@ -2312,6 +2393,18 @@ Nunquam Non Paratus — Never Not Ready.
             s.send_message(msg)
         log.info(f"Sent welcome email to {recipient_email}")
         return True
+    except smtplib.SMTPRecipientsRefused as e:
+        # All recipients refused (5xx) — permanent; retrying won't help.
+        log.error(f"Welcome email recipients refused for {recipient_email}: {e}")
+        return "permanent"
+    except smtplib.SMTPResponseException as e:
+        # SMTP error code: 5xx = permanent (bad address), 4xx = transient.
+        code = getattr(e, "smtp_code", 0) or 0
+        if code >= 500:
+            log.error(f"Welcome email permanently rejected for {recipient_email}: {e}")
+            return "permanent"
+        log.error(f"Welcome email temporarily failed for {recipient_email}: {e}")
+        return False
     except Exception as e:
         log.error(f"Failed to send welcome email to {recipient_email}: {e}")
         return False
@@ -2382,6 +2475,10 @@ def _onboard_member(card, state, dry_run=False):
     if not proton_email or "pending" in proton_email.lower() or proton_email.startswith("_"):
         log.warning(f"No Proton Mail address set for card #{card_id} ({name}) — cannot onboard. "
                      "S1 must edit the card and fill in the Proton Mail field before moving to Approved.")
+        return False
+    if not is_valid_proton_email(proton_email):
+        log.warning(f"Invalid Proton Mail address for card #{card_id} ({name}): {proton_email!r} — cannot onboard. "
+                     "S1 must correct the Proton Mail address on the card before moving to Approved.")
         return False
 
     log.info(f"Onboarding: {name} (proton: {proton_email}, app email: {email})")
@@ -2528,8 +2625,36 @@ def _onboard_member(card, state, dry_run=False):
     if card_id in state.get("welcome_emailed_cards", []):
         log.info(f"Welcome email already sent for card #{card_id} — not resending")
     elif send_welcome:
-        send_welcome_email(proton_email, name, nc_username, nc_password, team)
-        state.setdefault("welcome_emailed_cards", []).append(card_id)
+        welcome_result = send_welcome_email(proton_email, name, nc_username, nc_password, team)
+        if welcome_result is True:
+            state.setdefault("welcome_emailed_cards", []).append(card_id)
+        elif welcome_result == "permanent":
+            # The Proton address bounced (does not exist). The recruit has an NC
+            # account + portal row but never received credentials. Flag the card,
+            # dead-letter it (retrying can't fix a bad address), and tell S1.
+            mark_card_bad_email(card_id, STACKS["approved"], proton_email, kind="onboarding")
+            state.setdefault("onboard_dead_letter", []).append(card_id)
+            log.error(
+                f"Onboarding ABORTED for {name} ({nc_username}) — welcome email "
+                f"permanently bounced for {proton_email}; card flagged for S1"
+            )
+            notify_s1_nctalk(
+                f"🚫 **Onboarding: welcome email bounced**\n"
+                f"Member: {name} (`{nc_username}`)\n"
+                f"Proton address `{proton_email}` does not exist. Onboarding was "
+                f"halted and the card flagged — correct the address, remove the "
+                f"card id from `onboard_dead_letter` in state.json, then move the "
+                f"card back into Approved to re-run."
+            )
+            return False
+        else:
+            # Transient SMTP failure. Do NOT record the email as sent and do NOT
+            # advance; the bounded-retry wrapper will re-run on a later poll.
+            log.warning(
+                f"Onboarding incomplete for {name} ({nc_username}) — welcome email "
+                f"transiently failed; will retry on next poll"
+            )
+            return False
 
     # 6. Move card to Complete
     move_card_to_stack(card_id, STACKS["approved"], STACKS["complete"])
@@ -2622,9 +2747,68 @@ S1 Recruiting
             server.send_message(msg)
         log.info(f"Payment email sent successfully to {recipient_email}")
         return True
+    except smtplib.SMTPRecipientsRefused as e:
+        # All recipients refused (5xx) — permanent; retrying won't help.
+        log.error(f"Payment email recipients refused for {recipient_email}: {e}")
+        return "permanent"
+    except smtplib.SMTPResponseException as e:
+        # SMTP error code: 5xx = permanent (bad address/message), 4xx = transient.
+        code = getattr(e, "smtp_code", 0) or 0
+        if code >= 500:
+            log.error(f"Payment email permanently rejected for {recipient_email}: {e}")
+            return "permanent"
+        log.error(f"Payment email temporarily failed for {recipient_email}: {e}")
+        return False
     except Exception as e:
         log.error(f"Failed to send payment email to {recipient_email}: {e}")
         return False
+
+def mark_card_bad_email(card_id, stack_id, bad_email, kind="payment"):
+    """Append a visible 'invalid email' warning to a Deck card's description.
+
+    Called when an email is permanently rejected (5xx bounce). The card
+    stays in its stack; S1 sees the note when they open it and can correct the
+    applicant's email before re-triggering.
+
+    kind: "payment" (default) or "onboarding" — controls the re-trigger hint.
+    """
+    try:
+        card = nc_api(
+            "GET",
+            f"/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks/{stack_id}/cards/{card_id}",
+        )
+        desc = (card.get("description") or "").rstrip()
+        if kind == "onboarding":
+            hint = "move the card back into *Approved — Onboarding* to re-trigger"
+            label = "onboarding bounce"
+        else:
+            hint = "move the card out and back into *Documents & Payment* to re-trigger"
+            label = "payment bounce"
+        warning = (
+            f"\n\n⚠️ **INVALID EMAIL — {label}:** `{bad_email}` was rejected "
+            f"by the mail server (address does not exist). Correct the applicant's "
+            f"Proton email, then {hint}."
+        )
+        owner = card.get("owner")
+        owner_uid = owner.get("uid", NC_USER) if isinstance(owner, dict) else (owner or NC_USER)
+        nc_api(
+            "PUT",
+            f"/index.php/apps/deck/api/v1.0/boards/{BOARD_ID}/stacks/{stack_id}/cards/{card_id}",
+            json_data={
+                "title": card.get("title", ""),
+                "type": "plain",
+                "order": card.get("order", 0),
+                "description": desc + warning,
+                "duedate": card.get("duedate"),
+                "owner": owner_uid,
+            },
+        )
+        log.info(f"Marked card #{card_id} as bad email ({bad_email})")
+        return True
+    except Exception as e:
+        log.error(f"Failed to mark card #{card_id} as bad email: {e}", exc_info=True)
+        return False
+
 
 def check_payment_cards(state, dry_run=False):
     """Check for cards in Documents & Payment stack and trigger payment email."""
@@ -2680,9 +2864,21 @@ def check_payment_cards(state, dry_run=False):
             emailed += 1
             continue
             
-        if send_payment_email(target_email, name):
+        result = send_payment_email(target_email, name)
+        if result is True:
             state.setdefault("payment_emailed_cards", []).append(card_id)
             emailed += 1
+        elif result == "permanent":
+            state.setdefault("payment_emailed_cards", []).append(card_id)
+            mark_card_bad_email(card_id, STACKS["documents_payment"], target_email)
+            try:
+                notify_s1_nctalk(
+                    f"⚠️ **Payment email bounced — bad address**\n"
+                    f"Card #{card_id} ({name}) has a non-existent email: `{target_email}`.\n"
+                    f"Fix the email on the card, then move it out and back into *Documents & Payment* to re-trigger."
+                )
+            except Exception as _ne:
+                log.warning(f"Could not notify S1 about bounced email on card #{card_id}: {_ne}")
             
     return emailed
 

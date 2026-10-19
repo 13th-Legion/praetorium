@@ -1,0 +1,110 @@
+"""Proton address validation + welcome-email failure handling.
+
+Two related guards against the same failure class: a recruit whose Proton
+address does not exist. The welcome email 554-bounces and, historically, the
+daemon logged the error but still marked onboarding complete — leaving a
+recruit with an NC account + portal row but no credentials and no way in.
+
+1. `is_valid_proton_email` rejects obviously-wrong values before any account
+   is created.
+2. `send_welcome_email` distinguishes permanent (5xx) from transient (4xx)
+   failure so the caller can halt instead of silently completing.
+"""
+
+import smtplib
+
+import pytest
+
+
+# ─── is_valid_proton_email (pure) ────────────────────────────────────────────
+
+@pytest.mark.parametrize("addr", [
+    "recruit@proton.me",
+    "recruit.name@protonmail.com",
+    "recruit+tag@protonmail.ch",
+    "recruit@pm.me",
+])
+def test_valid_proton_addresses(daemon, addr):
+    assert daemon.is_valid_proton_email(addr) is True
+
+
+@pytest.mark.parametrize("addr", [
+    "not-an-email",
+    "recruit@gmail.com",            # non-Proton
+    "recruit@example.com",          # non-Proton
+    "bahoojawooja@protonmail.com",  # well-formed but does not exist — SMTP's job
+    "",
+    None,
+])
+def test_invalid_proton_addresses(daemon, addr):
+    # The "does not exist" address is well-formed and therefore passes the
+    # syntax check — that is intentional; only the SMTP bounce can catch it.
+    if addr == "bahoojawooja@protonmail.com":
+        assert daemon.is_valid_proton_email(addr) is True
+        return
+    assert daemon.is_valid_proton_email(addr) is False
+
+
+def test_whitespace_is_stripped(daemon):
+    assert daemon.is_valid_proton_email("  recruit@proton.me  ") is True
+
+
+# ─── send_welcome_email failure classification ───────────────────────────────
+
+class _RecipientsRefused(smtplib.SMTPRecipientsRefused):
+    def __init__(self):
+        super().__init__({"bad@x": (554, b"does not exist")})
+
+
+class _Permanent(smtplib.SMTPResponseException):
+    def __init__(self):
+        super().__init__(554, b"does not exist")
+
+
+class _Transient(smtplib.SMTPResponseException):
+    def __init__(self):
+        super().__init__(451, b"temporary failure")
+
+
+@pytest.fixture
+def smtp_ok(daemon, monkeypatch):
+    class _S:
+        def __init__(self, *a, **k):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def starttls(self):
+            pass
+        def login(self, *a, **k):
+            pass
+        def send_message(self, *a, **k):
+            pass
+    monkeypatch.setattr(daemon.smtplib, "SMTP", lambda *a, **k: _S())
+    return _S
+
+
+def test_welcome_email_success(daemon, smtp_ok):
+    assert daemon.send_welcome_email("r@proton.me", "Jane Doe", "jane.doe", "pw", "Alpha") is True
+
+
+def test_welcome_email_recipients_refused_is_permanent(daemon, monkeypatch):
+    def boom(*a, **k):
+        raise _RecipientsRefused()
+    monkeypatch.setattr(daemon.smtplib, "SMTP", boom)
+    assert daemon.send_welcome_email("r@proton.me", "J", "j", "pw", "A") == "permanent"
+
+
+def test_welcome_email_5xx_is_permanent(daemon, monkeypatch):
+    def boom(*a, **k):
+        raise _Permanent()
+    monkeypatch.setattr(daemon.smtplib, "SMTP", boom)
+    assert daemon.send_welcome_email("r@proton.me", "J", "j", "pw", "A") == "permanent"
+
+
+def test_welcome_email_4xx_is_transient(daemon, monkeypatch):
+    def boom(*a, **k):
+        raise _Transient()
+    monkeypatch.setattr(daemon.smtplib, "SMTP", boom)
+    assert daemon.send_welcome_email("r@proton.me", "J", "j", "pw", "A") is False
