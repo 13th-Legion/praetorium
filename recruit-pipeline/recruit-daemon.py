@@ -12,6 +12,7 @@ Runs as a systemd service on the NC server (167.172.233.122).
 """
 
 import argparse
+import html
 import json
 import logging
 import os
@@ -558,14 +559,18 @@ def save_state(state):
 
 
 def generate_password(length=16):
-    """Generate a secure random password."""
-    chars = string.ascii_letters + string.digits + "!@#$%&"
+    """Generate a secure random password.
+
+    Excludes '&' (and by extension '&#') so the raw value can never be misread
+    as an HTML character reference when it is rendered in the welcome email.
+    """
+    chars = string.ascii_letters + string.digits + "!@#$%"
     # Ensure at least one of each type
     pw = [
         secrets.choice(string.ascii_uppercase),
         secrets.choice(string.ascii_lowercase),
         secrets.choice(string.digits),
-        secrets.choice("!@#$%&"),
+        secrets.choice("!@#$%"),
     ]
     pw += [secrets.choice(chars) for _ in range(length - 4)]
     secrets.SystemRandom().shuffle(pw)
@@ -2257,9 +2262,9 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Username:</td>
             <td><code>{nc_username}</code></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Temporary Password:</td>
-            <td><code>{nc_password}</code></td></tr>
+            <td><code>{html.escape(nc_password)}</code></td></tr>
     </table>
-    <p><strong>Change your password on first login.</strong> Then enable 2FA (TOTP) in your security settings — this is mandatory.</p>
+    <p style="margin-top:10px;padding:10px 12px;background:#fdf3d8;border:1px solid #e5c25a;border-radius:4px;"><strong>Log in with the Username above — not your email address.</strong> Then <strong>change your password on first login</strong> and enable 2FA (TOTP) in your security settings — this is mandatory.</p>
 
     <p style="margin-top: 12px;"><strong>Download the apps:</strong></p>
     <ul>
@@ -2334,7 +2339,9 @@ YOUR NEXTCLOUD ACCOUNT
   URL: https://cloud.13thlegion.org
   Username: {nc_username}
   Temporary Password: {nc_password}
-  Change your password on first login. Enable 2FA (mandatory).
+
+  IMPORTANT: Log in with the Username above — NOT your email address.
+  Then change your password on first login and enable 2FA (mandatory).
 
   Download the apps:
   - Nextcloud (files/calendar): iOS, Android, or Desktop — https://nextcloud.com/install/#install-clients
