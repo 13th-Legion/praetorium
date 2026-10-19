@@ -12,7 +12,7 @@ Runs as a systemd service on the NC server (167.172.233.122).
 """
 
 import argparse
-import html
+from html import escape
 import json
 import logging
 import os
@@ -2262,7 +2262,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Username:</td>
             <td><code>{nc_username}</code></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Temporary Password:</td>
-            <td><code>{html.escape(nc_password)}</code></td></tr>
+            <td><code>{escape(nc_password)}</code></td></tr>
     </table>
     <p style="margin-top:10px;padding:10px 12px;background:#fdf3d8;border:1px solid #e5c25a;border-radius:4px;"><strong>Log in with the Username above — not your email address.</strong> Then <strong>change your password on first login</strong> and enable 2FA (TOTP) in your security settings — this is mandatory.</p>
 
