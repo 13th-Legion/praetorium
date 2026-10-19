@@ -191,7 +191,7 @@ var nlQuill = new Quill('#nl-editor', {
     modules: { toolbar: '#nl-toolbar' },
     placeholder: 'Legionaries,\n\nCompose the dispatch…'
 });
-{% if nl %}nlQuill.root.innerHTML = {{ (nl.body_html or '') | tojson }};{% endif %}
+{% if nl and nl.body_html %}nlQuill.clipboard.dangerouslyPasteHTML({{ nl.body_html | tojson }});{% endif %}
 
 // Images: toolbar button, paste AND drag-drop all upload to the server and
 // insert a hosted URL. Never base64 — bleach strips `data:` srcs on save, so a
@@ -247,6 +247,7 @@ function saveNewsletter(action) {
             if (d.error) { showResult(d.error, true); return null; }
             document.getElementById('nl-id').value = d.id;
             document.getElementById('att-hint').textContent = 'Max 15MB each, 18MB total.';
+            if (action === 'draft') { showResult('✓ Draft saved', false); }
             return d;
         })
         .catch(function(err){
