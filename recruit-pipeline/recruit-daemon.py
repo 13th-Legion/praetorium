@@ -2159,26 +2159,109 @@ def move_card_to_stack(card_id, from_stack, to_stack):
         return False
 
 
+def _calendar_entry(date_start, date_end, category, title, training_blocks, now):
+    """Return (label, is_past) for one training-calendar line.
+
+    label is the human text (dates + name); is_past is True when the event has
+    fully occurred (end < now) and should be struck through.
+    """
+    end = date_end or date_start
+    past = end < now
+
+    if category == "mcftx":
+        label = "MCFTX (Multi-Company)"
+    elif title and "urban evasion" in title.lower():
+        label = title
+    elif training_blocks:
+        blocks = [b.strip() for b in str(training_blocks).split(",") if b.strip()]
+        label = f"BTBLK-{int(blocks[0]):02d}" if len(blocks) == 1 else "FTX"
+    else:
+        label = title or "Field Training Exercise"
+
+    s = date_start
+    if s.date() == end.date():
+        when = s.strftime("%d %b").upper()
+    elif s.year == end.year and s.month == end.month:
+        when = f"{s.strftime('%d')}–{end.strftime('%d')} {end.strftime('%b').upper()}"
+    else:
+        when = f"{s.strftime('%d %b').upper()}–{end.strftime('%d %b').upper()}"
+
+    return f"{when} — {label}", past
+
+
+def _load_training_calendar(now=None):
+    """Build the current year's FTX/MCFTX calendar from the portal events
+    table. Past events are struck through so the welcome email never ships a
+    stale schedule.
+
+    Returns (html, plain): html is a complete <ul>…</ul> block (empty string on
+    failure), plain is newline-separated lines (empty on failure).
+    """
+    now = now or datetime.utcnow()
+    year_start = datetime(now.year, 1, 1)
+
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=_resolve_portal_db_host(),
+            port=PORTAL_DB_PORT,
+            dbname=PORTAL_DB_NAME,
+            user=PORTAL_DB_USER,
+            password=PORTAL_DB_PASS,
+            connect_timeout=5,
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT date_start, date_end, category, title, training_blocks "
+            "FROM events "
+            "WHERE category IN ('ftx','mcftx') AND date_start >= %s "
+            "ORDER BY date_start",
+            (year_start,),
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        log.error(
+            f"Failed to load training calendar from portal DB "
+            f"({type(e).__name__}: {e})"
+        )
+        return "", ""
+
+    html_items = []
+    plain_items = []
+    for date_start, date_end, category, title, training_blocks in rows:
+        inner, past = _calendar_entry(
+            date_start, date_end, category, title, training_blocks, now
+        )
+        if past:
+            html_items.append(f"<li><s>{inner}</s></li>")
+        else:
+            html_items.append(f"<li>{inner}</li>")
+        plain_items.append(f"  {inner}")
+
+    if not html_items:
+        return "", ""
+
+    html = (
+        '<ul style="margin: 5px 0; padding-left: 20px;">\n'
+        + "\n".join(html_items)
+        + "\n    </ul>"
+    )
+    return html, "\n".join(plain_items)
+
+
 def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     """Send welcome email to new recruit via Proton Bridge SMTP (PP-019)."""
 
-    # 2026 training calendar
-    calendar_html = """
-    <ul style="margin: 5px 0; padding-left: 20px;">
-        <li><s>09–11 JAN — BTBLK-04</s></li>
-        <li><s>06–08 FEB — BTBLK-01</s></li>
-        <li><s>21 FEB — Urban Evasion Course</s></li>
-        <li>13–15 MAR — BTBLK-02</li>
-        <li>09–12 APR — MCFTX (Multi-Company)</li>
-        <li>15–17 MAY — BTBLK-03</li>
-        <li>12–14 JUN — BTBLK-04</li>
-        <li>10–12 JUL — BTBLK-01</li>
-        <li>08 AUG — Family Day</li>
-        <li>11–13 SEP — BTBLK-02</li>
-        <li>08–11 OCT — MCFTX (Multi-Company)</li>
-        <li>13–15 NOV — BTBLK-03</li>
-        <li>11–13 DEC — BTBLK-04</li>
-    </ul>"""
+    # Training calendar — built dynamically from the portal events table so it
+    # never goes stale and past FTX/MCFTX events are struck through
+    # automatically.
+    calendar_html, calendar_plain = _load_training_calendar()
+    if not calendar_html:
+        calendar_html = '<p>See the portal calendar for this year\'s schedule.</p>'
+        calendar_plain = "  See the portal calendar for this year's schedule."
 
     tradoc_html = """
     <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin: 10px 0;">
@@ -2250,7 +2333,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         🔹 Assignment
     </h3>
     <p>You've been assigned to <strong>{team} Team</strong>. Your team leader will reach out to you shortly. By now you should be invited to your team's Signal messaging group.</p>
-    <p>You can view the 13th's overall chain of command <a href="https://coc.13thlegion.org/">here</a>.</p>
+    <p>You can view the 13th's overall chain of command <a href="https://portal.13thlegion.org/chain-of-command">here</a>.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Your Nextcloud Account
@@ -2289,7 +2372,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Training Calendar
     </h3>
-    <p>Below is this year's training calendar. You can always view our <a href="https://cloud.13thlegion.org/apps/calendar">training and events calendar here</a>.</p>
+    <p>Below is this year's training calendar. You can always view the full schedule on the <a href="https://portal.13thlegion.org/events">Praetorium events page</a>.</p>
     {calendar_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -2309,9 +2392,9 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <p>Your Nextcloud account includes a <strong>Recruit Packet</strong> folder in "13th Legion Shared" with all the documents you need to get started: code of conduct, bylaws, TRADOC checklist, medical card, uniform SOP, and more.</p>
     <p>The <a href="https://portal.13thlegion.org">unit portal</a> is your one-stop shop for everything else:</p>
     <ul>
-        <li><a href="https://portal.13thlegion.org/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
-        <li><a href="https://portal.13thlegion.org/coc">Chain of Command</a></li>
-        <li><a href="https://portal.13thlegion.org/calendar">Training &amp; Events Calendar</a></li>
+        <li><a href="https://portal.13thlegion.org/training/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
+        <li><a href="https://portal.13thlegion.org/chain-of-command">Chain of Command</a></li>
+        <li><a href="https://portal.13thlegion.org/events">Training &amp; Events Calendar</a></li>
     </ul>
 </div>
 
@@ -2333,7 +2416,7 @@ Thank you for joining us. The Texas State Militia offers excellent training and 
 
 ASSIGNMENT
   You've been assigned to {team} Team. Your team leader will reach out shortly.
-  Chain of Command: https://coc.13thlegion.org/
+  Chain of Command: https://portal.13thlegion.org/chain-of-command
 
 YOUR NEXTCLOUD ACCOUNT
   URL: https://cloud.13thlegion.org
@@ -2357,13 +2440,9 @@ COMMUNICATIONS
     to communicate (outside of gross negligence/misconduct) is the only way
     to get removed from the unit.
   - Nextcloud Talk: unit-wide chat channels in your NC account
-2026 TRAINING CALENDAR
-  13-15 MAR — BTBLK-02          09-12 APR — MCFTX
-  15-17 MAY — BTBLK-03          12-14 JUN — BTBLK-04
-  10-12 JUL — BTBLK-01          08 AUG — Family Day
-  11-13 SEP — BTBLK-02          08-11 OCT — MCFTX
-  13-15 NOV — BTBLK-03          11-13 DEC — BTBLK-04
-  Full calendar: https://cloud.13thlegion.org/apps/calendar
+TRAINING CALENDAR
+{calendar_plain}
+  Full calendar: https://portal.13thlegion.org/events
 
 BASIC TRAINING (TRADOC)
   Block 01 — Theory & Medical: Customs, Drill, Gear Review, History, Medical
@@ -2378,9 +2457,9 @@ YOUR FIRST FTX
 ADDITIONAL RESOURCES
   Your NC account has a "Recruit Packet" folder with all key documents.
   The unit portal (https://portal.13thlegion.org) is your one-stop shop:
-  - Resource Library: https://portal.13thlegion.org/library
-  - Chain of Command: https://portal.13thlegion.org/coc
-  - Training & Events Calendar: https://portal.13thlegion.org/calendar
+  - Resource Library: https://portal.13thlegion.org/training/library
+  - Chain of Command: https://portal.13thlegion.org/chain-of-command
+  - Training & Events Calendar: https://portal.13thlegion.org/events
 
 Nunquam Non Paratus — Never Not Ready.
 — 13th Legion, Texas State Militia

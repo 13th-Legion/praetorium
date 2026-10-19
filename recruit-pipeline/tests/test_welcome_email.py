@@ -108,3 +108,54 @@ def test_welcome_email_4xx_is_transient(daemon, monkeypatch):
         raise _Transient()
     monkeypatch.setattr(daemon.smtplib, "SMTP", boom)
     assert daemon.send_welcome_email("r@proton.me", "J", "j", "pw", "A") is False
+
+
+# ─── Training calendar entry (pure) ─────────────────────────────────────────
+
+from datetime import datetime as _dt
+
+
+def _d(y, m, dd):
+    return _dt(y, m, dd)
+
+
+NOW = _dt(2026, 10, 19)  # reference "today"
+
+
+def test_calendar_past_ftx_is_struck(daemon):
+    label, past = daemon._calendar_entry(
+        _d(2026, 1, 9), _d(2026, 1, 11), "ftx", "Field Training Exercise", "1", NOW
+    )
+    assert past is True
+    assert label == "09–11 JAN — BTBLK-01"
+
+
+def test_calendar_future_ftx_is_not_struck(daemon):
+    label, past = daemon._calendar_entry(
+        _d(2026, 11, 13), _d(2026, 11, 15), "ftx", "Field Training Exercise", "2", NOW
+    )
+    assert past is False
+    assert label == "13–15 NOV — BTBLK-02"
+
+
+def test_calendar_mcftx_label(daemon):
+    label, past = daemon._calendar_entry(
+        _d(2026, 10, 8), _d(2026, 10, 11), "mcftx", "Multi-Company Field Training Exercise", "", NOW
+    )
+    assert past is True
+    assert label == "08–11 OCT — MCFTX (Multi-Company)"
+
+
+def test_calendar_urban_evasion_uses_title(daemon):
+    label, past = daemon._calendar_entry(
+        _d(2026, 11, 7), None, "ftx", "Urban Evasion Part Deux", "", NOW
+    )
+    assert past is False
+    assert label == "07 NOV — Urban Evasion Part Deux"
+
+
+def test_calendar_multi_block_labels_ftx(daemon):
+    label, past = daemon._calendar_entry(
+        _d(2026, 12, 11), _d(2026, 12, 13), "ftx", "Field Training Exercise", "1,3", NOW
+    )
+    assert label == "11–13 DEC — FTX"
