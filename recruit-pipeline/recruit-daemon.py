@@ -2631,7 +2631,6 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Additional Resources
     </h3>
-    <p>Your Nextcloud account includes a <strong>Recruit Packet</strong> folder in "13th Legion Shared" with all the documents you need to get started: code of conduct, bylaws, TRADOC checklist, medical card, uniform SOP, and more.</p>
     <p>The <a href="https://portal.13thlegion.org">unit portal</a> is your one-stop shop for everything else:</p>
     <ul>
         <li><a href="https://portal.13thlegion.org/training/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
@@ -2703,7 +2702,6 @@ YOUR FIRST FTX
   Don't stress about gear — show up with what you have.
 
 ADDITIONAL RESOURCES
-  Your NC account has a "Recruit Packet" folder with all key documents.
   The unit portal (https://portal.13thlegion.org) is your one-stop shop:
   - Resource Library: https://portal.13thlegion.org/training/library
   - Chain of Command: https://portal.13thlegion.org/chain-of-command
