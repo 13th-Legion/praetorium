@@ -159,3 +159,52 @@ def test_calendar_multi_block_labels_ftx(daemon):
         _d(2026, 12, 11), _d(2026, 12, 13), "ftx", "Field Training Exercise", "1,3", NOW
     )
     assert label == "11–13 DEC — FTX"
+
+
+# ─── TRADOC subject doc URL mapping (pure) ───────────────────────────────────
+
+def test_tradoc_subject_url_none(daemon):
+    assert daemon._tradoc_subject_url(1, "none", None, False) is None
+    assert daemon._tradoc_subject_url(1, None, None, False) is None
+
+
+def test_tradoc_subject_url_markdown_needs_body(daemon):
+    assert daemon._tradoc_subject_url(7, "markdown", None, False) is None
+    assert (
+        daemon._tradoc_subject_url(7, "markdown", None, True)
+        == "https://portal.13thlegion.org/training/tradoc/7"
+    )
+
+
+def test_tradoc_subject_url_page_relative_path(daemon):
+    assert (
+        daemon._tradoc_subject_url(2, "page", "/training/tradoc/drill-ceremony", False)
+        == "https://portal.13thlegion.org/training/tradoc/drill-ceremony"
+    )
+
+
+def test_tradoc_subject_url_pdf_relative_path(daemon):
+    assert (
+        daemon._tradoc_subject_url(3, "pdf", "/static/tradoc/uniform-sop.pdf", False)
+        == "https://portal.13thlegion.org/static/tradoc/uniform-sop.pdf"
+    )
+
+
+def test_tradoc_subject_url_external_absolute(daemon):
+    url = "https://www.youtube.com/watch?v=rYfhBxCckXo"
+    assert daemon._tradoc_subject_url(13, "external", url, False) == url
+
+
+def test_tradoc_subject_url_no_doc_url(daemon):
+    assert daemon._tradoc_subject_url(1, "page", None, False) is None
+    assert daemon._tradoc_subject_url(1, "external", "", False) is None
+
+
+# ─── Team leader resolution (pure name/format + fallback) ───────────────────
+
+def test_team_leader_none_for_missing_team(daemon, monkeypatch):
+    monkeypatch.setattr(
+        daemon, "_resolve_portal_db_host", lambda: "localhost"
+    )
+    assert daemon._load_team_leader(None) is None
+    assert daemon._load_team_leader("") is None

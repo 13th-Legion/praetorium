@@ -2253,6 +2253,86 @@ def _load_training_calendar(now=None):
     return html, "\n".join(plain_items)
 
 
+def _tradoc_subject_url(item_id, doc_type, doc_url, has_body):
+    """Absolute portal URL for a TRADOC subject's doc, or None.
+
+    Mirrors app/routes/training_library.py:_item_doc so the welcome email links
+    exactly where the portal TRADOC page links.
+    """
+    dtype = (doc_type or "none").strip()
+    if dtype == "none":
+        return None
+    if dtype == "markdown":
+        if not has_body:
+            return None
+        return f"https://portal.13thlegion.org/training/tradoc/{item_id}"
+    if dtype in ("pdf", "external", "page"):
+        if not doc_url:
+            return None
+        url = doc_url.strip()
+        if url.startswith(("http://", "https://")):
+            return url
+        return "https://portal.13thlegion.org" + (url if url.startswith("/") else "/" + url)
+    return None
+
+
+def _load_team_leader(team):
+    """Resolve a team's Team Leader to 'SGT Lastname (Callsign)', or None.
+
+    Matches the portal chain-of-command selection: an active, non-HQ member
+    whose leadership_title is 'Team Leader' for the given team. Returns None
+    when the team is unset or has no leader on file (caller falls back to the
+    generic "will reach out to you shortly" wording).
+    """
+    if not team:
+        return None
+    # The daemon's geo zones still carry the legacy "Alpha" name; the portal
+    # renamed it to "Aquila" (2026-07-21). Normalize so the DB lookup matches.
+    lookup_team = "Aquila" if team == "Alpha" else team
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=_resolve_portal_db_host(),
+            port=PORTAL_DB_PORT,
+            dbname=PORTAL_DB_NAME,
+            user=PORTAL_DB_USER,
+            password=PORTAL_DB_PASS,
+            connect_timeout=5,
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT m.rank_grade, m.last_name, m.callsign, r.abbr "
+            "FROM members m "
+            "LEFT JOIN ranks r ON r.grade = m.rank_grade "
+            "WHERE m.team = %s AND m.leadership_title = 'Team Leader' "
+            "  AND m.status = 'active' AND COALESCE(m.is_hq, false) = false "
+            "ORDER BY r.sort_order DESC NULLS LAST, m.id "
+            "LIMIT 1",
+            (lookup_team,),
+        )
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        log.error(
+            f"Failed to resolve team leader for {team} ({type(e).__name__}: {e})"
+        )
+        return None
+    if not row:
+        return None
+    rank_grade, last_name, callsign, abbr = row
+    rank = abbr or rank_grade or ""
+    parts = []
+    if rank:
+        parts.append(rank)
+    if last_name:
+        parts.append(last_name)
+    if callsign:
+        parts.append(f"({callsign})")
+    return " ".join(parts).strip() or None
+
+
 def _load_tradoc_html():
     """Build the TRADOC curriculum summary from the portal DB.
 
@@ -2277,9 +2357,11 @@ def _load_tradoc_html():
             "WHERE archived = false ORDER BY sort_order, id"
         )
         tiers = cur.fetchall()
-        # Blocks (non-archived) + their non-optional, non-archived items.
+        # Blocks (non-archived) + their non-optional, non-archived items, with
+        # doc fields so each subject can be linked to its document.
         cur.execute(
-            "SELECT b.tier, b.number, b.name, i.name "
+            "SELECT b.tier, b.number, b.name, i.id, i.name, i.doc_type, i.doc_url, "
+            "       (i.doc_body IS NOT NULL AND i.doc_body <> '') AS has_body "
             "FROM tradoc_blocks b "
             "LEFT JOIN tradoc_items i "
             "  ON i.block = b.number AND i.archived = false AND i.optional = false "
@@ -2299,13 +2381,15 @@ def _load_tradoc_html():
     tier_order = [key for key, _label in tiers]
     blocks_by_tier = {key: [] for key in tier_order}
     items_by_block = {}
-    for tier, number, name, item in rows:
+    for tier, number, name, item_id, item_name, doc_type, doc_url, has_body in rows:
         if tier not in blocks_by_tier:
             blocks_by_tier[tier] = []
         if not any(b[0] == number for b in blocks_by_tier[tier]):
             blocks_by_tier[tier].append((number, name))
-        if item:
-            items_by_block.setdefault((tier, number), []).append(item)
+        if item_name:
+            items_by_block.setdefault((tier, number), []).append(
+                (item_name, _tradoc_subject_url(item_id, doc_type, doc_url, has_body))
+            )
 
     tier_labels = {key: label for key, label in tiers}
 
@@ -2323,18 +2407,22 @@ def _load_tradoc_html():
         ul_items = []
         for number, name in blocks:
             subjects = items_by_block.get((tier, number), [])
-            if number == 0:
-                # In-Processing / foundational block — no subject sub-list.
-                label = name
-            else:
-                label = name
+            label = name
             if subjects:
-                ul_items.append(
-                    f"<li><strong>{label}</strong> — {', '.join(subjects)}</li>"
+                html_subjects = ", ".join(
+                    f'<a href="{url}">{escape(subj)}</a>' if url else escape(subj)
+                    for subj, url in subjects
                 )
-                plain_parts.append(f"  • {label}: {', '.join(subjects)}")
+                plain_subjects = ", ".join(
+                    f"{subj} ({url})" if url else subj
+                    for subj, url in subjects
+                )
+                ul_items.append(
+                    f"<li><strong>{escape(label)}</strong> — {html_subjects}</li>"
+                )
+                plain_parts.append(f"  • {label}: {plain_subjects}")
             else:
-                ul_items.append(f"<li><strong>{label}</strong></li>")
+                ul_items.append(f"<li><strong>{escape(label)}</strong></li>")
                 plain_parts.append(f"  • {label}")
         html_parts.append(
             '<ul style="margin:0 0 10px;padding-left:20px;">'
@@ -2365,6 +2453,28 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         tradoc_html = '<p>See the full checklist on the <a href="https://portal.13thlegion.org/training/tradoc">portal</a>.</p>'
         tradoc_plain = "  See the full checklist: https://portal.13thlegion.org/training/tradoc"
 
+    # Team leader for the Assignment section (e.g. "SGT Bunker (Digger)").
+    team_leader = _load_team_leader(team)
+    if team_leader:
+        assignment_html = (
+            f"<p>You've been assigned to <strong>{team} Team</strong>. "
+            f"Your team leader is <strong>{team_leader}</strong> and he will "
+            f"reach out to you shortly.</p>"
+        )
+        assignment_plain = (
+            f"  You've been assigned to {team} Team. Your team leader is "
+            f"{team_leader} and he will reach out shortly."
+        )
+    else:
+        assignment_html = (
+            f"<p>You've been assigned to <strong>{team} Team</strong>. "
+            f"Your team leader will reach out to you shortly. By now you should "
+            f"be invited to your team's Signal messaging group.</p>"
+        )
+        assignment_plain = (
+            f"  You've been assigned to {team} Team. Your team leader will reach out shortly."
+        )
+
     html = f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -2393,7 +2503,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Assignment
     </h3>
-    <p>You've been assigned to <strong>{team} Team</strong>. Your team leader will reach out to you shortly. By now you should be invited to your team's Signal messaging group.</p>
+    {assignment_html}
     <p>You can view the 13th's overall chain of command <a href="https://portal.13thlegion.org/chain-of-command">here</a>.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -2476,7 +2586,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
 Thank you for joining us. The Texas State Militia offers excellent training and service opportunities, and the 13th is proud to be DFW's unit. Aside from our monthly field training exercises we also offer optional fitness, charity, and training activities — great opportunities to meet your fellow members and build skills that matter.
 
 ASSIGNMENT
-  You've been assigned to {team} Team. Your team leader will reach out shortly.
+{assignment_plain}
   Chain of Command: https://portal.13thlegion.org/chain-of-command
 
 YOUR NEXTCLOUD ACCOUNT
