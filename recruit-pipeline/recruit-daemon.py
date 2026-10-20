@@ -285,7 +285,7 @@ import math as _math
 GEO_CENTER = (32.7512, -97.0457)
 GEO_ZONE_START = 330
 GEO_ZONE_SIZE = 60
-GEO_ZONE_TEAMS = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
+GEO_ZONE_TEAMS = ["Aquila", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
 
 def _calc_bearing(lat, lon):
     lat1, lon1 = _math.radians(GEO_CENTER[0]), _math.radians(GEO_CENTER[1])
@@ -302,7 +302,7 @@ def geo_assign_team(lat, lon):
     idx = int(((b - GEO_ZONE_START + 360) % 360) / GEO_ZONE_SIZE)
     return GEO_ZONE_TEAMS[idx], b
 
-DEFAULT_TEAM = "Alpha"  # Fallback if geocoding fails
+DEFAULT_TEAM = "Aquila"  # Fallback if geocoding fails
 
 # NC Talk room tokens for notifications
 NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
@@ -2286,8 +2286,9 @@ def _load_team_leader(team):
     """
     if not team:
         return None
-    # The daemon's geo zones still carry the legacy "Alpha" name; the portal
-    # renamed it to "Aquila" (2026-07-21). Normalize so the DB lookup matches.
+    # Defensive fallback: some Deck cards / state may still carry the legacy
+    # "Alpha" name from before the portal renamed it to "Aquila" (2026-07-21).
+    # New assignments are already "Aquila"; normalize just in case.
     lookup_team = "Aquila" if team == "Alpha" else team
     try:
         import psycopg2
@@ -2752,7 +2753,7 @@ def _onboard_member(card, state, dry_run=False):
 
     # Determine team from geographic zone (bearing-based).
     # If geocoding fails, leave team UNSET (None = geo pending) rather than
-    # silently defaulting to Alpha. The portal re-geocodes (Census Bureau) on
+    # silently defaulting to Aquila. The portal re-geocodes (Census Bureau) on
     # its next pass and assign_zone places them correctly (team_locked stays f).
     team = None
     raw_addr = info.get("Address", "")
