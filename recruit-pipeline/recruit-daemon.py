@@ -2469,11 +2469,12 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     else:
         assignment_html = (
             f"<p>You've been assigned to <strong>{team} Team</strong>. "
-            f"Your team leader will reach out to you shortly. By now you should "
-            f"be invited to your team's Signal messaging group.</p>"
+            f"Your team leader will reach out to you shortly and check in with "
+            f"you in your team's Nextcloud Talk channel.</p>"
         )
         assignment_plain = (
-            f"  You've been assigned to {team} Team. Your team leader will reach out shortly."
+            f"  You've been assigned to {team} Team. Your team leader will reach "
+            f"out shortly and check in with you in your team's Nextcloud Talk channel."
         )
 
     html = f"""<!DOCTYPE html>
@@ -2521,12 +2522,11 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     </table>
     <p style="margin-top:10px;padding:10px 12px;background:#fdf3d8;border:1px solid #e5c25a;border-radius:4px;"><strong>Log in with the Username above — not your email address.</strong> Then <strong>change your password on first login</strong> and enable 2FA (TOTP) in your security settings — this is mandatory.</p>
 
-    <p style="margin-top: 12px;"><strong>Download the apps:</strong></p>
+    <p style="margin-top: 12px;"><strong>Download the app:</strong></p>
     <ul>
-        <li><strong>Nextcloud</strong> (files, calendar, contacts) — <a href="https://apps.apple.com/app/nextcloud/id1125420102">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.client">Android</a> · <a href="https://nextcloud.com/install/#install-clients">Desktop</a></li>
         <li><strong>Nextcloud Talk</strong> (chat &amp; calls) — <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2">Android</a></li>
     </ul>
-    <p>When logging in to the apps, enter <strong>cloud.13thlegion.org</strong> as the server address, then use your username and password above.</p>
+    <p>When logging in, enter <strong>cloud.13thlegion.org</strong> as the server address, then use your username and password above.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Unit Portal
@@ -2537,8 +2537,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         🔹 Communications
     </h3>
     <ul>
-        <li><strong>Signal</strong> — Your team leader will add you to the team chat. Make sure you have Signal installed. <strong>Please stay in contact with your team leader on Signal. Failing to do so, outside of gross negligence or misconduct, is the only way to get removed from the unit.</strong></li>
-        <li><strong>Nextcloud Talk</strong> — Unit-wide chat channels are in your Nextcloud account.</li>
+        <li><strong>Nextcloud Talk</strong> — Nextcloud Talk is our self-hosted chat platform that we use for unit communications. Your application has already been processed so you have been added to all necessary channels automatically. Check-in with your team leader in your team's channel as soon as you can.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -2598,8 +2597,7 @@ YOUR NEXTCLOUD ACCOUNT
   IMPORTANT: Log in with the Username above — NOT your email address.
   Then change your password on first login and enable 2FA (mandatory).
 
-  Download the apps:
-  - Nextcloud (files/calendar): iOS, Android, or Desktop — https://nextcloud.com/install/#install-clients
+  Download the app:
   - Nextcloud Talk (chat/calls): search "Nextcloud Talk" in your app store
   When logging in, enter cloud.13thlegion.org as the server address.
 
@@ -2608,10 +2606,9 @@ UNIT PORTAL
   Your TRADOC checklist, training progress, and profile are tracked here.
 
 COMMUNICATIONS
-  - Signal: your TL will add you to the team chat. STAY IN CONTACT — failing
-    to communicate (outside of gross negligence/misconduct) is the only way
-    to get removed from the unit.
-  - Nextcloud Talk: unit-wide chat channels in your NC account
+  - Nextcloud Talk: our self-hosted chat platform for unit communications.
+    You've already been added to all necessary channels automatically.
+    Check in with your team leader in your team's channel as soon as you can.
 TRAINING CALENDAR
 {calendar_plain}
   Full calendar: https://portal.13thlegion.org/events
