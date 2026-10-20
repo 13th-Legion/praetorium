@@ -2213,7 +2213,7 @@ def _load_training_calendar(now=None):
         )
         cur = conn.cursor()
         cur.execute(
-            "SELECT date_start, date_end, category, title, training_blocks "
+            "SELECT id, date_start, date_end, category, title, training_blocks "
             "FROM events "
             "WHERE category IN ('ftx','mcftx') AND date_start >= %s "
             "ORDER BY date_start",
@@ -2231,15 +2231,16 @@ def _load_training_calendar(now=None):
 
     html_items = []
     plain_items = []
-    for date_start, date_end, category, title, training_blocks in rows:
+    for event_id, date_start, date_end, category, title, training_blocks in rows:
         inner, past = _calendar_entry(
             date_start, date_end, category, title, training_blocks, now
         )
+        url = f"https://portal.13thlegion.org/events/{event_id}"
         if past:
-            html_items.append(f"<li><s>{inner}</s></li>")
+            html_items.append(f'<li><s><a href="{url}">{inner}</a></s></li>')
         else:
-            html_items.append(f"<li>{inner}</li>")
-        plain_items.append(f"  {inner}")
+            html_items.append(f'<li><a href="{url}">{inner}</a></li>')
+        plain_items.append(f"  {inner} — {url}")
 
     if not html_items:
         return "", ""
@@ -2250,6 +2251,100 @@ def _load_training_calendar(now=None):
         + "\n    </ul>"
     )
     return html, "\n".join(plain_items)
+
+
+def _load_tradoc_html():
+    """Build the TRADOC curriculum summary from the portal DB.
+
+    Returns (html, plain): html is a compact two-tier block list (empty string
+    on failure), plain is newline-separated lines (empty on failure).
+    """
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=_resolve_portal_db_host(),
+            port=PORTAL_DB_PORT,
+            dbname=PORTAL_DB_NAME,
+            user=PORTAL_DB_USER,
+            password=PORTAL_DB_PASS,
+            connect_timeout=5,
+        )
+        cur = conn.cursor()
+        # Tiers (non-archived) in display order.
+        cur.execute(
+            "SELECT key, label FROM tradoc_tiers "
+            "WHERE archived = false ORDER BY sort_order, id"
+        )
+        tiers = cur.fetchall()
+        # Blocks (non-archived) + their non-optional, non-archived items.
+        cur.execute(
+            "SELECT b.tier, b.number, b.name, i.name "
+            "FROM tradoc_blocks b "
+            "LEFT JOIN tradoc_items i "
+            "  ON i.block = b.number AND i.archived = false AND i.optional = false "
+            "WHERE b.archived = false "
+            "ORDER BY b.tier, b.sort_order, b.number, i.sort_order, i.id"
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        log.error(
+            f"Failed to load TRADOC from portal DB ({type(e).__name__}: {e})"
+        )
+        return "", ""
+
+    # Group blocks (with their items) under each tier, preserving tier order.
+    tier_order = [key for key, _label in tiers]
+    blocks_by_tier = {key: [] for key in tier_order}
+    items_by_block = {}
+    for tier, number, name, item in rows:
+        if tier not in blocks_by_tier:
+            blocks_by_tier[tier] = []
+        if not any(b[0] == number for b in blocks_by_tier[tier]):
+            blocks_by_tier[tier].append((number, name))
+        if item:
+            items_by_block.setdefault((tier, number), []).append(item)
+
+    tier_labels = {key: label for key, label in tiers}
+
+    html_parts = []
+    plain_parts = []
+    for tier in tier_order:
+        blocks = blocks_by_tier.get(tier, [])
+        if not blocks:
+            continue
+        html_parts.append(
+            f'<p style="margin:10px 0 4px;font-weight:bold;color:#d4a537;">'
+            f'{tier_labels.get(tier, tier)}</p>'
+        )
+        plain_parts.append(tier_labels.get(tier, tier))
+        ul_items = []
+        for number, name in blocks:
+            subjects = items_by_block.get((tier, number), [])
+            if number == 0:
+                # In-Processing / foundational block — no subject sub-list.
+                label = name
+            else:
+                label = name
+            if subjects:
+                ul_items.append(
+                    f"<li><strong>{label}</strong> — {', '.join(subjects)}</li>"
+                )
+                plain_parts.append(f"  • {label}: {', '.join(subjects)}")
+            else:
+                ul_items.append(f"<li><strong>{label}</strong></li>")
+                plain_parts.append(f"  • {label}")
+        html_parts.append(
+            '<ul style="margin:0 0 10px;padding-left:20px;">'
+            + "".join(ul_items)
+            + "</ul>"
+        )
+
+    if not html_parts:
+        return "", ""
+    return "".join(html_parts), "\n".join(plain_parts)
 
 
 def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
@@ -2263,46 +2358,12 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         calendar_html = '<p>See the portal calendar for this year\'s schedule.</p>'
         calendar_plain = "  See the portal calendar for this year's schedule."
 
-    tradoc_html = """
-    <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin: 10px 0;">
-        <tr style="background: #1a1a2e; color: #d4a537;">
-            <td style="padding: 8px; font-weight: bold;">Block 01 — Theory &amp; Medical</td>
-            <td style="padding: 8px; font-weight: bold;">Block 02 — Weapons Qualification</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px; vertical-align: top;">
-                • Customs &amp; Courtesies<br>
-                • Drill &amp; Ceremony<br>
-                • Gear Review<br>
-                • History &amp; Philosophy<br>
-                • Medical
-            </td>
-            <td style="padding: 8px; vertical-align: top;">
-                • Weapons Familiarization<br>
-                • Basic Rifle Marksmanship<br>
-                • Rifle Qualification<br>
-                • Shooting Drills<br>
-                • Use of Force
-            </td>
-        </tr>
-        <tr style="background: #1a1a2e; color: #d4a537;">
-            <td style="padding: 8px; font-weight: bold;">Block 03 — Supplemental Skills</td>
-            <td style="padding: 8px; font-weight: bold;">Block 04 — Combat Fundamentals</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px; vertical-align: top;">
-                • Comms<br>
-                • Land Navigation<br>
-                • Convoy
-            </td>
-            <td style="padding: 8px; vertical-align: top;">
-                • Individual Movement Techniques<br>
-                • Patrolling<br>
-                • React to Contact<br>
-                • Recon 101
-            </td>
-        </tr>
-    </table>"""
+    # TRADOC curriculum — built dynamically from the portal DB so block
+    # names/subjects stay current (two-tier: Initial Entry + Advanced Quals).
+    tradoc_html, tradoc_plain = _load_tradoc_html()
+    if not tradoc_html:
+        tradoc_html = '<p>See the full checklist on the <a href="https://portal.13thlegion.org/training/tradoc">portal</a>.</p>'
+        tradoc_plain = "  See the full checklist: https://portal.13thlegion.org/training/tradoc"
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -2445,10 +2506,8 @@ TRAINING CALENDAR
   Full calendar: https://portal.13thlegion.org/events
 
 BASIC TRAINING (TRADOC)
-  Block 01 — Theory & Medical: Customs, Drill, Gear Review, History, Medical
-  Block 02 — Weapons Qual: Familiarization, BRM, Qual, Drills, Use of Force
-  Block 03 — Supplemental: Comms, Land Nav, Convoy
-  Block 04 — Combat Fundamentals: IMT, Patrolling, React to Contact, Recon
+{tradoc_plain}
+  Full checklist: https://portal.13thlegion.org/training/tradoc
 
 YOUR FIRST FTX
   Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing.
