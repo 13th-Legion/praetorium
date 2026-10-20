@@ -742,6 +742,66 @@ def notify_s1_nctalk(message):
         return False
 
 
+def notify_team_leader_new_member(team, name, nc_username):
+    """DM the team's Team Leader (as Tesserarius) that a new member joined.
+
+    Best-effort: a failure here is logged but never fails onboarding. The DM
+    goes to a 1:1 room between Tesserarius and the leader (get-or-create via
+    roomType=1&invite=<nc_username>), matching scripts/ot-instructor-notify.py.
+    """
+    row = _query_team_leader(team)
+    if not row:
+        return False
+    leader_username = row[4]
+    if not leader_username:
+        log.warning(f"Team leader for {team} has no nc_username; skipping DM")
+        return False
+
+    try:
+        resp = nc_request(
+            "POST", "/ocs/v2.php/apps/spreed/api/v4/room",
+            data={"roomType": 1, "invite": leader_username}, timeout=15,
+            user=TESSERARIUS_USER, passwd=TESSERARIUS_PASS,
+            label="NC Talk DM room (team leader)",
+        )
+        token = None
+        if resp.status_code in (200, 201):
+            try:
+                token = resp.json()["ocs"]["data"]["token"]
+            except Exception:
+                token = None
+        if not token:
+            log.error(
+                f"Could not get/create DM room for team leader {leader_username}"
+            )
+            return False
+    except Exception as e:
+        log.error(f"Failed to get/create DM room for {leader_username}: {e}", exc_info=True)
+        return False
+
+    message = (
+        f"👋 New team member added to **{team}** team: {name} (`{nc_username}`).\n"
+        f"Check in with them in your team's channel as soon as you can."
+    )
+    try:
+        resp = nc_request(
+            "POST", f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
+            data={"message": message}, timeout=15,
+            user=TESSERARIUS_USER, passwd=TESSERARIUS_PASS,
+            label="NC Talk team-leader DM",
+        )
+        if resp.status_code in (200, 201):
+            log.info(f"Team-leader DM sent to {leader_username} about {name} ({team})")
+            return True
+        log.error(
+            f"Team-leader DM to {leader_username} failed: HTTP {resp.status_code}"
+        )
+        return False
+    except Exception as e:
+        log.error(f"Failed to DM team leader {leader_username}: {e}", exc_info=True)
+        return False
+
+
 def send_rejection_email(recipient_email, name):
     """Send a generic rejection email (no mention of blacklist)."""
     first_name = name.split()[0] if name.split() else name
@@ -2276,14 +2336,10 @@ def _tradoc_subject_url(item_id, doc_type, doc_url, has_body):
     return None
 
 
-def _load_team_leader(team):
-    """Resolve a team's Team Leader to 'SGT Lastname (Callsign)', or None.
-
-    Matches the portal chain-of-command selection: an active, non-HQ member
-    whose leadership_title is 'Team Leader' for the given team. Returns None
-    when the team is unset or has no leader on file (caller falls back to the
-    generic "will reach out to you shortly" wording).
-    """
+def _query_team_leader(team):
+    """Return the team's leader row (rank_grade, last_name, callsign, abbr,
+    nc_username) or None. Matches the portal chain-of-command selection: an
+    active, non-HQ member whose leadership_title is 'Team Leader'."""
     if not team:
         return None
     # Defensive fallback: some Deck cards / state may still carry the legacy
@@ -2303,7 +2359,7 @@ def _load_team_leader(team):
         )
         cur = conn.cursor()
         cur.execute(
-            "SELECT m.rank_grade, m.last_name, m.callsign, r.abbr "
+            "SELECT m.rank_grade, m.last_name, m.callsign, r.abbr, m.nc_username "
             "FROM members m "
             "LEFT JOIN ranks r ON r.grade = m.rank_grade "
             "WHERE m.team = %s AND m.leadership_title = 'Team Leader' "
@@ -2315,14 +2371,20 @@ def _load_team_leader(team):
         row = cur.fetchone()
         cur.close()
         conn.close()
+        return row
     except Exception as e:
         log.error(
             f"Failed to resolve team leader for {team} ({type(e).__name__}: {e})"
         )
         return None
+
+
+def _load_team_leader(team):
+    """Resolve a team's Team Leader to 'SGT Lastname (Callsign)', or None."""
+    row = _query_team_leader(team)
     if not row:
         return None
-    rank_grade, last_name, callsign, abbr = row
+    rank_grade, last_name, callsign, abbr, _nc_username = row
     rank = abbr or rank_grade or ""
     parts = []
     if rank:
@@ -2538,6 +2600,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     </h3>
     <ul>
         <li><strong>Nextcloud Talk</strong> — Nextcloud Talk is our self-hosted chat platform that we use for unit communications. Your application has already been processed so you have been added to all necessary channels automatically. Check-in with your team leader in your team's channel as soon as you can.</li>
+        <li><strong>Signal</strong> — Signal is our alternate and backup form of online communication in the event that Nextcloud Talk fails. Additionally, the state-wide organization utilizes Signal as their primary form of communication. Your team leader will add you to your team's backup chat group.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -2553,9 +2616,17 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     {tradoc_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
+        🔹 Important Documents
+    </h3>
+    <ul>
+        <li><strong>Medical Card</strong> — <a href="https://cloud.13thlegion.org/f/9345">cloud.13thlegion.org/f/9345</a>. This must be printed, filled out, and carried on your person at all FTXs.</li>
+        <li><strong>New Recruit Bible</strong> — <a href="https://cloud.13thlegion.org/f/85425">cloud.13thlegion.org/f/85425</a>. A printable document covering a wide range of basic 13th Legion and Texas State Militia field knowledge.</li>
+    </ul>
+
+    <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Your First FTX
     </h3>
-    <p><strong>Bring:</strong> Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing. Don't stress about gear — show up with what you have.</p>
+    <p><strong>Bring:</strong> Rifle, chest rig or plate carrier, IFAK, water, boots, weather-appropriate clothing, tent and a decent sleep system. Don't stress about gear — show up with what you have.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Additional Resources
@@ -2609,6 +2680,9 @@ COMMUNICATIONS
   - Nextcloud Talk: our self-hosted chat platform for unit communications.
     You've already been added to all necessary channels automatically.
     Check in with your team leader in your team's channel as soon as you can.
+  - Signal: our alternate and backup form of online communication in the event
+    that Nextcloud Talk fails. The state-wide organization uses Signal as its
+    primary channel. Your team leader will add you to your team's backup chat group.
 TRAINING CALENDAR
 {calendar_plain}
   Full calendar: https://portal.13thlegion.org/events
@@ -2617,8 +2691,15 @@ BASIC TRAINING (TRADOC)
 {tradoc_plain}
   Full checklist: https://portal.13thlegion.org/training/tradoc
 
+IMPORTANT DOCUMENTS
+  - Medical Card: https://cloud.13thlegion.org/f/9345 — print it, fill it out,
+    and carry it on your person at all FTXs.
+  - New Recruit Bible: https://cloud.13thlegion.org/f/85425 — a printable guide
+    covering basic 13th Legion and Texas State Militia field knowledge.
+
 YOUR FIRST FTX
-  Bring: Rifle, plate carrier, IFAK, water, boots, weather-appropriate clothing.
+  Bring: Rifle, chest rig or plate carrier, IFAK, water, boots,
+  weather-appropriate clothing, tent and a decent sleep system.
   Don't stress about gear — show up with what you have.
 
 ADDITIONAL RESOURCES
@@ -2933,6 +3014,12 @@ def _onboard_member(card, state, dry_run=False):
 
     state.setdefault("onboarded_cards", []).append(card_id)
     log.info(f"Onboarding complete: {name} → {nc_username} → Team {team}")
+
+    # Notify the team leader (best-effort, as Tesserarius) that they have a new
+    # member. Only when a team was actually assigned.
+    if team:
+        notify_team_leader_new_member(team, name, nc_username)
+
     return True
 
 

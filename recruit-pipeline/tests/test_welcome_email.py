@@ -208,3 +208,63 @@ def test_team_leader_none_for_missing_team(daemon, monkeypatch):
     )
     assert daemon._load_team_leader(None) is None
     assert daemon._load_team_leader("") is None
+
+
+# ─── Team-leader DM notification (best-effort, never fails onboarding) ──────
+
+def test_notify_team_leader_no_leader_returns_false(daemon, monkeypatch):
+    monkeypatch.setattr(daemon, "_query_team_leader", lambda team: None)
+    assert daemon.notify_team_leader_new_member("Bravo", "Jane Doe", "jane.doe") is False
+
+
+def test_notify_team_leader_leader_without_username(daemon, monkeypatch):
+    # row = (rank_grade, last_name, callsign, abbr, nc_username)
+    monkeypatch.setattr(daemon, "_query_team_leader",
+                        lambda team: ("E-5", "Bunker", "Digger", "SGT", None))
+    assert daemon.notify_team_leader_new_member("Bravo", "Jane Doe", "jane.doe") is False
+
+
+def test_notify_team_leader_dm_flow(daemon, monkeypatch):
+    monkeypatch.setattr(daemon, "_query_team_leader",
+                        lambda team: ("E-5", "Bunker", "Digger", "SGT", "clint.bunker"))
+
+    calls = {}
+
+    class _Resp:
+        status_code = 201
+        def __init__(self, payload):
+            self._payload = payload
+        def json(self):
+            return self._payload
+
+    def fake_nc_request(method, endpoint, data=None, **kw):
+        calls[method + " " + endpoint] = data
+        if "v4/room" in endpoint:
+            return _Resp({"ocs": {"data": {"token": "dm-token-123"}}})
+        return _Resp({})
+
+    monkeypatch.setattr(daemon, "nc_request", fake_nc_request)
+
+    assert daemon.notify_team_leader_new_member("Bravo", "Jane Doe", "jane.doe") is True
+
+    room_call = calls["POST /ocs/v2.php/apps/spreed/api/v4/room"]
+    assert room_call["roomType"] == 1
+    assert room_call["invite"] == "clint.bunker"
+
+    chat_call = calls["POST /ocs/v2.php/apps/spreed/api/v1/chat/dm-token-123"]
+    assert "Jane Doe" in chat_call["message"]
+    assert "jane.doe" in chat_call["message"]
+    assert "Bravo" in chat_call["message"]
+
+
+def test_notify_team_leader_room_create_failure(daemon, monkeypatch):
+    monkeypatch.setattr(daemon, "_query_team_leader",
+                        lambda team: ("E-5", "Bunker", "Digger", "SGT", "clint.bunker"))
+
+    class _Resp:
+        status_code = 404
+        def json(self):
+            return {"ocs": {"data": {}}}
+
+    monkeypatch.setattr(daemon, "nc_request", lambda *a, **k: _Resp())
+    assert daemon.notify_team_leader_new_member("Bravo", "Jane Doe", "jane.doe") is False
