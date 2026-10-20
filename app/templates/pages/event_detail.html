@@ -839,6 +839,61 @@ function insertTradocAgenda() {
         </form>
 
         {% if is_admin %}
+        {% if event.series_id %}
+        <div style="margin-top:24px;padding:16px;background:rgba(33,150,243,0.07);border:1px solid rgba(33,150,243,0.35);border-radius:6px;">
+            <div style="font-size:14px;color:#4fc3f7;font-weight:700;margin-bottom:4px;">🔁 Series recurrence range</div>
+            <p style="font-size:12px;color:#aaa;margin:0 0 12px;">
+                {% if series_summary %}
+                    <strong>{{ series_summary.cadence }}</strong> · {{ series_summary.count }} occurrence(s) · {{ series_summary.first.strftime('%Y-%m-%d') }} → {{ series_summary.last.strftime('%Y-%m-%d') }}
+                {% else %}
+                    This event belongs to a recurring series.
+                {% endif %}
+                <br>Set a new start and/or end date to extend or trim the series. Future occurrences outside the range are cancelled; past ones are left untouched.
+            </p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+                <div>
+                    <label style="display:block;font-size:12px;color:#888;margin-bottom:4px;">New start date (optional)</label>
+                    <input type="date" id="series-start" value="{% if series_summary %}{{ series_summary.first.strftime('%Y-%m-%d') }}{% endif %}"
+                        style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;color:#888;margin-bottom:4px;">New end date (optional)</label>
+                    <input type="date" id="series-end" value="{% if series_summary %}{{ series_summary.last.strftime('%Y-%m-%d') }}{% endif %}"
+                        style="padding:6px 10px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;">
+                </div>
+            </div>
+            <div id="series-recurrence-result" style="margin-bottom:10px;"></div>
+            <button type="button" onclick="seriesRecurrence()"
+                style="padding:8px 16px;background:#1565c0;border:none;border-radius:4px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+                🔁 Update series range
+            </button>
+        </div>
+        <script>
+        function seriesRecurrence() {
+            var start = document.getElementById('series-start').value;
+            var end = document.getElementById('series-end').value;
+            if (!start && !end) {
+                document.getElementById('series-recurrence-result').innerHTML = '<span style="color:#ef5350;font-size:12px;">Set a start and/or end date first.</span>';
+                return;
+            }
+            if (!confirm('Update this series to span ' + (start || '(unchanged)') + ' → ' + (end || '(unchanged)') + '?\n\nFuture occurrences outside this range will be cancelled.')) return;
+            var res = document.getElementById('series-recurrence-result');
+            res.innerHTML = '<span style="color:#aaa;font-size:12px;">Working…</span>';
+            var fd = new FormData();
+            if (start) fd.append('series_start', start);
+            if (end) fd.append('series_end', end);
+            fetch('/api/events/{{ event.id }}/series-recurrence', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin'
+            }).then(function(r){ return r.text(); }).then(function(html){
+                res.innerHTML = html;
+            }).catch(function(e){
+                res.innerHTML = '<span style="color:#ef5350;font-size:12px;">Error: ' + e + '</span>';
+            });
+        }
+        </script>
+        {% endif %}
         <div style="margin-top:24px;padding:16px;background:rgba(183,28,28,0.08);border:1px solid rgba(183,28,28,0.4);border-radius:6px;">
             <div style="font-size:14px;color:#ef5350;font-weight:700;margin-bottom:4px;">⚠️ Danger Zone</div>
             <p style="font-size:12px;color:#aaa;margin:0 0 12px;">

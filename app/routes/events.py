@@ -6,6 +6,7 @@ dashboard widget, and full events pages.
 
 import re
 import uuid
+import calendar
 import bleach
 from datetime import datetime, date, timedelta, time as dtime
 from typing import Optional
@@ -655,6 +656,113 @@ def generate_series_starts(start: datetime, rrule_str: str) -> list[datetime]:
         return [start]
 
 
+# ─── Series recurrence range editing (PP-326) ───────────────────────────────
+_WEEKDAY_NAME = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+
+
+def _series_cadence(occurrences) -> Optional[tuple]:
+    """Return a cadence descriptor for a series' occurrences, or None.
+
+    Prefers the master row's stored recurrence_rule; falls back to inferring
+    from the gaps between existing occurrences (weekly = 7-day gaps; monthly =
+    28–32 day gaps, classified as day-of-month, nth-weekday, or last-weekday).
+
+    Returns one of:
+      ("weekly",)
+      ("monthly_day", dom)            # dom: 1..31, or -1 for last day
+      ("monthly_nth", nth, wd_name)   # nth: 1..5, or -1 for last weekday
+    """
+    if not occurrences:
+        return None
+    master = next((e for e in occurrences if e.is_series_master), occurrences[0])
+    rule = (master.recurrence_rule or "").upper()
+    if "WEEKLY" in rule:
+        return ("weekly",)
+    if "MONTHLY" in rule:
+        m = re.search(r"BYMONTHDAY=(-?\d+)", rule)
+        if m:
+            return ("monthly_day", int(m.group(1)))
+        m = re.search(r"BYDAY=(-?\d?)(MO|TU|WE|TH|FR|SA|SU)", rule)
+        if m:
+            nth = int(m.group(1) or "1")
+            return ("monthly_nth", nth, m.group(2))
+        return None
+    dts = sorted(e.date_start for e in occurrences)
+    if len(dts) < 2:
+        return None
+    gaps = [(dts[i + 1] - dts[i]).days for i in range(len(dts) - 1)]
+    if all(6 <= g <= 8 for g in gaps):
+        return ("weekly",)
+    if all(27 <= g <= 35 for g in gaps):
+        doms = {d.day for d in dts}
+        if len(doms) == 1:
+            return ("monthly_day", next(iter(doms)))
+        wds = {d.weekday() for d in dts}
+        if len(wds) == 1:
+            wd = next(iter(wds))
+            if all((d + timedelta(days=7)).month != d.month for d in dts):
+                return ("monthly_nth", -1, _WEEKDAY_NAME[wd])
+            nths = {((d.day - 1) // 7) + 1 for d in dts}
+            if len(nths) == 1:
+                return ("monthly_nth", next(iter(nths)), _WEEKDAY_NAME[wd])
+    return None
+
+
+def _nth_weekday_of_month(year: int, month: int, nth: int, wd_name: str) -> Optional[int]:
+    """Day-of-month of the nth (or last) weekday, or None if absent that month."""
+    wd = _WEEKDAY_NAME.index(wd_name)
+    first_wd = calendar.monthrange(year, month)[0]  # weekday of day 1 (Mon=0)
+    dom = 1 + ((wd - first_wd) % 7)
+    if nth == -1:
+        days_in = calendar.monthrange(year, month)[1]
+        while dom + 7 <= days_in:
+            dom += 7
+        return dom
+    dom += 7 * (nth - 1)
+    if dom > calendar.monthrange(year, month)[1]:
+        return None
+    return dom
+
+
+def _step_occurrence(dt: datetime, cadence: tuple, direction: int) -> datetime:
+    """Return the next (+1) or previous (-1) occurrence datetime for the cadence."""
+    if cadence[0] == "weekly":
+        return dt + direction * timedelta(days=7)
+    y, m = dt.year, dt.month
+    m += direction
+    if m == 0:
+        y, m = y - 1, 12
+    elif m == 13:
+        y, m = y + 1, 1
+    if cadence[0] == "monthly_day":
+        dom = cadence[1]
+        if dom == -1:
+            dom = calendar.monthrange(y, m)[1]
+        else:
+            dom = min(dom, calendar.monthrange(y, m)[1])
+    else:  # monthly_nth
+        dom = _nth_weekday_of_month(y, m, cadence[1], cadence[2])
+        if dom is None:
+            return _step_occurrence(datetime(y, m, 1, dt.hour, dt.minute), cadence, direction)
+    return datetime(y, m, dom, dt.hour, dt.minute)
+
+
+def _occurrences_between(anchor: datetime, cadence: tuple, start: datetime, end: datetime) -> list[datetime]:
+    """All occurrence datetimes on the cadence falling within [start, end]."""
+    out = []
+    d = anchor
+    guard = 0
+    while d > start and guard < 600:
+        d = _step_occurrence(d, cadence, -1)
+        guard += 1
+    while d <= end and guard < 600:
+        if d >= start:
+            out.append(d)
+        d = _step_occurrence(d, cadence, 1)
+        guard += 1
+    return out
+
+
 def _parse_events_ical(ical_data: str, window_start: datetime, window_end: datetime) -> list[dict]:
     events = []
     blocks = re.findall(r'BEGIN:VEVENT(.*?)END:VEVENT', ical_data, re.DOTALL)
@@ -1286,6 +1394,31 @@ async def event_detail(request: Request, event_id: int):
             .order_by(EventFrago.number.desc())
         )).scalars().all()
         _creator = await _resolve_creator(_fdb, event.created_by)
+        # Series recurrence summary (PP-326): first/last occurrence + count +
+        # a human cadence label, so the admin sees the range before editing it.
+        series_summary = None
+        if event.series_id:
+            _sibs = (await _fdb.execute(
+                select(Event).where(Event.series_id == event.series_id)
+            )).scalars().all()
+            _dts = sorted((e.date_start for e in _sibs if e.date_start is not None))
+            if _dts:
+                _cad = _series_cadence(_sibs)
+                if _cad and _cad[0] == "weekly":
+                    _label = "Weekly"
+                elif _cad and _cad[0] == "monthly_day":
+                    _label = f"Monthly (day {_cad[1]})" if _cad[1] != -1 else "Monthly (last day)"
+                elif _cad and _cad[0] == "monthly_nth":
+                    _nth = {1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th"}.get(_cad[1], str(_cad[1]) + "th") if _cad[1] != -1 else "last"
+                    _label = f"Monthly ({_nth} {_cad[2]})"
+                else:
+                    _label = "Unknown cadence"
+                series_summary = {
+                    "count": len(_sibs),
+                    "first": _dts[0],
+                    "last": _dts[-1],
+                    "cadence": _label,
+                }
 
     return templates.TemplateResponse("pages/event_detail.html", {
         "members": members,
@@ -1306,6 +1439,7 @@ async def event_detail(request: Request, event_id: int):
         "nc_rooms": _nc_rooms_svc.selectable_rooms(),
         "talk_join_url": (_nc_rooms_svc.join_url(event.talk_token) if event.talk_token else None),
         "is_series": bool(event.series_id),
+        "series_summary": series_summary,
         "my_rsvp": my_rsvp,
         "my_guest_count": my_guest_count,
         "guests_allowed": guests_allowed,
@@ -2361,6 +2495,126 @@ async def delete_event(request: Request, event_id: int):
         '<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">'
         f'✅ {label}. Affected members and command/S3 have been notified.</div>'
         '<script>setTimeout(()=>window.location.href="/events",1200)</script>'
+    )
+
+
+@router.post("/api/events/{event_id}/series-recurrence", response_class=HTMLResponse)
+@require_role("command", "s3", "admin")
+async def edit_series_recurrence(request: Request, event_id: int):
+    """Edit the recurrence range (start/end) of an in-progress series (PP-326).
+
+    The series is materialized (one Event row per occurrence, linked by
+    series_id), so this reconciles the set of occurrences to match the cadence
+    over the requested [start, end] window:
+
+      * occurrences missing from the window are added (cloned from the series
+        anchor: title/category/mode/channel/description/invites/blocks);
+      * FUTURE occurrences that now fall outside the window are cancelled
+        (never hard-deleted — attendance history is preserved);
+      * past occurrences are never touched.
+
+    The cadence is taken from the master row's recurrence_rule when present,
+    else inferred from the gaps between existing occurrences. If neither is
+    available, the edit is refused with a clear message.
+    """
+    form = await request.form()
+    start_raw = (form.get("series_start") or "").strip()
+    end_raw = (form.get("series_end") or "").strip()
+
+    def _err(msg: str) -> HTMLResponse:
+        return HTMLResponse(
+            f'<div style="padding:12px;background:#b71c1c;color:#fff;border-radius:6px;">{msg}</div>'
+        )
+
+    async with database.async_session() as db:
+        event = (await db.execute(select(Event).where(Event.id == event_id))).scalar_one_or_none()
+        if not event:
+            return HTMLResponse("Event not found", status_code=404)
+        if not event.series_id:
+            return _err("This event is not part of a recurring series.")
+
+        siblings = (await db.execute(
+            select(Event).where(Event.series_id == event.series_id)
+        )).scalars().all()
+        if not siblings:
+            return _err("Series has no occurrences.")
+
+        cadence = _series_cadence(siblings)
+        if cadence is None:
+            return _err("Could not determine this series' recurrence pattern. "
+                        "Create a new recurring series (Repeat) instead.")
+
+        anchor = min((e for e in siblings if e.date_start is not None), key=lambda e: e.date_start)
+        duration = (anchor.date_end - anchor.date_start) if anchor.date_end else None
+
+        def _parse(raw: str) -> Optional[date]:
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d").date()
+            except ValueError:
+                return None
+
+        now = _now_ct()
+        current_first = min((e.date_start for e in siblings if e.date_start is not None))
+        current_last = max((e.date_start for e in siblings if e.date_start is not None))
+
+        start_date = _parse(start_raw) if start_raw else current_first.date()
+        end_date = _parse(end_raw) if end_raw else current_last.date()
+        if start_date is None or end_date is None:
+            return _err("Invalid date. Use YYYY-MM-DD.")
+        if start_date > end_date:
+            return _err("Start date is after the end date.")
+
+        # Inclusive day boundaries so an occurrence on the end date is kept.
+        start_dt = datetime.combine(start_date, dtime.min)
+        end_dt = datetime.combine(end_date, dtime.max)
+        targets = _occurrences_between(anchor.date_start, cadence, start_dt, end_dt)
+        existing = {e.date_start: e for e in siblings if e.date_start is not None}
+
+        added = 0
+        for occ in targets:
+            if occ in existing:
+                continue
+            db.add(Event(
+                title=anchor.title,
+                category=anchor.category,
+                description=anchor.description,
+                location=anchor.location,
+                meeting_mode=anchor.meeting_mode,
+                talk_token=anchor.talk_token,
+                date_start=occ,
+                date_end=(occ + duration) if duration else None,
+                status="active",
+                rsvp_enabled=anchor.rsvp_enabled,
+                training_block=anchor.training_block,
+                training_blocks=anchor.training_blocks,
+                instructor_id=None,  # rotation tool assigns
+                invite_groups=anchor.invite_groups,
+                series_id=event.series_id,
+                is_series_master=False,
+                created_by=get_current_user(request).get("username", "unknown"),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            ))
+            added += 1
+
+        cancelled = 0
+        target_set = set(targets)
+        for e in siblings:
+            if e.date_start is None or e.date_start <= now:
+                continue
+            if e.date_start not in target_set and e.status != "cancelled":
+                e.status = "cancelled"
+                e.rsvp_enabled = False
+                e.updated_at = datetime.utcnow()
+                cancelled += 1
+
+        await db.commit()
+
+    return HTMLResponse(
+        '<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
+        f'✅ Series recurrence updated — {added} occurrence(s) added, {cancelled} future occurrence(s) cancelled. '
+        f'<a href="/events/{event_id}" style="color:#8f8;text-decoration:underline;">Refresh</a></div>'
+        '<script>setTimeout(()=>window.location.href="/events/' + str(event_id) + '",1200)</script>'
     )
 
 
