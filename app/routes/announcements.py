@@ -178,23 +178,34 @@ def _can_post(user: dict) -> bool:
     return bool(roles & POSTER_ROLES)
 
 
-async def _upcoming_events(limit: int = 25) -> list[dict]:
-    """Return upcoming/published events for the announcement event-link picker.
+async def _upcoming_events() -> list[dict]:
+    """Return upcoming events for the announcement event-link picker.
 
     Each dict: {id, title, date_start}. Failures return [] so compose never breaks.
+
+    A hard cap of 25 hid anything after late November once shop meetings and
+    training filled the list, so a January event could not be linked. Include
+    every non-cancelled event through the end of next calendar year.
+    date_start is naive Central wall time, so compare against now_ct().
     """
     try:
         from sqlalchemy import select
+        from app.clock import now_ct
         from app.database import async_session as ev_session
         from app.models.events import Event
 
-        now = datetime.utcnow()
+        now = now_ct()
+        horizon = datetime(now.year + 1, 12, 31, 23, 59, 59)
         async with ev_session() as db:
             result = await db.execute(
                 select(Event)
-                .where(Event.date_start >= now, Event.status != "cancelled")
+                .where(
+                    Event.date_start >= now,
+                    Event.date_start <= horizon,
+                    Event.status != "cancelled",
+                )
                 .order_by(Event.date_start.asc())
-                .limit(limit)
+                .limit(400)
             )
             events = result.scalars().all()
             return [
@@ -597,7 +608,7 @@ async def compose_form(request: Request):
     event_options = '<option value="">\u2014 No event (links to dashboard) \u2014</option>'
     for ev in events:
         try:
-            dt_label = ev["date_start"].strftime("%b %d") if ev.get("date_start") else ""
+            dt_label = ev["date_start"].strftime("%b %d, %Y") if ev.get("date_start") else ""
         except Exception:
             dt_label = ""
         label = escape(f"{ev['title']}" + (f"  ({dt_label})" if dt_label else ""))
