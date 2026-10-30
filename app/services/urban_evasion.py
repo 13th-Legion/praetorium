@@ -31,8 +31,18 @@ def split_teams(member_ids: list[int], seed: int) -> dict[str, list[int]]:
 
 
 def buddy_pairs(team_ids: list[int]) -> list[tuple[int, int]]:
-    """Battle-buddy pairs within one team's ordered member list."""
-    return [(team_ids[i], team_ids[i + 1]) for i in range(0, len(team_ids) - 1, 2)]
+    """Senior-junior battle-buddy pairs from a seniority-ordered team list.
+
+    Pairs the most senior with the least senior, the next most with the next
+    least, and so on. An odd-sized team leaves the median member unpaired.
+    """
+    pairs = []
+    lo, hi = 0, len(team_ids) - 1
+    while lo < hi:
+        pairs.append((team_ids[lo], team_ids[hi]))
+        lo += 1
+        hi -= 1
+    return pairs
 
 # Sundance Square (downtown Fort Worth) waypoint pool, geocoded via Nominatim
 # 2026-10-29. Confirm the AO boundary with S3 before the event — a few of these
@@ -144,6 +154,22 @@ async def build_exercise(db, exercise, waypoints, seed=None):
 
     teams = split_teams(member_ids, seed)
     points = assign_start_end(waypoints, member_ids, seed)
+
+    # Sort each team by seniority (rank sort_order, descending) so buddy pairs
+    # land senior-with-junior rather than randomly.
+    from app.models.member import Member
+    from app.models.rank import Rank
+
+    sort_rows = (
+        await db.execute(
+            select(Member.id, Rank.sort_order)
+            .join(Rank, Rank.grade == Member.rank_grade)
+            .where(Member.id.in_(member_ids))
+        )
+    ).all()
+    sort_map = {mid: so for mid, so in sort_rows}
+    for ids in teams.values():
+        ids.sort(key=lambda mid: sort_map.get(mid, 0), reverse=True)
 
     await db.execute(
         delete(UrbanEvasionParticipant).where(

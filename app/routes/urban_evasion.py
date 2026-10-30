@@ -78,6 +78,14 @@ async def exercise_page(request: Request, exercise_id: int):
         p.id: (members[p.member_id].display_name if p.member_id in members else f"member {p.member_id}")
         for p in participants
     }
+
+    def _member_sort_key(member_id):
+        m = members.get(member_id)
+        return (m.last_name.lower(), m.first_name.lower()) if m else ("", "")
+
+    participants.sort(key=lambda p: (p.team, _member_sort_key(p.member_id)))
+    team_names = {"a": exercise.team_a_name, "b": exercise.team_b_name}
+
     per_participant: dict[int, int] = {}
     for s in scores:
         per_participant[s.participant_id] = per_participant.get(s.participant_id, 0) + s.points
@@ -107,6 +115,7 @@ async def exercise_page(request: Request, exercise_id: int):
             "score_kinds": SCORE_KINDS,
             "score_points": SCORE_POINTS,
             "map_points": map_points,
+            "team_names": team_names,
         },
     )
 

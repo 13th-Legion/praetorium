@@ -62,10 +62,11 @@ def test_split_teams_is_deterministic_and_balanced():
     assert len(a["a"]) == 7 and len(a["b"]) == 6
 
 
-def test_buddy_pairs_pair_adjacent_members():
+def test_buddy_pairs_senior_with_junior():
     from app.services.urban_evasion import buddy_pairs
 
-    assert buddy_pairs([1, 2, 3, 4, 5]) == [(1, 2), (3, 4)]  # odd leftover unpaired
+    # seniority-ordered (most senior first) -> pair senior with junior
+    assert buddy_pairs([1, 2, 3, 4, 5]) == [(1, 5), (2, 4)]  # median (3) unpaired
 
 
 def test_assign_start_end_unique_and_disjoint():
