@@ -1,92 +1,128 @@
 {% extends "base.html" %}
-{% block title %}Urban Evasion{% endblock %}
+{% block title %}{{ exercise.name }}{% endblock %}
+
+{% block head %}
+<style>
+  .ue2-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 18px 0; }
+  .ue2-table { width: 100%; border-collapse: collapse; }
+  .ue2-table th { text-align: left; padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #d4a537; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .ue2-table td { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .ue2-table tr:last-child td { border-bottom: none; }
+  .ue2-team { margin-bottom: 18px; }
+  .ue2-field { display: block; margin: 0 0 10px; }
+  .ue2-field .input { width: 100%; max-width: 320px; box-sizing: border-box; }
+  .ue2-meta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #999; }
+  .ue2-empty { color: #999; font-style: italic; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="ue2" style="max-width:1080px;margin:0 auto;padding:18px;">
+<div class="dashboard">
   <h1>{{ exercise.name }}</h1>
-  <p class="text-muted" style="margin-top:0;">
-    {% if exercise.date_start %}{{ exercise.date_start.strftime("%a %b %d, %Y") }}{% else %}TBD{% endif %}
+  <p class="text-muted" style="margin-top: 0;">
+    {% if exercise.date_start %}{{ exercise.date_start.strftime("%A %b %d, %Y") }}{% else %}Date TBD{% endif %}
     {% if exercise.date_start and exercise.date_end %} &middot; {{ exercise.date_start.strftime("%H%M") }}&ndash;{{ exercise.date_end.strftime("%H%M") }}{% endif %}
-    &middot; status: {{ exercise.status }}
+    &middot; {{ exercise.status }}
   </p>
 
-  {% if exercise.radio_primary or exercise.radio_alternate or exercise.radio_realworld %}
-  <section style="margin-bottom:18px;">
-    <h2>Comms</h2>
-    {% if exercise.radio_primary %}<p>Primary: <strong>{{ exercise.radio_primary }}</strong></p>{% endif %}
-    {% if exercise.radio_alternate %}<p>Alternate: <strong>{{ exercise.radio_alternate }}</strong></p>{% endif %}
-    {% if exercise.radio_realworld %}<p>Real world: <strong>{{ exercise.radio_realworld }}</strong></p>{% endif %}
-  </section>
-  {% endif %}
+  <div class="ue2-grid">
+    <div class="card">
+      <div class="card-title">Comms</div>
+      <div class="card-body">
+        <p><span class="ue2-meta">Primary</span><br><strong class="text-accent">{{ exercise.radio_primary or "TBD" }}</strong></p>
+        <p><span class="ue2-meta">Alternate</span><br><strong>{{ exercise.radio_alternate or "TBD" }}</strong></p>
+        <p><span class="ue2-meta">Real world</span><br><strong>{{ exercise.radio_realworld or "TBD" }}</strong></p>
+      </div>
+    </div>
 
-  <section style="margin-bottom:18px;">
-    <h2>Points</h2>
-    <table style="min-width:240px;">
-      <tr><th>Action</th><th>Points</th></tr>
-      {% for kind in score_kinds %}
-      <tr><td>{{ kind }}</td><td>{{ score_points[kind] }}</td></tr>
-      {% endfor %}
-    </table>
-  </section>
+    <div class="card">
+      <div class="card-title">Scoring</div>
+      <div class="card-body">
+        <table class="ue2-table">
+          <tr><th>Action</th><th>Pts</th></tr>
+          {% for kind in score_kinds %}
+          <tr><td>{{ kind }}</td><td class="text-accent">{{ score_points[kind] }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
 
-  <section style="margin-bottom:18px;">
-    <h2>Scoreboard</h2>
-    <p><strong>{{ exercise.team_a_name }}</strong>: {{ per_team.get("a", 0) }} &nbsp;·&nbsp; <strong>{{ exercise.team_b_name }}</strong>: {{ per_team.get("b", 0) }}</p>
-  </section>
+    <div class="card">
+      <div class="card-title">Scoreboard</div>
+      <div class="card-body">
+        <p style="margin-bottom: 10px;"><strong class="text-accent">{{ exercise.team_a_name }}</strong> &mdash; {{ per_team.get("a", 0) }} pts</p>
+        <p><strong class="text-accent">{{ exercise.team_b_name }}</strong> &mdash; {{ per_team.get("b", 0) }} pts</p>
+      </div>
+    </div>
+  </div>
 
-  <section style="margin-bottom:18px;">
-    <h2>Teams</h2>
-    {% for team_key, team_name in [("a", exercise.team_a_name), ("b", exercise.team_b_name)] %}
-    <h3>{{ team_name }}</h3>
-    <ul>
-      {% for p in participants if p.team == team_key %}
-      <li>
-        <strong>{{ names.get(p.id, "?") }}</strong>
-        &mdash; {{ p.start_label or "start TBD" }} &rarr; {{ p.end_label or "end TBD" }}
-        {% if p.buddy_id %} (buddy: {{ names.get(p.buddy_id, "?") }}){% endif %}
-        &mdash; {{ per_participant.get(p.id, 0) }} pts
-      </li>
-      {% endfor %}
-    </ul>
-    {% endfor %}
-  </section>
+  {% for team_key, team_name in [("a", exercise.team_a_name), ("b", exercise.team_b_name)] %}
+  <div class="card ue2-team">
+    <div class="card-title">{{ team_name }}</div>
+    <div class="card-body">
+      <table class="ue2-table">
+        <tr><th>Member</th><th>Route</th><th>Buddy</th><th>Pts</th></tr>
+        {% for p in participants if p.team == team_key %}
+        <tr>
+          <td><strong>{{ names.get(p.id, "?") }}</strong></td>
+          <td>{{ p.start_label or "TBD" }} &rarr; {{ p.end_label or "TBD" }}</td>
+          <td>{{ names.get(p.buddy_id, "&mdash;") if p.buddy_id else "&mdash;" }}</td>
+          <td>{{ per_participant.get(p.id, 0) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="ue2-empty">No participants yet</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  {% endfor %}
 
-  <section>
-    <h2>Log scoring event</h2>
-    <form method="post" action="/urban-evasion/{{ exercise.id }}/score">
-      <label>Kind
-        <select name="kind">
-          {% for kind in score_kinds %}<option value="{{ kind }}">{{ kind }} ({{ score_points[kind] }})</option>{% endfor %}
-        </select>
-      </label>
-      <label>Target
-        <select name="target_participant_id">
-          <option value="">&mdash; none &mdash;</option>
-          {% for p in participants %}<option value="{{ p.id }}">{{ names.get(p.id, "?") }} [{{ p.team }}]</option>{% endfor %}
-        </select>
-      </label>
-      <label>Note <input type="text" name="note" placeholder="optional"></label>
-      <button type="submit">Log</button>
-    </form>
-  </section>
+  <div class="card">
+    <div class="card-title">Log scoring event</div>
+    <div class="card-body">
+      <form method="post" action="/urban-evasion/{{ exercise.id }}/score">
+        <div class="ue2-field">
+          <label class="ue2-meta">Kind</label><br>
+          <select name="kind" class="input">
+            {% for kind in score_kinds %}<option value="{{ kind }}">{{ kind }} ({{ score_points[kind] }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ue2-field">
+          <label class="ue2-meta">Target</label><br>
+          <select name="target_participant_id" class="input">
+            <option value="">&mdash; none &mdash;</option>
+            {% for p in participants %}<option value="{{ p.id }}">{{ names.get(p.id, "?") }} [{{ p.team }}]</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ue2-field">
+          <label class="ue2-meta">Note</label><br>
+          <input type="text" name="note" class="input" placeholder="optional">
+        </div>
+        <button type="submit" class="btn btn-primary">Log</button>
+      </form>
+    </div>
+  </div>
 
   {% if "command" in user.roles or "admin" in user.roles or "s3" in user.roles %}
-  <section>
-    <h2>Admin</h2>
-    <form method="post" action="/urban-evasion/{{ exercise.id }}/build">
-      <button type="submit">Rebuild teams &amp; points</button>
-    </form>
-    <form method="post" action="/urban-evasion/{{ exercise.id }}/freqs" style="margin-top:8px;">
-      <label>Primary <input type="text" name="radio_primary" value="{{ exercise.radio_primary or '' }}"></label>
-      <label>Alternate <input type="text" name="radio_alternate" value="{{ exercise.radio_alternate or '' }}"></label>
-      <label>Real world <input type="text" name="radio_realworld" value="{{ exercise.radio_realworld or '' }}"></label>
-      <button type="submit">Save freqs</button>
-    </form>
-    <form method="post" action="/urban-evasion/create" style="margin-top:8px;">
-      <label>Name <input type="text" name="name" placeholder="Urban Evasion 3"></label>
-      <label>Event id <input type="number" name="event_id"></label>
-      <button type="submit">Create exercise</button>
-    </form>
-  </section>
+  <div class="card">
+    <div class="card-title">Admin</div>
+    <div class="card-body">
+      <form method="post" action="/urban-evasion/{{ exercise.id }}/build" style="margin-bottom: 14px;">
+        <button type="submit" class="btn btn-primary">Rebuild teams &amp; points</button>
+      </form>
+      <form method="post" action="/urban-evasion/{{ exercise.id }}/freqs" style="margin-bottom: 14px;">
+        <div class="ue2-field"><label class="ue2-meta">Primary</label><br><input type="text" name="radio_primary" class="input" value="{{ exercise.radio_primary or '' }}"></div>
+        <div class="ue2-field"><label class="ue2-meta">Alternate</label><br><input type="text" name="radio_alternate" class="input" value="{{ exercise.radio_alternate or '' }}"></div>
+        <div class="ue2-field"><label class="ue2-meta">Real world</label><br><input type="text" name="radio_realworld" class="input" value="{{ exercise.radio_realworld or '' }}"></div>
+        <button type="submit" class="btn btn-primary">Save freqs</button>
+      </form>
+      <form method="post" action="/urban-evasion/create">
+        <div class="ue2-field"><label class="ue2-meta">Name</label><br><input type="text" name="name" class="input" placeholder="Urban Evasion 3"></div>
+        <div class="ue2-field"><label class="ue2-meta">Event id</label><br><input type="number" name="event_id" class="input"></div>
+        <button type="submit" class="btn">Create exercise</button>
+      </form>
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endblock %}
