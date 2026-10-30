@@ -89,39 +89,25 @@ def _distance_m(a: dict, b: dict) -> float:
     return 2 * R * math.asin(math.sqrt(h))
 
 
-def assign_start_end(waypoints, member_ids, seed, min_separation_m=400):
-    """Assign unique start/end waypoints that maximize each member's traverse.
+def assign_start_end(waypoints, member_ids, seed, min_separation_m=350):
+    """Assign unique start/end waypoints so each target crosses the AO.
 
-    Each member's end is the farthest available waypoint from their start,
-    preferring a pair at least min_separation_m apart, so a target must cross
-    the AO rather than walk a half-block. Falls back to the farthest remaining
-    point when the pool is too small to honour the floor.
+    Pairs the northernmost waypoints with the southernmost (shuffled for
+    variety), forcing a north-to-south traverse rather than a half-block walk.
+    min_separation_m is the design target; small or centre-heavy pools cannot
+    always honour a hard floor for every member, so this maximises north-south
+    spread rather than guaranteeing a strict minimum.
     Returns {member_id: {"start": waypoint, "end": waypoint}}.
     """
     n = len(member_ids)
     if len(waypoints) < 2 * n:
         raise ValueError(f"need at least {2 * n} waypoints for {n} members, have {len(waypoints)}")
+    pool = sorted(waypoints, key=lambda w: (w["lat"], w["lng"]))
+    north = pool[:n]
+    south = list(reversed(pool[-n:]))
     rng = random.Random(seed)
-    pool = list(waypoints)
-    rng.shuffle(pool)
-    starts = pool[:n]
-    remaining = pool[n:]
-    result = {}
-    for i, mid in enumerate(member_ids):
-        start = starts[i]
-        best_idx = -1
-        best_d = -1.0
-        for j, end in enumerate(remaining):
-            d = _distance_m(start, end)
-            if d >= min_separation_m and d > best_d:
-                best_d, best_idx = d, j
-        if best_idx == -1:  # nothing met the floor — take the farthest anyway
-            for j, end in enumerate(remaining):
-                d = _distance_m(start, end)
-                if d > best_d:
-                    best_d, best_idx = d, j
-        result[mid] = {"start": start, "end": remaining.pop(best_idx)}
-    return result
+    rng.shuffle(south)
+    return {mid: {"start": north[i], "end": south[i]} for i, mid in enumerate(member_ids)}
 
 
 async def build_exercise(db, exercise, waypoints, seed=None):
