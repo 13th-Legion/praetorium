@@ -62,6 +62,18 @@ SUNDANCE_SQUARE_WAYPOINTS = [
     {"label": "Four Day Weekend", "lat": 32.755189, "lng": -97.332759},
     {"label": "Little Red Wasp", "lat": 32.752038, "lng": -97.329841},
     {"label": "The Bird and Branch", "lat": 32.755625, "lng": -97.332077},
+    {"label": "500 Main St", "lat": 32.754344, "lng": -97.331134},
+    {"label": "600 Main St", "lat": 32.753749, "lng": -97.330737},
+    {"label": "700 Main St", "lat": 32.753093, "lng": -97.330298},
+    {"label": "815 Main St", "lat": 32.752563, "lng": -97.329304},
+    {"label": "100 E 3rd St", "lat": 32.755136, "lng": -97.331381},
+    {"label": "100 E 4th St", "lat": 32.75449, "lng": -97.330945},
+    {"label": "500 Commerce St", "lat": 32.754772, "lng": -97.330345},
+    {"label": "600 Commerce St", "lat": 32.753907, "lng": -97.330054},
+    {"label": "400 Throckmorton St", "lat": 32.754216, "lng": -97.333137},
+    {"label": "500 Throckmorton St", "lat": 32.753251, "lng": -97.332942},
+    {"label": "400 Houston St", "lat": 32.754424, "lng": -97.332504},
+    {"label": "500 Houston St", "lat": 32.753968, "lng": -97.331917},
 ]
 
 
