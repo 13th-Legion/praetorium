@@ -1763,11 +1763,19 @@ async def update_applicant_info(request: Request, card_id: int):
 
             desc = card_data.get("description", "")
             if proton_email:
+                # Pipeline Proton Mail field
                 proton_line = f"**📧 Proton Mail:** *{proton_email}*"
                 if re.search(r'\*\*📧 Proton Mail:\*\*', desc):
                     desc = re.sub(r'\*\*📧 Proton Mail:\*\*.*', proton_line, desc)
                 else:
                     desc = desc.rstrip() + f"\n\n{proton_line}"
+                # Raw application Email field (what the applicant submitted)
+                email_line = f"**Email:** {proton_email}"
+                if re.search(r'\*\*Email:\*\*', desc):
+                    desc = re.sub(r'\*\*Email:\*\*.*', email_line, desc)
+                # Drop any stale payment-bounce note so the card no longer flags
+                desc = re.sub(r'(?m)^[ \t]*⚠️[^\n]*INVALID EMAIL[^\n]*\n?', '', desc)
+                desc = desc.strip()
 
             owner = card_data.get("owner")
             if isinstance(owner, dict):
