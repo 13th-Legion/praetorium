@@ -75,7 +75,7 @@
         <tr>
           <td><strong>{{ names.get(p.id, "?") }}</strong></td>
           <td>{{ p.start_label or "TBD" }} &rarr; {{ p.end_label or "TBD" }}</td>
-          <td>{{ names.get(p.buddy_id, "&mdash;") if p.buddy_id else "&mdash;" }}</td>
+          <td>{{ names.get(p.buddy_id, "—") if p.buddy_id else "—" }}</td>
           <td>{{ per_participant.get(p.id, 0) }}</td>
         </tr>
         {% else %}
