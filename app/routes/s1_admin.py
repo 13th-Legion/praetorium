@@ -1719,6 +1719,83 @@ async def set_protonmail(request: Request, card_id: int):
         return HTMLResponse(f'<p style="color:#c62828;font-size:11px;">Error: {e}</p>')
 
 
+@router.post("/pipeline/{card_id}/update")
+@require_auth
+async def update_applicant_info(request: Request, card_id: int):
+    """Update an applicant's name and/or Proton Mail on a Deck card.
+
+    Recruiters use this to correct bad or incomplete application data — e.g. a
+    mistyped Proton address, or a missing surname."""
+    import re
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    form = await request.form()
+    name = form.get("name", "").strip()
+    proton_email = form.get("proton_email", "").strip()
+
+    if not name:
+        return HTMLResponse('<p style="color:#c62828;font-size:11px;">Name required</p>')
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+            stacks = resp.json()
+
+            card_data = None
+            stack_id = None
+            for stack in stacks:
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        card_data = card
+                        stack_id = stack["id"]
+                        break
+                if card_data:
+                    break
+
+            if not card_data:
+                return HTMLResponse('<p style="color:#c62828;font-size:11px;">Card not found</p>')
+
+            desc = card_data.get("description", "")
+            if proton_email:
+                proton_line = f"**📧 Proton Mail:** *{proton_email}*"
+                if re.search(r'\*\*📧 Proton Mail:\*\*', desc):
+                    desc = re.sub(r'\*\*📧 Proton Mail:\*\*.*', proton_line, desc)
+                else:
+                    desc = desc.rstrip() + f"\n\n{proton_line}"
+
+            owner = card_data.get("owner")
+            if isinstance(owner, dict):
+                owner = owner.get("uid") or owner.get("primaryKey") or "portal-svc"
+            elif not owner:
+                owner = "portal-svc"
+
+            resp2 = await client.put(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/{stack_id}/cards/{card_id}",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json", "Content-Type": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+                json={
+                    "title": name,
+                    "type": card_data.get("type", "plain"),
+                    "description": desc,
+                    "owner": owner,
+                },
+            )
+            resp2.raise_for_status()
+
+        return HTMLResponse(
+            '<p style="color:#2e7d32;font-size:11px;font-weight:600;">✅ Saved</p>',
+            headers={"HX-Trigger": "pipelineChanged"},
+        )
+    except Exception as e:
+        return HTMLResponse(f'<p style="color:#c62828;font-size:11px;">Error: {e}</p>')
+
+
 @router.post("/pipeline/{card_id}/payment")
 @require_auth
 async def set_card_payment(request: Request, card_id: int):
