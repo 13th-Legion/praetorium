@@ -85,6 +85,14 @@ async def exercise_page(request: Request, exercise_id: int):
     for p in participants:
         per_team[p.team] = per_team.get(p.team, 0) + per_participant.get(p.id, 0)
 
+    map_points = []
+    for p in participants:
+        nm = names.get(p.id, "?")
+        if p.start_lat is not None and p.start_lng is not None:
+            map_points.append({"name": nm, "lat": p.start_lat, "lng": p.start_lng, "kind": "start", "label": p.start_label or ""})
+        if p.end_lat is not None and p.end_lng is not None:
+            map_points.append({"name": nm, "lat": p.end_lat, "lng": p.end_lng, "kind": "end", "label": p.end_label or ""})
+
     return templates.TemplateResponse(
         "pages/urban_evasion.html",
         {
@@ -98,6 +106,7 @@ async def exercise_page(request: Request, exercise_id: int):
             "per_team": per_team,
             "score_kinds": SCORE_KINDS,
             "score_points": SCORE_POINTS,
+            "map_points": map_points,
         },
     )
 

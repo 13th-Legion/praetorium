@@ -2,6 +2,7 @@
 {% block title %}{{ exercise.name }}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
   .ue2-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 18px 0; }
   .ue2-table { width: 100%; border-collapse: collapse; }
@@ -53,6 +54,14 @@
         <p style="margin-bottom: 10px;"><strong class="text-accent">{{ exercise.team_a_name }}</strong> &mdash; {{ per_team.get("a", 0) }} pts</p>
         <p><strong class="text-accent">{{ exercise.team_b_name }}</strong> &mdash; {{ per_team.get("b", 0) }} pts</p>
       </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Map</div>
+    <div class="card-body">
+      <p class="ue2-meta" style="margin-bottom:8px;"><span style="color:#2ecc71;">&#9679;</span> Start &nbsp;&nbsp; <span style="color:#e74c3c;">&#9679;</span> End</p>
+      <div id="ue2-map" style="height: 460px; border-radius: 6px;"></div>
     </div>
   </div>
 
@@ -125,4 +134,29 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var pts = {{ map_points|tojson }};
+  var el = document.getElementById('ue2-map');
+  if (!el || !pts.length) { return; }
+  var map = L.map('ue2-map', { scrollWheelZoom: false }).setView([32.7549, -97.3305], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+  var bounds = [];
+  pts.forEach(function(pt) {
+    var color = pt.kind === 'start' ? '#2ecc71' : '#e74c3c';
+    L.circleMarker([pt.lat, pt.lng], { radius: 7, color: color, fillColor: color, fillOpacity: 0.85, weight: 2 })
+      .addTo(map)
+      .bindPopup('<strong>' + pt.name + '</strong><br>' + (pt.kind === 'start' ? 'Start' : 'End') + ' &mdash; ' + pt.label);
+    bounds.push([pt.lat, pt.lng]);
+  });
+  if (bounds.length) { map.fitBounds(bounds, { padding: [30, 30] }); }
+});
+</script>
 {% endblock %}
