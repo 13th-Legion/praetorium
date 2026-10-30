@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Urban Evasion{% endblock %}
+{% block content %}
+<div class="ue2" style="max-width:1080px;margin:0 auto;padding:18px;">
+  <h1>{{ exercise.name }}</h1>
+  <p class="text-muted" style="margin-top:0;">
+    {% if exercise.date_start %}{{ exercise.date_start.strftime("%a %b %d, %Y") }}{% else %}TBD{% endif %}
+    {% if exercise.date_start and exercise.date_end %} &middot; {{ exercise.date_start.strftime("%H%M") }}&ndash;{{ exercise.date_end.strftime("%H%M") }}{% endif %}
+    &middot; status: {{ exercise.status }}
+  </p>
+
+  {% if exercise.radio_primary or exercise.radio_alternate or exercise.radio_realworld %}
+  <section style="margin-bottom:18px;">
+    <h2>Comms</h2>
+    {% if exercise.radio_primary %}<p>Primary: <strong>{{ exercise.radio_primary }}</strong></p>{% endif %}
+    {% if exercise.radio_alternate %}<p>Alternate: <strong>{{ exercise.radio_alternate }}</strong></p>{% endif %}
+    {% if exercise.radio_realworld %}<p>Real world: <strong>{{ exercise.radio_realworld }}</strong></p>{% endif %}
+  </section>
+  {% endif %}
+
+  <section style="margin-bottom:18px;">
+    <h2>Points</h2>
+    <table style="min-width:240px;">
+      <tr><th>Action</th><th>Points</th></tr>
+      {% for kind in score_kinds %}
+      <tr><td>{{ kind }}</td><td>{{ score_points[kind] }}</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section style="margin-bottom:18px;">
+    <h2>Scoreboard</h2>
+    <p><strong>{{ exercise.team_a_name }}</strong>: {{ per_team.get("a", 0) }} &nbsp;·&nbsp; <strong>{{ exercise.team_b_name }}</strong>: {{ per_team.get("b", 0) }}</p>
+  </section>
+
+  <section style="margin-bottom:18px;">
+    <h2>Teams</h2>
+    {% for team_key, team_name in [("a", exercise.team_a_name), ("b", exercise.team_b_name)] %}
+    <h3>{{ team_name }}</h3>
+    <ul>
+      {% for p in participants if p.team == team_key %}
+      <li>
+        <strong>{{ names.get(p.id, "?") }}</strong>
+        &mdash; {{ p.start_label or "start TBD" }} &rarr; {{ p.end_label or "end TBD" }}
+        {% if p.buddy_id %} (buddy: {{ names.get(p.buddy_id, "?") }}){% endif %}
+        &mdash; {{ per_participant.get(p.id, 0) }} pts
+      </li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Log scoring event</h2>
+    <form method="post" action="/urban-evasion/{{ exercise.id }}/score">
+      <label>Kind
+        <select name="kind">
+          {% for kind in score_kinds %}<option value="{{ kind }}">{{ kind }} ({{ score_points[kind] }})</option>{% endfor %}
+        </select>
+      </label>
+      <label>Target
+        <select name="target_participant_id">
+          <option value="">&mdash; none &mdash;</option>
+          {% for p in participants %}<option value="{{ p.id }}">{{ names.get(p.id, "?") }} [{{ p.team }}]</option>{% endfor %}
+        </select>
+      </label>
+      <label>Note <input type="text" name="note" placeholder="optional"></label>
+      <button type="submit">Log</button>
+    </form>
+  </section>
+
+  {% if "command" in user.roles or "admin" in user.roles or "s3" in user.roles %}
+  <section>
+    <h2>Admin</h2>
+    <form method="post" action="/urban-evasion/{{ exercise.id }}/build">
+      <button type="submit">Rebuild teams &amp; points</button>
+    </form>
+    <form method="post" action="/urban-evasion/{{ exercise.id }}/freqs" style="margin-top:8px;">
+      <label>Primary <input type="text" name="radio_primary" value="{{ exercise.radio_primary or '' }}"></label>
+      <label>Alternate <input type="text" name="radio_alternate" value="{{ exercise.radio_alternate or '' }}"></label>
+      <label>Real world <input type="text" name="radio_realworld" value="{{ exercise.radio_realworld or '' }}"></label>
+      <button type="submit">Save freqs</button>
+    </form>
+    <form method="post" action="/urban-evasion/create" style="margin-top:8px;">
+      <label>Name <input type="text" name="name" placeholder="Urban Evasion 3"></label>
+      <label>Event id <input type="number" name="event_id"></label>
+      <button type="submit">Create exercise</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
