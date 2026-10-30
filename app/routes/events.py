@@ -1295,9 +1295,10 @@ async def event_detail(request: Request, event_id: int):
         # My RSVP
         my_rsvp = None
         my_guest_count = 0
+        my_meal_plan = False
         if member_id:
             rsvp_result = await db.execute(
-                select(EventRSVP.status, EventRSVP.guest_count).where(
+                select(EventRSVP.status, EventRSVP.guest_count, EventRSVP.meal_plan).where(
                     and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
                 )
             )
@@ -1305,6 +1306,15 @@ async def event_detail(request: Request, event_id: int):
             if row:
                 my_rsvp = row[0]
                 my_guest_count = row[1] or 0
+                my_meal_plan = bool(row[2])
+
+        # Meal plan context (FTX/MCFTX with meal planning enabled).
+        meal_event = event.category in ("ftx", "mcftx") and event.meal_planning_enabled
+        meal_price = "15.00"
+        meal_menu = "Sat Dinner, Sun Breakfast"
+        if meal_event:
+            from app.services.meals import meal_offer
+            meal_price, meal_menu = await meal_offer(db, event)
 
         # Maintain roster: add new members, prune separated
         await _maintain_event_roster(db, event_id, event)
@@ -1459,6 +1469,10 @@ async def event_detail(request: Request, event_id: int):
         "now": _now_ct(),
         "recipient_groups": await _build_recipient_groups(None),
         "tradoc_blocks": tradoc_blocks,
+        "meal_event": meal_event,
+        "my_meal_plan": my_meal_plan,
+        "meal_price": meal_price,
+        "meal_menu": meal_menu,
     })
 
 

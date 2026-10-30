@@ -286,6 +286,21 @@ function insertTradocAgenda() {
         <div id="rsvp-controls-{{ event.id }}" class="rsvp-controls">
             <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:inline;">
                 <input type="hidden" name="status" value="attending">
+                {% if meal_event %}
+                <div style="margin-top:10px;font-size:13px;color:#bbb;">
+                    <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>${{ meal_price }}</strong> ({{ meal_menu }}). Required.</div>
+                    <div style="display:flex;gap:14px;">
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                            <input type="radio" name="meal_plan" value="in" {% if my_meal_plan %}checked{% endif %} style="accent-color:#4caf50;">
+                            <span>Opt in (+${{ meal_price }})</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                            <input type="radio" name="meal_plan" value="out" {% if not my_meal_plan %}checked{% endif %} style="accent-color:#888;">
+                            <span>Opt out</span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
                 <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-attend {% if my_rsvp == 'attending' %}rsvp-btn-active{% endif %}">
                     ✅ Attending
                 </button>
