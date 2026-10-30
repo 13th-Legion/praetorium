@@ -79,13 +79,12 @@ def _distance_m(a: dict, b: dict) -> float:
     return 2 * R * math.asin(math.sqrt(h))
 
 
-def assign_start_end(waypoints, member_ids, seed, min_separation_m=400):
-    """Assign unique start/end waypoints that maximize each member's traverse.
+def assign_start_end(waypoints, member_ids, seed, target_distance_m=550):
+    """Assign unique start/end waypoints so every target traverses a uniform distance.
 
-    Each member's end is the farthest available waypoint from their start,
-    preferring a pair at least min_separation_m apart, so a target crosses the
-    AO rather than walking a half-block. Falls back to the farthest remaining
-    point when the pool is too small to honour the floor.
+    Each member's end is chosen to land as close as possible to target_distance_m
+    from their start, then a 2-opt swap pass tightens the spread so the whole
+    cohort covers roughly the same ground instead of a few going much farther.
     Returns {member_id: {"start": waypoint, "end": waypoint}}.
     """
     n = len(member_ids)
@@ -96,22 +95,24 @@ def assign_start_end(waypoints, member_ids, seed, min_separation_m=400):
     rng.shuffle(pool)
     starts = pool[:n]
     remaining = pool[n:]
-    result = {}
-    for i, mid in enumerate(member_ids):
-        start = starts[i]
-        best_idx = -1
-        best_d = -1.0
-        for j, end in enumerate(remaining):
-            d = _distance_m(start, end)
-            if d >= min_separation_m and d > best_d:
-                best_d, best_idx = d, j
-        if best_idx == -1:  # nothing met the floor — take the farthest anyway
-            for j, end in enumerate(remaining):
-                d = _distance_m(start, end)
-                if d > best_d:
-                    best_d, best_idx = d, j
-        result[mid] = {"start": start, "end": remaining.pop(best_idx)}
-    return result
+    pairs: list[tuple[dict, dict]] = []
+    for s in starts:
+        best = min(range(len(remaining)), key=lambda j: abs(_distance_m(s, remaining[j]) - target_distance_m))
+        pairs.append((s, remaining.pop(best)))
+    improved = True
+    while improved:
+        improved = False
+        for x in range(len(pairs)):
+            for y in range(x + 1, len(pairs)):
+                sa, ea = pairs[x]
+                sb, eb = pairs[y]
+                cur = abs(_distance_m(sa, ea) - target_distance_m) + abs(_distance_m(sb, eb) - target_distance_m)
+                new = abs(_distance_m(sa, eb) - target_distance_m) + abs(_distance_m(sb, ea) - target_distance_m)
+                if new < cur - 1e-9:
+                    pairs[x] = (sa, eb)
+                    pairs[y] = (sb, ea)
+                    improved = True
+    return {mid: {"start": s, "end": e} for mid, (s, e) in zip(member_ids, pairs)}
 
 
 async def build_exercise(db, exercise, waypoints, seed=None):

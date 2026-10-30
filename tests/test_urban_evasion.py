@@ -82,16 +82,16 @@ def test_assign_start_end_unique_and_disjoint():
     assert set(starts).isdisjoint(ends)  # start never equals end
 
 
-def test_assign_start_end_forces_traversal():
+def test_assign_start_end_uniform_distance():
     from app.services.urban_evasion import _distance_m, assign_start_end
 
     north = [{"label": f"n{i}", "lat": 32.7549, "lng": -97.3305} for i in range(8)]
     south = [{"label": f"s{i}", "lat": 32.7480, "lng": -97.3305} for i in range(8)]
-    assignment = assign_start_end(north + south, list(range(1, 6)), seed=3, min_separation_m=500)
-    assert len(assignment) == 5
-    for mid, pair in assignment.items():
-        d = _distance_m(pair["start"], pair["end"])
-        assert d >= 500, f"member {mid}: separation {d:.0f}m < 500m"
+    assignment = assign_start_end(north + south, list(range(1, 6)), seed=3, target_distance_m=550)
+    ds = [_distance_m(p["start"], p["end"]) for p in assignment.values()]
+    assert len(ds) == 5
+    # two identical clusters -> all pairs land at the same distance (uniform)
+    assert max(ds) - min(ds) < 1
 
 
 def test_assign_start_end_needs_enough_waypoints():
