@@ -1792,7 +1792,7 @@ def _render_rsvp_controls(
     if guests_allowed:
         show = "block" if current_status == "attending" else "none"
         guest_html = f"""
-        <div id="guest-count-wrap-{event_id}" style="display:{show};margin-top:10px;">
+        <div id="guest-count-wrap-{event_id}" style="flex-basis:100%;display:{show};margin-top:4px;">
             <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML">
                 <input type="hidden" name="status" value="attending">
                 <label style="font-size:12px;color:#bbb;display:block;margin-bottom:4px;">Guests you're bringing</label>
@@ -1808,8 +1808,8 @@ def _render_rsvp_controls(
     meal_html = ""
     if meal_event:
         meal_html = f"""
-        <div style="margin-top:8px;font-size:13px;color:#bbb;">
-            <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>${_html.escape(meal_price)}</strong> ({_html.escape(meal_menu)}). Required.</div>
+        <div style="flex-basis:100%;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid #2a2a3e;border-radius:8px;font-size:13px;color:#bbb;">
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">🍽️ <strong style="color:#ccc;">Meal plan</strong> — <strong>${_html.escape(meal_price)}</strong> ({_html.escape(meal_menu)}). Required.</div>
             <div style="display:flex;gap:14px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <input type="radio" name="meal_plan" value="in" {'checked' if meal_plan else ''} style="accent-color:#4caf50;">
@@ -1824,14 +1824,14 @@ def _render_rsvp_controls(
 
     html = f"""
     <div class="rsvp-controls" id="rsvp-controls-{event_id}">
-        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:block;">
+        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:contents;">
             <input type="hidden" name="status" value="attending">
             {meal_html}
-            <button type="submit" class="rsvp-btn rsvp-btn-attend {attending_cls}" style="margin-top:8px;">
+            <button type="submit" class="rsvp-btn rsvp-btn-attend {attending_cls}">
                 ✅ Attending
             </button>
         </form>
-        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:inline;">
+        <form hx-post="/api/events/{event_id}/rsvp" hx-target="#rsvp-controls-{event_id}" hx-swap="outerHTML" style="display:contents;">
             <input type="hidden" name="status" value="declined">
             <button type="submit" class="rsvp-btn rsvp-btn-decline {declined_cls}">
                 ❌ Declined

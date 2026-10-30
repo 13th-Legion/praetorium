@@ -284,35 +284,31 @@ function insertTradocAgenda() {
         </div>
         {% else %}
         <div id="rsvp-controls-{{ event.id }}" class="rsvp-controls">
-            <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:inline;">
+            <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:contents;">
                 <input type="hidden" name="status" value="attending">
                 {% if meal_event %}
-                <div style="margin-top:10px;font-size:13px;color:#bbb;">
-                    <div style="font-size:12px;color:#888;margin-bottom:4px;">🍽️ Meal plan — <strong>${{ meal_price }}</strong> ({{ meal_menu }}). Required.</div>
-                    <div style="display:flex;gap:14px;">
-                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                <div style="flex-basis:100%;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid #2a2a3e;border-radius:8px;font-size:13px;color:#bbb;">
+                    <div style="font-size:12px;color:#888;margin-bottom:8px;">🍽️ <strong style="color:#ccc;">Meal plan</strong> — <strong>${{ meal_price }}</strong> ({{ meal_menu }}). Required.</div>
+                    <div style="display:flex;gap:18px;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#ccc;">
                             <input type="radio" name="meal_plan" value="in" {% if my_meal_plan %}checked{% endif %} style="accent-color:#4caf50;">
-                            <span>Opt in (+${{ meal_price }})</span>
+                            <span>Opt in <span style="color:#777;">(+${{ meal_price }})</span></span>
                         </label>
-                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#ccc;">
                             <input type="radio" name="meal_plan" value="out" {% if not my_meal_plan %}checked{% endif %} style="accent-color:#888;">
                             <span>Opt out</span>
                         </label>
                     </div>
                 </div>
                 {% endif %}
-                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-attend {% if my_rsvp == 'attending' %}rsvp-btn-active{% endif %}">
-                    ✅ Attending
-                </button>
+                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-attend {% if my_rsvp == 'attending' %}rsvp-btn-active{% endif %}">✅ Attending</button>
             </form>
-            <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:inline;">
+            <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML" style="display:contents;">
                 <input type="hidden" name="status" value="declined">
-                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-decline {% if my_rsvp == 'declined' %}rsvp-btn-active-danger{% endif %}">
-                    ❌ Declined
-                </button>
+                <button hx-disabled-elt="this" type="submit" class="rsvp-btn rsvp-btn-decline {% if my_rsvp == 'declined' %}rsvp-btn-active-danger{% endif %}">❌ Decline</button>
             </form>
             {% if guests_allowed %}
-            <div id="guest-count-wrap-{{ event.id }}" style="display:{% if my_rsvp == 'attending' %}block{% else %}none{% endif %};margin-top:10px;">
+            <div id="guest-count-wrap-{{ event.id }}" style="flex-basis:100%;display:{% if my_rsvp == 'attending' %}block{% else %}none{% endif %};margin-top:4px;">
                 <form hx-post="/api/events/{{ event.id }}/rsvp" hx-target="#rsvp-controls-{{ event.id }}" hx-swap="outerHTML">
                     <input type="hidden" name="status" value="attending">
                     <label style="font-size:12px;color:#bbb;display:block;margin-bottom:4px;">Guests you're bringing</label>
@@ -326,7 +322,7 @@ function insertTradocAgenda() {
             </div>
             {% endif %}
             {% if event.rsvp_deadline %}
-            <div style="font-size:11px;color:#888;margin-top:6px;">Deadline: {{ event.rsvp_deadline.strftime('%d %b %Y · %H%M CT') }}</div>
+            <div style="flex-basis:100%;font-size:11px;color:#888;margin-top:2px;">Deadline: {{ event.rsvp_deadline.strftime('%d %b %Y · %H%M CT') }}</div>
             {% endif %}
         </div>
         {% endif %}
