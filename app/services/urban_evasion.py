@@ -77,11 +77,25 @@ SUNDANCE_SQUARE_WAYPOINTS = [
 ]
 
 
-def assign_start_end(waypoints, member_ids, seed):
-    """Assign unique start and end waypoints to each member.
+def _distance_m(a: dict, b: dict) -> float:
+    """Great-circle distance in metres between two {lat, lng} points (haversine)."""
+    import math
 
-    Starts and ends are drawn from disjoint halves of a seeded shuffle, so every
-    start and every end is unique and a member's start never equals their end.
+    R = 6371000.0
+    lat1, lat2 = math.radians(a["lat"]), math.radians(b["lat"])
+    dlat = lat2 - lat1
+    dlng = math.radians(b["lng"] - a["lng"])
+    h = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(h))
+
+
+def assign_start_end(waypoints, member_ids, seed, min_separation_m=400):
+    """Assign unique start/end waypoints that maximize each member's traverse.
+
+    Each member's end is the farthest available waypoint from their start,
+    preferring a pair at least min_separation_m apart, so a target must cross
+    the AO rather than walk a half-block. Falls back to the farthest remaining
+    point when the pool is too small to honour the floor.
     Returns {member_id: {"start": waypoint, "end": waypoint}}.
     """
     n = len(member_ids)
@@ -91,9 +105,23 @@ def assign_start_end(waypoints, member_ids, seed):
     pool = list(waypoints)
     rng.shuffle(pool)
     starts = pool[:n]
-    ends = pool[n : 2 * n]
-    rng.shuffle(ends)
-    return {mid: {"start": starts[i], "end": ends[i]} for i, mid in enumerate(member_ids)}
+    remaining = pool[n:]
+    result = {}
+    for i, mid in enumerate(member_ids):
+        start = starts[i]
+        best_idx = -1
+        best_d = -1.0
+        for j, end in enumerate(remaining):
+            d = _distance_m(start, end)
+            if d >= min_separation_m and d > best_d:
+                best_d, best_idx = d, j
+        if best_idx == -1:  # nothing met the floor — take the farthest anyway
+            for j, end in enumerate(remaining):
+                d = _distance_m(start, end)
+                if d > best_d:
+                    best_d, best_idx = d, j
+        result[mid] = {"start": start, "end": remaining.pop(best_idx)}
+    return result
 
 
 async def build_exercise(db, exercise, waypoints, seed=None):
