@@ -2650,6 +2650,33 @@ async def reactivate_member(request: Request, member_id: int, db: AsyncSession =
         notes=notes,
     )
 
+    # Ensure the NC account exists. Inactive recruits may never have been
+    # provisioned (no NC account yet), so "enable" and group-adds would 404.
+    # Create it here with a throwaway password; the operator resets credentials
+    # on the profile edit page (which emails a fresh password).
+    nc_created = False
+    if member.nc_username and (enable_nc or restore_groups):
+        try:
+            import secrets as _secrets
+            import string as _string
+            async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
+                check = await client.get(
+                    f"{NC_URL}/ocs/v2.php/cloud/users/{member.nc_username}",
+                    headers={"OCS-APIRequest": "true"},
+                    timeout=15,
+                )
+                if check.status_code == 404:
+                    _temp_pw = ''.join(_secrets.choice(_string.ascii_letters + _string.digits) for _ in range(14))
+                    create = await client.post(
+                        f"{NC_URL}/ocs/v2.php/cloud/users",
+                        headers={"OCS-APIRequest": "true"},
+                        data={"userid": member.nc_username, "password": _temp_pw},
+                        timeout=20,
+                    )
+                    nc_created = create.status_code in (200, 100)
+        except Exception:
+            nc_created = False
+
     # Re-enable NC account if requested
     nc_enabled = False
     if enable_nc and member.nc_username:
@@ -2682,9 +2709,9 @@ async def reactivate_member(request: Request, member_id: int, db: AsyncSession =
                 elif grade == "W":
                     groups.append("Rank - Officer")
                 else:
-                    groups.append("Rank - Patched")
+                    groups.append("Rank - Enlisted")
             if member.team:
-                groups.append(f"Team - {member.team}")
+                groups.append(f"Team-{member.team}")
 
             async with httpx.AsyncClient(auth=(NC_SVC_USER, NC_SVC_PASS)) as client:
                 for group in groups:
@@ -2705,6 +2732,7 @@ async def reactivate_member(request: Request, member_id: int, db: AsyncSession =
     return HTMLResponse(f"""
         <div style="padding: 16px; background: #e8f5e9; border-left: 4px solid #2e7d32; border-radius: 4px;">
             <strong>✅ Reactivated:</strong> {member.first_name} {member.last_name} → {new_status}
+            {'<br>NC account created ✅' if nc_created else ''}
             {'<br>NC account enabled ✅' if nc_enabled else ''}
             {'<br>Groups restored ✅' if groups_restored else ''}
             {f'<br><em>Notes: {notes}</em>' if notes else ''}
