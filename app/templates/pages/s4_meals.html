@@ -67,15 +67,14 @@
                                 <button class="s4-btn s4-btn-sm" type="submit">Unmark</button>
                             </form>
                             {% else %}
-                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-paid" style="display:inline;">
+                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-paid" style="display:inline-flex;gap:4px;align-items:center;">
                                 <input type="hidden" name="member_id" value="{{ r.member_id }}">
-                                <input type="hidden" name="method" value="cash">
-                                <button class="s4-btn s4-btn-sm" type="submit">Paid (cash)</button>
-                            </form>
-                            <form method="post" action="/api/s4/meals/{{ ev.id }}/mark-paid" style="display:inline;">
-                                <input type="hidden" name="member_id" value="{{ r.member_id }}">
-                                <input type="hidden" name="method" value="venmo">
-                                <button class="s4-btn s4-btn-sm" type="submit">Paid (venmo)</button>
+                                <select name="method" class="s4-select">
+                                    <option value="cash">Cash</option>
+                                    <option value="paypal">PayPal</option>
+                                    <option value="venmo">Venmo</option>
+                                </select>
+                                <button class="s4-btn s4-btn-sm" type="submit">Paid</button>
                             </form>
                             {% endif %}
                         </td>
