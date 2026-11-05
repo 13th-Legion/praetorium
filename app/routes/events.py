@@ -1697,7 +1697,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
             try:
                 from app.routes.notifications import create_notification
                 await create_notification(
-                    db, member_id, "event", f"WARNO - {evt_title}",
+                    db, member_id, "event", f"RSVP Confirmed — {evt_title}",
                     body=f"{date_str} - RSVP now open",
                     link=f"/events/{evt_id}",
                     icon="⚡"
@@ -1736,10 +1736,10 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
     </tr></table>
 </div>
 <div style="padding: 20px;">
-<h2 style="color: #c62828;">WARNO - {evt_title}</h2>
+<h2 style="color: #c62828;">RSVP Confirmed</h2>
 <p><strong>Date:</strong> {date_str}<br>
 <strong>Location:</strong> {evt_location}</p>
-<p>A Warning Order has been issued for the upcoming exercise. You have RSVP'd as attending.</p>
+<p>You're confirmed for the upcoming exercise. Details below.</p>
 <p><strong>Full details on the Portal:</strong><br>
 <a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
 <p style="margin-top: 20px;">
@@ -1753,7 +1753,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 </div>
 </body></html>"""
 
-        _warno_subject = f"WARNO - {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
+        _warno_subject = f"RSVP Confirmed — {evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
 
         def _send_warno_catchup_email():
             from app.integrations import email as email_service
