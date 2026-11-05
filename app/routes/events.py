@@ -1816,7 +1816,7 @@ def _render_rsvp_controls(
                     <span>Opt in (+${_html.escape(meal_price)})</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
-                    <input type="radio" name="meal_plan" value="out" {'checked' if not meal_plan else ''} style="accent-color:#888;">
+                    <input type="radio" name="meal_plan" value="out" {'checked' if current_status == "attending" and not meal_plan else ''} style="accent-color:#888;">
                     <span>Opt out</span>
                 </label>
             </div>
@@ -3063,7 +3063,7 @@ async def warno_banner(request: Request):
                 meal_radios = f"""
                     <span style="font-size:12px;color:#888;margin-right:6px;">🍽️ Meal (${_html.escape(meal_price_txt)} — {_html.escape(meal_menu_txt)}):</span>
                     <label style="font-size:12px;color:#bbb;cursor:pointer;"><input type="radio" name="meal_plan" value="in" {'checked' if my_meal_plan else ''} style="accent-color:#4caf50;"> In</label>
-                    <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if not my_meal_plan else ''} style="accent-color:#888;"> Out</label>"""
+                    <label style="font-size:12px;color:#bbb;cursor:pointer;margin-left:6px;"><input type="radio" name="meal_plan" value="out" {'checked' if my_rsvp == "attending" and not my_meal_plan else ''} style="accent-color:#888;"> Out</label>"""
             rsvp_buttons = f"""
             <div id="warno-rsvp" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <form onclick="event.stopPropagation();event.preventDefault();" hx-post="/api/events/{event.id}/rsvp" hx-swap="none" hx-on::after-request="htmx.ajax('GET','/api/events/warno-banner','#warno-banner-area')" style="display:inline;">

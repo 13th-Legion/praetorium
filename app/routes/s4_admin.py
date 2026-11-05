@@ -183,7 +183,7 @@ async def _ftx_events(db: AsyncSession, upcoming_only: bool = False) -> list[Eve
         # Meal planning is a forward-looking activity — don't list years of
         # historical FTXs. date_start is naive Central, not UTC.
         stmt = stmt.where(Event.date_start >= now_ct())
-    return (await db.execute(stmt.order_by(desc(Event.date_start)))).scalars().all()
+    return (await db.execute(stmt.order_by(Event.date_start))).scalars().all()
 
 
 async def _active_members(db: AsyncSession) -> list[Member]:
@@ -332,6 +332,10 @@ async def meals_page(request: Request, db: AsyncSession = Depends(get_db)):
 
     members = await _active_members(db)
     names = {m.id: _display_name(m) for m in members}
+    # Non-active members (recruits) can RSVP + opt into meals; resolve their
+    # names too instead of rendering "Member <id>".
+    _roster_ids = {r["member_id"] for roster in meal_roster.values() for r in roster}
+    names.update(await _names_for(db, _roster_ids))
     checks = {ev.id: checked_slots(plans.get(ev.id), ev.date_start) for ev in events}
     prices = {ev.id: effective_price(ev) for ev in events}
 

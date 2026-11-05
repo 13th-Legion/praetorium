@@ -295,7 +295,7 @@ function insertTradocAgenda() {
                             <span>Opt in <span style="color:#777;">(+${{ meal_price }})</span></span>
                         </label>
                         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#ccc;">
-                            <input type="radio" name="meal_plan" value="out" {% if not my_meal_plan %}checked{% endif %} style="accent-color:#888;">
+                            <input type="radio" name="meal_plan" value="out" {% if my_rsvp == 'attending' and not my_meal_plan %}checked{% endif %} style="accent-color:#888;">
                             <span>Opt out</span>
                         </label>
                     </div>
