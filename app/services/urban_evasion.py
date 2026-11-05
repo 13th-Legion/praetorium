@@ -74,6 +74,20 @@ SUNDANCE_SQUARE_WAYPOINTS = [
     {"label": "400 Throckmorton St", "lat": 32.754216, "lng": -97.333137},
     {"label": "815 Main St", "lat": 32.752563, "lng": -97.329304},
     {"label": "500 Houston St", "lat": 32.753968, "lng": -97.331917},
+    {"label": "Sundance Square Plaza", "lat": 32.75570, "lng": -97.33060},
+    {"label": "Bass Performance Hall", "lat": 32.75460, "lng": -97.32940},
+    {"label": "Sid Richardson Museum", "lat": 32.75600, "lng": -97.33240},
+    {"label": "Sanger Building", "lat": 32.75640, "lng": -97.33070},
+    {"label": "Wells Fargo Tower", "lat": 32.75450, "lng": -97.33400},
+    {"label": "Chisholm Trail Mural", "lat": 32.75590, "lng": -97.33140},
+    {"label": "300 Main St", "lat": 32.75500, "lng": -97.33190},
+    {"label": "400 Main St", "lat": 32.75460, "lng": -97.33140},
+    {"label": "900 Main St", "lat": 32.75260, "lng": -97.33000},
+    {"label": "300 Throckmorton St", "lat": 32.75390, "lng": -97.33320},
+    {"label": "600 Throckmorton St", "lat": 32.75240, "lng": -97.33260},
+    {"label": "Flatiron Building", "lat": 32.75580, "lng": -97.33080},
+    {"label": "Land Title Building", "lat": 32.75550, "lng": -97.33100},
+    {"label": "W.T. Waggoner Building", "lat": 32.75520, "lng": -97.33200},
 ]
 
 
