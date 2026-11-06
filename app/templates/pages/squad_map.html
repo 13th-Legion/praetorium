@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Squad / Fireteam Map{% endblock %}
+{% block content_class %}map-page{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  main.content.map-page { padding: 0; max-width: none; width: 100%; }
+  .map-subtitle { background: #16213e; color: #999; font-size: 12px; padding: 6px 20px; border-bottom: 1px solid #333; }
+  #map { height: calc(100vh - 120px); width: 100%; background: #0f1220; }
+  .legend { background: rgba(22,33,62,0.94); padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #ccc; line-height: 1.75; }
+  .legend .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .legend .sl { color: #ffd54f; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-subtitle">Proposed squad / fireteam reorganization &mdash; active + recruit members &middot; <span style="color:#ffd54f;">&#9733;</span> = squad leader</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SQUADS = {{ squads | tojson }};
+
+const map = L.map('map').setView([32.7512, -97.0457], 8);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+const legend = L.control({ position: 'bottomleft' });
+legend.onAdd = function () {
+  const div = L.DomUtil.create('div', 'legend');
+  let html = '<strong>Legend</strong><br>';
+  for (const s of SQUADS) {
+    if (s.squad_leader) {
+      html += '<span class="sl">&#9733; <b>' + s.team + ' Squad</b></span> &mdash; ' + s.squad_leader.name + '<br>';
+    }
+    for (const ft of s.fireteams) {
+      html += '<span class="swatch" style="background:' + ft.color + '"></span>' + ft.name + '<br>';
+    }
+  }
+  div.innerHTML = html;
+  return div;
+};
+legend.addTo(map);
+
+for (const s of SQUADS) {
+  if (s.squad_leader) {
+    const sl = s.squad_leader;
+    L.circleMarker([sl.lat, sl.lon], { radius: 9, color: '#111', weight: 2, fillColor: '#ffb300', fillOpacity: 1 })
+      .addTo(map)
+      .bindPopup('<b>' + s.team + ' Squad Leader</b><br>' + sl.name);
+  }
+  for (const ft of s.fireteams) {
+    for (const m of ft.members) {
+      L.circleMarker([m.lat, m.lon], { radius: 6, color: '#111', weight: 1, fillColor: ft.color, fillOpacity: 0.9 })
+        .addTo(map)
+        .bindPopup('<b>' + ft.name + '</b><br>' + m.name);
+    }
+  }
+}
+
+setTimeout(function () { map.invalidateSize(); }, 100);
+</script>
+{% endblock %}

@@ -405,3 +405,96 @@ async def member_map(request: Request, db: AsyncSession = Depends(get_db)):
         "team_colors": team_colors,
         "geo_list": geo_list,
     })
+
+
+@router.get("/map/squads")
+@require_auth
+async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
+    """Proposed squad/fireteam reorganization map — Command/Admin/S1/Leader only."""
+    import math as _math
+    from collections import defaultdict
+
+    user = get_current_user(request)
+    roles = set(user.get("roles", []))
+    if not (roles & {"command", "admin", "s1", "leader"}):
+        raise HTTPException(status_code=403, detail="Map access restricted to leadership")
+
+    result = await db.execute(
+        select(Member).where(
+            Member.latitude.isnot(None),
+            Member.status.in_(["active", "recruit"]),
+        )
+    )
+    members = result.scalars().all()
+
+    def _hav(m1, m2):
+        R = 6371000.0
+        p1, p2 = _math.radians(m1.latitude), _math.radians(m2.latitude)
+        dp = _math.radians(m2.latitude - m1.latitude)
+        dl = _math.radians(m2.longitude - m1.longitude)
+        h = _math.sin(dp / 2) ** 2 + _math.cos(p1) * _math.cos(p2) * _math.sin(dl / 2) ** 2
+        return 2 * R * _math.asin(_math.sqrt(h))
+
+    def _cluster(ms, max_size=4):
+        groups = [[m] for m in ms]
+        while True:
+            best = None
+            for i in range(len(groups)):
+                for j in range(i + 1, len(groups)):
+                    if len(groups[i]) + len(groups[j]) > max_size:
+                        continue
+                    d = min(_hav(a, b) for a in groups[i] for b in groups[j])
+                    if best is None or d < best[2]:
+                        best = (i, j, d)
+            if best is None:
+                break
+            i, j, _ = best
+            groups[i].extend(groups[j])
+            groups.pop(j)
+        return groups
+
+    by_team = defaultdict(list)
+    for m in members:
+        by_team[m.team or "None"].append(m)
+
+    from app.services import ranks as _ranks
+    abbr = _ranks.abbr_map()
+
+    def _disp(m):
+        rank = abbr.get(m.rank_grade, m.rank_grade or "")
+        base = f"{rank} {m.last_name}".strip()
+        if m.callsign:
+            base += f" ({m.callsign})"
+        return base
+
+    palette = ["#e53935", "#8e24aa", "#3949ab", "#00897b", "#f9a825", "#6d4c41",
+               "#43a047", "#00acc1", "#d81b60", "#7cb342", "#fb8c00", "#5e35b1"]
+
+    squads = []
+    color_idx = 0
+    for team in sorted(by_team, key=lambda t: -len(by_team[t])):
+        ms = by_team[team]
+        sl = next((m for m in ms if m.leadership_title == "Team Leader"), None)
+        rest = [m for m in ms if m is not sl]
+        groups = _cluster(rest)
+
+        squad = {
+            "team": team,
+            "squad_leader": {"name": _disp(sl), "lat": sl.latitude, "lon": sl.longitude} if sl else None,
+            "fireteams": [],
+        }
+        for gi, g in enumerate(groups, 1):
+            color = palette[color_idx % len(palette)]
+            color_idx += 1
+            squad["fireteams"].append({
+                "name": f"{team}-{gi}",
+                "color": color,
+                "members": [{"name": _disp(m), "lat": m.latitude, "lon": m.longitude} for m in g],
+            })
+        squads.append(squad)
+
+    return templates.TemplateResponse("pages/squad_map.html", {
+        "request": request,
+        "user": user,
+        "squads": squads,
+    })
