@@ -437,6 +437,13 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
 
     def _cluster(ms, max_size=4):
         groups = [[m] for m in ms]
+
+        def _spread(g):
+            if len(g) < 2:
+                return 0.0
+            return max(_hav(a, b) for a in g for b in g if a is not b)
+
+        # Greedy agglomerative pass.
         while True:
             best = None
             for i in range(len(groups)):
@@ -451,6 +458,29 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
             i, j, _ = best
             groups[i].extend(groups[j])
             groups.pop(j)
+
+        # 2-opt swap pass: swap members between groups to shrink total spread.
+        improved = True
+        while improved:
+            improved = False
+            for i in range(len(groups)):
+                for j in range(i + 1, len(groups)):
+                    gi, gj = groups[i], groups[j]
+                    for a in range(len(gi)):
+                        for b in range(len(gj)):
+                            cur = _spread(gi) + _spread(gj)
+                            gi2 = gi[:a] + gi[a + 1:] + [gj[b]]
+                            gj2 = gj[:b] + gj[b + 1:] + [gi[a]]
+                            if _spread(gi2) + _spread(gj2) < cur - 1e-9:
+                                gi[a], gj[b] = gj[b], gi[a]
+                                improved = True
+                                break
+                        if improved:
+                            break
+                    if improved:
+                        break
+                if improved:
+                    break
         return groups
 
     by_team = defaultdict(list)
