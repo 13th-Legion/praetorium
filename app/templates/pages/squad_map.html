@@ -21,12 +21,57 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const SQUADS = {{ squads | tojson }};
+const TEAM_COLORS = {{ team_colors | tojson }};
+const TEAM_LIST = {{ geo_list | tojson }};
+const TEAM_DIRS = ["N", "NE", "E/SE", "S", "SW/W", "NW"];
+const ZONE_START = 330;
+const ZONE_SIZE = 60;
+const CENTER = {{ center | tojson }};
 
-const map = L.map('map').setView([32.7512, -97.0457], 8);
+const map = L.map('map').setView([CENTER.lat, CENTER.lon], 8);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18,
   attribution: '&copy; OpenStreetMap'
 }).addTo(map);
+
+// Squad-territory pie slices (same 6-zone scheme as the roster map)
+function bearingToPoint(lat, lon, bearing, distKm) {
+  const R = 6371;
+  const d = distKm / R;
+  const brng = bearing * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lon1 = lon * Math.PI / 180;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+  const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+  return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+}
+
+function generateZonePolygon(startBearing, endBearing, center, radiusKm) {
+  const pts = [[center.lat, center.lon]];
+  const steps = 30;
+  for (let i = 0; i <= steps; i++) {
+    const b = startBearing + (((endBearing - startBearing + 360) % 360) / steps) * i;
+    pts.push(bearingToPoint(center.lat, center.lon, b % 360, radiusKm));
+  }
+  pts.push([center.lat, center.lon]);
+  return pts;
+}
+
+const zoneLayer = L.layerGroup();
+TEAM_LIST.forEach(function (team, i) {
+  const startB = (ZONE_START + i * ZONE_SIZE) % 360;
+  const endB = (startB + ZONE_SIZE) % 360;
+  const polygon = generateZonePolygon(startB, endB, CENTER, 170);
+  const color = TEAM_COLORS[team] || '#666';
+  L.polygon(polygon, {
+    color: color + 'aa',
+    fillColor: color + '44',
+    fillOpacity: 0.15,
+    weight: 2,
+    dashArray: '5,5',
+  }).addTo(zoneLayer).bindPopup('<strong>' + team + ' (' + TEAM_DIRS[i] + ')</strong><br>' + startB + '° – ' + endB + '°');
+});
+zoneLayer.addTo(map);
 
 const legend = L.control({ position: 'bottomleft' });
 legend.onAdd = function () {

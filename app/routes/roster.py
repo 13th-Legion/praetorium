@@ -472,7 +472,7 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
 
     squads = []
     color_idx = 0
-    for team in sorted(by_team, key=lambda t: -len(by_team[t])):
+    for team in sorted(by_team):
         ms = by_team[team]
         sl = next((m for m in ms if m.leadership_title == "Team Leader"), None)
         rest = [m for m in ms if m is not sl]
@@ -493,8 +493,20 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
             })
         squads.append(squad)
 
+    from app.services import teams as _teams
+    _all = await _teams.all_teams()
+    team_colors = {t.name: (t.color or "#666") for t in _all}
+    team_colors["None"] = "#666"
+    geo_list = [t.name for t in sorted(
+        [x for x in _all if x.geo_zone_index is not None],
+        key=lambda x: x.geo_zone_index,
+    )]
+
     return templates.TemplateResponse("pages/squad_map.html", {
         "request": request,
         "user": user,
         "squads": squads,
+        "team_colors": team_colors,
+        "geo_list": geo_list,
+        "center": {"lat": 32.7512, "lon": -97.0457},
     })
