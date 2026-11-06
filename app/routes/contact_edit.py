@@ -172,6 +172,8 @@ async def save_contact(request: Request, db: AsyncSession = Depends(get_db)):
                     log.info(f"Contact edit: {member.first_name} {member.last_name} team LOCKED to {member.team} — coords updated, geo suggests {geo_team} but not applied")
                 elif geo_team != member.team and geo_team:
                     member.team = geo_team
+                    from app.services.nc_groups import sync_member_team_group
+                    await sync_member_team_group(member.nc_username, geo_team)
                     log.info(f"Contact edit: Geo-reassigned {member.first_name} {member.last_name} to {geo_team} (bearing {bearing:.1f}°)")
             else:
                 log.warning(f"Contact edit: geocode no match for {member.last_name} "

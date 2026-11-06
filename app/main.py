@@ -515,6 +515,8 @@ async def submit_verify_contact(
                             f"{geo_team} (bearing {bearing:.1f}°)"
                         )
                         member.team = geo_team
+                        from app.services.nc_groups import sync_member_team_group
+                        await sync_member_team_group(member.nc_username, geo_team)
                 else:
                     _vc_log.warning(
                         f"Geocode returned no match for {member.last_name} "

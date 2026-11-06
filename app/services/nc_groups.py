@@ -258,3 +258,41 @@ async def rename_team_group(
                      f"(OCS {_ocs_status(d)})")
         except Exception as e:
             log.error(f"rename_team_group: delete {old_group} failed: {e}")
+
+
+async def sync_member_team_group(username: str, new_team: str | None) -> None:
+    """Move a user's NC group membership to the correct Team-* group.
+
+    Geo-assignment (contact verification / contact edit) updates members.team
+    without touching Nextcloud, so the NC Team-* group drifts. Remove any old
+    Team-* group and add Team-{new_team} so the two stay in step.
+    """
+    if not username or not new_team:
+        return
+
+    target = f"Team-{new_team}"
+    try:
+        async with httpx.AsyncClient(auth=_auth(), timeout=15) as client:
+            r = await client.get(
+                f"{settings.nc_url}/ocs/v2.php/cloud/users/{username}/groups",
+                headers=_OCS_HEADERS,
+            )
+            r.raise_for_status()
+            current = r.json().get("ocs", {}).get("data", {}).get("groups", []) or []
+
+            # Remove any stale team group (old naming uses a space: "Team - X").
+            for g in current:
+                if (g.startswith("Team-") or g.startswith("Team - ")) and g != target:
+                    await client.delete(
+                        f"{settings.nc_url}/ocs/v2.php/cloud/users/{username}/groups",
+                        headers=_OCS_HEADERS, data={"groupid": g},
+                    )
+
+            # Add the correct team group.
+            if target not in current:
+                await client.post(
+                    f"{settings.nc_url}/ocs/v2.php/cloud/users/{username}/groups",
+                    headers=_OCS_HEADERS, data={"groupid": target},
+                )
+    except Exception as e:
+        log.warning(f"sync_member_team_group({username}, {new_team}) failed: {e}")
