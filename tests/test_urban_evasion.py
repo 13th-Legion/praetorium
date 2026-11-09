@@ -2,8 +2,6 @@
 
 from app.database import Base
 from app.models import (
-    UrbanEvasionEvolution,
-    UrbanEvasionExercise,
     UrbanEvasionParticipant,
     UrbanEvasionScoreEvent,
 )

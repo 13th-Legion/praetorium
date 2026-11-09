@@ -12,8 +12,6 @@ could ever be saved or sent.
 
 import pytest
 
-from app.models.newsletter import Newsletter
-
 pytestmark = pytest.mark.integration
 
 
