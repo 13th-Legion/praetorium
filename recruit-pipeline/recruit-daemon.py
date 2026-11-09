@@ -1849,8 +1849,10 @@ def create_portal_member(info, nc_username, team):
     try:
         import psycopg2
 
-        # Parse name
-        name = info.get("Legal Name", "")
+        # Parse name — prefer the S1-correctable card title over the form "Legal Name".
+        _raw_title = (info.get("raw_title") or "").strip().replace("📋 ", "").replace("✅ ", "").strip()
+        _legal_name = (info.get("Legal Name") or "").strip()
+        name = _raw_title or _legal_name
         parts = name.split()
         first_name = parts[0] if parts else ""
         last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
@@ -2794,7 +2796,15 @@ def _onboard_member(card, state, dry_run=False):
     card_id = card.get("id")
 
     info = parse_card_for_onboarding(card)
-    name = info.get("Legal Name", info["raw_title"].replace("📋 ", "").replace("✅ ", ""))
+    # Prefer the S1-correctable card title over the immutable form "Legal Name".
+    # The form's "Legal Name" is often just a first name (e.g. "Christina"),
+    # which produced a broken username ("christina") + display name ("RCT Christina").
+    _raw_title = (info.get("raw_title") or "").strip().replace("📋 ", "").replace("✅ ", "").strip()
+    _legal_name = (info.get("Legal Name") or "").strip()
+    name = _raw_title or _legal_name
+    if len(name.split()) < 2:
+        log.warning(f"Cannot onboard card #{card_id}: name {name!r} has no last name — fix the card title and retry.")
+        return False
     email = info.get("Email", "")
 
     if not email:
@@ -3159,7 +3169,9 @@ def check_payment_cards(state, dry_run=False):
             continue
             
         info = parse_card_for_onboarding(card)
-        name = info.get("Legal Name", info["raw_title"].replace("📋 ", "").replace("✅ ", ""))
+        _raw_title = (info.get("raw_title") or "").strip().replace("📋 ", "").replace("✅ ", "").strip()
+        _legal_name = (info.get("Legal Name") or "").strip()
+        name = _raw_title or _legal_name
         proton_email = info.get("📧 Proton Mail", "").strip()
         
         # Determine the recipient: new protonmail or application email
