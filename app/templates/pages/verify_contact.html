@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Verify Your Contact Info{% endblock %}
 
+{% block head %}
+<style>
+.vf-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
+.vf-input {
+    width:100%; padding:8px 10px; font-size:14px;
+    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
+    box-sizing:border-box;
+}
+.vf-input:focus { border-color:#d4a537; outline:none; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div style="max-width:600px;margin:0 auto;">
     <h1>📋 Verify Your Contact Information</h1>
@@ -65,14 +77,4 @@
         ">Confirm & Continue</button>
     </form>
 </div>
-
-<style>
-.vf-label { display:block; font-size:11px; font-weight:600; color:#aaa; margin-bottom:3px; }
-.vf-input {
-    width:100%; padding:8px 10px; font-size:14px;
-    background:#2a2a3e; color:#eee; border:1px solid #444; border-radius:4px;
-    box-sizing:border-box;
-}
-.vf-input:focus { border-color:#d4a537; outline:none; }
-</style>
 {% endblock %}
