@@ -99,14 +99,9 @@ for (const s of SQUADS) {
   }
   for (const ft of s.fireteams) {
     for (const m of ft.members) {
-      const opts = m.isolated
-        ? { radius: 7, color: '#ff9800', weight: 2, fillColor: '#ff9800', fillOpacity: 0.9 }
-        : { radius: 6, color: '#111', weight: 1, fillColor: ft.color, fillOpacity: 0.9 };
-      const popup = '<b>' + ft.name + '</b><br>' + m.name
-        + (m.isolated ? '<br><b>⚠ isolated</b> — ' + m.isolated_km + ' km from nearest fireteam peer' : '');
-      L.circleMarker([m.lat, m.lon], opts)
+      L.circleMarker([m.lat, m.lon], { radius: 6, color: '#111', weight: 1, fillColor: ft.color, fillOpacity: 0.9 })
         .addTo(map)
-        .bindPopup(popup);
+        .bindPopup('<b>' + ft.name + '</b><br>' + m.name);
     }
   }
 }

@@ -499,9 +499,6 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
 
     palette = ["#e53935", "#8e24aa", "#3949ab", "#00897b", "#f9a825", "#6d4c41",
                "#43a047", "#00acc1", "#d81b60", "#7cb342", "#fb8c00", "#5e35b1"]
-    # A member whose nearest fireteam peer is farther than this is flagged
-    # as geographically isolated (a real outlier, not a clustering fix).
-    ISOLATED_MAX_KM = 40
 
     squads = []
     color_idx = 0
@@ -519,21 +516,10 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
         for gi, g in enumerate(groups, 1):
             color = palette[color_idx % len(palette)]
             color_idx += 1
-            members = []
-            for m in g:
-                peers = [p for p in g if p is not m]
-                min_d = min((_hav(m, p) for p in peers), default=None)
-                members.append({
-                    "name": _disp(m),
-                    "lat": m.latitude,
-                    "lon": m.longitude,
-                    "isolated": min_d is not None and min_d > ISOLATED_MAX_KM * 1000,
-                    "isolated_km": round(min_d / 1000, 1) if min_d is not None else None,
-                })
             squad["fireteams"].append({
                 "name": f"{team}-{gi}",
                 "color": color,
-                "members": members,
+                "members": [{"name": _disp(m), "lat": m.latitude, "lon": m.longitude} for m in g],
             })
         squads.append(squad)
 
