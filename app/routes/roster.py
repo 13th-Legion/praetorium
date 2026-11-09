@@ -506,18 +506,30 @@ async def squad_map(request: Request, db: AsyncSession = Depends(get_db)):
         ms = by_team[team]
         sl = next((m for m in ms if m.leadership_title == "Team Leader"), None)
         rest = [m for m in ms if m is not sl]
-        groups = _cluster(rest)
+
+        # Manual fireteam overrides: members with `fireteam` set are pinned to
+        # that number; the rest are auto-clustered into the remaining slots.
+        pinned = [m for m in rest if m.fireteam is not None]
+        unpinned = [m for m in rest if m.fireteam is None]
+        ft_map = {}
+        for m in pinned:
+            ft_map.setdefault(m.fireteam, []).append(m)
+        next_num = (max(ft_map) + 1) if pinned else 1
+        for g in _cluster(unpinned):
+            ft_map[next_num] = g
+            next_num += 1
 
         squad = {
             "team": team,
             "squad_leader": {"name": _disp(sl), "lat": sl.latitude, "lon": sl.longitude} if sl else None,
             "fireteams": [],
         }
-        for gi, g in enumerate(groups, 1):
+        for num in sorted(ft_map):
+            g = ft_map[num]
             color = palette[color_idx % len(palette)]
             color_idx += 1
             squad["fireteams"].append({
-                "name": f"{team}-{gi}",
+                "name": f"{team}-{num}",
                 "color": color,
                 "members": [{"name": _disp(m), "lat": m.latitude, "lon": m.longitude} for m in g],
             })

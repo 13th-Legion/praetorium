@@ -33,6 +33,8 @@ class Member(Base):
     # When True, the team was manually set (override) and must NOT be
     # overwritten by geo-zone auto-assignment on address edits/backfills.
     team_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    # Manual fireteam number (1-based) within the squad. NULL = auto-clustered.
+    fireteam: Mapped[Optional[int]] = mapped_column(Integer)
     company: Mapped[str] = mapped_column(String(64), default="13th Legion")
 
     # Position & Billets
