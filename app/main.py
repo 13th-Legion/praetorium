@@ -4,7 +4,7 @@
 # See AUDIT_2026-04-01.md finding 2.4
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
@@ -95,6 +95,8 @@ if _SENTRY_DSN:
 # ─── Contact Verification Middleware ─────────────────────────────────────────
 
 VERIFY_BYPASS = {"/auth/", "/verify-contact", "/static/", "/nlmedia/", "/health", "/api/docs", "/favicon.ico"}
+# Re-prompt members to re-verify their contact info after this many days.
+VERIFY_MAX_AGE_DAYS = 30
 
 
 class ContactVerifyMiddleware(BaseHTTPMiddleware):
@@ -123,9 +125,14 @@ class ContactVerifyMiddleware(BaseHTTPMiddleware):
                 )
                 row = result.first()
                 if row and row[0] is not None:
-                    # Already verified in DB — cache in session
-                    request.session["contact_verified"] = True
-                    return await call_next(request)
+                    verified_at = row[0]
+                    if verified_at.tzinfo is not None:
+                        verified_at = verified_at.replace(tzinfo=None)
+                    if datetime.utcnow() - verified_at <= timedelta(days=VERIFY_MAX_AGE_DAYS):
+                        # Recently verified — cache in session
+                        request.session["contact_verified"] = True
+                        return await call_next(request)
+                    # else: stale (older than VERIFY_MAX_AGE_DAYS) → fall through to re-verify
                 elif row is None:
                     # No member record — skip verification (admin/bot accounts)
                     return await call_next(request)
