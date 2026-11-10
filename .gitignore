@@ -59,3 +59,55 @@ praetorium.db
 
 # Local-only Deck card-creation scripts — never pushed (contain PP-XXX board automation)
 projects/praetorium-fix/
+
+# ─── Workspace cruft (non-portal artifacts — do NOT track) ──────────────────
+.clawhub/
+.ruff_cache/
+
+# Helldivers 2 mod work
+hd2-mods/
+hd2-mod-authoring-release/
+
+# Recovered data / briefs / recipes
+metttc_recovery/
+tradoc-brief/
+s6-comms-deck/
+recipe-work/
+
+# Local skills (user-owned, not portal code)
+skills/
+
+# Reference / audit / report dumps
+references/
+html-reports/
+audit-*/
+
+# Media / mockups / memes / previews
+praetorium_mockups/
+praetorium_memes/
+recon-images/
+ribbon_previews/
+13th-legion-favicons/
+
+# Intel area studies (PDF products)
+projects/*-area-study*/
+
+# Loose ad-hoc workspace files (rosters, org docs, PDFs, CSVs, images)
+13th_*
+13LP_*
+
+# Loose root-level workspace files by type (portal code lives in app/, scripts/, tests/)
+/*.pdf
+/*.csv
+/*.CSV
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.pptx
+/*.php
+/*.txt
+/*.md
+/*.sh
+/*.py
+~/
