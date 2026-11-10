@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}S6 Comms Crypto — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .s6c-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 18px 0; }
+    .s6c-grid .card { margin: 0; }
+    .s6c-full { grid-column: 1 / -1; }
+    .s6c-muted { color: #999; font-size: 13px; }
+    .s6c-result { font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 2px; color: #d4a537; background: #0f1626; border: 1px solid #333; border-radius: 4px; padding: 10px 12px; min-height: 1.4em; margin-top: 8px; word-break: break-all; }
+    .s6c-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .s6c-row .input { flex: 1 1 140px; }
+    .s6c-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 3px; }
+    .shackle-table th { text-align: left; padding: 4px 8px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+    .shackle-table td { padding: 4px 8px; border-bottom: 1px solid rgba(42,42,74,.5); font-family: 'Courier New', monospace; }
+    .key-banner { font-size: 1.15rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+</style>
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">🔐 S6 — Comms Crypto</h1>
+    <p class="s6c-muted" style="margin: 0;">Shackle code, one-time pad, and trench code generators with printable sheets and in-portal encode/decode.</p>
+    <p style="margin: 6px 0 0;"><a href="/api/s6" style="color:#d4a537;">← Back to S6 dashboard</a></p>
+</div>
+
+<!-- Shackle code -->
+<div class="card s6c-full">
+    <div class="card-title">🔗 Shackle Code <span class="s6c-muted" style="font-weight:400;">— numeral cipher</span></div>
+    <div class="card-body">
+        {% if shackle %}
+        <p class="key-banner">{{ shackle_label }}</p>
+        <table class="shackle-table" style="border-collapse: collapse;">
+            <thead><tr><th>Digit</th><th>Letter</th><th>Example word</th></tr></thead>
+            <tbody>
+            {% for d in ['1','2','3','4','5','6','7','8','9','0'] %}
+                <tr>
+                    <td>{{ d }}</td>
+                    <td style="color:#d4a537;">{{ shackle_map.get(d, '') }}</td>
+                    <td class="s6c-muted" style="font-family: inherit;">{{ nato.get(shackle_map.get(d, ''), '') }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p class="s6c-muted" style="margin: 8px 0;">Transmit: "SHACKLE" → one word per digit → "UNSHACKLE".</p>
+        <div class="s6c-row" style="margin-top: 12px;">
+            <div style="flex:1 1 160px;"><label class="s6c-label">Number → letters</label><input class="input" id="sh-en" placeholder="e.g. 1234"></div>
+            <button class="btn btn-primary" onclick="encodeShackle()">Encode</button>
+            <div style="flex:1 1 160px;"><label class="s6c-label">Letters → number</label><input class="input" id="sh-de" placeholder="e.g. CKHO"></div>
+            <button class="btn btn-primary" onclick="decodeShackle()">Decode</button>
+        </div>
+        <div class="s6c-result" id="sh-out">&nbsp;</div>
+        <div class="s6c-row" style="margin-top: 12px;">
+            <a class="btn" href="/api/s6/crypto/shackle/pdf" style="background:#333;color:#ccc;text-decoration:none;">⬇ Shackle sheet PDF</a>
+            {% if can_edit %}<button class="btn btn-primary" onclick="postReload('/api/s6/crypto/shackle/generate')">🔄 New key</button>{% endif %}
+        </div>
+        {% else %}
+        <p class="s6c-muted">No shackle key yet.</p>
+        {% if can_edit %}<button class="btn btn-primary" onclick="postReload('/api/s6/crypto/shackle/generate')">🔄 Generate key</button>{% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="s6c-grid">
+    <!-- One-time pad -->
+    <div class="card">
+        <div class="card-title">🎲 One-Time Pad <span class="s6c-muted" style="font-weight:400;">— letters A–Z</span></div>
+        <div class="card-body">
+            <div class="s6c-row">
+                <div style="flex:1 1 120px;"><label class="s6c-label">Plaintext</label><input class="input" id="otp-enc"></div>
+                <div style="flex:1 1 120px;"><label class="s6c-label">Pad key</label><input class="input" id="otp-key1"></div>
+                <button class="btn btn-primary" onclick="otpEncrypt()">Encrypt</button>
+            </div>
+            <div class="s6c-result" id="otp-enc-out">&nbsp;</div>
+            <div class="s6c-row" style="margin-top: 10px;">
+                <div style="flex:1 1 120px;"><label class="s6c-label">Ciphertext</label><input class="input" id="otp-dec"></div>
+                <div style="flex:1 1 120px;"><label class="s6c-label">Pad key</label><input class="input" id="otp-key2"></div>
+                <button class="btn btn-primary" onclick="otpDecrypt()">Decrypt</button>
+            </div>
+            <div class="s6c-result" id="otp-dec-out">&nbsp;</div>
+        </div>
+    </div>
+
+    <!-- Trench code -->
+    <div class="card">
+        <div class="card-title">📖 Trench Code <span class="s6c-muted" style="font-weight:400;">— phrase ↔ code</span></div>
+        <div class="card-body">
+            {% if current_codebook %}
+            <p class="s6c-muted" style="margin:0 0 8px;">Current: <strong style="color:#e0e0e0;">{{ current_codebook.title }}</strong> ({{ entries|length }} entries)</p>
+            {% else %}
+            <p class="s6c-muted">No codebook yet.</p>
+            {% endif %}
+            <div class="s6c-row">
+                <div style="flex:1 1 140px;"><label class="s6c-label">Message → codes</label><input class="input" id="tr-en" placeholder="e.g. ENEMY CONTACT NORTH"></div>
+                <button class="btn btn-primary" onclick="encodeTrench()">Encode</button>
+            </div>
+            <div class="s6c-result" id="tr-en-out">&nbsp;</div>
+            <div class="s6c-row" style="margin-top: 10px;">
+                <div style="flex:1 1 140px;"><label class="s6c-label">Codes → message</label><input class="input" id="tr-de" placeholder="e.g. 233 959 014"></div>
+                <button class="btn btn-primary" onclick="decodeTrench()">Decode</button>
+            </div>
+            <div class="s6c-result" id="tr-de-out">&nbsp;</div>
+        </div>
+    </div>
+</div>
+
+<!-- OTP pads -->
+<div class="card s6c-full">
+    <div class="card-title">🎲 One-Time Pads</div>
+    <div class="card-body">
+        {% if pads %}
+        <div class="s6c-tablewrap" style="overflow-x:auto;">
+            <table class="roster-table">
+                <thead><tr><th>Serial</th><th>Created</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                {% for p in pads %}
+                    <tr>
+                        <td>{{ p.serial }}</td>
+                        <td>{{ p.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                        <td>{% if p.burned %}<span class="badge badge-dim">Burned</span>{% else %}<span class="badge badge-ok">Active</span>{% endif %}</td>
+                        <td style="white-space:nowrap;">
+                            <a class="btn" href="/api/s6/crypto/otp/pdf/{{ p.id }}" style="padding:2px 8px;font-size:11px;background:#333;color:#d4a537;text-decoration:none;">PDF</a>
+                            {% if can_edit and not p.burned %}<button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#e57373;" onclick="postReload('/api/s6/crypto/otp/{{ p.id }}/burn')">Burn</button>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="s6c-muted">No pads generated.</p>
+        {% endif %}
+        {% if can_edit %}
+        <form class="s6c-row" style="margin-top:12px;" onsubmit="return genOtp(event)">
+            <div><label class="s6c-label">Pages</label><input class="input" name="pages" value="10" style="width:70px;"></div>
+            <div><label class="s6c-label">Groups/page</label><input class="input" name="groups" value="20" style="width:90px;"></div>
+            <button type="submit" class="btn btn-primary">🎲 Generate pad</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Trench codebooks -->
+<div class="card s6c-full">
+    <div class="card-title">📖 Trench Codebooks</div>
+    <div class="card-body">
+        {% if current_codebook %}
+        <div class="s6c-tablewrap" style="overflow-x:auto; max-height: 360px; overflow-y: auto;">
+            <table class="roster-table">
+                <thead><tr><th>Phrase</th><th>Code</th></tr></thead>
+                <tbody>
+                {% for phrase, code in entries %}
+                    <tr><td>{{ phrase }}</td><td style="font-family:'Courier New',monospace;color:#d4a537;">{{ code }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="s6c-row" style="margin-top:12px;">
+            <a class="btn" href="/api/s6/crypto/trench/pdf/{{ current_codebook.id }}" style="background:#333;color:#ccc;text-decoration:none;">⬇ Codebook PDF</a>
+        </div>
+        {% endif %}
+        {% if can_edit %}
+        <form class="s6c-row" style="margin-top:12px;" onsubmit="return genTrench(event)">
+            <div><label class="s6c-label">Title</label><input class="input" name="title" placeholder="e.g. Codebook NOV"></div>
+            <button type="submit" class="btn btn-primary">📖 Generate codebook</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function postText(url, data, outId) {
+        var el = document.getElementById(outId);
+        el.textContent = '…';
+        fetch(url, { method: 'POST', body: data }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            return res.text().then(function(t) { el.textContent = t; });
+        });
+    }
+    function postReload(url, data) {
+        fetch(url, { method: 'POST', body: data || new FormData() }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            window.location.reload();
+        });
+    }
+    function encodeShackle() {
+        var fd = new FormData(); fd.append('text', document.getElementById('sh-en').value);
+        postText('/api/s6/crypto/shackle/encode', fd, 'sh-out');
+    }
+    function decodeShackle() {
+        var fd = new FormData(); fd.append('text', document.getElementById('sh-de').value);
+        postText('/api/s6/crypto/shackle/decode', fd, 'sh-out');
+    }
+    function otpEncrypt() {
+        var fd = new FormData();
+        fd.append('text', document.getElementById('otp-enc').value);
+        fd.append('key', document.getElementById('otp-key1').value);
+        postText('/api/s6/crypto/otp/encrypt', fd, 'otp-enc-out');
+    }
+    function otpDecrypt() {
+        var fd = new FormData();
+        fd.append('text', document.getElementById('otp-dec').value);
+        fd.append('key', document.getElementById('otp-key2').value);
+        postText('/api/s6/crypto/otp/decrypt', fd, 'otp-dec-out');
+    }
+    function encodeTrench() {
+        var fd = new FormData(); fd.append('text', document.getElementById('tr-en').value);
+        postText('/api/s6/crypto/trench/encode', fd, 'tr-en-out');
+    }
+    function decodeTrench() {
+        var fd = new FormData(); fd.append('text', document.getElementById('tr-de').value);
+        postText('/api/s6/crypto/trench/decode', fd, 'tr-de-out');
+    }
+    function genOtp(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        fd.append('pages', f.querySelector('[name=pages]').value);
+        fd.append('groups', f.querySelector('[name=groups]').value);
+        postReload('/api/s6/crypto/otp/generate', fd);
+        return false;
+    }
+    function genTrench(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        fd.append('title', f.querySelector('[name=title]').value);
+        postReload('/api/s6/crypto/trench/generate', fd);
+        return false;
+    }
+</script>
+{% endblock %}

@@ -53,3 +53,10 @@ from app.models.urban_evasion import (
     UrbanEvasionScoreEvent,
 )  # noqa: F401
 from app.models.s6_comms import S6Channel, S6EmcommPlan, S6NetSchedule, S6Radio  # noqa: F401
+from app.models.s6_crypto import (  # noqa: F401
+    S6OtpPad,
+    S6OtpPage,
+    S6ShackleKey,
+    S6TrenchCodebook,
+    S6TrenchEntry,
+)
