@@ -1170,11 +1170,15 @@ async def events_page(request: Request):
 
     # Needs AAR — finalized events whose AAR is still unpublished (Command/S3/S1 only).
     # An event "includes an AAR" if it is FTX/MCFTX or already carries AAR content.
+    # AARs only count from when the feature shipped (2026-04-14, PP-118–126) — older
+    # historical events predate AAR tracking and must not surface here.
+    _aar_go_live = datetime(2026, 4, 14)
     needs_aar = []
     if roles & {"command", "s3", "s1", "admin"}:
         needs_aar = [
             e for e in past
-            if e["event"].finalized_at
+            if e["event"].date_start >= _aar_go_live
+            and e["event"].finalized_at
             and not e["event"].aar_published_at
             and (
                 e["event"].category in ("ftx", "mcftx")
