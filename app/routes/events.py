@@ -1168,6 +1168,21 @@ async def events_page(request: Request):
             and not e["event"].finalized_at
         ]
 
+    # Needs AAR — finalized events whose AAR is still unpublished (Command/S3/S1 only).
+    # An event "includes an AAR" if it is FTX/MCFTX or already carries AAR content.
+    needs_aar = []
+    if roles & {"command", "s3", "s1", "admin"}:
+        needs_aar = [
+            e for e in past
+            if e["event"].finalized_at
+            and not e["event"].aar_published_at
+            and (
+                e["event"].category in ("ftx", "mcftx")
+                or e["event"].aar_commander_intent is not None
+                or e["event"].aar_mission_summary is not None
+            )
+        ]
+
     recipient_groups = await _build_recipient_groups(None)
     return templates.TemplateResponse("pages/events.html", {
         "request": request,
@@ -1178,6 +1193,7 @@ async def events_page(request: Request):
         "upcoming": upcoming,
         "past": past,
         "needs_finalization": needs_finalization,
+        "needs_aar": needs_aar,
         "current_tab": tab,
         "filter_tabs": FILTER_TABS,
         "categories": VALID_CATEGORIES(),
