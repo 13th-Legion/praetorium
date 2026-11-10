@@ -110,6 +110,12 @@
 
                     <!-- Action buttons -->
                     <div id="kanban-action-{{ card.id }}" style="display:flex;flex-direction:column;gap:4px;">
+                        {% if card.has_prev %}
+                        <button onclick="htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/back', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'})"
+                            style="padding:4px 8px;background:rgba(21,101,192,0.15);color:#90caf9;border:1px solid rgba(21,101,192,0.4);border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
+                            {{ card.back_label }}
+                        </button>
+                        {% endif %}
                         {% if card.has_next %}
                         <!-- Advance -->
                         {% if card.is_approve %}

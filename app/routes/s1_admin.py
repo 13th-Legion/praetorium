@@ -528,6 +528,18 @@ ADVANCE_LABELS = {
     15: "Mark Complete",
 }
 
+# Reverse stage flow: current_stack_id → previous_stack_id
+STAGE_FLOW_REVERSE = {v: k for k, v in STAGE_FLOW.items()}
+
+# Labels for the "back" button per stage (what you move back INTO)
+BACK_LABELS = {
+    12: "← New Application",
+    13: "← Background Check",
+    14: "← Interview",
+    15: "← Documents & Payment",
+    16: "← Approved — Onboarding",
+}
+
 
 # ─── PP-052: Recruiter Credit & Load Accounting ─────────────────────────────
 # current_load = ACTIVE pipeline assignments only (members with status='recruit'
@@ -725,6 +737,8 @@ async def _fetch_pipeline_applicants() -> list[dict]:
                         "advance_label": ADVANCE_LABELS.get(stack_id),
                         "next_stage": DECK_STACKS.get(STAGE_FLOW.get(stack_id, 0), ""),
                         "is_approve": stack_id == 14,  # Docs & Payment → Approve triggers onboarding
+                        "has_prev": stack_id in STAGE_FLOW_REVERSE,
+                        "back_label": BACK_LABELS.get(stack_id),
                     })
     except Exception as e:
         # Was a bare `except Exception: pass`, which turned a broken Deck
@@ -855,6 +869,8 @@ async def _fetch_full_pipeline(db=None) -> dict:
                         "advance_label": ADVANCE_LABELS.get(stack_id),
                         "is_approve": stack_id == 14,
                         "has_next": stack_id in STAGE_FLOW,
+                        "has_prev": stack_id in STAGE_FLOW_REVERSE,
+                        "back_label": BACK_LABELS.get(stack_id),
                         "proton_email": proton_email if has_proton else "",
                         "payment_status": payment_status,
                         "payment_method": payment_method,
@@ -1285,6 +1301,68 @@ async def advance_pipeline_stage(request: Request, card_id: int):
                     f'{credit_status}'
                     f'<span style="color:#888;font-size:11px;">by {by}</span>'
                     f'</div>',
+                    headers={"HX-Trigger": "pipelineChanged"},
+                )
+            else:
+                return HTMLResponse(f'<span style="color:#c62828;">❌ Move failed ({move_resp.status_code})</span>')
+
+    except Exception as e:
+        return HTMLResponse(f'<span style="color:#c62828;">❌ Error: {e}</span>')
+
+
+@router.post("/pipeline/{card_id}/back")
+@require_auth
+async def back_pipeline_stage(request: Request, card_id: int):
+    """Move a Deck card back to the previous pipeline stage."""
+    user = request.session.get("user", {})
+    require_pipeline(user)
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            current_stack_id = None
+            card_title = "Unknown"
+            card_desc = ""
+            resp = await client.get(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks",
+                headers={"OCS-APIRequest": "true", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+            )
+            resp.raise_for_status()
+            for stack in resp.json():
+                for card in stack.get("cards", []):
+                    if card["id"] == card_id:
+                        current_stack_id = stack["id"]
+                        card_title = card.get("title", "Unknown")
+                        card_desc = card.get("description", "")
+                        break
+                if current_stack_id:
+                    break
+
+            if not current_stack_id:
+                return HTMLResponse('<span style="color:#c62828;">❌ Card not found</span>')
+
+            prev_stack_id = STAGE_FLOW_REVERSE.get(current_stack_id)
+            if not prev_stack_id:
+                return HTMLResponse('<span style="color:#888;">Already at first stage</span>')
+
+            move_resp = await client.put(
+                f"{NC_URL}/index.php/apps/deck/api/v1.0/boards/{DECK_BOARD_ID}/stacks/{prev_stack_id}/cards/{card_id}",
+                headers={"OCS-APIRequest": "true", "Content-Type": "application/json", "Accept": "application/json"},
+                auth=(NC_SVC_USER, NC_SVC_PASS),
+                json={
+                    "title": card_title,
+                    "description": card_desc,
+                    "type": "plain",
+                    "order": 999,
+                    "owner": NC_SVC_USER,
+                },
+            )
+
+            if move_resp.status_code in (200, 201):
+                prev_name = DECK_STACKS.get(prev_stack_id, "previous stage")
+                by = user.get("display_name", user.get("uid", "unknown"))
+                return HTMLResponse(
+                    f'<span style="color:#1565c0;font-size:11px;">← Moved back to {prev_name} by {by}</span>',
                     headers={"HX-Trigger": "pipelineChanged"},
                 )
             else:
