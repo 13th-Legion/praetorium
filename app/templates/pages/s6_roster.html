@@ -5,17 +5,17 @@
 {% include "partials/s6_styles.html" %}
 
 <div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
-    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">📻 Comms-Qualified Roster</h1>
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">📻 Licensed Operators</h1>
     <p class="s6-muted" style="margin: 0;"><a href="/api/s6" style="color:#d4a537;">← S6 dashboard</a></p>
 </div>
 
 <div class="card">
-    <div class="card-title">Qualified Operators</div>
+    <div class="card-title">Licensed Operators</div>
     <div class="card-body">
-        <p class="s6-muted" style="margin-bottom: 10px;">Members who have signed off all three comms TRADOC items: Radio Familiarity, Net Etiquette, and Reports.</p>
+        <p class="s6-muted" style="margin-bottom: 10px;">Members holding a HAM and/or GMRS license.</p>
         <div class="s6-tablewrap">
             <table class="roster-table">
-                <thead><tr><th>Name</th><th>Call Sign</th><th>HAM</th><th>License</th><th>Team</th></tr></thead>
+                <thead><tr><th>Name</th><th>Call Sign</th><th>HAM</th><th>Class</th><th>GMRS</th><th>Team</th></tr></thead>
                 <tbody>
                 {% for m in roster %}
                     <tr>
@@ -23,10 +23,11 @@
                         <td>{{ m.callsign or '—' }}</td>
                         <td>{{ m.ham_callsign or '—' }}</td>
                         <td>{{ m.ham_license_class or '—' }}</td>
+                        <td>{{ m.gmrs_callsign or '—' }}</td>
                         <td>{{ m.team or '—' }}</td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="5" class="s6-muted">No comms-qualified members yet.</td></tr>
+                    <tr><td colspan="6" class="s6-muted">No licensed operators on record.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

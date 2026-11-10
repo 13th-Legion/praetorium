@@ -11,7 +11,7 @@ import re
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, is_guest, require_auth
@@ -20,14 +20,10 @@ from app.database import get_db
 from app.models.member import Member
 from app.models.s6_comms import S6Channel, S6EmcommPlan, S6NetSchedule, S6Radio
 from app.models.s6_crypto import S6ShackleKey
-from app.models.training import MemberTradoc, TradocItem
 from app.services.ranks import abbr_map
 
 router = APIRouter(prefix="/api/s6", tags=["s6-admin"])
 templates = Jinja2Templates(directory="app/templates")
-
-# Matches ribbon_derive.COMMS_ITEM_NAMES — all three must be signed off for comms qualification.
-COMMS_ITEM_NAMES = {"Radio Familiarity", "Net Etiquette", "Reports"}
 
 
 async def _current_member(request: Request, db: AsyncSession) -> Member | None:
@@ -71,24 +67,16 @@ def _can_edit(user: dict | None, member: Member | None) -> bool:
 
 
 async def _comms_roster(db: AsyncSession) -> list[Member]:
-    """Active/recruit members who completed all three comms TRADOC items."""
-    rows = (await db.execute(select(TradocItem.id, TradocItem.name))).all()
-    by_name = {(n or "").strip().lower(): i for i, n in rows}
-    item_ids = {by_name[n.lower()] for n in COMMS_ITEM_NAMES if n.lower() in by_name}
-    if len(item_ids) < len(COMMS_ITEM_NAMES):
-        return []
-    rows = await db.execute(
-        select(MemberTradoc.member_id)
-        .where(MemberTradoc.item_id.in_(item_ids))
-        .group_by(MemberTradoc.member_id)
-        .having(func.count(func.distinct(MemberTradoc.item_id)) == len(item_ids))
-    )
-    member_ids = [r[0] for r in rows.all()]
-    if not member_ids:
-        return []
+    """Active/recruit members holding a HAM and/or GMRS license."""
     res = await db.execute(
         select(Member)
-        .where(Member.id.in_(member_ids), Member.status.in_(["active", "recruit"]))
+        .where(
+            Member.status.in_(["active", "recruit"]),
+            or_(
+                (Member.ham_callsign.isnot(None)) & (Member.ham_callsign != ""),
+                (Member.gmrs_callsign.isnot(None)) & (Member.gmrs_callsign != ""),
+            ),
+        )
         .order_by(Member.last_name, Member.first_name)
     )
     return list(res.scalars().all())
