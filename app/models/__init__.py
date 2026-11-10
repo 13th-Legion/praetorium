@@ -52,3 +52,4 @@ from app.models.urban_evasion import (
     UrbanEvasionEvolution,
     UrbanEvasionScoreEvent,
 )  # noqa: F401
+from app.models.s6_comms import S6Channel, S6EmcommPlan, S6NetSchedule, S6Radio  # noqa: F401

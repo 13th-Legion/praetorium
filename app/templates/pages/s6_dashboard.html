@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}S6 Communications — 13th Legion{% endblock %}
+
+{% block content %}
+<style>
+    .s6-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 18px 0; }
+    .s6-grid .card { margin: 0; }
+    .s6-full { grid-column: 1 / -1; }
+    .s6-muted { color: #999; font-size: 13px; }
+    .s6-status { margin: 10px 0; min-height: 1.2em; font-size: 14px; }
+    #s6-editor { background: #0f1626; min-height: 260px; }
+    #s6-editor .ql-toolbar { background: #16213e; border: 1px solid #333; border-radius: 4px 4px 0 0; }
+    #s6-editor .ql-container { border: 1px solid #333; border-radius: 0 0 4px 4px; color: #e0e0e0; font-size: 14px; }
+    .s6-preview { border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; background: #0f1626; max-height: 420px; overflow-y: auto; }
+    .s6-preview h1, .s6-preview h2, .s6-preview h3 { color: var(--accent); }
+    .s6-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+    .s6-form label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 3px; }
+    .s6-form .input { width: 100%; box-sizing: border-box; padding: 0.55rem 0.6rem; font-size: 0.85rem; }
+    .s6-btnrow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .s6-btnrow .btn { font-size: 0.8rem; padding: 0.5rem 1.1rem; }
+    .s6-tablewrap { overflow-x: auto; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-ok { background: rgba(46,125,50,.18); color: #81c784; }
+    .badge-out { background: rgba(198,40,40,.18); color: #e57373; }
+    .badge-dim { background: rgba(120,120,120,.18); color: #b0b0b0; }
+</style>
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">📡 S6 — Communications</h1>
+    <p class="s6-muted" style="margin: 0;">Emergency Communications Plan, channel &amp; frequency reference, net schedule, and radio inventory for the 13th Legion — DFW Area of Operations.</p>
+</div>
+
+{% if can_edit %}
+<div class="card s6-full">
+    <div class="card-title">🆘 EmComm Plan <span class="s6-muted" style="font-weight:400;">— editable draft</span></div>
+    <div class="card-body">
+        <div id="s6-editor"></div>
+        <div class="s6-btnrow">
+            <button type="button" class="btn btn-primary" onclick="saveDraft()">💾 Save Draft</button>
+            <button type="button" class="btn btn-primary" onclick="publishPlan()">📢 Publish</button>
+            <button type="button" class="btn" onclick="discardDraft()" style="background:#333;color:#ccc;">🗑 Discard Draft</button>
+            <a class="btn" href="/api/s6/emcomm/pdf" style="background:#333;color:#ccc;text-decoration:none;">⬇ Export PDF</a>
+        </div>
+        <div id="s6-status" class="s6-status"></div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card s6-full">
+    <div class="card-title">🆘 EmComm Plan — Published{% if plan and plan.published_at %} <span class="s6-muted" style="font-weight:400;">({{ plan.published_at.strftime('%d %b %Y %H:%M') }} CT{% if plan.updated_by %} · {{ plan.updated_by }}{% endif %})</span>{% endif %}</div>
+    <div class="card-body">
+        {% if plan and plan.content %}
+        <div class="s6-preview">{{ plan.content | safe }}</div>
+        {% else %}
+        <p class="s6-muted">No EmComm Plan published yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="s6-grid">
+    <div class="card">
+        <div class="card-title">📻 Comms-Qualified Roster</div>
+        <div class="card-body s6-tablewrap">
+            {% if roster %}
+            <table class="roster-table">
+                <thead><tr><th>Name</th><th>Call Sign</th><th>HAM</th><th>License</th><th>Team</th></tr></thead>
+                <tbody>
+                {% for m in roster %}
+                    <tr>
+                        <td>{{ rank_abbr.get(m.rank_grade, m.rank_grade or '') }} {{ m.last_name }}, {{ m.first_name }}</td>
+                        <td>{{ m.callsign or '—' }}</td>
+                        <td>{{ m.ham_callsign or '—' }}</td>
+                        <td>{{ m.ham_license_class or '—' }}</td>
+                        <td>{{ m.team or '—' }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="s6-muted">No comms-qualified members yet (Radio Familiarity, Net Etiquette, and Reports all signed off).</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📅 Net Schedule</div>
+        <div class="card-body s6-tablewrap">
+            {% if nets %}
+            <table class="roster-table">
+                <thead><tr><th>Day</th><th>Time</th><th>Freq</th><th>Net</th><th>Purpose</th></tr></thead>
+                <tbody>
+                {% for n in nets %}
+                    <tr>
+                        <td>{{ n.day_of_week }}</td>
+                        <td>{{ n.start_time }}</td>
+                        <td>{{ n.frequency }}</td>
+                        <td>{{ n.alias }}</td>
+                        <td>{{ n.purpose }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="s6-muted">No nets scheduled.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card s6-full">
+    <div class="card-title">📶 Channel &amp; Frequency Reference</div>
+    <div class="card-body">
+        <div class="s6-tablewrap">
+            <table class="roster-table">
+                <thead><tr><th>#</th><th>Type</th><th>Alias</th><th>RX</th><th>TX</th><th>Power</th><th>DEC</th><th>ENC</th><th>Notes</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+                <tbody>
+                {% for c in channels %}
+                    <tr>
+                        <td>{{ c.channel_no }}</td>
+                        <td>{{ c.channel_type }}</td>
+                        <td>{{ c.alias }}</td>
+                        <td>{{ c.rx_freq }}</td>
+                        <td>{{ c.tx_freq }}</td>
+                        <td>{{ c.tx_power }}</td>
+                        <td>{{ c.dec_tone }}</td>
+                        <td>{{ c.enc_tone }}</td>
+                        <td>{{ c.notes }}</td>
+                        {% if can_edit %}<td><button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#e57373;" onclick="delChannel({{ c.id }})">✕</button></td>{% endif %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{% if can_edit %}10{% else %}9{% endif %}" class="s6-muted">No channels recorded.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if can_edit %}
+        <form class="s6-form" onsubmit="return addChannel(event)">
+            <div><label>Channel #</label><input class="input" name="channel_no"></div>
+            <div><label>Type</label><input class="input" name="channel_type"></div>
+            <div><label>Alias</label><input class="input" name="alias"></div>
+            <div><label>RX Freq</label><input class="input" name="rx_freq"></div>
+            <div><label>TX Freq</label><input class="input" name="tx_freq"></div>
+            <div><label>Power</label><input class="input" name="tx_power"></div>
+            <div><label>DEC Tone</label><input class="input" name="dec_tone"></div>
+            <div><label>ENC Tone</label><input class="input" name="enc_tone"></div>
+            <div><label>Notes</label><input class="input" name="notes"></div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary">＋ Add</button></div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if can_edit %}
+<div class="card s6-full">
+    <div class="card-title">📅 Add Net</div>
+    <div class="card-body">
+        <form class="s6-form" onsubmit="return addNet(event)">
+            <div><label>Day</label><input class="input" name="day_of_week" placeholder="e.g. Sun"></div>
+            <div><label>Time</label><input class="input" name="start_time" placeholder="e.g. 2000"></div>
+            <div><label>Freq</label><input class="input" name="frequency"></div>
+            <div><label>Net Name</label><input class="input" name="alias"></div>
+            <div><label>Purpose</label><input class="input" name="purpose"></div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary">＋ Add</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card s6-full">
+    <div class="card-title">🔦 Radio &amp; Equipment Inventory</div>
+    <div class="card-body">
+        <div class="s6-tablewrap">
+            <table class="roster-table">
+                <thead><tr><th>Name</th><th>Type</th><th>Serial</th><th>Status</th><th>Held By</th>{% if can_edit %}<th>Actions</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for r in radios %}
+                    <tr>
+                        <td>{{ r.name }}</td>
+                        <td>{{ r.radio_type }}</td>
+                        <td>{{ r.serial }}</td>
+                        <td>
+                            {% if r.status == 'checked_out' %}<span class="badge badge-out">Checked out</span>
+                            {% elif r.status == 'maintenance' %}<span class="badge badge-dim">Maintenance</span>
+                            {% else %}<span class="badge badge-ok">Available</span>{% endif %}
+                        </td>
+                        <td>{{ r.checked_out_to or '—' }}</td>
+                        {% if can_edit %}
+                        <td style="white-space:nowrap;">
+                            {% if r.status == 'checked_out' %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#81c784;" onclick="checkinRadio({{ r.id }})">Check in</button>
+                            {% else %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#d4a537;" onclick="checkoutRadio({{ r.id }})">Check out</button>
+                            {% endif %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#e57373;" onclick="delRadio({{ r.id }})">✕</button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{% if can_edit %}6{% else %}5{% endif %}" class="s6-muted">No radios on the books.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if can_edit %}
+        <form class="s6-form" onsubmit="return addRadio(event)">
+            <div><label>Name</label><input class="input" name="name" placeholder="e.g. Baofeng UV-5R"></div>
+            <div><label>Type</label><input class="input" name="radio_type" placeholder="HT / Mobile / Base"></div>
+            <div><label>Serial</label><input class="input" name="serial"></div>
+            <div><label>Notes</label><input class="input" name="notes"></div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary">＋ Add</button></div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var s6Quill = new Quill('#s6-editor', {
+        theme: 'snow',
+        modules: { toolbar: [
+            [{ header: [1,2,3,false] }], ['bold','italic','underline','strike'],
+            [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote'],
+            ['link','image'], ['clean']
+        ]}
+    });
+    {% if plan and (plan.draft_content or plan.content) %}s6Quill.root.innerHTML = {{ (plan.draft_content or plan.content or '') | tojson }};{% endif %}
+    attachQuillImageUpload(s6Quill, '/api/media/image-upload');
+
+    function setStatus(html) { document.getElementById('s6-status').innerHTML = html; }
+
+    function postForm(url, data, reload) {
+        return fetch(url, { method: 'POST', body: data }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            return res.text().then(function(t) { setStatus(t); if (reload) setTimeout(function(){ window.location.reload(); }, 700); });
+        });
+    }
+
+    function saveDraft() {
+        var fd = new FormData();
+        fd.append('content', s6Quill.root.innerHTML);
+        postForm('/api/s6/emcomm/save-draft', fd, false);
+    }
+    function publishPlan() {
+        var fd = new FormData();
+        fd.append('content', s6Quill.root.innerHTML);
+        postForm('/api/s6/emcomm/publish', fd, true);
+    }
+    function discardDraft() {
+        postForm('/api/s6/emcomm/discard', new FormData(), true);
+    }
+
+    function addChannel(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        ['channel_no','channel_type','alias','rx_freq','tx_freq','tx_power','dec_tone','enc_tone','notes'].forEach(function(k){
+            var el = f.querySelector('[name='+k+']'); if (el) fd.append(k, el.value);
+        });
+        postForm('/api/s6/channel', fd, true);
+        return false;
+    }
+    function delChannel(id) {
+        if (!confirm('Delete this channel?')) return;
+        postForm('/api/s6/channel/' + id + '/delete', new FormData(), true);
+    }
+    function addNet(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        ['day_of_week','start_time','frequency','alias','purpose'].forEach(function(k){
+            var el = f.querySelector('[name='+k+']'); if (el) fd.append(k, el.value);
+        });
+        postForm('/api/s6/net', fd, true);
+        return false;
+    }
+    function addRadio(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        ['name','radio_type','serial','notes'].forEach(function(k){
+            var el = f.querySelector('[name='+k+']'); if (el) fd.append(k, el.value);
+        });
+        postForm('/api/s6/radio', fd, true);
+        return false;
+    }
+    function checkoutRadio(id) {
+        var who = prompt('Checked out to (name / call sign):');
+        if (who === null) return;
+        var fd = new FormData();
+        fd.append('checked_out_to', who);
+        postForm('/api/s6/radio/' + id + '/checkout', fd, true);
+    }
+    function checkinRadio(id) {
+        postForm('/api/s6/radio/' + id + '/checkin', new FormData(), true);
+    }
+    function delRadio(id) {
+        if (!confirm('Delete this radio?')) return;
+        postForm('/api/s6/radio/' + id + '/delete', new FormData(), true);
+    }
+</script>
+{% endblock %}

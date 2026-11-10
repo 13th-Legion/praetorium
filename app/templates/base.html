@@ -156,7 +156,7 @@
             {% if "s5" in user.roles or "command" in user.roles or "admin" in user.roles %}
                 {% set _ = shop_roles.shops.append("s5") %}
             {% endif %}
-            {% if "s6" in user.roles or "command" in user.roles or "admin" in user.roles %}
+            {% if "s6" in user.roles or "leader" in user.roles or "command" in user.roles or "admin" in user.roles %}
                 {% set _ = shop_roles.shops.append("s6") %}
             {% endif %}
             {% set is_recruit = "recruit" in user.roles %}
@@ -226,7 +226,7 @@
                     {% endif %}
                     {% if "s6" in shop_roles.shops %}
                     <div>
-                        <a href="/shops/s6" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📡 S6 — Comms</a>
+                        <a href="/api/s6" style="display: block; padding: 8px 16px; color: #d4a537; text-decoration: none; font-size: 13px; font-weight: 600;">📡 S6 — Comms</a>
                     </div>
                     {% endif %}
                 </div>
