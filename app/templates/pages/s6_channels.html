@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Channel Reference — S6 — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s6_styles.html" %}
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">📶 Channel &amp; Frequency Reference</h1>
+    <p class="s6-muted" style="margin: 0;"><a href="/api/s6" style="color:#d4a537;">← S6 dashboard</a></p>
+</div>
+
+<div class="card">
+    <div class="card-title">Channels</div>
+    <div class="card-body">
+        <div class="s6-tablewrap">
+            <table class="roster-table">
+                <thead><tr><th>#</th><th>Type</th><th>Alias</th><th>RX</th><th>TX</th><th>Power</th><th>DEC</th><th>ENC</th><th>Notes</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+                <tbody>
+                {% for c in channels %}
+                    <tr>
+                        <td>{{ c.channel_no }}</td>
+                        <td>{{ c.channel_type }}</td>
+                        <td>{{ c.alias }}</td>
+                        <td>{{ c.rx_freq }}</td>
+                        <td>{{ c.tx_freq }}</td>
+                        <td>{{ c.tx_power }}</td>
+                        <td>{{ c.dec_tone }}</td>
+                        <td>{{ c.enc_tone }}</td>
+                        <td>{{ c.notes }}</td>
+                        {% if can_edit %}<td><button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#e57373;" onclick="delChannel({{ c.id }})">✕</button></td>{% endif %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{% if can_edit %}10{% else %}9{% endif %}" class="s6-muted">No channels recorded.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if can_edit %}
+        <form class="s6-form" onsubmit="return addChannel(event)">
+            <div><label>Channel #</label><input class="input" name="channel_no"></div>
+            <div><label>Type</label><input class="input" name="channel_type"></div>
+            <div><label>Alias</label><input class="input" name="alias"></div>
+            <div><label>RX Freq</label><input class="input" name="rx_freq"></div>
+            <div><label>TX Freq</label><input class="input" name="tx_freq"></div>
+            <div><label>Power</label><input class="input" name="tx_power"></div>
+            <div><label>DEC Tone</label><input class="input" name="dec_tone"></div>
+            <div><label>ENC Tone</label><input class="input" name="enc_tone"></div>
+            <div><label>Notes</label><input class="input" name="notes"></div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary">＋ Add</button></div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function postReload(url, data) {
+        fetch(url, { method: 'POST', body: data || new FormData() }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            window.location.reload();
+        });
+    }
+    function addChannel(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        ['channel_no','channel_type','alias','rx_freq','tx_freq','tx_power','dec_tone','enc_tone','notes'].forEach(function(k){
+            var el = f.querySelector('[name='+k+']'); if (el) fd.append(k, el.value);
+        });
+        postReload('/api/s6/channel', fd);
+        return false;
+    }
+    function delChannel(id) {
+        if (!confirm('Delete this channel?')) return;
+        postReload('/api/s6/channel/' + id + '/delete');
+    }
+</script>
+{% endblock %}

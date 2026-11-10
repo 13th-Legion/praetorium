@@ -19,6 +19,7 @@ from app.clock import now_ct
 from app.database import get_db
 from app.models.member import Member
 from app.models.s6_comms import S6Channel, S6EmcommPlan, S6NetSchedule, S6Radio
+from app.models.s6_crypto import S6ShackleKey
 from app.models.training import MemberTradoc, TradocItem
 from app.services.ranks import abbr_map
 
@@ -101,19 +102,108 @@ async def s6_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     if not _can_view(user, member):
         raise HTTPException(status_code=403, detail="Restricted")
     plan = (await db.execute(select(S6EmcommPlan).where(S6EmcommPlan.id == 1))).scalar_one_or_none()
-    channels = (await db.execute(select(S6Channel).order_by(S6Channel.ordinal, S6Channel.id))).scalars().all()
-    nets = (await db.execute(select(S6NetSchedule).order_by(S6NetSchedule.id))).scalars().all()
-    radios = (await db.execute(select(S6Radio).order_by(S6Radio.name))).scalars().all()
+    channel_count = (await db.execute(select(func.count(S6Channel.id)))).scalar() or 0
+    net_count = (await db.execute(select(func.count(S6NetSchedule.id)))).scalar() or 0
+    radio_total = (await db.execute(select(func.count(S6Radio.id)))).scalar() or 0
+    radio_out = (await db.execute(select(func.count(S6Radio.id)).where(S6Radio.status == "checked_out"))).scalar() or 0
     roster = await _comms_roster(db)
-    return templates.TemplateResponse("pages/s6_dashboard.html", {
+    shackle = (await db.execute(select(S6ShackleKey).order_by(S6ShackleKey.id.desc()).limit(1))).scalar_one_or_none()
+    if plan and plan.content:
+        plan_status = "Live"
+    elif plan and plan.draft_content:
+        plan_status = "Draft"
+    else:
+        plan_status = "None"
+    return templates.TemplateResponse("pages/s6_hub.html", {
         "request": request,
         "user": user,
-        "member": member,
+        "can_edit": _can_edit(user, member),
+        "plan_status": plan_status,
+        "plan_draft": bool(plan and plan.draft_content),
+        "channel_count": channel_count,
+        "net_count": net_count,
+        "radio_total": radio_total,
+        "radio_out": radio_out,
+        "roster_count": len(roster),
+        "shackle_label": f"{shackle.word.upper()}{shackle.offset}" if shackle else "",
+    })
+
+
+@router.get("/emcomm", response_class=HTMLResponse)
+@require_auth
+async def s6_emcomm_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    if not _can_view(user, member):
+        raise HTTPException(status_code=403, detail="Restricted")
+    plan = (await db.execute(select(S6EmcommPlan).where(S6EmcommPlan.id == 1))).scalar_one_or_none()
+    return templates.TemplateResponse("pages/s6_emcomm.html", {
+        "request": request,
+        "user": user,
         "can_edit": _can_edit(user, member),
         "plan": plan,
+    })
+
+
+@router.get("/channels", response_class=HTMLResponse)
+@require_auth
+async def s6_channels_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    if not _can_view(user, member):
+        raise HTTPException(status_code=403, detail="Restricted")
+    channels = (await db.execute(select(S6Channel).order_by(S6Channel.ordinal, S6Channel.id))).scalars().all()
+    return templates.TemplateResponse("pages/s6_channels.html", {
+        "request": request,
+        "user": user,
+        "can_edit": _can_edit(user, member),
         "channels": channels,
+    })
+
+
+@router.get("/nets", response_class=HTMLResponse)
+@require_auth
+async def s6_nets_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    if not _can_view(user, member):
+        raise HTTPException(status_code=403, detail="Restricted")
+    nets = (await db.execute(select(S6NetSchedule).order_by(S6NetSchedule.id))).scalars().all()
+    return templates.TemplateResponse("pages/s6_nets.html", {
+        "request": request,
+        "user": user,
+        "can_edit": _can_edit(user, member),
         "nets": nets,
+    })
+
+
+@router.get("/radios", response_class=HTMLResponse)
+@require_auth
+async def s6_radios_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    if not _can_view(user, member):
+        raise HTTPException(status_code=403, detail="Restricted")
+    radios = (await db.execute(select(S6Radio).order_by(S6Radio.name))).scalars().all()
+    return templates.TemplateResponse("pages/s6_radios.html", {
+        "request": request,
+        "user": user,
+        "can_edit": _can_edit(user, member),
         "radios": radios,
+    })
+
+
+@router.get("/roster", response_class=HTMLResponse)
+@require_auth
+async def s6_roster_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_current_user(request)
+    member = await _current_member(request, db)
+    if not _can_view(user, member):
+        raise HTTPException(status_code=403, detail="Restricted")
+    roster = await _comms_roster(db)
+    return templates.TemplateResponse("pages/s6_roster.html", {
+        "request": request,
+        "user": user,
         "roster": roster,
         "rank_abbr": abbr_map(),
     })

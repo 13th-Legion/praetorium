@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}EmComm Plan — S6 — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s6_styles.html" %}
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">🆘 EmComm Plan</h1>
+    <p class="s6-muted" style="margin: 0;"><a href="/api/s6" style="color:#d4a537;">← S6 dashboard</a></p>
+</div>
+
+{% if can_edit %}
+<div class="card">
+    <div class="card-title">Editable Draft</div>
+    <div class="card-body">
+        <div id="s6-editor"></div>
+        <div class="s6-btnrow">
+            <button type="button" class="btn btn-primary" onclick="saveDraft()">💾 Save Draft</button>
+            <button type="button" class="btn btn-primary" onclick="publishPlan()">📢 Publish</button>
+            <button type="button" class="btn" onclick="discardDraft()" style="background:#333;color:#ccc;">🗑 Discard Draft</button>
+            <a class="btn" href="/api/s6/emcomm/pdf" style="background:#333;color:#ccc;text-decoration:none;">⬇ Export PDF</a>
+        </div>
+        <div id="s6-status" class="s6-status"></div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:16px;">
+    <div class="card-title">Published{% if plan and plan.published_at %} <span class="s6-muted" style="font-weight:400;">({{ plan.published_at.strftime('%d %b %Y %H:%M') }} CT{% if plan.updated_by %} · {{ plan.updated_by }}{% endif %})</span>{% endif %}</div>
+    <div class="card-body">
+        {% if plan and plan.content %}
+        <div class="s6-preview">{{ plan.content | safe }}</div>
+        {% else %}
+        <p class="s6-muted">No EmComm Plan published yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var s6Quill = new Quill('#s6-editor', {
+        theme: 'snow',
+        modules: { toolbar: [
+            [{ header: [1,2,3,false] }], ['bold','italic','underline','strike'],
+            [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote'],
+            ['link','image'], ['clean']
+        ]}
+    });
+    {% if plan and (plan.draft_content or plan.content) %}s6Quill.root.innerHTML = {{ (plan.draft_content or plan.content or '') | tojson }};{% endif %}
+    attachQuillImageUpload(s6Quill, '/api/media/image-upload');
+
+    function setStatus(html) { document.getElementById('s6-status').innerHTML = html; }
+    function postForm(url, data, reload) {
+        return fetch(url, { method: 'POST', body: data }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            return res.text().then(function(t) { setStatus(t); if (reload) setTimeout(function(){ window.location.reload(); }, 700); });
+        });
+    }
+    function saveDraft() {
+        var fd = new FormData();
+        fd.append('content', s6Quill.root.innerHTML);
+        postForm('/api/s6/emcomm/save-draft', fd, false);
+    }
+    function publishPlan() {
+        var fd = new FormData();
+        fd.append('content', s6Quill.root.innerHTML);
+        postForm('/api/s6/emcomm/publish', fd, true);
+    }
+    function discardDraft() {
+        postForm('/api/s6/emcomm/discard', new FormData(), true);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}S6 Communications — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s6_styles.html" %}
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">📡 S6 — Communications</h1>
+    <p class="s6-muted" style="margin: 0;">Emergency Communications Plan, channel &amp; frequency reference, net schedule, radio inventory, and comms crypto for the 13th Legion — DFW Area of Operations.</p>
+</div>
+
+<div class="s6-stats">
+    <div class="s6-stat">
+        <div class="num">{{ plan_status }}</div>
+        <div class="lbl">EmComm Plan</div>
+        <div class="sub">{% if plan_draft %}draft pending{% else %}published / none{% endif %}</div>
+    </div>
+    <div class="s6-stat">
+        <div class="num">{{ channel_count }}</div>
+        <div class="lbl">Channels</div>
+    </div>
+    <div class="s6-stat">
+        <div class="num">{{ net_count }}</div>
+        <div class="lbl">Scheduled nets</div>
+    </div>
+    <div class="s6-stat">
+        <div class="num">{{ radio_total }}</div>
+        <div class="lbl">Radios</div>
+        <div class="sub">{{ radio_out }} checked out</div>
+    </div>
+    <div class="s6-stat">
+        <div class="num">{{ roster_count }}</div>
+        <div class="lbl">Comms-qualified</div>
+    </div>
+    <div class="s6-stat">
+        <div class="num" style="font-size: 18px; padding-top: 6px;">{{ shackle_label or '—' }}</div>
+        <div class="lbl">Active shackle key</div>
+    </div>
+</div>
+
+<div class="s6-cards">
+    <a href="/api/s6/emcomm" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>🆘 EmComm Plan</h3>
+            <p class="s6-muted">Draft, publish, and export the Emergency Communications Plan.</p>
+        </div>
+    </a>
+    <a href="/api/s6/channels" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>📶 Channel Reference</h3>
+            <p class="s6-muted">Channel &amp; frequency table — one source of truth.</p>
+        </div>
+    </a>
+    <a href="/api/s6/nets" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>📅 Net Schedule</h3>
+            <p class="s6-muted">Recurring radio nets and their frequencies.</p>
+        </div>
+    </a>
+    <a href="/api/s6/radios" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>🔦 Radio Inventory</h3>
+            <p class="s6-muted">Radios &amp; equipment, with checkout tracking.</p>
+        </div>
+    </a>
+    <a href="/api/s6/roster" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>📻 Comms Roster</h3>
+            <p class="s6-muted">Members qualified on Radio Familiarity, Net Etiquette, Reports.</p>
+        </div>
+    </a>
+    <a href="/api/s6/crypto" style="text-decoration:none;">
+        <div class="s6-card" style="height:100%;">
+            <h3>🔐 Comms Crypto</h3>
+            <p class="s6-muted">Shackle code, one-time pad, and trench code generators.</p>
+        </div>
+    </a>
+</div>
+{% endblock %}

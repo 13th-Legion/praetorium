@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Radio Inventory — S6 — 13th Legion{% endblock %}
+
+{% block content %}
+{% include "partials/s6_styles.html" %}
+
+<div class="card" style="margin-bottom: 18px; border-left: 3px solid var(--accent);">
+    <h1 style="margin: 0 0 4px; font-size: 1.5rem;">🔦 Radio &amp; Equipment Inventory</h1>
+    <p class="s6-muted" style="margin: 0;"><a href="/api/s6" style="color:#d4a537;">← S6 dashboard</a></p>
+</div>
+
+<div class="card">
+    <div class="card-title">Inventory</div>
+    <div class="card-body">
+        <div class="s6-tablewrap">
+            <table class="roster-table">
+                <thead><tr><th>Name</th><th>Type</th><th>Serial</th><th>Status</th><th>Held By</th>{% if can_edit %}<th>Actions</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for r in radios %}
+                    <tr>
+                        <td>{{ r.name }}</td>
+                        <td>{{ r.radio_type }}</td>
+                        <td>{{ r.serial }}</td>
+                        <td>
+                            {% if r.status == 'checked_out' %}<span class="badge badge-out">Checked out</span>
+                            {% elif r.status == 'maintenance' %}<span class="badge badge-dim">Maintenance</span>
+                            {% else %}<span class="badge badge-ok">Available</span>{% endif %}
+                        </td>
+                        <td>{{ r.checked_out_to or '—' }}</td>
+                        {% if can_edit %}
+                        <td style="white-space:nowrap;">
+                            {% if r.status == 'checked_out' %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#81c784;" onclick="checkinRadio({{ r.id }})">Check in</button>
+                            {% else %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#d4a537;" onclick="checkoutRadio({{ r.id }})">Check out</button>
+                            {% endif %}
+                            <button class="btn" style="padding:2px 8px;font-size:11px;background:#333;color:#e57373;" onclick="delRadio({{ r.id }})">✕</button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{% if can_edit %}6{% else %}5{% endif %}" class="s6-muted">No radios on the books.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if can_edit %}
+        <form class="s6-form" onsubmit="return addRadio(event)">
+            <div><label>Name</label><input class="input" name="name" placeholder="e.g. Baofeng UV-5R"></div>
+            <div><label>Type</label><input class="input" name="radio_type" placeholder="HT / Mobile / Base"></div>
+            <div><label>Serial</label><input class="input" name="serial"></div>
+            <div><label>Notes</label><input class="input" name="notes"></div>
+            <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn btn-primary">＋ Add</button></div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function postReload(url, data) {
+        fetch(url, { method: 'POST', body: data || new FormData() }).then(function(res) {
+            if (res.redirected) { window.location.href = res.url; return; }
+            window.location.reload();
+        });
+    }
+    function addRadio(ev) {
+        ev.preventDefault();
+        var f = ev.target;
+        var fd = new FormData();
+        ['name','radio_type','serial','notes'].forEach(function(k){
+            var el = f.querySelector('[name='+k+']'); if (el) fd.append(k, el.value);
+        });
+        postReload('/api/s6/radio', fd);
+        return false;
+    }
+    function checkoutRadio(id) {
+        var who = prompt('Checked out to (name / call sign):');
+        if (who === null) return;
+        var fd = new FormData();
+        fd.append('checked_out_to', who);
+        postReload('/api/s6/radio/' + id + '/checkout', fd);
+    }
+    function checkinRadio(id) {
+        postReload('/api/s6/radio/' + id + '/checkin');
+    }
+    function delRadio(id) {
+        if (!confirm('Delete this radio?')) return;
+        postReload('/api/s6/radio/' + id + '/delete');
+    }
+</script>
+{% endblock %}

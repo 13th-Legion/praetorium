@@ -1,0 +1,32 @@
+<style>
+    .s6-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 18px 0; }
+    .s6-grid .card { margin: 0; }
+    .s6-full { grid-column: 1 / -1; }
+    .s6-muted { color: #999; font-size: 13px; }
+    .s6-status { margin: 10px 0; min-height: 1.2em; font-size: 14px; }
+    #s6-editor { background: #0f1626; min-height: 260px; }
+    #s6-editor .ql-toolbar { background: #16213e; border: 1px solid #333; border-radius: 4px 4px 0 0; }
+    #s6-editor .ql-container { border: 1px solid #333; border-radius: 0 0 4px 4px; color: #e0e0e0; font-size: 14px; }
+    .s6-preview { border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; background: #0f1626; max-height: 420px; overflow-y: auto; }
+    .s6-preview h1, .s6-preview h2, .s6-preview h3 { color: var(--accent); }
+    .s6-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+    .s6-form label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 3px; }
+    .s6-form .input { width: 100%; box-sizing: border-box; padding: 0.55rem 0.6rem; font-size: 0.85rem; }
+    .s6-btnrow { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .s6-btnrow .btn { font-size: 0.8rem; padding: 0.5rem 1.1rem; }
+    .s6-tablewrap { overflow-x: auto; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-ok { background: rgba(46,125,50,.18); color: #81c784; }
+    .badge-out { background: rgba(198,40,40,.18); color: #e57373; }
+    .badge-dim { background: rgba(120,120,120,.18); color: #b0b0b0; }
+    .s6-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .s6-stat { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 14px 16px; }
+    .s6-stat .num { font-size: 26px; font-weight: 700; color: #e0e0e0; font-family: 'Oswald', sans-serif; }
+    .s6-stat .num.warn { color: #d4a537; }
+    .s6-stat .lbl { font-size: 12px; color: #999; margin-top: 4px; }
+    .s6-stat .sub { font-size: 11px; color: #777; margin-top: 2px; }
+    .s6-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .s6-card { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 16px; transition: border-color .2s; }
+    .s6-card:hover { border-color: var(--accent); }
+    .s6-card h3 { margin: 0 0 6px; font-size: 16px; color: #e0e0e0; }
+</style>
