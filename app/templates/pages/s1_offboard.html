@@ -213,8 +213,8 @@
                     {% endif %}
                 </td>
                 <td style="padding: 8px; color: #aaa; font-size: 12px;">
-                    {{ log.notes or "—" }}
-                    {% if log.internal_memo %}<div style="color: #b71c1c; font-size: 11px; margin-top: 3px;"><b>Internal:</b> {{ log.internal_memo }}</div>{% endif %}
+                    {% if log.notes %}<div><b>To member:</b> {{ log.notes }}</div>{% else %}<div>—</div>{% endif %}
+                    {% if log.internal_memo %}<div style="color: #b71c1c; font-size: 11px; margin-top: 3px;"><b>Internal memo:</b> {{ log.internal_memo }}</div>{% endif %}
                 </td>
             </tr>
             {% endfor %}
