@@ -2451,7 +2451,8 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
 
     form = await request.form()
     reason = form.get("reason", "voluntary")  # voluntary, involuntary, inactivity, blacklisted
-    notes = form.get("notes", "").strip() or None
+    notes = form.get("notes", "").strip() or None  # external — included in the separation email
+    internal_memo = form.get("internal_memo", "").strip() or None  # internal only, never emailed
     disable_nc = form.get("disable_nc") == "on"
     revoke_portal = form.get("revoke_portal") == "on"
     remove_groups = form.get("remove_groups") == "on"
@@ -2475,6 +2476,7 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
     member.separation_date = datetime.utcnow().date()
     member.separation_reason = reason
     member.separation_notes = notes
+    member.separation_internal_memo = internal_memo
     member.separation_initiated_by = initiated_by
 
     # Log the separation
@@ -2483,6 +2485,7 @@ async def process_offboarding(request: Request, member_id: int, background_tasks
         reason=reason,
         initiated_by=initiated_by,
         notes=notes,
+        internal_memo=internal_memo,
     )
 
     # ── Mechanical cleanup, with HONEST per-step reporting ──────────────────

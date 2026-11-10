@@ -107,7 +107,8 @@ class Member(Base):
 
     # Offboarding (PP-024)
     separation_reason: Mapped[Optional[str]] = mapped_column(String(64))
-    separation_notes: Mapped[Optional[str]] = mapped_column(Text)
+    separation_notes: Mapped[Optional[str]] = mapped_column(Text)  # external — included in the separation email
+    separation_internal_memo: Mapped[Optional[str]] = mapped_column(Text)  # internal only, never emailed
     separation_initiated_by: Mapped[Optional[str]] = mapped_column(String(64))
 
     # Conduct / Promotability

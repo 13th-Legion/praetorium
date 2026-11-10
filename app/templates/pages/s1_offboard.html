@@ -34,8 +34,14 @@
             </div>
 
             <div style="margin-bottom: 12px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Notes</label>
-                <textarea name="notes" rows="3" placeholder="Reason details..."
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Notes to Member <span style="font-weight: 400; color: #888;">(included in separation email)</span></label>
+                <textarea name="notes" rows="3" placeholder="Reason details sent to the member..."
+                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></textarea>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Internal Memo <span style="font-weight: 400; color: #888;">(NOT sent to member)</span></label>
+                <textarea name="internal_memo" rows="3" placeholder="Internal notes — never emailed..."
                     style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></textarea>
             </div>
 
@@ -206,7 +212,10 @@
                         <div style="color: #b71c1c; font-size: 11px; margin-top: 3px;">{{ log.cleanup_outstanding | join(', ') }}</div>
                     {% endif %}
                 </td>
-                <td style="padding: 8px; color: #aaa; font-size: 12px;">{{ log.notes or '—' }}</td>
+                <td style="padding: 8px; color: #aaa; font-size: 12px;">
+                    {{ log.notes or "—" }}
+                    {% if log.internal_memo %}<div style="color: #b71c1c; font-size: 11px; margin-top: 3px;"><b>Internal:</b> {{ log.internal_memo }}</div>{% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>

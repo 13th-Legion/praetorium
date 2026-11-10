@@ -52,6 +52,7 @@ class SeparationLog(Base):
     reason: Mapped[str] = mapped_column(String(64))  # voluntary, involuntary, inactivity, blacklisted
     initiated_by: Mapped[str] = mapped_column(String(64))  # NC username of admin
     notes: Mapped[Optional[str]] = mapped_column(Text)
+    internal_memo: Mapped[Optional[str]] = mapped_column(Text)
     nc_account_disabled: Mapped[bool] = mapped_column(Boolean, default=False)
     portal_access_revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     groups_removed: Mapped[bool] = mapped_column(Boolean, default=False)
