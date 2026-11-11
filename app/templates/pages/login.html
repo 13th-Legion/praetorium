@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Login{% endblock %}
+{% block title %}Sign in — Praetorium{% endblock %}
 
 {% block content %}
 <div class="login-container">
@@ -8,7 +8,17 @@
         <p class="login-subtitle">13th Legion — Unit Portal</p>
 
         {% if error %}
-        <p class="login-error">{{ error }}</p>
+        <div class="login-error" role="alert">
+            <strong>Sign-in didn't finish.</strong>
+            <p style="margin:0.25rem 0;">{{ error }}</p>
+            <p class="login-error-sub" style="margin:0.25rem 0;color:var(--text-secondary);font-size:0.85rem;">This is not an account problem — the sign-in window just expired or got interrupted. Click the button below to try again.</p>
+            {% if detail %}
+            <details style="margin-top:0.5rem;text-align:left;font-size:0.75rem;">
+                <summary style="cursor:pointer;color:var(--text-muted);">Technical detail (for S6/DigInfra)</summary>
+                <code style="word-break:break-all;">{{ detail }}</code>
+            </details>
+            {% endif %}
+        </div>
         {% endif %}
 
         <a href="/auth/login" class="btn btn-primary btn-lg">
@@ -16,8 +26,19 @@
         </a>
 
         <p class="login-help">
-            You'll be redirected to cloud.13thlegion.org to authenticate.
+            You'll be redirected to <strong>cloud.13thlegion.org</strong> to authenticate.
         </p>
+
+        <details class="login-troubleshoot" style="margin-top:1.5rem;text-align:left;color:var(--text-secondary);font-size:0.9rem;">
+            <summary style="cursor:pointer;color:var(--accent);">Having trouble signing in?</summary>
+            <ul style="margin-top:0.5rem;padding-left:1.25rem;line-height:1.6;">
+                <li><strong>Wrong password?</strong> That's your <strong>Nextcloud</strong> password — the same one you use for file sync and Talk. It is not a separate portal password.</li>
+                <li><strong>After you log in to Nextcloud</strong>, click <strong>"Grant access"</strong> on the next screen to return here. Nothing happens until you do.</li>
+                <li><strong>Stuck spinning or looping?</strong> Clear cookies/site data for <strong>portal.13thlegion.org</strong> and <strong>cloud.13thlegion.org</strong>, or try a private/incognito window.</li>
+                <li><strong>Forgot your Nextcloud password?</strong> Reset it at <a href="https://cloud.13thlegion.org" target="_blank">cloud.13thlegion.org</a>.</li>
+                <li><strong>Still stuck?</strong> Ping <strong>S6 / DigInfra</strong> with a screenshot of what you're seeing.</li>
+            </ul>
+        </details>
     </div>
 </div>
 {% endblock %}
