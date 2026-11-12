@@ -80,28 +80,39 @@ def send_email(to: str, subject: str, html: str, text: Optional[str] = None,
         return False
 
 
-def send_bulk(messages: Iterable[EmailMessage]) -> tuple[int, int]:
-    """Send many emails over ONE connection. Returns (sent, failed).
+def send_bulk(messages: Iterable[EmailMessage], batch_size: int = 5, delay_seconds: float = 10.0) -> tuple[int, int]:
+    """Send many emails in small batches over fresh connections.
 
-    A per-message failure is logged and counted but does not abort the batch.
+    Proton Bridge throttles and then drops a single long SMTP connection after a
+    handful of sends (observed: 4 sent, then dropped). Chunking + a pause between
+    batches keeps each connection short enough to avoid the rate limit.
     """
+    import time
+
     messages = list(messages)
     if not messages:
         return (0, 0)
     sent = failed = 0
-    try:
-        with _connect() as server:
-            for m in messages:
-                try:
-                    msg = _build_mime(m)
-                    server.sendmail(msg["From"], [m.to], msg.as_string())
-                    sent += 1
-                except Exception as e:
-                    failed += 1
-                    log.error(f"bulk email failed to {m.to} ({m.subject!r}): {e}")
-    except Exception as e:
-        # Connection-level failure — everything not yet sent is failed.
-        log.error(f"bulk email connection failed: {e}")
-        failed += len(messages) - sent
+    for start in range(0, len(messages), batch_size):
+        chunk = messages[start:start + batch_size]
+        chunk_sent = 0
+        try:
+            with _connect() as server:
+                for m in chunk:
+                    try:
+                        msg = _build_mime(m)
+                        server.sendmail(msg["From"], [m.to], msg.as_string())
+                        sent += 1
+                        chunk_sent += 1
+                    except Exception as e:
+                        failed += 1
+                        log.error(f"bulk email failed to {m.to} ({m.subject!r}): {e}")
+        except Exception as e:
+            # Connection-level failure — the rest of this chunk never sent.
+            log.error(f"bulk email connection failed: {e}")
+            failed += len(chunk) - chunk_sent
+        # Pause between batches to stay under the bridge's rate limit.
+        if start + batch_size < len(messages):
+            time.sleep(delay_seconds)
     log.info(f"bulk email: {sent} sent, {failed} failed")
     return (sent, failed)
