@@ -450,6 +450,19 @@ async def update_schedule_block(
         block.instructor_id = instructor_id if instructor_id and instructor_id > 0 else None
         block.notes = notes.strip() if notes else None
         block.updated_at = datetime.utcnow()
+
+        # Re-sort blocks (per day) so sort_order stays in sync when a block's
+        # time or day changes — otherwise the builder list goes out of order.
+        all_blocks = (await db.execute(
+            select(EventScheduleBlock)
+            .where(EventScheduleBlock.event_id == event_id)
+            .order_by(EventScheduleBlock.day_number, EventScheduleBlock.start_time, EventScheduleBlock.end_time)
+        )).scalars().all()
+        day_idx = {}
+        for b in all_blocks:
+            day_idx[b.day_number] = day_idx.get(b.day_number, 0) + 1
+            b.sort_order = day_idx[b.day_number]
+
         await db.commit()
 
     return HTMLResponse(
