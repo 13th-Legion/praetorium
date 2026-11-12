@@ -27,7 +27,7 @@ from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
 from app.models.ribbons import MemberRibbon, MissionLeaderGrant
 from config import get_settings
-from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK
+from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK, TEAM_ORDER
 from app.services import ranks as _ranks
 from app.services import nc_rooms as _nc_rooms_svc
 from app.services import attendance as attendance_svc
@@ -1917,14 +1917,39 @@ async def event_roster(request: Request, event_id: int):
 
 def _render_roster_section(label: str, entries: list, color: str) -> str:
     count = len(entries)
-    names = ", ".join(m.display_name for _, m in entries) if entries else "—"
+    names = _render_grouped_names(entries) if entries else "—"
     return f"""
     <div style="margin-bottom:12px;">
         <div style="font-weight:600;color:{color};font-size:14px;margin-bottom:4px;">
             {label} ({count})
         </div>
-        <div style="font-size:13px;color:#ccc;padding-left:8px;">{names}</div>
+        <div style="font-size:13px;color:#ccc;padding-left:8px;line-height:1.7;">{names}</div>
     </div>"""
+
+
+def _render_grouped_names(entries: list) -> str:
+    """Group roster entries by team (TEAM_ORDER), then rank descending, then last name."""
+    rank_map = _ranks.order_map()
+    grouped: dict[str, list] = {}
+    for r, m in entries:
+        grouped.setdefault(m.team or "", []).append((r, m))
+
+    def _team_key(name: str) -> tuple:
+        return (TEAM_ORDER.get(name, 9999), name.lower())
+
+    lines = []
+    for team_name in sorted(grouped.keys(), key=_team_key):
+        members = grouped[team_name]
+        members.sort(
+            key=lambda rm: (
+                -rank_map.get(rm[1].rank_grade, -1),
+                (rm[1].last_name or "").lower(),
+            )
+        )
+        names = ", ".join(m.display_name for _, m in members)
+        header = team_name or "Unassigned"
+        lines.append(f'<span style="color:#8a8a9a;">{header}:</span> {names}')
+    return "<br>".join(lines)
 
 
 # ─── Event Creation ──────────────────────────────────────────────────────────
