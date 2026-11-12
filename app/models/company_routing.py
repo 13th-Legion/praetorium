@@ -7,7 +7,7 @@ that unit's S1). Managed from the S1 admin page.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,9 +15,12 @@ from app.database import Base
 
 class CompanyRouting(Base):
     __tablename__ = "company_routing"
+    __table_args__ = (
+        UniqueConstraint("unit_name", name="uq_company_routing_unit_name"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    unit_name: Mapped[str] = mapped_column(unique=True)
+    unit_name: Mapped[str] = mapped_column()
     route_type: Mapped[str] = mapped_column()  # "deck" | "email"
     email: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

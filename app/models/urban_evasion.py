@@ -8,7 +8,7 @@ scoring events from the field; targets are pass/fail (reach endpoint undetected)
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -36,6 +36,9 @@ class UrbanEvasionExercise(Base):
 
 class UrbanEvasionParticipant(Base):
     __tablename__ = "ue2_participants"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "member_id", name="uq_ue2_participant"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("ue2_exercises.id"))
@@ -56,6 +59,9 @@ class UrbanEvasionParticipant(Base):
 
 class UrbanEvasionEvolution(Base):
     __tablename__ = "ue2_evolutions"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "seq", name="uq_ue2_evolution"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("ue2_exercises.id"))

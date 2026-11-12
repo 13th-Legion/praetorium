@@ -15,7 +15,7 @@ class Notification(Base):
     # Identifies the record that produced this notification, so a later delete
     # of that record (e.g. an announcement) can purge the in-portal rows it
     # fanned out. Nullable: older/other notifications have no source.
-    source_id = Column(String(64), nullable=True)
+    source_id = Column(String(64), nullable=True, index=True)
     read_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
