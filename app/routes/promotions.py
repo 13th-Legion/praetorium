@@ -149,17 +149,30 @@ async def promotions_dashboard(request: Request):
             )).scalars().all())
 
         # TRADOC progress: required = non-optional, non-archived items
-        required_ids = set((await db.execute(
-            select(TradocItem.id).where(TradocItem.optional.is_(False), TradocItem.archived.is_(False))
-        )).scalars().all())
+        req_items = (await db.execute(
+            select(TradocItem.id, TradocItem.block, TradocItem.block_name, TradocItem.name)
+            .where(TradocItem.optional.is_(False), TradocItem.archived.is_(False))
+            .order_by(TradocItem.block, TradocItem.sort_order)
+        )).all()
+        required_ids = {r[0] for r in req_items}
         tradoc_total = len(required_ids)
-        tradoc_done_by_member = {}
+        # Ordered block structure (for per-block progress visuals)
+        tradoc_blocks = []
+        _cur = None
+        for iid, block, bname, iname in req_items:
+            label = bname or f"Block {block}"
+            if _cur is None or _cur["name"] != label:
+                _cur = {"name": label, "items": []}
+                tradoc_blocks.append(_cur)
+            _cur["items"].append({"id": iid, "name": iname})
+        # Done items per member (set of item ids)
+        done_by_member = {}
         if required_ids:
-            tradoc_done_by_member = {mid: cnt for mid, cnt in (await db.execute(
-                select(MemberTradoc.member_id, func.count(MemberTradoc.item_id))
+            for mid, iid in (await db.execute(
+                select(MemberTradoc.member_id, MemberTradoc.item_id)
                 .where(MemberTradoc.item_id.in_(required_ids))
-                .group_by(MemberTradoc.member_id)
-            )).all()}
+            )).all():
+                done_by_member.setdefault(mid, set()).add(iid)
 
         # Promotion-point totals per member (lifetime + since last promotion)
         from app.services.ribbon_points import compute_member_points
@@ -218,8 +231,17 @@ async def promotions_dashboard(request: Request):
             "is_recruit": m.status == "recruit",
             "join_date_str": m.join_date.strftime("%Y-%m-%d") if m.join_date else "—",
             "ftx_count": m.ftx_count or 0,
-            "tradoc_done": tradoc_done_by_member.get(m.id, 0),
+            "tradoc_done": len(done_by_member.get(m.id, set())),
             "tradoc_total": tradoc_total,
+            "tradoc": [
+                {
+                    "name": blk["name"],
+                    "done": sum(1 for it in blk["items"] if it["id"] in done_by_member.get(m.id, set())),
+                    "total": len(blk["items"]),
+                    "items": [{"name": it["name"], "done": it["id"] in done_by_member.get(m.id, set())} for it in blk["items"]],
+                }
+                for blk in tradoc_blocks
+            ],
             "rsvp_attending": m.id in attending_ids,
         })
 
@@ -265,10 +287,15 @@ async def promotions_dashboard(request: Request):
     if filter_ftx:
         rows = [r for r in rows if r["rsvp_attending"]]
 
+    recruit_rows = [r for r in rows if r["is_recruit"]]
+    patched_rows = [r for r in rows if not r["is_recruit"]]
+
     return templates.TemplateResponse("pages/promotions.html", {
         "request": request,
         "user": user,
         "rows": rows,
+        "recruit_rows": recruit_rows,
+        "patched_rows": patched_rows,
         "staged_rows": staged_rows,
         "today": today,
         "ftx": ftx,
