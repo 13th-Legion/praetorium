@@ -202,19 +202,46 @@ async def test_extend_end_adds_occurrences(auth_client, weekly_series, db_sessio
 
 
 @pytest.mark.asyncio
-async def test_trim_end_cancels_future_only(auth_client, weekly_series, db_sessionmaker):
-    _post_recurrence(auth_client, weekly_series["anchor_id"], end="2026-11-04")
-    r = _post_recurrence(auth_client, weekly_series["anchor_id"], end="2026-10-21")
+async def test_trim_end_cancels_future_only(auth_client, db_sessionmaker, patch_global_session):
+    # Anchor the series in the future so the trim exercises the future-only
+    # cancellation path regardless of when the suite runs.
+    base = (datetime.datetime.now() + datetime.timedelta(days=30)).replace(
+        hour=20, minute=0, second=0, microsecond=0
+    )
+    sid = uuid.uuid4().hex
+    async with db_sessionmaker() as db:
+        ids = []
+        for i in range(3):
+            e = await make_event(
+                db,
+                title="Command Meeting",
+                category="meeting",
+                date_start=base + datetime.timedelta(days=7 * i),
+                date_end=base + datetime.timedelta(days=7 * i, hours=1),
+                series_id=sid,
+                is_series_master=(i == 0),
+                meeting_mode="online",
+                talk_token="7jrpakx2",
+                status="active",
+            )
+            ids.append(int(e.id))
+        await db.commit()
+    anchor_id = ids[0]
+
+    end_far = (base + datetime.timedelta(days=28)).date().isoformat()
+    end_near = (base + datetime.timedelta(days=14)).date().isoformat()
+    _post_recurrence(auth_client, anchor_id, end=end_far)
+    r = _post_recurrence(auth_client, anchor_id, end=end_near)
     assert r.status_code == 200, r.text
 
     async with db_sessionmaker() as db:
         rows = (await db.execute(
-            select(Event).where(Event.series_id == weekly_series["series_id"])
+            select(Event).where(Event.series_id == sid)
         )).scalars().all()
         by_dt = {e.date_start.date(): e for e in rows}
-        assert by_dt[datetime.date(2026, 10, 28)].status == "cancelled"
-        assert by_dt[datetime.date(2026, 11, 4)].status == "cancelled"
-        assert by_dt[datetime.date(2026, 10, 21)].status == "active"
+        assert by_dt[(base + datetime.timedelta(days=21)).date()].status == "cancelled"
+        assert by_dt[(base + datetime.timedelta(days=28)).date()].status == "cancelled"
+        assert by_dt[(base + datetime.timedelta(days=14)).date()].status == "active"
 
 
 @pytest.mark.asyncio

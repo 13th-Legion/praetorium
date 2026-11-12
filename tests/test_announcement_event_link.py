@@ -13,7 +13,7 @@ pytestmark = pytest.mark.integration
 class TestEventLinkEmbedding:
     async def test_resolves_event_to_html_and_plain(self, db_session, patch_global_session):
         ev = await make_event(db_session, title="Monthly FTX")
-        await db_session.flush()
+        await db_session.commit()
 
         html, plain = await _event_link_html(str(ev.id))
         assert "Monthly FTX" in html
@@ -49,7 +49,7 @@ class TestEventLinkEmbedding:
             title="Way out",
             date_start=datetime(2030, 6, 1, 9, 0),
         )
-        await db_session.flush()
+        await db_session.commit()
 
         rows = await _upcoming_events()
         got = {row["id"] for row in rows}
@@ -59,7 +59,7 @@ class TestEventLinkEmbedding:
     async def test_event_line_survives_markdown_conversion(self, db_session, patch_global_session):
         """The event link must survive the Talk cross-post markdown conversion."""
         ev = await make_event(db_session, title="CQB Course")
-        await db_session.flush()
+        await db_session.commit()
         html, _plain = await _event_link_html(str(ev.id))
         body = f"<p>See you there.</p>{html}"
         md = _html_to_markdown(body)
