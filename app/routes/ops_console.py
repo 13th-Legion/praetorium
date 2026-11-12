@@ -37,8 +37,6 @@ from app.models.events import (
 from app.models.member import Member
 from app.models.s2_intel import S2ChallengePassword
 from app.services import teams as teams_svc
-from app.services import ranks as ranks_svc
-from app.constants import TEAM_ORDER
 from config import get_settings
 
 router = APIRouter(tags=["ops-console"])
@@ -1415,21 +1413,7 @@ async def _build_roster(db, event: Event) -> list[dict]:
             "row_type": "guest",
         })
 
-    # Team leads want the roster divided by team, then by rank (descending).
-    # Members are grouped/sorted accordingly; checked-in guests stay at the bottom.
-    rank_map = ranks_svc.order_map()
-
-    def _member_sort_key(r: dict) -> tuple:
-        m = r["member"]
-        team_idx = TEAM_ORDER.get(m.team or "", 9999)
-        rank_idx = rank_map.get(m.rank_grade, -1)
-        return (team_idx, -rank_idx, (m.last_name or "").lower())
-
-    member_rows = sorted(
-        (r for r in rows if r["row_type"] == "member"), key=_member_sort_key
-    )
-    guest_rows = [r for r in rows if r["row_type"] == "guest"]
-    return member_rows + guest_rows
+    return rows
 
 
 async def _get_guard_slots(db, event_id: int) -> list[EventGuardSlot]:
