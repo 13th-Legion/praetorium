@@ -20,12 +20,17 @@
     </tr>
   </thead>
   <tbody>
+    {% set ns = namespace(current_team='__none__') %}
     {% for row in roster %}
 
     {# ── Member Row ── #}
     {% if row.row_type == 'member' %}
     {% set rsvp = row.rsvp %}
     {% set member = row.member %}
+    {% if member.team != ns.current_team %}
+    <tr class="ops-team-header"><td colspan="99">{{ member.team or 'Unassigned' }}</td></tr>
+    {% set ns.current_team = member.team %}
+    {% endif %}
     <tr class="{% if rsvp.no_show %}ops-row-noshow{% endif %}" {% if rsvp.no_show %}style="color:#eee;"{% elif rsvp.checked_in %}style="color:#eee;"{% else %}style="color:#777;"{% endif %}>
       <td data-label="Rank">{{ member.rank_grade or '—' }}</td>
       <td data-label="Name">
