@@ -173,7 +173,7 @@
 </div>
 
 <style>
-    .tradoc-chip { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .tradoc-chip { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; line-height: 1.4; vertical-align: middle; }
     .tradoc-complete { background: rgba(46,125,50,.2); color: #81c784; border: 1px solid rgba(46,125,50,.4); }
     .tradoc-partial { background: rgba(212,165,55,.18); color: #d4a537; border: 1px solid rgba(212,165,55,.4); }
     .tradoc-none { background: rgba(120,120,120,.15); color: #999; border: 1px solid rgba(120,120,120,.3); }
@@ -287,10 +287,7 @@
             <td>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">
                     {% for blk in row.tradoc %}
-                    <span class="tradoc-chip tradoc-{{ 'complete' if blk['done'] == blk['total'] else ('partial' if blk['done'] > 0 else 'none') }}"
-                          title="B{{ loop.index }} — {{ blk['name'] }}: {% for it in blk['items'] %}{{ it['name'] }}{{ ' ✓' if it['done'] else ' ✗' }}{% if not loop.last %}, {% endif %}{% endfor %}">
-                        B{{ loop.index }} {{ blk['done'] }}/{{ blk['total'] }}
-                    </span>
+                    <span class="tradoc-chip tradoc-{{ 'complete' if blk['done'] == blk['total'] else ('partial' if blk['done'] > 0 else 'none') }}" title="B{{ loop.index }} — {{ blk['name'] }}: {% for it in blk['items'] %}{{ it['name'] }}{{ ' ✓' if it['done'] else ' ✗' }}{% if not loop.last %}, {% endif %}{% endfor %}">B{{ loop.index }} {{ blk['done'] }}/{{ blk['total'] }}</span>
                     {% endfor %}
                 </div>
             </td>
