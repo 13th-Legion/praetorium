@@ -178,50 +178,6 @@
     .tradoc-partial { background: rgba(212,165,55,.18); color: #d4a537; border: 1px solid rgba(212,165,55,.4); }
     .tradoc-none { background: rgba(120,120,120,.15); color: #999; border: 1px solid rgba(120,120,120,.3); }
 </style>
-<h2 style="color:#d4a537; margin: 18px 0 8px; font-size: 18px;">🎖️ Recruits <span style="color:#888; font-size: 13px;">({{ recruit_rows|length }})</span></h2>
-<table class="promo-table">
-    <thead>
-        <tr>
-            <th style="width: 36px;"></th>
-            <th>RNK</th>
-            <th>Name</th>
-            <th>Callsign</th>
-            <th>Joined</th>
-            <th>FTX</th>
-            <th>TRADOC Progress</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in recruit_rows %}
-        <tr class="promo-row">
-            <td><input type="checkbox" class="batch-check" data-member-id="{{ row.id }}" onchange="updateBatchBar()"></td>
-            <td><strong>{{ row.rank_abbr }}</strong></td>
-            <td>
-                <a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a>
-                <span class="sa-patch" style="font-size:10px; padding:1px 5px; margin-left:5px;">RECRUIT</span>
-            </td>
-            <td>{{ row.callsign }}</td>
-            <td>{{ row.join_date_str }}</td>
-            <td>{{ row.ftx_count }}</td>
-            <td>
-                <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                    {% for blk in row.tradoc %}
-                    <span class="tradoc-chip tradoc-{{ 'complete' if blk['done'] == blk['total'] else ('partial' if blk['done'] > 0 else 'none') }}"
-                          title="{% for it in blk['items'] %}{{ it['name'] }}: {{ '✓' if it['done'] else '✗' }}&#10;{% endfor %}">
-                        {{ blk['name'] }} {{ blk['done'] }}/{{ blk['total'] }}
-                    </span>
-                    {% endfor %}
-                </div>
-            </td>
-            <td><button class="promo-btn" onclick="stageMember({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')">Stage</button></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="8" style="color:#888; text-align:center; padding:20px;">No recruits.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
-
 <h2 style="color:#d4a537; margin: 22px 0 8px; font-size: 18px;">🪖 Patched Members <span style="color:#888; font-size: 13px;">({{ patched_rows|length }})</span></h2>
 <table class="promo-table" id="promoTable">
     <thead>
@@ -301,6 +257,47 @@
                 {% endif %}
             </td>
         </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 style="color:#d4a537; margin: 22px 0 8px; font-size: 18px;">🎖️ Recruits <span style="color:#888; font-size: 13px;">({{ recruit_rows|length }})</span></h2>
+<table class="promo-table">
+    <thead>
+        <tr>
+            <th style="width: 36px;"></th>
+            <th>RNK</th>
+            <th>Name</th>
+            <th>Callsign</th>
+            <th>Joined</th>
+            <th>FTX</th>
+            <th>TRADOC Progress</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in recruit_rows %}
+        <tr class="promo-row">
+            <td><input type="checkbox" class="batch-check" data-member-id="{{ row.id }}" onchange="updateBatchBar()"></td>
+            <td><strong>{{ row.rank_abbr }}</strong></td>
+            <td><a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a></td>
+            <td>{{ row.callsign }}</td>
+            <td style="white-space: nowrap;">{{ row.join_date_str }}</td>
+            <td>{{ row.ftx_count }}</td>
+            <td>
+                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                    {% for blk in row.tradoc %}
+                    <span class="tradoc-chip tradoc-{{ 'complete' if blk['done'] == blk['total'] else ('partial' if blk['done'] > 0 else 'none') }}"
+                          title="B{{ loop.index }} — {{ blk['name'] }}: {% for it in blk['items'] %}{{ it['name'] }}{{ ' ✓' if it['done'] else ' ✗' }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                        B{{ loop.index }} {{ blk['done'] }}/{{ blk['total'] }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </td>
+            <td><button class="promo-btn" onclick="stageMember({{ row.id }}, '{{ row.rank_abbr }}', '{{ row.last_name }}')">Stage</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="color:#888; text-align:center; padding:20px;">No recruits.</td></tr>
         {% endfor %}
     </tbody>
 </table>
