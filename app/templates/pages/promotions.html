@@ -163,6 +163,15 @@
     <button class="modal-cancel" onclick="clearBatch()" style="margin-left: 8px;">Clear</button>
 </div>
 
+<div style="margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    {% if ftx %}
+    <a class="promo-btn" href="/api/s1/promotions{% if not filter_ftx %}?ftx=1{% endif %}" style="text-decoration: none;">
+        {% if filter_ftx %}← Show all members{% else %}🎯 {{ ftx_title }} ({{ ftx_date }}) — attending only{% endif %}
+    </a>
+    {% endif %}
+    <span style="color:#888;font-size:12px;">Recruits show join date, FTX count, and TRADOC progress to surface patch-readiness.</span>
+</div>
+
 <table class="promo-table" id="promoTable">
     <thead>
         <tr>
@@ -195,7 +204,13 @@
                 {% endif %}
             </td>
             <td><strong>{{ row.rank_abbr }}</strong></td>
-            <td><a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a></td>
+            <td>
+                <a href="/profile/{{ row.id }}" style="color: #ccc; text-decoration: none; border-bottom: 1px dotted #555;">{{ row.last_name }}</a>
+                {% if row.is_recruit %}
+                    <span class="sa-patch" style="font-size:10px; padding:1px 5px; margin-left:5px;">RECRUIT</span>
+                    <div style="font-size:11px; color:#999; margin-top:2px;">Joined {{ row.join_date_str }} · {{ row.ftx_count }} FTX · TRADOC {{ row.tradoc_done }}/{{ row.tradoc_total }}</div>
+                {% endif %}
+            </td>
             <td>{{ row.callsign }}</td>
             <td>{{ row.promo_date_str }}</td>
             <td>

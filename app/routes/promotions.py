@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth import require_auth, get_current_user
 from app.constants import COMMAND_ROLES, S1_ROLES
@@ -16,6 +16,8 @@ from app import database
 from app.models.member import Member
 from app.models.rank_history import RankHistory
 from app.models.promotion_stage import PromotionStage, OFFICER_GRADES
+from app.models.events import Event, EventRSVP
+from app.models.training import MemberTradoc, TradocItem
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +134,33 @@ async def promotions_dashboard(request: Request):
         staged_objs = stage_result.scalars().all()
         member_lookup = {m.id: m for m in members}
 
+        # Upcoming FTX + attending RSVPs (for the "FTX RSVP only" filter)
+        ftx = (await db.execute(
+            select(Event).where(
+                Event.category == "ftx",
+                Event.date_start >= today,
+                Event.status == "active",
+            ).order_by(Event.date_start).limit(1)
+        )).scalar_one_or_none()
+        attending_ids = set()
+        if ftx:
+            attending_ids = set((await db.execute(
+                select(EventRSVP.member_id).where(EventRSVP.event_id == ftx.id, EventRSVP.status == "attending")
+            )).scalars().all())
+
+        # TRADOC progress: required = non-optional, non-archived items
+        required_ids = set((await db.execute(
+            select(TradocItem.id).where(TradocItem.optional.is_(False), TradocItem.archived.is_(False))
+        )).scalars().all())
+        tradoc_total = len(required_ids)
+        tradoc_done_by_member = {}
+        if required_ids:
+            tradoc_done_by_member = {mid: cnt for mid, cnt in (await db.execute(
+                select(MemberTradoc.member_id, func.count(MemberTradoc.item_id))
+                .where(MemberTradoc.item_id.in_(required_ids))
+                .group_by(MemberTradoc.member_id)
+            )).all()}
+
         # Promotion-point totals per member (lifetime + since last promotion)
         from app.services.ribbon_points import compute_member_points
         points_by_member: dict[int, tuple[int, int]] = {}
@@ -185,6 +214,13 @@ async def promotions_dashboard(request: Request):
             "allowed_ranks": _allowed_rank_changes(m.rank_grade),
             "points_lifetime": points_by_member.get(m.id, (0, 0))[0],
             "points_since_promo": points_by_member.get(m.id, (0, 0))[1],
+            "status": m.status,
+            "is_recruit": m.status == "recruit",
+            "join_date_str": m.join_date.strftime("%Y-%m-%d") if m.join_date else "—",
+            "ftx_count": m.ftx_count or 0,
+            "tradoc_done": tradoc_done_by_member.get(m.id, 0),
+            "tradoc_total": tradoc_total,
+            "rsvp_attending": m.id in attending_ids,
         })
 
     # Default sort: highest TIG first
@@ -224,12 +260,21 @@ async def promotions_dashboard(request: Request):
         })
     staged_rows.sort(key=lambda r: (r["last_name"], r["first_name"]))
 
+    # Optional filter: show only members RSVP'd attending to the upcoming FTX
+    filter_ftx = request.query_params.get("ftx") == "1"
+    if filter_ftx:
+        rows = [r for r in rows if r["rsvp_attending"]]
+
     return templates.TemplateResponse("pages/promotions.html", {
         "request": request,
         "user": user,
         "rows": rows,
         "staged_rows": staged_rows,
         "today": today,
+        "ftx": ftx,
+        "ftx_title": ftx.title if ftx else None,
+        "ftx_date": ftx.date_start.strftime("%a %b %d") if ftx else None,
+        "filter_ftx": filter_ftx,
     })
 
 
