@@ -3287,6 +3287,10 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
                 rally_html += f' @ {event.rally_point_time}'
             rally_html += '</p>'
 
+        # Full event details (Quill HTML from the event description) — the "rest
+        # of the FTX info" that isn't the 5-paragraph SMEAC.
+        desc_html = event.description or ""
+
         html_body = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a2e; line-height: 1.6; max-width: 650px; margin: 0 auto;">
@@ -3308,6 +3312,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
 <h2 style="color: #2e7d32;">📋 OPERATIONS ORDER — {event.title}</h2>
 <p><strong>Date:</strong> {date_str}<br>
 <strong>Location:</strong> {event.location or 'TBD'}</p>
+{desc_html}
 {rally_html}
 {freq_html}
 {maps_html}
