@@ -285,7 +285,7 @@
             <td style="white-space: nowrap;">{{ row.join_date_str }}</td>
             <td>{{ row.ftx_count }}</td>
             <td>
-                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                <div style="display:flex; flex-wrap:nowrap; gap:4px; align-items:center; overflow-x:auto;">
                     {% for blk in row.tradoc %}
                     <span class="tradoc-chip tradoc-{{ 'complete' if blk['done'] == blk['total'] else ('partial' if blk['done'] > 0 else 'none') }}" title="B{{ loop.index }} — {{ blk['name'] }}: {% for it in blk['items'] %}{{ it['name'] }}{{ ' ✓' if it['done'] else ' ✗' }}{% if not loop.last %}, {% endif %}{% endfor %}">B{{ loop.index }} {{ blk['done'] }}/{{ blk['total'] }}</span>
                     {% endfor %}
