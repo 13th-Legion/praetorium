@@ -101,6 +101,27 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    var fragoDetails = document.getElementById('issue-frago-details');
+    var fragoQuill = null;
+    function initFragoQuill() {
+        if (fragoQuill) return;
+        fragoQuill = new Quill('#frago-editor', {
+            theme: 'snow',
+            placeholder: 'Rally point time is changed from 1900 to 1830 to allow for the convoy brief. All other instructions from the OPORD remain in effect.',
+            modules: { toolbar: [['bold','italic','underline'],[{'list':'ordered'},{'list':'bullet'}],['link']] }
+        });
+        fragoQuill.on('text-change', function() {
+            document.getElementById('frago-body').value = fragoQuill.root.innerHTML;
+        });
+    }
+    if (fragoDetails) {
+        fragoDetails.addEventListener('toggle', function() {
+            if (fragoDetails.open) initFragoQuill();
+        });
+    }
+});
+
 function toggleMeetingMode() {
     var mode = (document.getElementById('evt-meeting-mode') || {}).value;
     var phys = document.getElementById('physical-location-block');
@@ -613,7 +634,7 @@ function insertTradocAgenda() {
                FRAGO 1, 2, 3... Previously this branch collapsed to "Full pipeline complete"
                after the first one, leaving no way to publish a second change. #}
             {% set next_frago = (fragos[0].number + 1) if fragos else 1 %}
-            <details style="flex:1;min-width:260px;">
+            <details id="issue-frago-details" style="flex:1;min-width:260px;">
                 <summary style="cursor:pointer;padding:6px 12px;background:rgba(239,108,0,0.15);border:1px solid #ef6c00;border-radius:4px;color:#ef6c00;font-size:13px;font-weight:600;">📝 Issue FRAGO {{ next_frago }}</summary>
                 <form hx-post="/api/events/{{ event.id }}/issue-fragord" hx-target="#warno-pipeline-result" hx-swap="innerHTML"
                       style="padding:12px;background:rgba(0,0,0,0.2);border-radius:0 0 4px 4px;">
@@ -624,8 +645,8 @@ function insertTradocAgenda() {
                     </div>
                     <div style="margin-bottom:8px;">
                         <label style="font-size:11px;color:#888;">Details — the change, and anything it affects</label>
-                        <textarea name="body" required rows="5" placeholder="Rally point time is changed from 1900 to 1830 to allow for the convoy brief. All other instructions from the OPORD remain in effect."
-                            style="width:100%;padding:6px 8px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
+                        <input type="hidden" name="body" id="frago-body">
+                        <div id="frago-editor" style="background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;min-height:110px;"></div>
                     </div>
                     <p style="font-size:11px;color:#888;margin:0 0 8px;">
                         Emails everyone marked <strong>attending</strong>, posts to T1 · Announcements, and notifies the Portal.
@@ -653,7 +674,7 @@ function insertTradocAgenda() {
                 </summary>
                 <div style="padding:0 10px 10px;">
                     {% if f.body %}
-                    <p style="white-space:pre-wrap;font-size:13px;color:#ccc;line-height:1.6;margin:6px 0;">{{ f.body }}</p>
+                    <div class="quill-render" style="font-size:13px;color:#ccc;line-height:1.6;margin:6px 0;">{{ f.body | safe }}</div>
                     {% else %}
                     <p style="font-size:12px;color:#888;font-style:italic;margin:6px 0;">
                         No text recorded — this FRAGO predates FRAGO tracking.

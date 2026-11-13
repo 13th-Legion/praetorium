@@ -874,6 +874,17 @@ def _clean_description(html: str) -> str:
     return s.strip()
 
 
+def _html_to_plain_text(html: str) -> str:
+    """Strip HTML tags for plain-text channels (Talk) and emptiness checks."""
+    import re
+    import html as _html
+    NL = chr(10)
+    s = (html or "").replace("<br>", NL).replace("<br/>", NL).replace("<br />", NL)
+    s = s.replace("</p>", NL).replace("</li>", NL)
+    s = re.sub(r"<[^>]+>", "", s)
+    return _html.unescape(s).strip()
+
+
 def _parse_mil_datetime(date_str: str, time_str: str = "") -> datetime:
     """Parse a date string + optional HHMM military time into a naive CT datetime.
 
@@ -3428,7 +3439,7 @@ def _frago_email_html(event, frago_number: int, subject: str, body: str, date_st
     def esc(s):
         return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    body_html = esc(body).replace("\n", "<br>")
+    body_html = body
     rally_html = ""
     if event.rally_point:
         rally_html = f'<p style="font-size:14px;"><strong>Rally Point:</strong> {esc(event.rally_point)}'
@@ -3502,8 +3513,8 @@ async def issue_fragord(
     issuer = (user or {}).get("username") or "unknown"
 
     subject = (subject or "").strip()
-    body = (body or "").strip()
-    if not subject or not body:
+    body = _clean_description(body or "")
+    if not subject or not _html_to_plain_text(body):
         # The entire point of a FRAGO is communicating what changed. Refusing an
         # empty one is the fix for "I issued a FRAGO and it did absolutely nothing".
         return HTMLResponse(
@@ -3567,7 +3578,7 @@ async def issue_fragord(
             f"\U0001f4dd **FRAGO {number} — {event_title}**\n\n"
             f"\U0001f4c5 {date_str}\n"
             f"\U0001f4cd {event.location or 'TBD'}\n\n"
-            f"**{subject}**\n{body}\n\n"
+            f"**{subject}**\n{_html_to_plain_text(body)}\n\n"
             f"All other instructions from the WARNO/OPORD remain in effect.\n"
             f"\U0001f517 https://portal.13thlegion.org/events/{event_id}"
         )
