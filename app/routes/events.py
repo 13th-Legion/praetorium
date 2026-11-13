@@ -1242,8 +1242,7 @@ async def _maintain_event_roster(db, event_id, event):
     
     Called on event detail and roster partial loads for unfinalised, RSVP-enabled events.
     - Adds pending RSVPs for active/recruit members who joined after event creation
-    - Removes pending RSVPs for members who have been separated/inactivated
-    - Preserves non-pending RSVPs (attending/declined) for historical accuracy
+    - Removes ALL RSVPs (pending/attending/declined) for members who have been separated/inactivated
     """
     if not event or event.finalized_at or not event.rsvp_enabled:
         return
@@ -1292,7 +1291,7 @@ async def _maintain_event_roster(db, event_id, event):
     all_active_ids = {r[0] for r in all_active_result.all()}
 
     for member_id, rsvp in existing_by_member.items():
-        if member_id not in all_active_ids and rsvp.status == "pending":
+        if member_id not in all_active_ids:
             await db.delete(rsvp)
             changed = True
 
