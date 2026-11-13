@@ -406,6 +406,9 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.45);
     }
     .feedback-fab:hover { filter: brightness(1.08); }
+    @media print {
+        .feedback-fab { display: none !important; }
+    }
     </style>
     {% block scripts %}{% endblock %}
 </body>
