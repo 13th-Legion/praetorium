@@ -3572,49 +3572,24 @@ async def issue_fragord(
         html_body = _frago_email_html(event, number, subject, body, date_str)
         subj_line = f"\U0001f4dd FRAGO {number} — {event_title}{_subject_date_suffix(event.date_start, event.date_end)}"
 
-        # Cross-post to T1 - Announcements. Unlike the WARNO/OPORD paths this records
-        # whether it worked instead of swallowing the failure.
-        talk_msg = (
-            f"\U0001f4dd **FRAGO {number} — {event_title}**\n\n"
-            f"\U0001f4c5 {date_str}\n"
-            f"\U0001f4cd {event.location or 'TBD'}\n\n"
-            f"**{subject}**\n{_html_to_plain_text(body)}\n\n"
-            f"All other instructions from the WARNO/OPORD remain in effect.\n"
-            f"\U0001f517 https://portal.13thlegion.org/events/{event_id}"
-        )
+        # FRAGOs are attendee-only: no T1 - Announcements cross-post.
         talk_ok = False
-        try:
-            settings = get_settings()
-            async with httpx.AsyncClient(timeout=15) as client:
-                tr = await client.post(
-                    f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
-                    headers={"OCS-APIRequest": "true", "Accept": "application/json"},
-                    auth=(NC_TALK_USER, NC_TALK_PASS),
-                    data={"message": talk_msg},
-                )
-            talk_ok = tr.status_code < 300
-            if not talk_ok:
-                _frago_log.error(
-                    "FRAGO %s/%s Talk post failed: HTTP %s body=%r",
-                    event_id, number, tr.status_code, (tr.text or "")[:300],
-                )
-        except Exception as e:
-            _frago_log.error("FRAGO %s/%s Talk post error: %s", event_id, number, e, exc_info=True)
 
         notified_ok = False
         try:
-            from app.routes.notifications import create_notification_for_all
-            await create_notification_for_all(
-                db, "event", f"\U0001f4dd FRAGO {number} — {event_title}",
-                body=subject,
-                link=f"/events/{event_id}",
-                icon="\U0001f4dd",
-            )
+            from app.routes.notifications import create_notification
+            for m in attending_members:
+                await create_notification(
+                    db, m.id, "event", f"\U0001f4dd FRAGO {number} — {event_title}",
+                    body=subject,
+                    link=f"/events/{event_id}",
+                    icon="\U0001f4dd",
+                )
             notified_ok = True
         except Exception as e:
             _frago_log.error("FRAGO %s/%s portal notification failed: %s", event_id, number, e, exc_info=True)
 
-        frago.talk_posted = talk_ok
+        frago.talk_posted = False
         frago.notified = notified_ok
         await db.commit()
 
@@ -3659,9 +3634,8 @@ async def issue_fragord(
         bits.append(f'emailing {email_count} attending member{"s" if email_count != 1 else ""}')
     else:
         bits.append('no attending members with an email on file — <strong>no email sent</strong>')
-    bits.append('posted to Announcements' if talk_ok else '<strong>Talk post FAILED</strong>')
     bits.append('portal notification sent' if notified_ok else '<strong>portal notification FAILED</strong>')
-    all_ok = bool(email_count) and talk_ok and notified_ok
+    all_ok = bool(email_count) and notified_ok
     bg = "#1b5e20" if all_ok else "#e65100"
 
     return HTMLResponse(
