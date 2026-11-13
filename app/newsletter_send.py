@@ -7,19 +7,14 @@ from __future__ import annotations
 import os
 import re
 import json
-import smtplib
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.mime.image import MIMEImage
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.member import Member
 from app.newsletter_assets import crest_url, NEWSLETTER_ATTACH_DIR
-from app.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+from app.settings import SMTP_FROM
 
 logger = logging.getLogger(__name__)
 
@@ -206,52 +201,25 @@ def send_email_sync(
     for disk_path, orig_name, mime_type in attachment_files:
         try:
             with open(disk_path, "rb") as fh:
-                loaded_atts.append((fh.read(), orig_name, mime_type))
+                loaded_atts.append((orig_name, mime_type, fh.read()))
         except Exception as e:
             logger.error(f"Unit comms attachment unreadable {disk_path}: {e}")
 
-    sent = failed = 0
-    err = None
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            if SMTP_PASS:
-                server.login(SMTP_USER, SMTP_PASS)
-            for email_addr, _name in recipients:
-                try:
-                    if loaded_atts:
-                        msg = MIMEMultipart("mixed")
-                        alt = MIMEMultipart("alternative")
-                        alt.attach(MIMEText(plain_body, "plain"))
-                        alt.attach(MIMEText(html_body, "html"))
-                        msg.attach(alt)
-                        for data, oname, mtype in loaded_atts:
-                            maintype, _, subtype = mtype.partition("/")
-                            if maintype == "image":
-                                part = MIMEImage(data, _subtype=subtype or "octet-stream")
-                            elif mtype == "application/pdf":
-                                part = MIMEApplication(data, _subtype="pdf")
-                            else:
-                                part = MIMEApplication(data)
-                            part.add_header("Content-Disposition", "attachment", filename=oname)
-                            msg.attach(part)
-                    else:
-                        msg = MIMEMultipart("alternative")
-                        msg.attach(MIMEText(plain_body, "plain"))
-                        msg.attach(MIMEText(html_body, "html"))
-                    msg["Subject"] = subject
-                    msg["From"] = sender_from
-                    msg["To"] = email_addr
-                    server.send_message(msg)
-                    sent += 1
-                except Exception as e:
-                    failed += 1
-                    logger.warning(f"Unit comms send failed to {email_addr}: {e}")
-    except Exception as e:
-        err = str(e)
-        logger.error(f"Unit comms SMTP connection failed: {e}")
+    from app.integrations import email as email_service
+    messages = [
+        email_service.EmailMessage(
+            to=email_addr,
+            subject=subject,
+            html=html_body,
+            text=plain_body,
+            from_addr=sender_from,
+            attachments=loaded_atts if loaded_atts else None,
+        )
+        for email_addr, _name in recipients
+    ]
+    sent, failed = email_service.send_bulk(messages)
     logger.info(f"Unit comms '{subject}' complete: {sent} sent, {failed} failed")
-    return sent, failed, err
+    return sent, failed, None
 
 
 def send_newsletter_sync(
@@ -274,49 +242,22 @@ def send_newsletter_sync(
     for disk_path, orig_name, mime_type in attachment_files:
         try:
             with open(disk_path, "rb") as fh:
-                loaded_atts.append((fh.read(), orig_name, mime_type))
+                loaded_atts.append((orig_name, mime_type, fh.read()))
         except Exception as e:
             logger.error(f"Newsletter attachment unreadable {disk_path}: {e}")
 
-    sent = failed = 0
-    err = None
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            if SMTP_PASS:
-                server.login(SMTP_USER, SMTP_PASS)
-            for email_addr, _name in recipients:
-                try:
-                    if loaded_atts:
-                        msg = MIMEMultipart("mixed")
-                        alt = MIMEMultipart("alternative")
-                        alt.attach(MIMEText(plain_body, "plain"))
-                        alt.attach(MIMEText(html_body, "html"))
-                        msg.attach(alt)
-                        for data, oname, mtype in loaded_atts:
-                            maintype, _, subtype = mtype.partition("/")
-                            if maintype == "image":
-                                part = MIMEImage(data, _subtype=subtype or "octet-stream")
-                            elif mtype == "application/pdf":
-                                part = MIMEApplication(data, _subtype="pdf")
-                            else:
-                                part = MIMEApplication(data)
-                            part.add_header("Content-Disposition", "attachment", filename=oname)
-                            msg.attach(part)
-                    else:
-                        msg = MIMEMultipart("alternative")
-                        msg.attach(MIMEText(plain_body, "plain"))
-                        msg.attach(MIMEText(html_body, "html"))
-                    msg["Subject"] = subject
-                    msg["From"] = SMTP_FROM
-                    msg["To"] = email_addr
-                    server.send_message(msg)
-                    sent += 1
-                except Exception as e:
-                    failed += 1
-                    logger.warning(f"Newsletter send failed to {email_addr}: {e}")
-    except Exception as e:
-        err = str(e)
-        logger.error(f"Newsletter SMTP connection failed: {e}")
+    from app.integrations import email as email_service
+    messages = [
+        email_service.EmailMessage(
+            to=email_addr,
+            subject=subject,
+            html=html_body,
+            text=plain_body,
+            from_addr=SMTP_FROM,
+            attachments=loaded_atts if loaded_atts else None,
+        )
+        for email_addr, _name in recipients
+    ]
+    sent, failed = email_service.send_bulk(messages)
     logger.info(f"Newsletter '{subject}' complete: {sent} sent, {failed} failed")
-    return sent, failed, err
+    return sent, failed, None

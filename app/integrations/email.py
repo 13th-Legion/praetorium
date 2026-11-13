@@ -36,22 +36,43 @@ class EmailMessage:
     from_addr: Optional[str] = None          # defaults to SMTP_FROM
     reply_to: Optional[str] = None
     extra_headers: dict = field(default_factory=dict)
+    attachments: Optional[list] = None   # [(filename, mime_type, data_bytes)]
 
 
 def _build_mime(m: EmailMessage) -> MIMEMultipart:
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = m.subject
-    msg["From"] = m.from_addr or SMTP_FROM
-    msg["To"] = m.to
+    from email.mime.application import MIMEApplication
+
+    alt = MIMEMultipart("alternative")
+    alt["Subject"] = m.subject
+    alt["From"] = m.from_addr or SMTP_FROM
+    alt["To"] = m.to
     if m.reply_to:
-        msg["Reply-To"] = m.reply_to
+        alt["Reply-To"] = m.reply_to
     for k, v in (m.extra_headers or {}).items():
-        msg[k] = v
+        alt[k] = v
     # Plain-text part first (fallback), then HTML (preferred) per RFC.
     if m.text:
-        msg.attach(MIMEText(m.text, "plain"))
-    msg.attach(MIMEText(m.html, "html"))
-    return msg
+        alt.attach(MIMEText(m.text, "plain"))
+    alt.attach(MIMEText(m.html, "html"))
+
+    if m.attachments:
+        from email.mime.image import MIMEImage
+        msg = MIMEMultipart("mixed")
+        for k, v in alt.items():
+            msg[k] = v
+        msg.attach(alt)
+        for filename, mime_type, data in m.attachments:
+            maintype, _, subtype = (mime_type or "").partition("/")
+            if maintype == "image":
+                part = MIMEImage(data, _subtype=subtype or "octet-stream")
+            elif mime_type == "application/pdf":
+                part = MIMEApplication(data, _subtype="pdf")
+            else:
+                part = MIMEApplication(data)
+            part.add_header("Content-Disposition", "attachment", filename=filename)
+            msg.attach(part)
+        return msg
+    return alt
 
 
 def _connect() -> smtplib.SMTP:
