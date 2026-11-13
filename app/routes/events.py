@@ -3469,7 +3469,7 @@ def _frago_email_html(event, frago_number: int, subject: str, body: str, date_st
        📍 {esc(event.location or 'TBD')}</p>
     <h2 style="color:#d4a537;margin:20px 0 4px;font-size:16px;">{esc(subject)}</h2>
     <div style="background:#f5f5f5;border-left:4px solid #ef6c00;padding:12px 16px;border-radius:4px;">
-        <p style="color:#333;font-size:14px;line-height:1.6;margin:0;">{body_html}</p>
+        <div style="color:#333;font-size:14px;line-height:1.6;margin:0;">{body_html}</div>
     </div>
     {rally_html}
     <p style="font-size:14px;">This is a change to a previously issued order. All other
