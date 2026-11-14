@@ -231,6 +231,12 @@
     </button>
     {% endif %}
 
+    {% if can_buddy and show_tactical %}
+    <form method="POST" action="/events/{{ event.id }}/ops/buddy/auto" style="display:inline;" onsubmit="return confirm('Auto-assign battle buddies? Pairs patched with unpatched, never two unpatched.');">
+      <button type="submit" class="ops-btn">🤝 Auto-Assign Buddies</button>
+    </form>
+    {% endif %}
+
     {% if can_vex_create and show_tactical %}
     <button class="ops-btn" onclick="document.getElementById('modal-vex-create').classList.add('show')">
       ⚔️ + Vexillation

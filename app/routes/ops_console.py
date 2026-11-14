@@ -796,6 +796,56 @@ async def pair_buddy(
     return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
 
+@router.post("/events/{event_id}/ops/buddy/auto", response_class=HTMLResponse)
+@require_role(*S1_CMD_ROLES)
+async def auto_pair_buddies(request: Request, event_id: int):
+    """Auto-assign battle buddies for checked-in, unpaired members.
+
+    Pairs each unpatched member (no patch_date) with a patched member, then
+    pairs leftover patched members together. Leftover unpatched members stay
+    unpaired — never two unpatched together.
+    """
+    async with database.async_session() as db:
+        await _get_event_or_404(db, event_id)
+
+        existing = await db.execute(
+            select(EventBuddyPair).where(EventBuddyPair.event_id == event_id)
+        )
+        paired_ids: set[int] = set()
+        for pair in existing.scalars().all():
+            if pair.member_a_id:
+                paired_ids.add(pair.member_a_id)
+            if pair.member_b_id:
+                paired_ids.add(pair.member_b_id)
+
+        checked_in = await _get_checked_in_members(db, event_id)
+        available = [m for m in checked_in if m.id not in paired_ids]
+        available.sort(key=lambda m: (m.last_name.lower(), m.first_name.lower()))
+
+        patched = [m for m in available if m.patch_date]
+        unpatched = [m for m in available if not m.patch_date]
+
+        # 1) Each unpatched member gets a patched buddy.
+        new_pairs = list(zip(patched, unpatched))
+        # 2) Leftover patched members pair with each other.
+        leftover_patched = patched[len(unpatched):]
+        for i in range(0, len(leftover_patched) - 1, 2):
+            new_pairs.append((leftover_patched[i], leftover_patched[i + 1]))
+
+        for a, b in new_pairs:
+            db.add(
+                EventBuddyPair(
+                    event_id=event_id,
+                    member_a_id=a.id,
+                    member_b_id=b.id,
+                    created_at=datetime.utcnow(),
+                )
+            )
+        await db.commit()
+
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
 @router.delete("/events/{event_id}/ops/buddy/{pair_id}", response_class=HTMLResponse)
 @require_role(*S1_CMD_ROLES)
 async def unpair_buddy(request: Request, event_id: int, pair_id: int):
