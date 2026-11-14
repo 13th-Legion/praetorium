@@ -818,8 +818,21 @@ async def auto_pair_buddies(request: Request, event_id: int):
             if pair.member_b_id:
                 paired_ids.add(pair.member_b_id)
 
+        excluded_result = await db.execute(
+            select(EventRSVP.member_id).where(
+                and_(
+                    EventRSVP.event_id == event_id,
+                    EventRSVP.buddy_exclude == True,
+                )
+            )
+        )
+        excluded_ids = set(excluded_result.scalars().all())
+
         checked_in = await _get_checked_in_members(db, event_id)
-        available = [m for m in checked_in if m.id not in paired_ids]
+        available = [
+            m for m in checked_in
+            if m.id not in paired_ids and m.id not in excluded_ids
+        ]
         available.sort(key=lambda m: (m.last_name.lower(), m.first_name.lower()))
 
         patched = [m for m in available if m.patch_date]
@@ -842,6 +855,25 @@ async def auto_pair_buddies(request: Request, event_id: int):
                 )
             )
         await db.commit()
+
+    return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
+
+
+@router.post("/events/{event_id}/ops/buddy/exclude/{member_id}", response_class=HTMLResponse)
+@require_role(*S1_CMD_ROLES)
+async def toggle_buddy_exclude(request: Request, event_id: int, member_id: int):
+    """Toggle a member's 'exclude from auto-pair' flag for this event."""
+    async with database.async_session() as db:
+        await _get_event_or_404(db, event_id)
+        result = await db.execute(
+            select(EventRSVP).where(
+                and_(EventRSVP.event_id == event_id, EventRSVP.member_id == member_id)
+            )
+        )
+        rsvp = result.scalar_one_or_none()
+        if rsvp:
+            rsvp.buddy_exclude = not rsvp.buddy_exclude
+            await db.commit()
 
     return RedirectResponse(url=f"/events/{event_id}/ops", status_code=303)
 
@@ -1358,12 +1390,16 @@ async def _build_roster(db, event: Event) -> list[dict]:
             and_(
                 EventRSVP.event_id == event_id,
                 Member.status.in_(("active", "recruit")),
+                or_(
+                    EventRSVP.status == "attending",
+                    EventRSVP.checked_in == True,
+                ),
             )
         )
         .order_by(
-            EventRSVP.checked_in_at.desc().nullslast(),
-            EventRSVP.no_show.desc(),
-            Member.last_name,
+            EventRSVP.checked_in.desc(),
+            Member.last_name.asc(),
+            Member.first_name.asc(),
         )
     )
     rsvp_rows = rsvp_result.all()

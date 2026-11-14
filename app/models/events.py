@@ -197,6 +197,9 @@ class EventRSVP(Base):
     # Event-scoped extra-duty exemption (PP-324). Not a standing member-profile flag.
     immunes: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
+    # Event-scoped "don't auto-pair me" flag for battle buddies (PP-070c).
+    buddy_exclude: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
