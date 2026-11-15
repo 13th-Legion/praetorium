@@ -28,14 +28,20 @@ def require_auth(func):
     return wrapper
 
 
-def require_role(*roles: str):
-    """Decorator: require one of the specified portal roles."""
+def require_role(*roles: str, allow_guest: bool = True):
+    """Decorator: require one of the specified portal roles.
+
+    allow_guest=False rejects the read-only guest bundle (which carries
+    s1-s6, command, and admin view roles) even when it intersects roles.
+    """
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
             user = get_current_user(request)
             if not user:
                 return RedirectResponse(url="/auth/login", status_code=302)
+            if not allow_guest and is_guest(user):
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
             user_roles = set(user.get("roles", []))
             if not user_roles.intersection(set(roles)):
                 raise HTTPException(status_code=403, detail="Insufficient permissions")

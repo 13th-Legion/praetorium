@@ -144,7 +144,7 @@ def _user_has_role(user: dict, *roles: str) -> bool:
 # ─── Ops Console — Main Page ─────────────────────────────────────────────────
 
 @router.get("/events/{event_id}/ops", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def ops_console(request: Request, event_id: int):
     """Main ops console page for an event."""
     user = get_current_user(request)
@@ -223,7 +223,7 @@ async def ops_console(request: Request, event_id: int):
 # ─── QR Code endpoint ─────────────────────────────────────────────────────────
 
 @router.get("/events/{event_id}/ops/qr", response_class=Response)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def ops_qr_code(request: Request, event_id: int):
     """Return a QR code PNG image for the current check-in token."""
     user = get_current_user(request)
@@ -407,7 +407,7 @@ async def qr_checkin_get(request: Request, event_id: int, token: str = ""):
 # ─── Live Roster Partial ──────────────────────────────────────────────────────
 
 @router.get("/events/{event_id}/ops/roster", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def ops_roster(request: Request, event_id: int):
     """HTMX partial: live roster table body (polls every 10s)."""
     user = get_current_user(request)
@@ -435,7 +435,7 @@ async def ops_roster(request: Request, event_id: int):
 # ─── Manual Check-in ─────────────────────────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/override-rsvp", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def override_rsvp(
     request: Request,
     event_id: int,
@@ -490,7 +490,7 @@ async def override_rsvp(
 
 
 @router.post("/events/{event_id}/ops/manual-checkin", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def manual_checkin(
     request: Request,
     event_id: int,
@@ -532,7 +532,7 @@ async def manual_checkin(
 
 
 @router.post("/events/{event_id}/ops/uncheckin", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def manual_uncheckin(
     request: Request,
     event_id: int,
@@ -564,7 +564,7 @@ async def manual_uncheckin(
 # ─── Immunes (event-scoped extra-duty exemption) ───────────────────────────────
 
 @router.post("/events/{event_id}/ops/immunes", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def toggle_immunes(
     request: Request,
     event_id: int,
@@ -606,7 +606,7 @@ async def toggle_immunes(
 # ─── Duty team (event-scoped extra duties) ────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/duty/assign", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def assign_duty(
     request: Request,
     event_id: int,
@@ -666,7 +666,7 @@ async def assign_duty(
 
 
 @router.post("/events/{event_id}/ops/duty/from-team", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def assign_duty_from_team(
     request: Request,
     event_id: int,
@@ -722,7 +722,7 @@ async def assign_duty_from_team(
 
 
 @router.delete("/events/{event_id}/ops/duty/{assignment_id}", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def unassign_duty(request: Request, event_id: int, assignment_id: int):
     async with database.async_session() as db:
         result = await db.execute(
@@ -742,7 +742,7 @@ async def unassign_duty(request: Request, event_id: int, assignment_id: int):
 
 
 @router.post("/events/{event_id}/ops/duty/{assignment_id}/delete", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def unassign_duty_post(request: Request, event_id: int, assignment_id: int):
     async with database.async_session() as db:
         result = await db.execute(
@@ -764,7 +764,7 @@ async def unassign_duty_post(request: Request, event_id: int, assignment_id: int
 # ─── Battle Buddy ─────────────────────────────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/buddy", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def pair_buddy(
     request: Request,
     event_id: int,
@@ -797,7 +797,7 @@ async def pair_buddy(
 
 
 @router.post("/events/{event_id}/ops/buddy/auto", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def auto_pair_buddies(request: Request, event_id: int):
     """Auto-assign battle buddies for checked-in, unpaired members.
 
@@ -860,7 +860,7 @@ async def auto_pair_buddies(request: Request, event_id: int):
 
 
 @router.post("/events/{event_id}/ops/buddy/exclude/{member_id}", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def toggle_buddy_exclude(request: Request, event_id: int, member_id: int):
     """Toggle a member's 'exclude from auto-pair' flag for this event."""
     async with database.async_session() as db:
@@ -879,7 +879,7 @@ async def toggle_buddy_exclude(request: Request, event_id: int, member_id: int):
 
 
 @router.delete("/events/{event_id}/ops/buddy/{pair_id}", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def unpair_buddy(request: Request, event_id: int, pair_id: int):
     """Remove a battle buddy pairing (HTMX DELETE)."""
     async with database.async_session() as db:
@@ -898,7 +898,7 @@ async def unpair_buddy(request: Request, event_id: int, pair_id: int):
 
 
 @router.post("/events/{event_id}/ops/buddy/{pair_id}/delete", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def unpair_buddy_post(request: Request, event_id: int, pair_id: int):
     """Remove a battle buddy pairing (POST fallback for non-JS)."""
     async with database.async_session() as db:
@@ -922,7 +922,7 @@ async def unpair_buddy_post(request: Request, event_id: int, pair_id: int):
 # ─── Guard Duty ───────────────────────────────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/guard/slots", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def configure_guard_slots(
     request: Request,
     event_id: int,
@@ -955,7 +955,7 @@ async def configure_guard_slots(
 
 
 @router.post("/events/{event_id}/ops/guard/assign", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def assign_guard(
     request: Request,
     event_id: int,
@@ -1016,7 +1016,7 @@ async def assign_guard(
 
 
 @router.delete("/events/{event_id}/ops/guard/{assignment_id}", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def unassign_guard(request: Request, event_id: int, assignment_id: int):
     """Remove a guard duty assignment (HTMX DELETE)."""
     async with database.async_session() as db:
@@ -1035,7 +1035,7 @@ async def unassign_guard(request: Request, event_id: int, assignment_id: int):
 
 
 @router.post("/events/{event_id}/ops/guard/{assignment_id}/delete", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def unassign_guard_post(request: Request, event_id: int, assignment_id: int):
     """Remove a guard duty assignment (POST fallback)."""
     async with database.async_session() as db:
@@ -1054,7 +1054,7 @@ async def unassign_guard_post(request: Request, event_id: int, assignment_id: in
 
 
 @router.post("/events/{event_id}/ops/guard/auto-assign", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def auto_assign_guard(request: Request, event_id: int):
     """Auto-distribute checked-in members evenly across guard slots."""
     user = get_current_user(request)
@@ -1098,7 +1098,7 @@ async def auto_assign_guard(request: Request, event_id: int):
 # ─── Vexillations ─────────────────────────────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/vexillation", response_class=HTMLResponse)
-@require_role(*S3_CMD_ROLES)
+@require_role(*S3_CMD_ROLES, allow_guest=False)
 async def create_vexillation(
     request: Request,
     event_id: int,
@@ -1125,7 +1125,7 @@ async def create_vexillation(
 
 
 @router.delete("/events/{event_id}/ops/vexillation/{vex_id}", response_class=HTMLResponse)
-@require_role(*S3_CMD_ROLES)
+@require_role(*S3_CMD_ROLES, allow_guest=False)
 async def delete_vexillation(request: Request, event_id: int, vex_id: int):
     """Delete a vexillation and all its assignments (HTMX DELETE)."""
     async with database.async_session() as db:
@@ -1144,7 +1144,7 @@ async def delete_vexillation(request: Request, event_id: int, vex_id: int):
 
 
 @router.post("/events/{event_id}/ops/vexillation/{vex_id}/delete", response_class=HTMLResponse)
-@require_role(*S3_CMD_ROLES)
+@require_role(*S3_CMD_ROLES, allow_guest=False)
 async def delete_vexillation_post(request: Request, event_id: int, vex_id: int):
     """Delete a vexillation (POST fallback)."""
     user = get_current_user(request)
@@ -1179,7 +1179,7 @@ async def delete_vexillation_post(request: Request, event_id: int, vex_id: int):
 
 
 @router.post("/events/{event_id}/ops/vexillation/{vex_id}/assign", response_class=HTMLResponse)
-@require_role(*S1_S3_CMD_ROLES)
+@require_role(*S1_S3_CMD_ROLES, allow_guest=False)
 async def assign_vexillation(
     request: Request,
     event_id: int,
@@ -1220,7 +1220,7 @@ async def assign_vexillation(
 
 
 @router.post("/events/{event_id}/ops/vexillation/{vex_id}/status", response_class=HTMLResponse)
-@require_role(*S3_CMD_ROLES)
+@require_role(*S3_CMD_ROLES, allow_guest=False)
 async def set_vexillation_status(
     request: Request,
     event_id: int,
@@ -1248,7 +1248,7 @@ async def set_vexillation_status(
 
 
 @router.post("/events/{event_id}/ops/vexillation/{vex_id}/commander", response_class=HTMLResponse)
-@require_role(*S3_CMD_ROLES)
+@require_role(*S3_CMD_ROLES, allow_guest=False)
 async def set_vexillation_commander(
     request: Request,
     event_id: int,
@@ -1274,7 +1274,7 @@ async def set_vexillation_commander(
 # ─── Guest Management ─────────────────────────────────────────────────────────
 
 @router.post("/events/{event_id}/ops/guest", response_class=HTMLResponse)
-@require_role(*S1_CMD_ROLES)
+@require_role(*S1_CMD_ROLES, allow_guest=False)
 async def add_walkin_guest(
     request: Request,
     event_id: int,
@@ -1317,7 +1317,7 @@ async def add_walkin_guest(
 # ─── Guard Config Partial ─────────────────────────────────────────────────────
 
 @router.get("/events/{event_id}/ops/guard/config", response_class=HTMLResponse)
-@require_role(*S1_S2_CMD_ROLES)
+@require_role(*S1_S2_CMD_ROLES, allow_guest=False)
 async def ops_guard_config(request: Request, event_id: int):
     """HTMX partial: guard slot configuration panel."""
     user = get_current_user(request)
@@ -1348,7 +1348,7 @@ async def ops_guard_config(request: Request, event_id: int):
 # ─── Vexillation Summary Partial ──────────────────────────────────────────────
 
 @router.get("/events/{event_id}/ops/vexillations", response_class=HTMLResponse)
-@require_role(*OPS_ROLES)
+@require_role(*OPS_ROLES, allow_guest=False)
 async def ops_vex_summary(request: Request, event_id: int):
     """HTMX partial: vexillation summary with field status toggles."""
     user = get_current_user(request)
