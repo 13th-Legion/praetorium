@@ -228,7 +228,7 @@ async def promotions_dashboard(request: Request):
             "points_lifetime": points_by_member.get(m.id, (0, 0))[0],
             "points_since_promo": points_by_member.get(m.id, (0, 0))[1],
             "status": m.status,
-            "is_recruit": m.status == "recruit",
+            "is_recruit": m.patch_date is None,
             "join_date_str": m.join_date.strftime("%Y-%m-%d") if m.join_date else "—",
             "ftx_count": m.ftx_count or 0,
             "tradoc_done": len(done_by_member.get(m.id, set())),
