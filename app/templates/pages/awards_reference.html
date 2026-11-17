@@ -28,13 +28,13 @@
   <p class="sub">Live from the award catalog. Promotion points are base points plus device increments.</p>
 
   {% for section in sections %}
-  {% if section.items %}
+  {% if section["items"] %}
   <section class="tier">
     <h2>{{ section.title }}{% if section.latin %}<span class="latin">{{ section.latin }}</span>{% endif %}</h2>
     <p class="blurb">{{ section.blurb }}</p>
     <table>
       <tr><th class="prec">#</th><th>Award</th><th class="pts">Points</th><th>Device</th><th>Trigger</th><th>Notes</th></tr>
-      {% for item in section.items %}
+      {% for item in section["items"] %}
       <tr>
         <td class="prec">{{ item.precedence }}</td>
         <td>{{ item.name }}</td>
