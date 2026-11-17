@@ -11,6 +11,12 @@
     </div>
     {% endif %}
 
+    {% if request.query_params.get('creds_error') %}
+    <div style="margin:0 0 16px;padding:10px 14px;background:rgba(198,40,40,0.15);border:1px solid #c62828;border-radius:6px;color:#ef9a9a;font-size:13px;">
+        ⚠️ {{ request.query_params.get('creds_error') }}
+    </div>
+    {% endif %}
+
     <form method="POST" action="/api/members/{{ member.id }}/edit">
         <!-- Identity -->
         <div class="card" style="margin-bottom:16px;">

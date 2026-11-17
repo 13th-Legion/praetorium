@@ -4,9 +4,10 @@ import logging
 import re
 from datetime import datetime, date
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -853,6 +854,14 @@ V/R,
     return subject, html_body, text_body
 
 
+def _creds_error(member_id: int, message: str) -> RedirectResponse:
+    """Redirect back to the edit page with a human-readable error banner."""
+    return RedirectResponse(
+        url=f"/api/members/{member_id}/edit?creds_error={quote(message)}",
+        status_code=303,
+    )
+
+
 @router.post("/{member_id}/resend-credentials")
 @require_auth
 async def resend_credentials(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
@@ -896,7 +905,7 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
                 "Resend creds: NC password reset failed for %s: HTTP %s body=%r",
                 member.nc_username, resp.status_code, resp.text[:300],
             )
-            raise HTTPException(status_code=502, detail=f"NC password reset failed (HTTP {resp.status_code})")
+            return _creds_error(member_id, f"NC password reset failed (HTTP {resp.status_code})")
 
         # HTTP 200 is not enough -- read the OCS meta block.
         ocs_code, ocs_msg = None, ""
@@ -917,9 +926,9 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
                 "Resend creds: could not parse OCS status for %s; body=%r",
                 member.nc_username, (resp.text or "")[:300],
             )
-            raise HTTPException(
-                status_code=502,
-                detail="NC returned an unreadable response; password state unknown. Nothing was emailed.",
+            return _creds_error(
+                member_id,
+                "NC returned an unreadable response; password state unknown. Nothing was emailed.",
             )
 
         if ocs_code not in (100, 200):
@@ -932,10 +941,10 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
                 997: "Nextcloud rejected our service credentials (NC_SVC_USER/NC_SVC_PASS).",
                 998: f"Nextcloud has no user '{member.nc_username}'.",
             }.get(ocs_code, f"Nextcloud returned OCS status {ocs_code}.")
-            raise HTTPException(
-                status_code=502,
-                detail=f"{hint} Password was NOT changed and no email was sent."
-                       + (f" NC said: {ocs_msg[:120]}" if ocs_msg else ""),
+            return _creds_error(
+                member_id,
+                f"{hint} Password was NOT changed and no email was sent."
+                + (f" NC said: {ocs_msg[:120]}" if ocs_msg else ""),
             )
 
         log.info(
@@ -946,7 +955,7 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
         raise
     except Exception as e:
         log.error(f"Resend creds: NC reset error for {member.nc_username}: {e}")
-        raise HTTPException(status_code=502, detail=f"NC reset error: {e}")
+        return _creds_error(member_id, f"NC reset error: {e}")
 
     # 2. Send the credentials email via the shared email service (Proton Bridge)
     from app.integrations import email as email_service
@@ -955,7 +964,7 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
     if email_service.send_email(member.email, subject, html_body, text=text_body):
         log.info(f"Resent credentials to {member.email} for {member.nc_username} by {user.get('username')}")
     else:
-        raise HTTPException(status_code=502, detail="Password was reset but email failed to send")
+        return _creds_error(member_id, "Password was reset but email failed to send")
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"/api/members/{member_id}/edit?creds_sent=1", status_code=303)
