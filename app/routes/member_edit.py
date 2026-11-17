@@ -617,6 +617,7 @@ async def save_member_edit(request: Request, member_id: int, db: AsyncSession = 
     # Checkboxes only submit when checked; the full-form guard above guarantees
     # the whole form rendered, so an absent box legitimately means "unchecked".
     member.is_founder = form.get("is_founder") == "on"
+    member.no_media = form.get("no_media") == "on"
     member.is_veteran = form.get("is_veteran") == "on"
     if form.get("mos", _MISSING) is not _MISSING:
         member.mos = form.get("mos", "").strip() or None

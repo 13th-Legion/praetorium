@@ -135,6 +135,11 @@
                         <input type="checkbox" name="is_founder" {% if member.is_founder %}checked{% endif %}> Founder
                     </label>
                 </div>
+                <div>
+                    <label class="edit-label" style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" name="no_media" {% if member.no_media %}checked{% endif %}> 🚫 No media (opt out of photos/video/social)
+                    </label>
+                </div>
             </div>
         </div>
 

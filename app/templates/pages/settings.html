@@ -44,6 +44,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- Privacy & Media -->
+        <div class="card card-pii" style="border-color: rgba(212,165,55,0.2);">
+            <h3 class="card-title">🚫 Privacy & Media</h3>
+            <div class="card-body">
+                <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.85rem;">
+                    Opt out of appearing in photos, video, or social media. Squad and team leaders will see a 🚫 marker next to your name on the roster.
+                </p>
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                    <input type="checkbox" name="no_media" {% if member.no_media %}checked{% endif %}
+                           hx-post="/settings/no-media" hx-trigger="change" hx-target="#no-media-result"
+                           style="margin-top:3px;">
+                    <span>Do not photograph, film, or publish me (no-media)</span>
+                </label>
+                <div id="no-media-result" style="margin-top: 10px; font-weight: 500; font-size: 0.85rem;"></div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

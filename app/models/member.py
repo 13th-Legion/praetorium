@@ -77,6 +77,7 @@ class Member(Base):
 
     # Organizational flags
     is_hq: Mapped[bool] = mapped_column(Boolean, default=False)  # HQ element (dual-assigned)
+    no_media: Mapped[bool] = mapped_column(Boolean, default=False)  # opt out of photos/video/social media
 
     # Flags
     is_veteran: Mapped[bool] = mapped_column(Boolean, default=False)
