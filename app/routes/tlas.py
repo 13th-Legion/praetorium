@@ -104,9 +104,16 @@ async def set_threat_level(request: Request, db: AsyncSession = Depends(get_db))
     ann_subject = f"TLAS \u2192 {config['label'].upper()}"
     risk = config.get("risk", "")
     checkin = config.get("checkin", "")
+    supply_kit = config.get("supply_kit", "")
+    measures = config.get("measures", [])
     body_lines = [f"<p><strong>Threat Level is now {config['label'].upper()}.</strong> {risk}</p>"]
+    if supply_kit:
+        body_lines.append(f"<p><strong>Supply kit:</strong> {supply_kit}</p>")
     if checkin:
         body_lines.append(f"<p><strong>Check-in:</strong> {checkin}</p>")
+    if measures:
+        items = "".join(f"<li>{m}</li>" for m in measures)
+        body_lines.append(f"<p><strong>Measures:</strong></p><ul>{items}</ul>")
     if note:
         body_lines.append(f"<p>{note}</p>")
     ann_body = "".join(body_lines)
