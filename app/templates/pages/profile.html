@@ -198,7 +198,7 @@
                     {% for r in row %}
                     <div class="rack-ribbon ribbon-hover" data-name="{{ r.name }}" data-desc="{{ r.description or '' }}" data-meta="{{ r.device_meaning or '' }}" data-cite="{{ r.reason or '' }}">
                         <img src="/static/img/ribbons/{{ r.image }}" alt="{{ r.name }}">
-                        {% if r.device_count %}<span class="rack-devices">{% if r.stars.gold %}<span class="rd-gold">{{ '★' * r.stars.gold }}</span>{% endif %}{% if r.stars.silver %}<span class="rd-silver">{{ '★' * r.stars.silver }}</span>{% endif %}{% if r.stars.bronze %}<span class="rd-bronze">{{ '★' * r.stars.bronze }}</span>{% endif %}</span>{% endif %}
+                        {% if r.stars.gold or r.stars.silver or r.stars.bronze %}<span class="rack-devices">{% if r.stars.gold %}<span class="rd-gold">{{ '★' * r.stars.gold }}</span>{% endif %}{% if r.stars.silver %}<span class="rd-silver">{{ '★' * r.stars.silver }}</span>{% endif %}{% if r.stars.bronze %}<span class="rd-bronze">{{ '★' * r.stars.bronze }}</span>{% endif %}</span>{% endif %}
                     </div>
                     {% endfor %}
                 </div>

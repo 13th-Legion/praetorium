@@ -312,8 +312,15 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
         if not c:
             continue
         dc = info["device_count"]
-        _gold, _rem = divmod(dc, 10)
-        _silver, _bronze = divmod(_rem, 5)
+        if code == "ham":
+            # Amateur radio is a license-class tier, not occurrences:
+            # Technician = bronze, General = silver, Extra = gold (one star).
+            _gold = 1 if dc >= 2 else 0
+            _silver = 1 if dc == 1 else 0
+            _bronze = 1 if dc == 0 else 0
+        else:
+            _gold, _rem = divmod(dc, 10)
+            _silver, _bronze = divmod(_rem, 5)
         # rich tooltip: name — description (· device meaning) (· citation)
         tip_parts = [c.name]
         if c.description:
