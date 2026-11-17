@@ -45,7 +45,7 @@
           <div class="meta">
             {% if item.device_increment %}+{{ item.device_increment }} for each extra award. {% endif %}
             {% if item.is_auto %}Awarded automatically.{% else %}Awarded by hand.{% endif %}
-            {% if item.description %}<div>{{ item.description }}</div>{% endif %}
+            {% if item.description %}<div style="white-space: pre-line;">{{ item.description }}</div>{% endif %}
           </div>
         </div>
       </article>
