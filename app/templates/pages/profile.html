@@ -23,6 +23,9 @@
   .rack-devices { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
     color: #f4d878; font-size: 10px; text-shadow: 0 0 2px #000, 0 0 2px #000; letter-spacing: 1px;
     pointer-events: none; }
+  .rack-devices .rd-gold { color: #f4d878; }
+  .rack-devices .rd-silver { color: #c9c9c9; }
+  .rack-devices .rd-bronze { color: #cd7f32; }
   /* Tabs */
   .tab-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
   .tab-item { transition: transform .15s ease; cursor: help; }
@@ -195,7 +198,7 @@
                     {% for r in row %}
                     <div class="rack-ribbon ribbon-hover" data-name="{{ r.name }}" data-desc="{{ r.description or '' }}" data-meta="{{ r.device_meaning or '' }}" data-cite="{{ r.reason or '' }}">
                         <img src="/static/img/ribbons/{{ r.image }}" alt="{{ r.name }}">
-                        {% if r.device_count %}<span class="rack-devices">{{ '★' * r.device_count }}</span>{% endif %}
+                        {% if r.device_count %}<span class="rack-devices">{% if r.stars.gold %}<span class="rd-gold">{{ '★' * r.stars.gold }}</span>{% endif %}{% if r.stars.silver %}<span class="rd-silver">{{ '★' * r.stars.silver }}</span>{% endif %}{% if r.stars.bronze %}<span class="rd-bronze">{{ '★' * r.stars.bronze }}</span>{% endif %}</span>{% endif %}
                     </div>
                     {% endfor %}
                 </div>

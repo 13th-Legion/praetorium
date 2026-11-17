@@ -302,6 +302,8 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
         if not c:
             continue
         dc = info["device_count"]
+        _gold, _rem = divmod(dc, 10)
+        _silver, _bronze = divmod(_rem, 5)
         # rich tooltip: name — description (· device meaning) (· citation)
         tip_parts = [c.name]
         if c.description:
@@ -314,6 +316,7 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
         entry = {
             "code": c.code, "name": c.name, "image": c.image,
             "precedence": c.precedence, "device_count": dc,
+            "stars": {"gold": _gold, "silver": _silver, "bronze": _bronze},
             "reason": info["reason"], "awarded_at": info["awarded_at"],
             "description": c.description,
             "device_meaning": dm,
