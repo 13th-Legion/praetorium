@@ -83,10 +83,25 @@ def _connect() -> smtplib.SMTP:
     return server
 
 
+def _smtp_reason(exc: Exception) -> str:
+    """Return a short human-readable reason for an SMTP send failure."""
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        parts = []
+        for addr, (code, msg) in exc.recipients.items():
+            text = msg.decode("utf-8", "replace") if isinstance(msg, bytes) else str(msg)
+            parts.append(f"{addr}: {code} {text}")
+        return "; ".join(parts)
+    if isinstance(exc, smtplib.SMTPResponseException):
+        text = exc.smtp_error.decode("utf-8", "replace") if isinstance(exc.smtp_error, bytes) else str(exc.smtp_error)
+        return f"{exc.smtp_code} {text}"
+    return str(exc)
+
+
 def send_email(to: str, subject: str, html: str, text: Optional[str] = None,
                from_addr: Optional[str] = None, reply_to: Optional[str] = None,
-               extra_headers: Optional[dict] = None) -> bool:
-    """Send a single email. Returns True on success, False on failure (logged)."""
+               extra_headers: Optional[dict] = None) -> Optional[str]:
+    """Send a single email. Returns None on success, or a human-readable
+    failure reason string on failure (also logged)."""
     m = EmailMessage(to=to, subject=subject, html=html, text=text,
                      from_addr=from_addr, reply_to=reply_to,
                      extra_headers=extra_headers or {})
@@ -95,10 +110,11 @@ def send_email(to: str, subject: str, html: str, text: Optional[str] = None,
             msg = _build_mime(m)
             server.sendmail(msg["From"], [to], msg.as_string())
         log.info(f"email sent to {to}: {subject!r}")
-        return True
+        return None
     except Exception as e:
+        reason = _smtp_reason(e)
         log.error(f"email send failed to {to} ({subject!r}): {e}")
-        return False
+        return reason
 
 
 def send_bulk(messages: Iterable[EmailMessage], batch_size: int = 5, delay_seconds: float = 10.0) -> tuple[int, int]:

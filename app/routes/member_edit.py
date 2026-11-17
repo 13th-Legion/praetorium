@@ -961,10 +961,14 @@ async def resend_credentials(request: Request, member_id: int, db: AsyncSession 
     from app.integrations import email as email_service
     subject, html_body, text_body = _build_credentials_email(
         member.first_name, member.nc_username, temp_password, member.email)
-    if email_service.send_email(member.email, subject, html_body, text=text_body):
+    send_err = email_service.send_email(member.email, subject, html_body, text=text_body)
+    if send_err is None:
         log.info(f"Resent credentials to {member.email} for {member.nc_username} by {user.get('username')}")
     else:
-        return _creds_error(member_id, "Password was reset but email failed to send")
+        return _creds_error(
+            member_id,
+            f"Password was reset but the credentials email could not be sent: {send_err}",
+        )
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"/api/members/{member_id}/edit?creds_sent=1", status_code=303)

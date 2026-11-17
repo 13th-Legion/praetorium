@@ -33,15 +33,17 @@ def test_send_email_success():
     _FakeSMTP.instances.clear()
     with mock.patch("app.integrations.email.smtplib.SMTP", _FakeSMTP):
         ok = email_service.send_email("x@y.z", "Subj", "<b>hi</b>", text="hi")
-    assert ok is True
+    assert ok is None
     assert _FakeSMTP.instances[-1].sent  # one message sent
 
 
-def test_send_email_failure_returns_false():
+def test_send_email_failure_returns_reason():
     def boom(*a, **k):
         raise OSError("smtp down")
     with mock.patch("app.integrations.email.smtplib.SMTP", boom):
-        assert email_service.send_email("x@y.z", "S", "<b>h</b>") is False
+        err = email_service.send_email("x@y.z", "S", "<b>h</b>")
+    assert err is not None
+    assert "smtp down" in err
 
 
 def test_send_bulk_reuses_one_connection():
