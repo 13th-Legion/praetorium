@@ -276,6 +276,16 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
             if d["device_count"] > (existing["device_count"] or 0):
                 existing["device_count"] = d["device_count"]
 
+    def _star_phrase(dc):
+        """Compact tier phrase for a device count, e.g. '1 gold + 1 silver'."""
+        g, rem = divmod(dc, 10)
+        s, b = divmod(rem, 5)
+        parts = []
+        for n, name in ((g, "gold"), (s, "silver"), (b, "bronze")):
+            if n:
+                parts.append(f"{n} {name} star{'s' if n != 1 else ''}")
+        return " + ".join(parts)
+
     def _device_meaning(code, dc):
         """Human phrase for what a device count represents on a given ribbon."""
         if code == "ftx":
@@ -291,9 +301,9 @@ async def _get_ribbon_data(member, db: AsyncSession) -> dict:
         if code == "instructor_ftx":
             return f"{dc + 1} FTX class{'es' if dc else ''} taught"
         if code == "recruiter":
-            return f"{dc} recruiting device{'s' if dc != 1 else ''}"
+            return _star_phrase(dc)
         if dc:
-            return f"+{dc} device{'s' if dc != 1 else ''}"
+            return _star_phrase(dc)
         return ""
 
     dona, rack, tabs = [], [], []
