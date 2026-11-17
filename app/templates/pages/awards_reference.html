@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Awards — Points Reference{% endblock %}
+{% block head %}
+<style>
+  .awref { max-width: 900px; margin: 0 auto; color: #e8e6dc; }
+  .awref h1 { color: #d4a537; font-size: 1.5rem; letter-spacing: .04em; margin: 0; }
+  .awref .sub { color: #9a9788; margin: 6px 0 0; }
+  .awref .tier { margin-top: 26px; }
+  .awref .tier h2 { margin: 0; color: #d4a537; font-size: 1.05rem; }
+  .awref .latin { color: #9a9788; font-size: .8rem; font-style: italic; margin-left: 8px; }
+  .awref .blurb { color: #9a9788; font-size: .82rem; margin: 4px 0 10px; }
+  .awref table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .awref th { text-align: left; color: #9a9788; font-weight: 600; font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .05em; padding: 6px 10px; border-bottom: 1px solid #33362b; }
+  .awref td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: top; }
+  .awref .prec { color: #9a9788; width: 34px; text-align: right; }
+  .awref .pts { color: #d4a537; font-weight: 700; text-align: right; white-space: nowrap; }
+  .awref .dev { color: #b9bcc4; white-space: nowrap; }
+  .awref .auto { color: #7cb342; }
+  .awref .man { color: #9a9788; }
+  .awref .desc { color: #9a9788; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="awref">
+  <h1>Awards — Promotion Points Reference</h1>
+  <p class="sub">Live from the award catalog. Promotion points are base points plus device increments.</p>
+
+  {% for section in sections %}
+  {% if section.items %}
+  <section class="tier">
+    <h2>{{ section.title }}{% if section.latin %}<span class="latin">{{ section.latin }}</span>{% endif %}</h2>
+    <p class="blurb">{{ section.blurb }}</p>
+    <table>
+      <tr><th class="prec">#</th><th>Award</th><th class="pts">Points</th><th>Device</th><th>Trigger</th><th>Notes</th></tr>
+      {% for item in section.items %}
+      <tr>
+        <td class="prec">{{ item.precedence }}</td>
+        <td>{{ item.name }}</td>
+        <td class="pts">{{ item.points }}</td>
+        <td class="dev">{% if item.device_increment %}+{{ item.device_increment }}{% if item.max_devices %} (max {{ item.max_devices }}){% endif %}{% else %}—{% endif %}</td>
+        <td>{% if item.is_auto %}<span class="auto">auto</span>{% else %}<span class="man">manual</span>{% endif %}</td>
+        <td class="desc">{{ item.description or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

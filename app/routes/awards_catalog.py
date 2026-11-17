@@ -68,3 +68,41 @@ async def awards_catalog(request: Request, db: AsyncSession = Depends(get_db)):
         "user": user,
         "sections": sections,
     })
+
+
+@router.get("/awards/reference")
+@require_auth
+async def awards_reference(request: Request, db: AsyncSession = Depends(get_db)):
+    """Compact table-formatted promotion-points reference (S1/Command quick view)."""
+    user = get_current_user(request)
+    rows = (
+        await db.execute(
+            select(RibbonCatalog)
+            .where(RibbonCatalog.active.is_(True))
+            .order_by(RibbonCatalog.section, RibbonCatalog.precedence)
+        )
+    ).scalars().all()
+
+    grouped = {key: [] for key, _, _, _ in SECTIONS}
+    for row in rows:
+        if row.section in grouped:
+            grouped[row.section].append({
+                "code": row.code,
+                "name": row.name,
+                "precedence": row.precedence,
+                "points": row.base_points,
+                "device_increment": row.device_increment or 0,
+                "max_devices": row.max_devices or 0,
+                "is_auto": row.is_auto,
+                "description": row.description,
+            })
+
+    sections = [
+        {"key": key, "title": title, "latin": latin, "blurb": blurb, "items": grouped[key]}
+        for key, title, latin, blurb in SECTIONS
+    ]
+    return templates.TemplateResponse("pages/awards_reference.html", {
+        "request": request,
+        "user": user,
+        "sections": sections,
+    })
