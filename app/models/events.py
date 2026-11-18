@@ -357,6 +357,8 @@ class EventGuardSlot(Base):
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
     slot_number: Mapped[int] = mapped_column(Integer)
     slot_label: Mapped[Optional[str]] = mapped_column(String(32))  # e.g., "2200-0000"
+    set_number: Mapped[int] = mapped_column(Integer, default=1)  # which shift set (1, 2, 3, ...)
+    set_label: Mapped[Optional[str]] = mapped_column(String(64))  # e.g., "Sat 0000-0600"
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     event: Mapped["Event"] = relationship(back_populates="guard_slots")
@@ -380,6 +382,7 @@ class EventGuardDuty(Base):
     slot_id: Mapped[Optional[int]] = mapped_column(ForeignKey("event_guard_slots.id"), nullable=True)
     slot_number: Mapped[int] = mapped_column(Integer)
     slot_label: Mapped[Optional[str]] = mapped_column(String(32))
+    set_label: Mapped[Optional[str]] = mapped_column(String(64))  # denormalized set/window label for display
     member_id: Mapped[Optional[int]] = mapped_column(ForeignKey("members.id"), nullable=True)
     guest_id: Mapped[Optional[int]] = mapped_column(ForeignKey("event_guests.id"), nullable=True)
     assigned_by: Mapped[str] = mapped_column(String(64))

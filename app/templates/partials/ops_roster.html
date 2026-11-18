@@ -95,7 +95,7 @@
       {# Guard Duty Column #}
       <td data-label="Guard">
         {% if row.guard_duty %}
-          <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
+          <span style="color:#d4a537;">{% if row.guard_duty.set_label %}{{ row.guard_duty.set_label }} · {% endif %}Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
           {% if can_guard %}
           <button class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
                   hx-delete="/events/{{ event.id }}/ops/guard/{{ row.guard_duty.id }}"
@@ -108,7 +108,7 @@
             <input type="hidden" name="override_immunes" value="0">
             <select name="slot_number" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;">
               {% for slot in guard_slots %}
-              <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
+              <option value="{{ slot.slot_number }}">{% if slot.set_label %}{{ slot.set_label }} · {% endif %}Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
               {% endfor %}
             </select>
             <button type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;"
@@ -222,7 +222,7 @@
       <td data-label="Buddy">—</td>
       <td data-label="Guard">
         {% if row.guard_duty %}
-          <span style="color:#d4a537;">Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
+          <span style="color:#d4a537;">{% if row.guard_duty.set_label %}{{ row.guard_duty.set_label }} · {% endif %}Slot {{ row.guard_duty.slot_number }}{% if row.guard_duty.slot_label %} · {{ row.guard_duty.slot_label }}{% endif %}</span>
           {% if can_guard %}
           <button class="ops-btn ops-btn-danger" style="padding:1px 6px;font-size:10px;margin-left:4px;"
                   hx-delete="/events/{{ event.id }}/ops/guard/{{ row.guard_duty.id }}"
@@ -233,7 +233,7 @@
             <input type="hidden" name="guest_id" value="{{ guest.id }}">
             <select name="slot_number" style="padding:2px 4px;background:#111;border:1px solid #333;color:#ccc;font-size:11px;border-radius:3px;">
               {% for slot in guard_slots %}
-              <option value="{{ slot.slot_number }}">Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
+              <option value="{{ slot.slot_number }}">{% if slot.set_label %}{{ slot.set_label }} · {% endif %}Slot {{ slot.slot_number }}{% if slot.slot_label %} · {{ slot.slot_label }}{% endif %}</option>
               {% endfor %}
             </select>
             <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn" style="padding:2px 6px;font-size:10px;">Assign</button>

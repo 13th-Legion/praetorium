@@ -13,6 +13,7 @@
       <div style="background:#111122;border:1px solid #2a2a4a;border-radius:6px;padding:10px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div style="font-weight:600;color:#ccc;font-size:13px;">
+            {% if slot.set_label %}<span style="color:#d4a537;font-size:12px;">{{ slot.set_label }}</span> · {% endif %}
             Slot {{ slot.slot_number }}
             {% if slot.slot_label %}
             <span style="color:#888;font-weight:400;font-size:12px;margin-left:6px;">{{ slot.slot_label }}</span>

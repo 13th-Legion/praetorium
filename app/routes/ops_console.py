@@ -926,28 +926,58 @@ async def unpair_buddy_post(request: Request, event_id: int, pair_id: int):
 async def configure_guard_slots(
     request: Request,
     event_id: int,
-    slot_count: int = Form(...),
-    slot_labels: str = Form(""),  # comma-separated labels
+    sets_json: str = Form(""),
+    slot_count: Optional[int] = Form(None),
+    slot_labels: str = Form(""),
 ):
-    """Configure guard duty slots for an event."""
+    """Configure guard duty slots (one or more shift sets) for an event.
+
+    sets_json is a JSON array:
+        [{"label": "Sat 0000-0600", "slots": ["0000-0200", "0200-0400", "0400-0600"]}, ...]
+    Slots are numbered globally (1..N) across all sets; set_number/set_label
+    group them for display.
+    """
     async with database.async_session() as db:
         await _get_event_or_404(db, event_id)
 
-        # Remove existing slots
+        # Remove existing slots (assignments cascade via delete-orphan)
         await db.execute(
             delete(EventGuardSlot).where(EventGuardSlot.event_id == event_id)
         )
 
-        labels = [l.strip() for l in slot_labels.split(",") if l.strip()]
-        for i in range(1, slot_count + 1):
-            label = labels[i - 1] if i <= len(labels) else None
-            slot = EventGuardSlot(
-                event_id=event_id,
-                slot_number=i,
-                slot_label=label,
-                created_at=datetime.utcnow(),
-            )
-            db.add(slot)
+        import json as _json
+        try:
+            sets = _json.loads(sets_json) if sets_json.strip() else []
+        except Exception:
+            sets = []
+        if not isinstance(sets, list):
+            sets = []
+
+        # Legacy single-set fallback (inline config form: slot_count + slot_labels)
+        if not sets and slot_count is not None and slot_count > 0:
+            labels = [l.strip() for l in (slot_labels or "").split(",") if l.strip()]
+            legacy_slots = []
+            for i in range(slot_count):
+                legacy_slots.append(labels[i] if i < len(labels) else f"{i + 1}")
+            sets = [{"label": None, "slots": legacy_slots}]
+
+        slot_number = 1
+        for set_idx, s in enumerate(sets, start=1):
+            if not isinstance(s, dict):
+                continue
+            set_label = (str(s.get("label") or "").strip()) or None
+            labels = [str(x).strip() for x in (s.get("slots") or []) if str(x).strip()]
+            for label in labels:
+                slot = EventGuardSlot(
+                    event_id=event_id,
+                    slot_number=slot_number,
+                    slot_label=label,
+                    set_number=set_idx,
+                    set_label=set_label,
+                    created_at=datetime.utcnow(),
+                )
+                db.add(slot)
+                slot_number += 1
 
         await db.commit()
 
@@ -1004,6 +1034,7 @@ async def assign_guard(
             slot_id=slot.id if slot else None,
             slot_number=slot_number,
             slot_label=slot.slot_label if slot else None,
+            set_label=slot.set_label if slot else None,
             member_id=member_id,
             guest_id=guest_id,
             assigned_by=username,
@@ -1083,6 +1114,7 @@ async def auto_assign_guard(request: Request, event_id: int):
                 slot_id=slot.id,
                 slot_number=slot.slot_number,
                 slot_label=slot.slot_label,
+                set_label=slot.set_label,
                 member_id=member_id,
                 guest_id=guest_id,
                 assigned_by=username,

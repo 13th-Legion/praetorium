@@ -379,31 +379,12 @@
 <div id="modal-guard-config" class="ops-modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="ops-modal">
     <h3>🔒 Configure Guard Duty</h3>
-    <form method="POST" action="/events/{{ event.id }}/ops/guard/slots" id="guard-config-form">
-      <input type="hidden" name="slot_count" id="guard-slot-count" value="{{ guard_slots | length or 6 }}">
-      <input type="hidden" name="slot_labels" id="guard-slot-labels" value="{{ guard_slots | map(attribute='slot_label') | select | join(', ') }}">
+    <form method="POST" action="/events/{{ event.id }}/ops/guard/slots" id="guard-config-form" onsubmit="return serializeGuardSets()">
+      <input type="hidden" name="sets_json" id="guard-sets-json" value="">
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div class="ops-form-row">
-          <label>Start Time</label>
-          <input type="text" id="guard-start" value="0000" maxlength="4" placeholder="0000"
-                 style="font-family:monospace;" onchange="generateGuardSlots()">
-        </div>
-        <div class="ops-form-row">
-          <label>End Time</label>
-          <input type="text" id="guard-end" value="0600" maxlength="4" placeholder="0600"
-                 style="font-family:monospace;" onchange="generateGuardSlots()">
-        </div>
-      </div>
-      <div class="ops-form-row" style="margin-bottom:12px;">
-        <label>Shift Length</label>
-        <select id="guard-shift-length" onchange="generateGuardSlots()">
-          <option value="60" selected>1 hour</option>
-          <option value="90">1.5 hours</option>
-          <option value="120">2 hours</option>
-          <option value="180">3 hours</option>
-        </select>
-      </div>
+      <div id="guard-sets" style="margin-bottom:8px;"></div>
+
+      <button type="button" class="ops-btn" onclick="addGuardSet()" style="width:100%;margin-bottom:12px;">+ Add shift set</button>
 
       <!-- Preview -->
       <div id="guard-preview" style="margin-bottom:12px;padding:10px;background:#111122;border:1px solid #2a2a4a;border-radius:6px;font-size:13px;color:#ccc;">
@@ -411,7 +392,7 @@
 
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button type="button" class="ops-btn" onclick="document.getElementById('modal-guard-config').classList.remove('show')">Cancel</button>
-        <button onclick="this.disabled=true;this.form.submit();" type="submit" class="ops-btn ops-btn-primary">Save Slots</button>
+        <button type="submit" class="ops-btn ops-btn-primary">Save Slots</button>
       </div>
     </form>
     {% if guard_slots %}
@@ -467,45 +448,97 @@ document.addEventListener('DOMContentLoaded', function() {
   content.style.maxHeight = content.scrollHeight + 'px';
 });
 
-// Guard duty slot generator
-function generateGuardSlots() {
-  var startEl = document.getElementById('guard-start');
-  if (!startEl) return;
-  var startStr = startEl.value.padStart(4, '0');
-  var endStr = document.getElementById('guard-end').value.padStart(4, '0');
-  var shiftMin = parseInt(document.getElementById('guard-shift-length').value);
+// Guard duty slot generator (multi-set)
+var guardSets = [];
 
-  var startMin = parseInt(startStr.slice(0,2)) * 60 + parseInt(startStr.slice(2,4));
-  var endMin = parseInt(endStr.slice(0,2)) * 60 + parseInt(endStr.slice(2,4));
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  // Handle overnight (e.g., 2200-0600)
-  if (endMin <= startMin) endMin += 1440;
-
-  var slots = [];
-  var cur = startMin;
-  while (cur < endMin) {
-    var next = Math.min(cur + shiftMin, endMin);
-    var sH = Math.floor((cur % 1440) / 60);
-    var sM = (cur % 1440) % 60;
-    var eH = Math.floor((next % 1440) / 60);
-    var eM = (next % 1440) % 60;
-    var label = String(sH).padStart(2,'0') + String(sM).padStart(2,'0') + '-' + String(eH).padStart(2,'0') + String(eM).padStart(2,'0');
-    slots.push(label);
-    cur = next;
-  }
-
-  document.getElementById('guard-slot-count').value = slots.length;
-  document.getElementById('guard-slot-labels').value = slots.join(', ');
-
-  var preview = document.getElementById('guard-preview');
-  if (slots.length === 0) {
-    preview.innerHTML = '<span style="color:#555;">No slots — check your times</span>';
-  } else {
-    preview.innerHTML = '<div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:6px;">' + slots.length + ' shifts</div>' +
-      slots.map(function(s, i) { return '<span style="display:inline-block;background:#1e1e35;border:1px solid #333;padding:3px 10px;border-radius:10px;font-size:12px;margin:2px 4px;font-family:monospace;">Slot ' + (i+1) + ' · ' + s + '</span>'; }).join('');
-  }
+function addGuardSet(label, start, end, len) {
+  guardSets.push({label: label || '', start: start || '0000', end: end || '0600', len: len || 120});
+  renderGuardSets();
 }
-document.addEventListener('DOMContentLoaded', generateGuardSlots);
+
+function removeGuardSet(idx) {
+  guardSets.splice(idx, 1);
+  renderGuardSets();
+}
+
+function renderGuardSets() {
+  var container = document.getElementById('guard-sets');
+  if (!container) return;
+  var html = '';
+  for (var i = 0; i < guardSets.length; i++) {
+    var s = guardSets[i];
+    var lenOpts = [60, 90, 120, 180].map(function(v){ return '<option value="'+v+'"'+(String(s.len)===String(v)?' selected':'')+'>'+ (v===60?'1 hour':v===90?'1.5 hours':v===120?'2 hours':'3 hours') +'</option>'; }).join('');
+    html += '<div class="guard-set" style="border:1px solid #2a2a4a;border-radius:8px;padding:10px;margin-bottom:10px;">'
+      + '<div class="ops-form-row"><label>Set label (e.g. Sat 0000-0600)</label>'
+      + '<input type="text" class="guard-set-label" value="' + esc(s.label) + '" placeholder="Sat 0000-0600" onchange="guardSetChanged(' + i + ')" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;box-sizing:border-box;"></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">'
+      + '<div class="ops-form-row"><label>Start</label><input type="text" class="guard-set-start" value="' + esc(s.start) + '" maxlength="4" placeholder="0000" style="font-family:monospace;width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;box-sizing:border-box;" onchange="guardSetChanged(' + i + ')"></div>'
+      + '<div class="ops-form-row"><label>End</label><input type="text" class="guard-set-end" value="' + esc(s.end) + '" maxlength="4" placeholder="0600" style="font-family:monospace;width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;box-sizing:border-box;" onchange="guardSetChanged(' + i + ')"></div>'
+      + '<div class="ops-form-row"><label>Length</label><select class="guard-set-length" onchange="guardSetChanged(' + i + ')" style="width:100%;padding:6px;background:#111;border:1px solid #333;color:#ccc;border-radius:4px;font-size:13px;">' + lenOpts + '</select></div>'
+      + '</div>'
+      + '<div style="text-align:right;margin-top:6px;"><button type="button" class="ops-btn" onclick="removeGuardSet(' + i + ')">Remove set</button></div>'
+      + '</div>';
+  }
+  container.innerHTML = html;
+  generateGuardSlots();
+}
+
+function guardSetChanged(idx) {
+  var el = document.querySelectorAll('.guard-set')[idx];
+  if (!el) return;
+  guardSets[idx].label = el.querySelector('.guard-set-label').value;
+  guardSets[idx].start = el.querySelector('.guard-set-start').value;
+  guardSets[idx].end = el.querySelector('.guard-set-end').value;
+  guardSets[idx].len = el.querySelector('.guard-set-length').value;
+  generateGuardSlots();
+}
+
+function generateGuardSlots() {
+  var preview = document.getElementById('guard-preview');
+  var jsonInput = document.getElementById('guard-sets-json');
+  if (!preview || !jsonInput) return;
+  var sets = [];
+  for (var i = 0; i < guardSets.length; i++) {
+    var s = guardSets[i];
+    var startStr = (s.start || '0000').padStart(4, '0');
+    var endStr = (s.end || '0000').padStart(4, '0');
+    var shiftMin = parseInt(s.len) || 120;
+    var startMin = parseInt(startStr.slice(0,2)) * 60 + parseInt(startStr.slice(2,4));
+    var endMin = parseInt(endStr.slice(0,2)) * 60 + parseInt(endStr.slice(2,4));
+    if (endMin <= startMin) endMin += 1440;
+    var slots = [];
+    var cur = startMin;
+    while (cur < endMin) {
+      var next = Math.min(cur + shiftMin, endMin);
+      var sH = Math.floor((cur % 1440) / 60);
+      var sM = (cur % 1440) % 60;
+      var eH = Math.floor((next % 1440) / 60);
+      var eM = (next % 1440) % 60;
+      var label = String(sH).padStart(2,'0') + String(sM).padStart(2,'0') + '-' + String(eH).padStart(2,'0') + String(eM).padStart(2,'0');
+      slots.push(label);
+      cur = next;
+    }
+    sets.push({label: s.label || '', slots: slots});
+  }
+  jsonInput.value = JSON.stringify(sets);
+  preview.innerHTML = '<div style="font-size:11px;color:#888;margin-bottom:6px;">Preview</div>' + sets.map(function(set) {
+    var head = set.label ? '<strong style="color:#d4a537;">' + esc(set.label) + '</strong> · ' : '';
+    return '<div style="margin-bottom:4px;">' + head + set.slots.map(function(x, j) { return '<span style="display:inline-block;background:#1e1e35;border:1px solid #333;padding:3px 10px;border-radius:10px;font-size:12px;margin:2px 4px;font-family:monospace;">Slot ' + (j+1) + ' · ' + x + '</span>'; }).join('') + '</div>';
+  }).join('');
+}
+
+function serializeGuardSets() {
+  for (var i = 0; i < guardSets.length; i++) guardSetChanged(i);
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (!document.getElementById('guard-sets')) return;
+  if (!guardSets.length) addGuardSet('', '0000', '0600', 120);
+});
+
 
 {% if display_mode == 'tv' %}
 // TV mode: auto-scroll roster
