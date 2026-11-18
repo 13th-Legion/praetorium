@@ -220,8 +220,8 @@ function insertTradocAgenda() {
         {% endif %}
     </div>
 
-    <!-- Ops Console Link (S1/S2/S3/Command only) -->
-    {% if is_admin or 's2' in user.get('roles', []) %}
+    <!-- Ops Console Link (S1/S2/S3/Command only; hidden for volunteering — PP-424) -->
+    {% if (is_admin or 's2' in user.get('roles', [])) and event.category != 'volunteering' %}
     <div class="card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
             <div style="font-size:14px;font-weight:600;color:#d4a537;">📡 Operations Console</div>
@@ -396,7 +396,7 @@ function insertTradocAgenda() {
     {% endif %}
 
     <!-- PP-074a: Attendance Confirmation (Command/S3/S1 only, past FTX/MCFTX, not finalized) -->
-    {% if is_admin and event.category in ['ftx', 'mcftx', 'family_day', 'external_training'] %}
+    {% if is_admin and event.category in ['ftx', 'mcftx', 'family_day', 'external_training', 'volunteering'] %}
     {% set is_past = event.date_start < now %}
     {% if is_past and not event.finalized_at %}
     <div class="card" style="margin-bottom:16px;">
@@ -421,10 +421,17 @@ function insertTradocAgenda() {
     {% if 'command' in user_roles or 's3' in user_roles or 's1' in user_roles or 'admin' in user_roles %}
     <div class="card" style="margin-bottom:16px;">
         <h2 class="card-title" style="font-size:0.9rem;">🔒 Finalize Event</h2>
-        <p style="font-size:13px;color:#aaa;margin-bottom:12px;">Finalizing locks attendance, imports any remaining ops-console check-ins as attended, sets status to complete, and auto-credits TRADOC items for attendees.</p>
+        {% if event.category == 'volunteering' %}
+        {% set finalize_note = 'Finalizing locks attendance, imports any remaining ops-console check-ins as attended, sets status to complete, and awards the Volunteer Service ribbon to confirmed attendees.' %}
+        {% set finalize_confirm = 'Finalize this event? This will lock attendance and award the Volunteer Service ribbon to confirmed attendees. This action cannot be undone.' %}
+        {% else %}
+        {% set finalize_note = 'Finalizing locks attendance, imports any remaining ops-console check-ins as attended, sets status to complete, and auto-credits TRADOC items for attendees.' %}
+        {% set finalize_confirm = 'Finalize this event? This will lock attendance and auto-credit TRADOC items. This action cannot be undone.' %}
+        {% endif %}
+        <p style="font-size:13px;color:#aaa;margin-bottom:12px;">{{ finalize_note }}</p>
         <div id="finalize-result"></div>
         <form hx-post="/api/events/{{ event.id }}/finalize" hx-target="#finalize-result" hx-swap="innerHTML"
-              hx-confirm="Finalize this event? This will lock attendance and auto-credit TRADOC items. This action cannot be undone.">
+              hx-confirm="{{ finalize_confirm }}">
             <button hx-disabled-elt="this" type="submit" style="padding:8px 20px;background:#c62828;color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:14px;">
                 🔒 Finalize Event
             </button>

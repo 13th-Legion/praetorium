@@ -25,7 +25,7 @@ from app.models.events import Event, EventRSVP, EventDocument, EventAARItem, Eve
 from app.models.schedule import EventScheduleBlock
 from app.models.member import Member
 from app.models.training import TradocItem, MemberTradoc, TradocBlock
-from app.models.ribbons import MemberRibbon, MissionLeaderGrant
+from app.models.ribbons import MemberRibbon, MissionLeaderGrant, VolunteerServiceGrant
 from config import get_settings
 from app.constants import RECIPIENT_GROUPS, FIELD_TASKS_BLOCK, TEAM_ORDER
 from app.services import ranks as _ranks
@@ -448,7 +448,8 @@ FILTER_TABS = {
     "ftx": {"label": "FTX", "categories": ["ftx", "mcftx"]},
     "training": {"label": "Training", "categories": ["online_training", "external_training"]},
     "meetings": {"label": "Meetings", "categories": ["meeting"]},
-    "social": {"label": "Social", "categories": ["social", "family_day", "volunteering"]},
+    "social": {"label": "Social", "categories": ["social", "family_day"]},
+    "volunteering": {"label": "Volunteering", "categories": ["volunteering"]},
 }
 
 # Keyword → category auto-mapping for CalDAV sync
@@ -1175,7 +1176,7 @@ async def events_page(request: Request):
     if roles & {"command", "s3", "s1", "admin"}:
         needs_finalization = [
             e for e in past
-            if e["event"].category in ("ftx", "mcftx")
+            if e["event"].category in ("ftx", "mcftx", "volunteering")
             and not e["event"].finalized_at
         ]
 
@@ -3902,9 +3903,15 @@ async def finalize_event(request: Request, event_id: int):
         if event.category in ("ftx", "mcftx"):
             ml_summary = await _auto_award_mission_leader(db, event)
 
+        # Auto-award Volunteer Service ribbon to confirmed attendees when a
+        # volunteering event is finalized (PP-424).
+        vol_summary = ""
+        if event.category == "volunteering":
+            vol_summary = await _auto_award_volunteer_service(db, event)
+
         await db.commit()
 
-    summary_bits = [s for s in (credit_summary, ml_summary) if s]
+    summary_bits = [s for s in (credit_summary, ml_summary, vol_summary) if s]
     summary = " " + " ".join(summary_bits) if summary_bits else ""
     return HTMLResponse(
         f'<div style="padding:12px;background:#1b5e20;color:#fff;border-radius:6px;">'
@@ -3945,6 +3952,8 @@ async def unfinalize_event(request: Request, event_id: int):
         # finalize wrote, or the next finalize treats the same stint as a new one.
         if event.category in ("ftx", "mcftx"):
             await _reverse_mission_leader(db, event)
+        if event.category == "volunteering":
+            await _reverse_volunteer_service(db, event)
 
         event.finalized_at = None
         event.finalized_by = None
@@ -4192,6 +4201,121 @@ async def _reverse_mission_leader(db, event: Event) -> None:
         remaining = (await db.execute(
             select(func.count(MissionLeaderGrant.id)).where(
                 MissionLeaderGrant.member_id == grant.member_id
+            )
+        )).scalar_one()
+        if remaining == 0 and ribbon.source == "auto" and (ribbon.device_count or 0) == 0:
+            await db.delete(ribbon)
+        else:
+            from app.models.ribbons import RibbonCitation
+            dropped = (await db.execute(
+                select(RibbonCitation).where(
+                    RibbonCitation.member_ribbon_id == ribbon.id,
+                    RibbonCitation.award_index == (ribbon.device_count or 0),
+                )
+            )).scalar_one_or_none()
+            if dropped:
+                await db.delete(dropped)
+            ribbon.device_count = max(0, (ribbon.device_count or 0) - 1)
+
+
+async def _auto_award_volunteer_service(db, event: Event) -> str:
+    """Auto-award the Volunteer Service ribbon to every confirmed attendee
+    when a volunteering event is finalized (PP-424).
+
+    One ribbon per member, +1 device per additional volunteer event (the
+    volunteer catalog row has device_increment=5, max_devices=0 = unlimited).
+    Guests are excluded automatically — only member RSVPs carry a member_id.
+    """
+    rsvp_result = await db.execute(
+        select(EventRSVP.member_id).where(
+            and_(EventRSVP.event_id == event.id, EventRSVP.attended == True)
+        )
+    )
+    attendee_ids = [r[0] for r in rsvp_result.all()]
+
+    now = datetime.utcnow()
+    awarded = 0
+    already = 0
+    for mid in attendee_ids:
+        grant = (await db.execute(
+            select(VolunteerServiceGrant).where(
+                and_(
+                    VolunteerServiceGrant.event_id == event.id,
+                    VolunteerServiceGrant.member_id == mid,
+                )
+            )
+        )).scalar_one_or_none()
+        if grant:
+            already += 1
+            continue
+        existing = (await db.execute(
+            select(MemberRibbon).where(
+                and_(
+                    MemberRibbon.member_id == mid,
+                    MemberRibbon.ribbon_code == "volunteer",
+                )
+            )
+        )).scalar_one_or_none()
+        cite = f"Volunteer event — {event.title}"
+        if existing:
+            # Additional volunteer event -> increment device count. Leave
+            # awarded_at and the earlier citation alone.
+            existing.device_count = (existing.device_count or 0) + 1
+            ribbon = existing
+            index = existing.device_count
+        else:
+            ribbon = MemberRibbon(
+                member_id=mid,
+                ribbon_code="volunteer",
+                device_count=0,
+                awarded_at=now,
+                awarded_by="auto",
+                reason=cite,
+                source="auto",
+            )
+            db.add(ribbon)
+            index = 0
+        from app.services.ribbon_citations import record_citation
+        await record_citation(db, ribbon, index, cite, "auto", now)
+        db.add(VolunteerServiceGrant(event_id=event.id, member_id=mid))
+        awarded += 1
+
+    if already and not awarded:
+        return f"Volunteer Service already awarded to {already} member{'s' if already != 1 else ''}."
+    if not awarded:
+        return "No confirmed attendees to award."
+    base = f"Auto-awarded Volunteer Service to {awarded} member{'s' if awarded != 1 else ''}."
+    if already:
+        base += f" Skipped {already} already granted."
+    return base
+
+
+async def _reverse_volunteer_service(db, event: Event) -> None:
+    """Undo Volunteer Service grants this event wrote, and nothing else.
+
+    A ribbon that was only the base auto-award (device_count 0, source auto,
+    no grants left) is deleted. Anything else — a later event, or a manual
+    grant we incremented — loses exactly one device.
+    """
+    grants = (await db.execute(
+        select(VolunteerServiceGrant).where(VolunteerServiceGrant.event_id == event.id)
+    )).scalars().all()
+    for grant in grants:
+        ribbon = (await db.execute(
+            select(MemberRibbon).where(
+                and_(
+                    MemberRibbon.member_id == grant.member_id,
+                    MemberRibbon.ribbon_code == "volunteer",
+                )
+            )
+        )).scalar_one_or_none()
+        await db.delete(grant)
+        await db.flush()
+        if ribbon is None:
+            continue
+        remaining = (await db.execute(
+            select(func.count(VolunteerServiceGrant.id)).where(
+                VolunteerServiceGrant.member_id == grant.member_id
             )
         )).scalar_one()
         if remaining == 0 and ribbon.source == "auto" and (ribbon.device_count or 0) == 0:

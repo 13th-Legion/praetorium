@@ -70,6 +70,25 @@ class MissionLeaderGrant(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class VolunteerServiceGrant(Base):
+    """One Volunteer Service auto-award for one member on one event.
+
+    Mirrors MissionLeaderGrant: finalize writes one row per attended member,
+    and unfinalize revokes exactly those rows so a re-finalize doesn't double-
+    increment ``device_count`` for the same volunteer stint.
+    """
+
+    __tablename__ = "volunteer_service_grants"
+    __table_args__ = (
+        UniqueConstraint("event_id", "member_id", name="uq_volunteer_service_grant"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class RibbonCitation(Base):
     """One comment for one award of a ribbon.
 
