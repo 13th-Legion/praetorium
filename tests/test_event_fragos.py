@@ -198,7 +198,7 @@ async def test_legacy_column_mirrors_the_latest_frago(auth_client, frago_env, db
 # ─── Distribution actually happens ────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_frago_emails_attending_posts_to_talk_and_notifies(
+async def test_frago_emails_attending_and_notifies_without_talk_post(
     auth_client, frago_env, db_session
 ):
     event = frago_env["event"]
@@ -206,12 +206,9 @@ async def test_frago_emails_attending_posts_to_talk_and_notifies(
 
     assert resp.status_code == 200
 
-    # Talk cross-post fired, and the message names the FRAGO and the change.
-    assert len(frago_env["talk"].posts) == 1
-    _url, data = frago_env["talk"].posts[0]
-    assert "FRAGO 1" in data["message"]
-    assert "Rally moved" in data["message"]
-    assert f"/events/{event.id}" in data["message"]
+    # PP-405: FRAGOs do NOT cross-post to Talk (no T1 - Announcements cross-post).
+    # Distribution is attendee email + portal notifications only.
+    assert len(frago_env["talk"].posts) == 0
 
     # Portal notification for the roster.
     notes = (await db_session.execute(select(Notification))).scalars().all()
@@ -233,28 +230,35 @@ async def test_frago_emails_attending_posts_to_talk_and_notifies(
     row = (await db_session.execute(
         select(EventFrago).where(EventFrago.event_id == event.id)
     )).scalar_one()
-    assert row.talk_posted is True
+    # talk_posted is a legacy column: PP-405 removed the Talk cross-post, so
+    # issuing a FRAGO must leave it untouched.
+    assert row.talk_posted is False
     assert row.notified is True
 
 
 @pytest.mark.asyncio
-async def test_talk_failure_is_reported_not_swallowed(
+async def test_notification_failure_is_reported_not_swallowed(
     auth_client, frago_env, db_session, monkeypatch
 ):
-    """The WARNO/OPORD paths hide Talk failures in `except Exception: pass`.
+    """The WARNO/OPORD paths hide distribution failures in `except Exception: pass`.
     A FRAGO must say so instead -- silently not telling the unit about a change
     is the whole bug this feature exists to fix."""
-    import app.routes.events as ev
-    failing = _FakeTalkClient(response=_FakeResponse(500, text="boom"))
-    monkeypatch.setattr(ev.httpx, "AsyncClient", failing)
+    import app.routes.notifications as notif_mod
+
+    def _boom(db, *a, **kw):
+        raise RuntimeError("notification table exploded")
+
+    monkeypatch.setattr(notif_mod, "create_notification", _boom)
 
     event = frago_env["event"]
     resp = _issue(auth_client, event.id, subject="Route change", body="Use FM 1187.")
 
     assert resp.status_code == 200
-    assert "Talk post FAILED" in resp.text
+    assert "portal notification FAILED" in resp.text
     # Orange, not green -- the banner must not look like a clean success.
     assert "#e65100" in resp.text
+    # The email side still went out: a notification hiccup must not eat the FRAGO.
+    assert frago_env["sent_batches"]
 
     row = (await db_session.execute(
         select(EventFrago).where(EventFrago.event_id == event.id)
