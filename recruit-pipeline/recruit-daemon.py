@@ -2708,6 +2708,10 @@ ADDITIONAL RESOURCES
   - Resource Library: https://portal.13thlegion.org/training/library
   - Chain of Command: https://portal.13thlegion.org/chain-of-command
   - Training & Events Calendar: https://portal.13thlegion.org/events
+  - Your Profile / no-media: https://portal.13thlegion.org/settings —
+    flip on "Do not photograph, film, or publish me" if you don't want
+    your image shared. The roster shows a no-media icon next to your name
+    so photographers and AAR writers know to leave you out.
 
 Nunquam Non Paratus — Never Not Ready.
 — 13th Legion, Texas State Militia
@@ -3162,11 +3166,13 @@ def check_payment_cards(state, dry_run=False):
     """Check for cards in Documents & Payment stack and trigger payment email."""
     cards = get_stack_cards(STACKS["documents_payment"])
     emailed = 0
+    emailed_map = state.setdefault("payment_emailed_cards", {})
+    if isinstance(emailed_map, list):
+        emailed_map = {str(cid): None for cid in emailed_map}
+        state["payment_emailed_cards"] = emailed_map
     
     for card in cards:
         card_id = card.get("id")
-        if card_id in state.get("payment_emailed_cards", []):
-            continue
             
         info = parse_card_for_onboarding(card)
         _raw_title = (info.get("raw_title") or "").strip().replace("📋 ", "").replace("✅ ", "").strip()
@@ -3182,6 +3188,9 @@ def check_payment_cards(state, dry_run=False):
             
         if not target_email:
             log.warning(f"No email found for card #{card_id} ({name}) — cannot send payment instructions.")
+            continue
+
+        if emailed_map.get(str(card_id)) == target_email:
             continue
 
         # Guard against malformed recipients (e.g. a Y/N field value like "No"
@@ -3203,23 +3212,23 @@ def check_payment_cards(state, dry_run=False):
                 )
             except Exception as _ne:
                 log.warning(f"Could not notify S1 about bad email on card #{card_id}: {_ne}")
-            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed_map[str(card_id)] = target_email
             continue
 
         log.info(f"Sending payment email for {name} to {target_email}")
         
         if dry_run:
             log.info(f"[DRY RUN] Would send payment email to: {target_email}")
-            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed_map[str(card_id)] = target_email
             emailed += 1
             continue
             
         result = send_payment_email(target_email, name)
         if result is True:
-            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed_map[str(card_id)] = target_email
             emailed += 1
         elif result == "permanent":
-            state.setdefault("payment_emailed_cards", []).append(card_id)
+            emailed_map[str(card_id)] = target_email
             mark_card_bad_email(card_id, STACKS["documents_payment"], target_email)
             try:
                 notify_s1_nctalk(

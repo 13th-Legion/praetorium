@@ -53,6 +53,7 @@ CODE_OF_CONDUCT_TEXT = """
   <li>Foster a supportive, productive environment.</li>
   <li>Promote unity by respecting and valuing cultural, religious, and personal differences within our ranks and communities served.</li>
   <li>Practice effective communication and teamwork.</li>
+  <li>Respect photography and media preferences — a member who has set the no-media flag on their portal profile must not be photographed, filmed, or posted without explicit permission.</li>
 </ul>
 
 <h3>5. Code of Conduct Violations</h3>
