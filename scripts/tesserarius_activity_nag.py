@@ -15,7 +15,7 @@ import logging
 import os
 import smtplib
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -153,7 +153,7 @@ def send_email(to, subject, body_html):
 def days_since(dt):
     if dt is None:
         return None
-    if isinstance(dt, datetime.date) and not isinstance(dt, datetime.datetime):
+    if isinstance(dt, date) and not isinstance(dt, datetime):
         dt = datetime(dt.year, dt.month, dt.day)
     return (datetime.utcnow() - dt).days
 
