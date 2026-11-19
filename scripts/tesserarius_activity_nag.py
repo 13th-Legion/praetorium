@@ -153,28 +153,26 @@ def send_email(to, subject, body_html):
 def days_since(dt):
     if dt is None:
         return None
+    if isinstance(dt, datetime.date) and not isinstance(dt, datetime.datetime):
+        dt = datetime(dt.year, dt.month, dt.day)
     return (datetime.utcnow() - dt).days
 
 
 def tier_for(m, p):
     """Return (tier, urgency_label) or None. Higher tier wins."""
-    # No-contact
-    c = days_since(m["last_login"])
-    if m["last_ftx"] and (c is None or m["last_ftx"] > m["last_login"]):
-        c = days_since(m["last_ftx"])
-    if c is None:
-        c = 9999
+    # No-contact: most recent of last_login / last_ftx wins.
+    c_login = days_since(m["last_login"])
+    c_ftx = days_since(m["last_ftx"])
+    contact_days = min([x for x in (c_login, c_ftx) if x is not None], default=9999)
     removal_w = p["no_contact_removal_weeks"]
     outreach_w = p["no_contact_outreach_weeks"]
-    ftx = days_since(m["last_ftx"])
-    if ftx is None:
-        ftx = 9999
+    ftx = c_ftx if c_ftx is not None else 9999
 
     # Most-severe single message: prefer removal, then written, verbal, then contact.
     tiers = []
-    if c >= removal_w * 7:
+    if contact_days >= removal_w * 7:
         tiers.append(("no_contact_removal", f"{removal_w} weeks with no contact"))
-    elif c >= outreach_w * 7:
+    elif contact_days >= outreach_w * 7:
         tiers.append(("no_contact_outreach", f"{outreach_w} weeks with no contact"))
     if ftx >= p["no_ftx_removal_months"] * 30:
         tiers.append(("no_ftx_removal", f"{p['no_ftx_removal_months']} months with no FTX"))
