@@ -553,6 +553,8 @@ function sortTable(col) {
                 av = a.dataset.promoDate; bv = b.dataset.promoDate; break;
             case 'tig':
                 av = parseInt(a.dataset.tig); bv = parseInt(b.dataset.tig); break;
+            case 'points':
+                av = parseInt(a.dataset.points); bv = parseInt(b.dataset.points); break;
             default:
                 av = ''; bv = '';
         }
