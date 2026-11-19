@@ -517,6 +517,7 @@ async def get_announcements(request: Request):
                             modules: {{ toolbar: '#edit-toolbar-{ann_id}' }},
                             placeholder: 'Message body...'
                         }});
+                        attachQuillImageUpload(q, '/api/media/image-upload');
                         q.root.innerHTML = `{message_js}`;
                         window['editQuill_{ann_id}'] = q;
                     }})();
@@ -651,6 +652,7 @@ async def compose_form(request: Request):
         modules: {{ toolbar: '#compose-toolbar' }},
         placeholder: 'Message body...'
     }});
+    attachQuillImageUpload(composeQuill, '/api/media/image-upload');
 
     function submitAnnouncement() {{
         var subject = document.getElementById('announce-subject').value.trim();

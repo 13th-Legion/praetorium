@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
             placeholder: 'Rally point time is changed from 1900 to 1830 to allow for the convoy brief. All other instructions from the OPORD remain in effect.',
             modules: { toolbar: [['bold','italic','underline'],[{'list':'ordered'},{'list':'bullet'}],['link']] }
         });
+        attachQuillImageUpload(fragoQuill, '/api/media/image-upload');
         fragoQuill.on('text-change', function() {
             document.getElementById('frago-body').value = fragoQuill.root.innerHTML;
         });
