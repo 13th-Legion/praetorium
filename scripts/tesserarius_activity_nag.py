@@ -160,26 +160,29 @@ def days_since(dt):
 
 def tier_for(m, p):
     """Return (tier, urgency_label) or None. Higher tier wins."""
-    # No-contact: most recent of last_login / last_ftx wins.
+    # No-contact: most recent of last_login / last_ftx wins. If BOTH are
+    # unmeasured, skip (conservative: don't flag members we have no signal for).
     c_login = days_since(m["last_login"])
     c_ftx = days_since(m["last_ftx"])
-    contact_days = min([x for x in (c_login, c_ftx) if x is not None], default=9999)
+    contact_days = min([x for x in (c_login, c_ftx) if x is not None], default=None)
     removal_w = p["no_contact_removal_weeks"]
     outreach_w = p["no_contact_outreach_weeks"]
-    ftx = c_ftx if c_ftx is not None else 9999
+    ftx = c_ftx  # None = never tracked
 
     # Most-severe single message: prefer removal, then written, verbal, then contact.
     tiers = []
-    if contact_days >= removal_w * 7:
-        tiers.append(("no_contact_removal", f"{removal_w} weeks with no contact"))
-    elif contact_days >= outreach_w * 7:
-        tiers.append(("no_contact_outreach", f"{outreach_w} weeks with no contact"))
-    if ftx >= p["no_ftx_removal_months"] * 30:
-        tiers.append(("no_ftx_removal", f"{p['no_ftx_removal_months']} months with no FTX"))
-    elif ftx >= p["no_ftx_written_months"] * 30:
-        tiers.append(("no_ftx_written", f"{p['no_ftx_written_months']} months with no FTX"))
-    elif ftx >= p["no_ftx_verbal_months"] * 30:
-        tiers.append(("no_ftx_verbal", f"{p['no_ftx_verbal_months']} months with no FTX"))
+    if contact_days is not None:
+        if contact_days >= removal_w * 7:
+            tiers.append(("no_contact_removal", f"{removal_w} weeks with no contact"))
+        elif contact_days >= outreach_w * 7:
+            tiers.append(("no_contact_outreach", f"{outreach_w} weeks with no contact"))
+    if ftx is not None:
+        if ftx >= p["no_ftx_removal_months"] * 30:
+            tiers.append(("no_ftx_removal", f"{p['no_ftx_removal_months']} months with no FTX"))
+        elif ftx >= p["no_ftx_written_months"] * 30:
+            tiers.append(("no_ftx_written", f"{p['no_ftx_written_months']} months with no FTX"))
+        elif ftx >= p["no_ftx_verbal_months"] * 30:
+            tiers.append(("no_ftx_verbal", f"{p['no_ftx_verbal_months']} months with no FTX"))
 
     if not tiers:
         return None
