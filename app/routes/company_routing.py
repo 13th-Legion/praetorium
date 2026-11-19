@@ -71,7 +71,7 @@ async def company_routing_create(request: Request, db: AsyncSession = Depends(ge
 
 @router.post("/{rid}/update", response_class=HTMLResponse)
 @require_role("s1", "command", "admin")
-async def company_routing_update(rid: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def company_routing_update(request: Request, rid: int, db: AsyncSession = Depends(get_db)):
     row = await db.get(CompanyRouting, rid)
     if row is None:
         raise HTTPException(status_code=404, detail="Routing entry not found.")
@@ -87,7 +87,7 @@ async def company_routing_update(rid: int, request: Request, db: AsyncSession = 
 
 @router.post("/{rid}/delete", response_class=HTMLResponse)
 @require_role("s1", "command", "admin")
-async def company_routing_delete(rid: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def company_routing_delete(request: Request, rid: int, db: AsyncSession = Depends(get_db)):
     row = await db.get(CompanyRouting, rid)
     if row is not None:
         await db.delete(row)
