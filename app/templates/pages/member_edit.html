@@ -242,6 +242,18 @@
             {% if not member.email %}<span style="font-size:11px;color:#c62828;margin-left:8px;">No email on record</span>{% endif %}
         </form>
     </div>
+
+    <!-- Activity (PP-429): log contact — resets the no-contact clock -->
+    <div style="margin-top:8px;margin-bottom:32px;padding:16px;background:#1e1e2e;border:1px solid #3a3a4e;border-radius:8px;">
+        <div style="font-size:13px;font-weight:700;color:#d4a537;margin-bottom:6px;">Activity</div>
+        <p style="font-size:12px;color:#999;margin:0 0 10px;">
+            Records that you made contact with this member (resets the no-contact clock the activity nag bot uses).
+            Last contact: {% if member.last_contact %}{{ member.last_contact.strftime('%d %b %Y') }}{% else %}never{% endif %}
+        </p>
+        <form method="POST" action="/api/members/{{ member.id }}/log-contact" style="display:inline;">
+            <button type="submit" style="padding:6px 14px;background:#2a2a3e;color:#d4a537;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:12px;">📞 Log Contact</button>
+        </form>
+    </div>
 </div>
 
 <script>

@@ -862,6 +862,22 @@ def _creds_error(member_id: int, message: str) -> RedirectResponse:
     )
 
 
+@router.post("/{member_id}/log-contact")
+@require_auth
+async def log_contact(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):
+    """Record that a team leader/S1/Command made contact with this member."""
+    user = get_current_user(request)
+    if not (_can_edit(user) or "leader" in set(user.get("roles", []))):
+        raise HTTPException(status_code=403, detail="Command, S1, or leader access required")
+    result = await db.execute(select(Member).where(Member.id == member_id))
+    member = result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    member.last_contact = datetime.utcnow()
+    await db.commit()
+    return RedirectResponse(url=f"/api/members/{member_id}/edit", status_code=303)
+
+
 @router.post("/{member_id}/resend-credentials")
 @require_auth
 async def resend_credentials(request: Request, member_id: int, db: AsyncSession = Depends(get_db)):

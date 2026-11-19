@@ -4094,6 +4094,7 @@ async def _auto_credit_tradoc(db, event: Event) -> str:
             update(Member).where(Member.id == mid).values(
                 ftx_count=cnt,
                 last_ftx=last_date,
+                last_contact=now,
                 updated_at=now,
             )
         )

@@ -90,7 +90,7 @@ def load_members() -> list[dict]:
     cur.execute(
         """
         SELECT id, nc_username, first_name, last_name, email, team,
-               leadership_title, last_login, last_ftx, on_leave, leave_end
+               leadership_title, last_login, last_contact, last_ftx, on_leave, leave_end
         FROM members
         WHERE status = 'active'
         ORDER BY team, last_name
@@ -161,9 +161,9 @@ def days_since(dt):
 def tier_for(m, p):
     """Return (tier, urgency_label) or None. Higher tier wins."""
     # Two SEPARATE tracks:
-    #   - No-contact (communication) -> last_login only (weak proxy; null = skip)
+    #   - No-contact (communication) -> last_contact (login/FTX/manual), fallback last_login
     #   - No-FTX (attendance)       -> last_ftx only
-    c_login = days_since(m["last_login"])
+    c_login = days_since(m.get("last_contact") or m["last_login"])
     c_ftx = days_since(m["last_ftx"])
     removal_w = p["no_contact_removal_weeks"]
     outreach_w = p["no_contact_outreach_weeks"]

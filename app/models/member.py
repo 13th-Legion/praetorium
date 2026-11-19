@@ -73,6 +73,9 @@ class Member(Base):
     # FTX tracking
     last_ftx: Mapped[Optional[date]] = mapped_column(Date)
     ftx_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Last verified contact (login, RSVP, attendance, or a manual team-leader/S1
+    # "logged contact"). Drives the Tesserarius activity-nag no-contact track.
+    last_contact: Mapped[Optional[datetime]] = mapped_column(DateTime)
     is_founder: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Organizational flags

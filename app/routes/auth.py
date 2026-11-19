@@ -242,7 +242,11 @@ async def callback(request: Request):
         row = result.first()
         if row:
             await db.execute(
-                update(Member).where(Member.id == row[0]).values(portal_roles=json.dumps(roles))
+                update(Member).where(Member.id == row[0]).values(
+                    portal_roles=json.dumps(roles),
+                    last_login=datetime.utcnow(),
+                    last_contact=datetime.utcnow(),
+                )
             )
             await db.commit()
 
