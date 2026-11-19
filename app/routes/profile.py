@@ -532,11 +532,11 @@ MY_DOCUMENTS = [
 def _get_doc_content(doc_type: str):
     """Return (title, html_content) for a document key, or (None, None)."""
     from app.routes.doc_texts import (
-        CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, ACTIVITY_POLICY_TEXT,
+        CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, activity_policy_html,
     )
     from app.routes.s1_admin import NDA_TEXT, WAIVER_TEXT
     mapping = {
-        "activity_policy": ("Activity Policy", ACTIVITY_POLICY_TEXT),
+        "activity_policy": ("Activity Policy", activity_policy_html()),
         "code_of_conduct": ("Code of Conduct", CODE_OF_CONDUCT_TEXT),
         "bylaws": ("TSM By-Laws", BYLAWS_TEXT),
         "nda": ("Non-Disclosure Agreement", NDA_TEXT),

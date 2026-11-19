@@ -12,7 +12,7 @@ from sqlalchemy import select, update, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
-from app.routes.doc_texts import CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, ACTIVITY_POLICY_TEXT
+from app.routes.doc_texts import CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, activity_policy_html
 from app.database import get_db
 from app.models.member import Member
 from app.models.recruiting import Recruiter, DocumentSignature, SeparationLog
@@ -315,7 +315,7 @@ async def sign_document_page(request: Request, doc_type: str, db: AsyncSession =
         doc_content = CODE_OF_CONDUCT_TEXT
         doc_title = "Code of Conduct"
     elif doc_type == "activity_policy":
-        doc_content = ACTIVITY_POLICY_TEXT
+        doc_content = activity_policy_html()
         doc_title = "Activity Policy"
     else:
         doc_content = BYLAWS_TEXT

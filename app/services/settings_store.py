@@ -145,3 +145,23 @@ def ftx_device_thresholds() -> list[int]:
 def meal_plan_price() -> float:
     """Unit-wide default FTX meal price. Per-event overrides live on Event."""
     return get_float("meal_plan_price", 15.0)
+
+
+# Activity-policy dials (weeks / months). Stored under keys prefixed "activity_".
+_ACTIVITY_DEFAULTS = {
+    "no_contact_outreach_weeks": 6,
+    "no_contact_response_weeks": 2,
+    "no_ftx_verbal_months": 2,
+    "no_ftx_written_months": 3,
+    "no_ftx_removal_months": 4,
+    "loa_months": 6,
+}
+
+
+def activity_policy() -> dict[str, int]:
+    """Activity-policy dials with defaults, plus the derived no-contact removal total."""
+    out = {}
+    for k, default in _ACTIVITY_DEFAULTS.items():
+        out[k] = get_int("activity_" + k, default)
+    out["no_contact_removal_weeks"] = out["no_contact_outreach_weeks"] + out["no_contact_response_weeks"]
+    return out
