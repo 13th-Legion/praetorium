@@ -50,7 +50,11 @@ async def _find_dup(db: AsyncSession, unit_name: str, exclude_id: int | None = N
 @require_role("s1", "command", "admin")
 async def company_routing_page(request: Request, db: AsyncSession = Depends(get_db)):
     rows = (
-        await db.execute(select(CompanyRouting).order_by(CompanyRouting.unit_name))
+        await db.execute(
+            select(CompanyRouting).order_by(
+                CompanyRouting.is_state_s1.desc(), CompanyRouting.unit_name
+            )
+        )
     ).scalars().all()
     return templates.TemplateResponse(
         "pages/company_routing.html",

@@ -203,7 +203,7 @@ PORTAL_DB_PASS = os.environ.get("POSTGRES_PASSWORD", "")
 # portal outage or a not-yet-run migration degrades gracefully instead of
 # silently dropping routing. Cached for a short TTL so a burst of submissions
 # doesn't hammer the DB.
-_routing_cache = {"map": None, "fetched_at": 0.0}
+_routing_cache = {"map": None, "state_s1_email": None, "fetched_at": 0.0}
 _ROUTING_CACHE_TTL = 60.0  # seconds
 
 
@@ -227,16 +227,21 @@ def _load_company_routing():
             password=PORTAL_DB_PASS,
         )
         cur = conn.cursor()
-        cur.execute("SELECT unit_name, route_type, email FROM company_routing")
+        cur.execute("SELECT unit_name, route_type, email, is_state_s1 FROM company_routing")
         rows = cur.fetchall()
         cur.close()
         conn.close()
 
         mapping = {}
-        for unit_name, route_type, email in rows:
+        state_s1_email = None
+        for unit_name, route_type, email, is_state_s1 in rows:
+            if is_state_s1:
+                state_s1_email = (email or "").strip() or None
+                continue
             mapping[unit_name] = "deck" if route_type == "deck" else (email or None)
         if mapping:
             _routing_cache["map"] = mapping
+            _routing_cache["state_s1_email"] = state_s1_email or STATE_S1_FALLBACK
             _routing_cache["fetched_at"] = now
             log.info(f"Loaded company routing from portal DB ({len(mapping)} units)")
             return mapping
@@ -248,8 +253,15 @@ def _load_company_routing():
         )
 
     _routing_cache["map"] = COMPANY_ROUTING
+    _routing_cache["state_s1_email"] = STATE_S1_FALLBACK
     _routing_cache["fetched_at"] = now
     return COMPANY_ROUTING
+
+
+def _state_s1_email() -> str:
+    """Return the editable State S1 copy address (default admin@texasstatemilitia.org)."""
+    _load_company_routing()  # refresh the cache if stale
+    return _routing_cache.get("state_s1_email") or STATE_S1_FALLBACK
 
 
 # Paths are env-overridable so the module can be imported and unit-tested off
@@ -1201,12 +1213,15 @@ S1 — Personnel & Recruiting
         return False
 
 
-def send_generic_application_received_email(recipient_email, name, company, company_email=None):
+def send_generic_application_received_email(
+    recipient_email, name, company, company_email=None, state_s1_email=None
+):
     """Send generic TSM-branded application received confirmation for non-13th applicants."""
 
     first_name = name.split()[0] if name.split() else name
     company_display = company or "your local unit"
     contact_email = company_email or STATE_S1_FALLBACK
+    state_cc = state_s1_email or STATE_S1_FALLBACK
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -1399,9 +1414,9 @@ def forward_application_to_unit(sub, company, recipient_email):
         msg["To"] = recipient_email
         # CC state admin on all unit-forwarded applications
         recipients = [recipient_email]
-        if recipient_email != STATE_S1_FALLBACK:
-            msg["Cc"] = STATE_S1_FALLBACK
-            recipients.append(STATE_S1_FALLBACK)
+        if recipient_email != state_cc:
+            msg["Cc"] = state_cc
+            recipients.append(state_cc)
         msg["Subject"] = f"New TSM Application: {name} — {company}"
         msg.attach(MIMEText(html, "html"))
 
@@ -1439,7 +1454,7 @@ def forward_application_to_unit(sub, company, recipient_email):
             server.sendmail(SMTP_USER, recipients, msg.as_string())
 
         log.info(f"Forwarded application for {name} ({company}) to {recipient_email}" +
-                 (f" (cc: {STATE_S1_FALLBACK})" if recipient_email != STATE_S1_FALLBACK else ""))
+                 (f" (cc: {state_cc})" if recipient_email != state_cc else ""))
         return True
     except Exception as e:
         log.error(f"Failed to forward application for {name} ({company}) to {recipient_email}: {e}")
@@ -1508,6 +1523,7 @@ def check_new_submissions(state, dry_run=False):
 
         # Route by company
         route = _load_company_routing().get(company, None)
+        state_s1_email = _state_s1_email()
 
         if dry_run:
             # --dry-run must have NO external side effects. This block used to
@@ -1517,7 +1533,7 @@ def check_new_submissions(state, dry_run=False):
             # submission happened to be in processed_submissions already.
             # The deploy procedure mandates a dry run after every edit, so this
             # was a loaded gun pointed at exactly the routine we run most.
-            forward_to = route if route else STATE_S1_FALLBACK
+            forward_to = route if route else state_s1_email
             log.info(
                 f"[DRY RUN] Would process submission #{sub_id} ({name}) — "
                 f"company={company!r} route="
@@ -1539,9 +1555,17 @@ def check_new_submissions(state, dry_run=False):
                 )
                 # NOT marked processed: leave it for the next poll to retry.
                 continue
+            # State S1 wants an emailed copy of every deck-routed application.
+            try:
+                forward_application_to_unit(sub, company, state_s1_email)
+            except Exception as e:
+                log.error(
+                    f"Failed to forward deck application to State S1 for "
+                    f"submission #{sub_id} ({name}): {e}", exc_info=True,
+                )
         else:
             # Other company — forward to unit S1 or state fallback
-            forward_to = route if route else STATE_S1_FALLBACK
+            forward_to = route if route else state_s1_email
             forward_application_to_unit(sub, company, forward_to)
 
         # Send application received confirmation — 13th gets branded, others get generic TSM
@@ -1549,8 +1573,11 @@ def check_new_submissions(state, dry_run=False):
             if route == "deck":
                 send_application_received_email(email, name)
             else:
-                company_email = route if route else STATE_S1_FALLBACK
-                send_generic_application_received_email(email, name, company, company_email=company_email)
+                company_email = route if route else state_s1_email
+                send_generic_application_received_email(
+                    email, name, company,
+                    company_email=company_email, state_s1_email=state_s1_email,
+                )
         else:
             log.warning(f"No email for submission #{sub_id} ({name}), skipping confirmation email")
 

@@ -7,7 +7,7 @@ that unit's S1). Managed from the S1 admin page.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -23,6 +23,9 @@ class CompanyRouting(Base):
     unit_name: Mapped[str] = mapped_column()
     route_type: Mapped[str] = mapped_column()  # "deck" | "email"
     email: Mapped[str | None] = mapped_column(nullable=True)
+    # True on the single reserved "State S1" row: the state-wide address that
+    # receives an emailed copy of every application (deck + forwarded).
+    is_state_s1: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

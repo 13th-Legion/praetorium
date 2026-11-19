@@ -49,7 +49,7 @@
             <tbody>
                 {% for r in rows %}
                 <tr style="border-top:1px solid #333;">
-                    <td style="padding:10px 16px;color:#eee;">{{ r.unit_name }}</td>
+                    <td style="padding:10px 16px;color:#eee;">{{ r.unit_name }}{% if r.is_state_s1 %} <span style="color:#d4a537;font-size:11px;">(state-wide copy)</span>{% endif %}</td>
                     <td style="padding:10px 12px;">
                         {% if r.route_type == 'deck' %}<span style="color:#d4a537;font-weight:600;">deck</span>{% else %}<span style="color:#888;">email</span>{% endif %}
                     </td>
@@ -57,10 +57,12 @@
                     <td style="padding:10px 12px;white-space:nowrap;">
                         <button type="button" onclick="editRow({{ r.id }}, '{{ r.unit_name }}', '{{ r.route_type }}', '{{ r.email or '' }}')"
                             style="background:none;border:none;color:#d4a537;cursor:pointer;font-size:12px;">Edit</button>
+                        {% if not r.is_state_s1 %}
                         <form method="post" action="/api/s1/company-routing/{{ r.id }}/delete" style="display:inline;"
                             onsubmit="return confirm('Remove {{ r.unit_name }} from routing?');">
                             <button type="submit" style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:12px;">Delete</button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
