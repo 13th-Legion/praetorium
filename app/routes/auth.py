@@ -1,6 +1,7 @@
 """Authentication routes — NC OAuth2 SSO login/logout."""
 
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
