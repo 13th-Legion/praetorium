@@ -7,7 +7,9 @@
 <style>
   main.content.map-page { padding: 0; max-width: none; width: 100%; }
   .map-subtitle { background: #16213e; color: #999; font-size: 12px; padding: 6px 20px; border-bottom: 1px solid #333; }
-  #map { height: calc(100vh - 120px); width: 100%; background: #0f1220; }
+  #map { height: calc(100vh - 120px); width: 100%; background: #0f1220; position: relative; z-index: 0; }
+  /* z-index:0 + position:relative gives #map its own stacking context, so Leaflet's
+     high internal pane z-indexes can't paint over the nav dropdowns or feedback FAB. */
   .legend { background: rgba(22,33,62,0.94); padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #ccc; line-height: 1.75; }
   .legend .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
   .legend .sl { color: #ffd54f; }
@@ -73,7 +75,7 @@ TEAM_LIST.forEach(function (team, i) {
 });
 zoneLayer.addTo(map);
 
-const legend = L.control({ position: 'bottomleft' });
+const legend = L.control({ position: 'bottomright' });
 legend.onAdd = function () {
   const div = L.DomUtil.create('div', 'legend');
   let html = '<strong>Legend</strong><br>';
