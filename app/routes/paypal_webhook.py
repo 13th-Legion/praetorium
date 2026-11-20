@@ -32,6 +32,9 @@ from app.models.events import Event, EventRSVP
 from app.models.webhook_event import WebhookEvent
 from config import get_settings
 from app.settings import (
+    DECK_BOARD_ID,
+    DECK_PAYMENT_STACKS,
+    NC_TALK_S1_ROOM,
     NC_SVC_USER as NC_SPOOKY_USER,
     NC_SVC_PASS as NC_SPOOKY_PASS,
 )
@@ -69,12 +72,9 @@ def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
         .order_by(Event.date_start.asc())
     )
 
-# Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
+# Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants);
+# DECK_BOARD_ID / DECK_PAYMENT_STACKS / NC_TALK_S1_ROOM come from app.settings (env-overridable).
 NC_URL = get_settings().nc_url
-DECK_BOARD_ID = 5
-NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
-# Stacks where an applicant could plausibly pay from
-DECK_PAYMENT_STACKS = {14, 13, 12, 11}  # Documents & Payment first, then earlier stages
 
 
 async def _set_outcome(transaction_id: str, outcome: str) -> None:
@@ -365,7 +365,7 @@ async def _notify_talk_payment(name: str, amount: float) -> bool:
         from app.settings import NC_TALK_USER, NC_TALK_PASS
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
-                f"{NC_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NCTALK_S1_ROOM}",
+                f"{NC_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NC_TALK_S1_ROOM}",
                 headers={"OCS-APIRequest": "true"},
                 auth=(NC_TALK_USER, NC_TALK_PASS),
                 data={

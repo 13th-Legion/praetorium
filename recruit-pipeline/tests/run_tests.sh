@@ -18,6 +18,10 @@
 set -e
 cd "$(dirname "$0")/.."
 
+# Fail DB connects fast on loopback instead of hanging on TCP SYN timeouts
+# when the portal stack isn't running locally.
+export PORTAL_DB_HOST="${PORTAL_DB_HOST:-127.0.0.1}"
+
 PYTEST_ARGS="tests/ -v --tb=short"
 if [ "${FAST:-0}" = "1" ]; then
     PYTEST_ARGS="$PYTEST_ARGS -x"

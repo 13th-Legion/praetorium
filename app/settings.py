@@ -35,6 +35,13 @@ FEEDBACK_FORM_ID = int(os.getenv("FEEDBACK_FORM_ID", "9"))
 FEEDBACK_BOARD_ID = int(os.getenv("FEEDBACK_BOARD_ID", "47"))
 FEEDBACK_INBOX_STACK_ID = int(os.getenv("FEEDBACK_INBOX_STACK_ID", "175"))
 
+# S1 Recruit Pipeline Deck config — board/stack IDs and the S1 Talk room token.
+# Literal defaults match production (board 5, S1 Admin room r99dxzo8); env-overridable.
+DECK_BOARD_ID = int(os.getenv("DECK_BOARD_ID", "5"))
+DECK_PAYMENT_STACKS = {int(x) for x in os.getenv("DECK_PAYMENT_STACKS", "14,13,12,11").split(",") if x.strip()}
+DECK_ACTIVE_STACKS = {int(x) for x in os.getenv("DECK_ACTIVE_STACKS", "11,12,13,14,15").split(",") if x.strip()}
+NC_TALK_S1_ROOM = os.getenv("NC_TALK_S1_ROOM", "r99dxzo8")
+
 # Public base URL of the portal — used to build ABSOLUTE asset URLs that must
 # resolve from remote email clients (inline newsletter images, seasonal crests).
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://portal.13thlegion.org").rstrip("/")

@@ -76,7 +76,7 @@ router = APIRouter(prefix="/api/s4", tags=["s4-admin"])
 S4_ROLES = {"command", "admin", "s4"}
 
 # Nextcloud group-folder base for receipt storage.
-NC_S4_BASE = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-4%5d%20Logistics"
+NC_S4_BASE = f"/remote.php/dav/files/{NC_SVC_USER}/13th%20Legion%20Shared/%5bS-4%5d%20Logistics"
 
 FTX_CATEGORIES = ("ftx", "mcftx")
 MAX_RECEIPT_BYTES = 10 * 1024 * 1024  # 10MB

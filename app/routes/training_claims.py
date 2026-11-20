@@ -30,8 +30,8 @@ ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".doc", 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # NC WebDAV base for personnel file archive
-NC_PERSONNEL_BASE = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
 from app.settings import NC_SVC_USER as NC_ARCHIVE_USER, NC_SVC_PASS as NC_ARCHIVE_PASS
+NC_PERSONNEL_BASE = f"/remote.php/dav/files/{NC_ARCHIVE_USER}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
 
 
 async def _ensure_nc_folders(nc_url: str, *path_parts: str):

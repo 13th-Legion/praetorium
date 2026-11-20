@@ -41,6 +41,8 @@ PORTAL_HOST = PORTAL_URL.split("//", 1)[-1]
 WEBSITE_HOST = WEBSITE_URL.split("//", 1)[-1]
 
 from app.settings import (
+    DECK_BOARD_ID,
+    DECK_ACTIVE_STACKS,
     NC_PORTAL_SVC_USER as NC_SVC_USER,
     NC_PORTAL_SVC_PASS as NC_SVC_PASS,
     NC_SVC_USER as NC_SPOOKY_USER,
@@ -454,7 +456,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
         )
 
         member_folder = f"{member.last_name}, {member.first_name}"
-        nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+        nc_base = f"/remote.php/dav/files/{NC_SPOOKY_USER}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
         nc_user_arch = NC_SPOOKY_USER
         nc_pass_arch = NC_SPOOKY_PASS
 
@@ -491,7 +493,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
 # ─── PP-022: Recruiter Auto-Assignment ──────────────────────────────────────
 
 # Deck board & stack IDs for S1 Recruit Pipeline
-DECK_BOARD_ID = 5
+# DECK_BOARD_ID / DECK_ACTIVE_STACKS come from app.settings (env-overridable).
 DECK_STACKS = {
     11: "New Application",
     12: "Background Check",
@@ -502,7 +504,7 @@ DECK_STACKS = {
     81: "On Hold",
 }
 # Stacks that represent active applicants (exclude Complete and On Hold)
-DECK_ACTIVE_STACKS = {11, 12, 13, 14, 15}
+# DECK_ACTIVE_STACKS -> app.settings (env-overridable, default {11,12,13,14,15})
 
 # Stage flow: current_stack_id → next_stack_id
 STAGE_FLOW = {
@@ -2231,7 +2233,7 @@ async def _get_portal_uploads_html(card_id: int) -> str:
     if not card_title:
         return ""
 
-    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+    nc_base = f"/remote.php/dav/files/{NC_SPOOKY_USER}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
     folder_path = f"{NC_URL}{nc_base}/{quote(card_title)}/Pipeline"
 
     try:
@@ -2312,7 +2314,7 @@ async def upload_pipeline_file(request: Request, card_id: int):
     safe_type = doc_type.replace("/", "-").replace("\\", "-")
     filename = f"{safe_type} - {card_title} - {date.today().isoformat()}.{ext}"
 
-    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+    nc_base = f"/remote.php/dav/files/{NC_SPOOKY_USER}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -2356,7 +2358,7 @@ async def serve_portal_file(request: Request, card_id: int, filename: str):
     if not card_title:
         raise HTTPException(status_code=404, detail="Card not found")
 
-    nc_base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
+    nc_base = f"/remote.php/dav/files/{NC_SPOOKY_USER}/13th%20Legion%20Shared/%5bS-1%5d%20Admin/Personnel"
     file_path = f"{NC_URL}{nc_base}/{quote(card_title)}/Pipeline/{quote(filename)}"
 
     download = request.query_params.get("download") == "1"

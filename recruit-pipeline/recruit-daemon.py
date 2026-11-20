@@ -52,9 +52,9 @@ WEBSITE_URL = os.environ.get("WEBSITE_URL", "https://13thlegion.org")
 WEBSITE_HOST = WEBSITE_URL.split("//", 1)[-1]
 PORTAL_URL = os.environ.get("PORTAL_URL", "https://portal.13thlegion.org")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@13thlegion.org")
-NC_USER = "spooky"
+NC_USER = os.environ.get("NC_USER", "spooky")
 NC_PASS = os.environ.get("NC_SVC_PASS", "")
-TESSERARIUS_USER = "tesserarius"
+TESSERARIUS_USER = os.environ.get("TESSERARIUS_USER", "tesserarius")
 TESSERARIUS_PASS = os.environ.get("TESSERARIUS_PASS", "")
 
 # Service account for provisioning (NC admin)
@@ -69,8 +69,8 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "13th Legion <admin@13thlegion.org>")
 
 # Forms & Deck
-FORM_ID = 3
-BOARD_ID = 5
+FORM_ID = int(os.environ.get("FORM_ID", "3"))
+BOARD_ID = int(os.environ.get("BOARD_ID", "5"))
 
 # ── Forms storage layout (SINGLE SOURCE OF TRUTH) ───────────────────────────
 # Nextcloud Forms files land in the form owner's home under:
@@ -149,11 +149,17 @@ COMPANY_ROUTING = {
 }
 STATE_S1_FALLBACK = "admin@texasstatemilitia.org"
 
-# Praetorium portal DB (for creating member records)
+# Praetorium portal DB (for creating member records).
+# Explicit host override (default empty -> auto-detect via docker inspect).
+PORTAL_DB_HOST = os.environ.get("PORTAL_DB_HOST", "")
+
+
 def _resolve_portal_db_host():
     """Resolve praetorium-db container IP at runtime (Docker IPs are dynamic).
 
     Falls back to the last-known IP if docker inspect is unavailable."""
+    if PORTAL_DB_HOST:
+        return PORTAL_DB_HOST
     import subprocess
     fallback = "172.21.0.2"
     try:
@@ -197,9 +203,9 @@ def _db_host_warn(msg):
 # NOTE: deliberately NOT resolved at import time. Both call sites invoke
 # _resolve_portal_db_host() directly so a recreated praetorium-db container
 # (new IP) is picked up without restarting the daemon.
-PORTAL_DB_PORT = 5432
-PORTAL_DB_NAME = "praetorium"
-PORTAL_DB_USER = "praetorium"
+PORTAL_DB_PORT = int(os.environ.get("PORTAL_DB_PORT", "5432"))
+PORTAL_DB_NAME = os.environ.get("PORTAL_DB_NAME", "praetorium")
+PORTAL_DB_USER = os.environ.get("PORTAL_DB_USER", "praetorium")
 PORTAL_DB_PASS = os.environ.get("POSTGRES_PASSWORD", "")
 
 # Company routing now lives in the portal's company_routing table (managed via

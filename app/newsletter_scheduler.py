@@ -31,7 +31,7 @@ from config import get_settings
 NC_URL = get_settings().nc_url
 # WebDAV base for the self-building archive (matches where past issues live).
 ARCHIVE_DAV_BASE = (
-    f"{NC_URL}/remote.php/dav/files/spooky/"
+    f"{NC_URL}/remote.php/dav/files/{_NC_USER}/"
     "13th%20Legion%20Shared/%5bS-1%5d%20Admin/Legionary%20Dispatch"
 )
 

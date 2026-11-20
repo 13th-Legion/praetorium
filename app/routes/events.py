@@ -77,8 +77,8 @@ templates.env.filters["cdt_stored"] = _fmt_ct_stored
 
 # ─── CalDAV Config ───────────────────────────────────────────────────────────
 
-CALENDAR_PATH = "/remote.php/dav/calendars/spooky/13th-legion/"
 from app.settings import NC_SVC_USER as CALENDAR_USER, NC_SVC_PASS as CALENDAR_PASS
+CALENDAR_PATH = f"/remote.php/dav/calendars/{CALENDAR_USER}/13th-legion/"
 from app.settings import NC_TALK_USER, NC_TALK_PASS
 from app.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 

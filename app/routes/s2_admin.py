@@ -813,7 +813,7 @@ async def _store_map(site_key: str, ext: str, label: str, data: bytes) -> str | 
     from app.settings import NC_SVC_PASS, NC_SVC_USER
     from config import get_settings
     settings = get_settings()
-    base = "/remote.php/dav/files/spooky/13th%20Legion%20Shared/%5bS-2%5d%20Intel-Security/Maps"
+    base = f"/remote.php/dav/files/{NC_SVC_USER}/13th%20Legion%20Shared/%5bS-2%5d%20Intel-Security/Maps"
     safe_key = "".join(c if c.isalnum() or c in "-_" else "_" for c in site_key)
     safe_label = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
