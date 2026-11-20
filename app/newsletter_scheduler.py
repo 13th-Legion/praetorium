@@ -27,7 +27,8 @@ from app.settings import NC_SVC_USER as _NC_USER, NC_SVC_PASS as _NC_PASS
 logger = logging.getLogger(__name__)
 
 POLL_SECONDS = 60
-NC_URL = "https://cloud.13thlegion.org"
+from config import get_settings
+NC_URL = get_settings().nc_url
 # WebDAV base for the self-building archive (matches where past issues live).
 ARCHIVE_DAV_BASE = (
     f"{NC_URL}/remote.php/dav/files/spooky/"

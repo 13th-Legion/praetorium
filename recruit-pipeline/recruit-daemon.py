@@ -46,7 +46,12 @@ import requests
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
-NC_URL = "https://cloud.13thlegion.org"
+NC_URL = os.environ.get("NC_URL", "https://cloud.13thlegion.org")
+NC_HOST = NC_URL.split("//", 1)[-1]
+WEBSITE_URL = os.environ.get("WEBSITE_URL", "https://13thlegion.org")
+WEBSITE_HOST = WEBSITE_URL.split("//", 1)[-1]
+PORTAL_URL = os.environ.get("PORTAL_URL", "https://portal.13thlegion.org")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@13thlegion.org")
 NC_USER = "spooky"
 NC_PASS = os.environ.get("NC_SVC_PASS", "")
 TESSERARIUS_USER = "tesserarius"
@@ -59,9 +64,9 @@ NC_SVC_PASS = os.environ.get("NC_PORTAL_SVC_PASS", "")
 # SMTP via Proton Bridge (localhost)
 SMTP_HOST = "127.0.0.1"
 SMTP_PORT = 1025
-SMTP_USER = "admin@13thlegion.org"
+SMTP_USER = os.environ.get("SMTP_USER", "admin@13thlegion.org")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
-SMTP_FROM = "13th Legion <admin@13thlegion.org>"
+SMTP_FROM = os.environ.get("SMTP_FROM", "13th Legion <admin@13thlegion.org>")
 
 # Forms & Deck
 FORM_ID = 3
@@ -826,14 +831,14 @@ def send_rejection_email(recipient_email, name):
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
     </tr></table>
 </div>
@@ -854,7 +859,7 @@ def send_rejection_email(recipient_email, name):
 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #888; margin: 0; font-size: 12px;">
-        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
+        13th Legion · Texas State Militia · <a href="{WEBSITE_URL}" style="color: #888;">{WEBSITE_HOST}</a>
     </p>
 </div>
 
@@ -1076,14 +1081,14 @@ def send_application_received_email(recipient_email, name):
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
     </tr></table>
 </div>
@@ -1147,7 +1152,7 @@ def send_application_received_email(recipient_email, name):
         Nunquam Non Paratus — Never Not Ready
     </p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
+        13th Legion · Texas State Militia · <a href="{WEBSITE_URL}" style="color: #888;">{WEBSITE_HOST}</a>
     </p>
 </div>
 
@@ -1191,7 +1196,7 @@ We look forward to having you with us.
 Nunquam Non Paratus,
 S1 — Personnel & Recruiting
 13th Legion, Texas State Militia
-13thlegion.org
+{WEBSITE_HOST}
 """
 
     msg = MIMEMultipart("alternative")
@@ -1231,7 +1236,7 @@ def send_generic_application_received_email(
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; text-align: center;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="80" style="display: block; margin: 0 auto;">
+            <img src="{WEBSITE_URL}/assets/img/tsm-seal.png" alt="TSM" height="80" style="display: block; margin: 0 auto;">
             <h1 style="color: #d4a537; margin: 10px 0 0; font-size: 24px;">TEXAS STATE MILITIA</h1>
         </td>
     </tr></table>
@@ -1402,7 +1407,7 @@ def forward_application_to_unit(sub, company, recipient_email):
 
     <p style="margin-top: 20px; color: #666; font-size: 12px;">
         <em>This email was automatically forwarded by the 13th Legion S1 recruit pipeline.<br>
-        If you believe this was sent in error, contact admin@13thlegion.org.</em>
+        If you believe this was sent in error, contact {ADMIN_EMAIL}.</em>
     </p>
 </div>
 </body>
@@ -2324,7 +2329,7 @@ def _load_training_calendar(now=None):
         inner, past = _calendar_entry(
             date_start, date_end, category, title, training_blocks, now
         )
-        url = f"https://portal.13thlegion.org/events/{event_id}"
+        url = f"{PORTAL_URL}/events/{event_id}"
         if past:
             html_items.append(f'<li><s><a href="{url}">{inner}</a></s></li>')
         else:
@@ -2354,14 +2359,14 @@ def _tradoc_subject_url(item_id, doc_type, doc_url, has_body):
     if dtype == "markdown":
         if not has_body:
             return None
-        return f"https://portal.13thlegion.org/training/tradoc/{item_id}"
+        return f"{PORTAL_URL}/training/tradoc/{item_id}"
     if dtype in ("pdf", "external", "page"):
         if not doc_url:
             return None
         url = doc_url.strip()
         if url.startswith(("http://", "https://")):
             return url
-        return "https://portal.13thlegion.org" + (url if url.startswith("/") else "/" + url)
+        return PORTAL_URL + (url if url.startswith("/") else "/" + url)
     return None
 
 
@@ -2542,8 +2547,8 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     # names/subjects stay current (two-tier: Initial Entry + Advanced Quals).
     tradoc_html, tradoc_plain = _load_tradoc_html()
     if not tradoc_html:
-        tradoc_html = '<p>See the full checklist on the <a href="https://portal.13thlegion.org/training/tradoc">portal</a>.</p>'
-        tradoc_plain = "  See the full checklist: https://portal.13thlegion.org/training/tradoc"
+        tradoc_html = f'<p>See the full checklist on the <a href="{PORTAL_URL}/training/tradoc">portal</a>.</p>'
+        tradoc_plain = f"  See the full checklist: {PORTAL_URL}/training/tradoc"
 
     # Team leader for the Assignment section (e.g. "SGT Bunker (Digger)").
     team_leader = _load_team_leader(team)
@@ -2576,14 +2581,14 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
     </tr></table>
 </div>
@@ -2597,7 +2602,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         🔹 Assignment
     </h3>
     {assignment_html}
-    <p>You can view the 13th's overall chain of command <a href="https://portal.13thlegion.org/chain-of-command">here</a>.</p>
+    <p>You can view the 13th's overall chain of command <a href="{PORTAL_URL}/chain-of-command">here</a>.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Your Nextcloud Account
@@ -2605,7 +2610,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <p>Nextcloud is our secure, self-hosted platform for files, calendar, chat, and more. Everything lives here.</p>
     <table style="margin: 10px 0; font-size: 14px;">
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">URL:</td>
-            <td><a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></td></tr>
+            <td><a href="{NC_URL}">{NC_HOST}</a></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Username:</td>
             <td><code>{nc_username}</code></td></tr>
         <tr><td style="padding: 4px 10px 4px 0; font-weight: bold;">Temporary Password:</td>
@@ -2617,12 +2622,12 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <ul>
         <li><strong>Nextcloud Talk</strong> (chat &amp; calls) — <a href="https://apps.apple.com/app/nextcloud-talk/id1296825574">iOS</a> · <a href="https://play.google.com/store/apps/details?id=com.nextcloud.talk2">Android</a></li>
     </ul>
-    <p>When logging in, enter <strong>cloud.13thlegion.org</strong> as the server address, then use your username and password above.</p>
+    <p>When logging in, enter <strong>{NC_HOST}</strong> as the server address, then use your username and password above.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Unit Portal
     </h3>
-    <p>Access the unit portal at <a href="https://portal.13thlegion.org">portal.13thlegion.org</a> — log in with the same Nextcloud account above. Your TRADOC checklist, training progress, certifications, and profile are all tracked there.</p>
+    <p>Access the unit portal at <a href="{PORTAL_URL}">portal.{WEBSITE_HOST}</a> — log in with the same Nextcloud account above. Your TRADOC checklist, training progress, certifications, and profile are all tracked there.</p>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Communications
@@ -2635,21 +2640,21 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Training Calendar
     </h3>
-    <p>Below is this year's training calendar. You can always view the full schedule on the <a href="https://portal.13thlegion.org/events">Praetorium events page</a>.</p>
+    <p>Below is this year's training calendar. You can always view the full schedule on the <a href="{PORTAL_URL}/events">Praetorium events page</a>.</p>
     {calendar_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Basic Training (TRADOC)
     </h3>
-    <p>Pay special attention to the TRADOC blocks below — these are the subjects you'll be trained and tested on to become a fully patched member. Your progress is tracked on the <a href="https://portal.13thlegion.org">unit portal</a>.</p>
+    <p>Pay special attention to the TRADOC blocks below — these are the subjects you'll be trained and tested on to become a fully patched member. Your progress is tracked on the <a href="{PORTAL_URL}">unit portal</a>.</p>
     {tradoc_html}
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Important Documents
     </h3>
     <ul>
-        <li><strong>Medical Card</strong> — <a href="https://cloud.13thlegion.org/f/9345">cloud.13thlegion.org/f/9345</a>. This must be printed, filled out, and carried on your person at all FTXs.</li>
-        <li><strong>New Recruit Bible</strong> — <a href="https://cloud.13thlegion.org/f/85425">cloud.13thlegion.org/f/85425</a>. A printable document covering a wide range of basic 13th Legion and Texas State Militia field knowledge.</li>
+        <li><strong>Medical Card</strong> — <a href="{NC_URL}/f/9345">{NC_HOST}/f/9345</a>. This must be printed, filled out, and carried on your person at all FTXs.</li>
+        <li><strong>New Recruit Bible</strong> — <a href="{NC_URL}/f/85425">{NC_HOST}/f/85425</a>. A printable document covering a wide range of basic 13th Legion and Texas State Militia field knowledge.</li>
     </ul>
 
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
@@ -2660,11 +2665,11 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
     <h3 style="color: #d4a537; border-bottom: 2px solid #d4a537; padding-bottom: 5px;">
         🔹 Additional Resources
     </h3>
-    <p>The <a href="https://portal.13thlegion.org">unit portal</a> is your one-stop shop for everything else:</p>
+    <p>The <a href="{PORTAL_URL}">unit portal</a> is your one-stop shop for everything else:</p>
     <ul>
-        <li><a href="https://portal.13thlegion.org/training/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
-        <li><a href="https://portal.13thlegion.org/chain-of-command">Chain of Command</a></li>
-        <li><a href="https://portal.13thlegion.org/events">Training &amp; Events Calendar</a></li>
+        <li><a href="{PORTAL_URL}/training/library">Resource Library</a> — field manuals, SOPs, TSM state documents, and reference material</li>
+        <li><a href="{PORTAL_URL}/chain-of-command">Chain of Command</a></li>
+        <li><a href="{PORTAL_URL}/events">Training &amp; Events Calendar</a></li>
     </ul>
 </div>
 
@@ -2673,7 +2678,7 @@ def send_welcome_email(recipient_email, name, nc_username, nc_password, team):
         Nunquam Non Paratus — Never Not Ready
     </p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion • Texas State Militia • 13thlegion.org
+        13th Legion • Texas State Militia • {WEBSITE_HOST}
     </p>
 </div>
 
@@ -2686,10 +2691,10 @@ Thank you for joining us. The Texas State Militia offers excellent training and 
 
 ASSIGNMENT
 {assignment_plain}
-  Chain of Command: https://portal.13thlegion.org/chain-of-command
+  Chain of Command: {PORTAL_URL}/chain-of-command
 
 YOUR NEXTCLOUD ACCOUNT
-  URL: https://cloud.13thlegion.org
+  URL: {NC_URL}
   Username: {nc_username}
   Temporary Password: {nc_password}
 
@@ -2698,10 +2703,10 @@ YOUR NEXTCLOUD ACCOUNT
 
   Download the app:
   - Nextcloud Talk (chat/calls): search "Nextcloud Talk" in your app store
-  When logging in, enter cloud.13thlegion.org as the server address.
+  When logging in, enter {NC_HOST} as the server address.
 
 UNIT PORTAL
-  https://portal.13thlegion.org — log in with your Nextcloud account.
+  {PORTAL_URL} — log in with your Nextcloud account.
   Your TRADOC checklist, training progress, and profile are tracked here.
 
 COMMUNICATIONS
@@ -2713,16 +2718,16 @@ COMMUNICATIONS
     primary channel. Your team leader will add you to your team's backup chat group.
 TRAINING CALENDAR
 {calendar_plain}
-  Full calendar: https://portal.13thlegion.org/events
+  Full calendar: {PORTAL_URL}/events
 
 BASIC TRAINING (TRADOC)
 {tradoc_plain}
-  Full checklist: https://portal.13thlegion.org/training/tradoc
+  Full checklist: {PORTAL_URL}/training/tradoc
 
 IMPORTANT DOCUMENTS
-  - Medical Card: https://cloud.13thlegion.org/f/9345 — print it, fill it out,
+  - Medical Card: {NC_URL}/f/9345 — print it, fill it out,
     and carry it on your person at all FTXs.
-  - New Recruit Bible: https://cloud.13thlegion.org/f/85425 — a printable guide
+  - New Recruit Bible: {NC_URL}/f/85425 — a printable guide
     covering basic 13th Legion and Texas State Militia field knowledge.
 
 YOUR FIRST FTX
@@ -2731,11 +2736,11 @@ YOUR FIRST FTX
   Don't stress about gear — show up with what you have.
 
 ADDITIONAL RESOURCES
-  The unit portal (https://portal.13thlegion.org) is your one-stop shop:
-  - Resource Library: https://portal.13thlegion.org/training/library
-  - Chain of Command: https://portal.13thlegion.org/chain-of-command
-  - Training & Events Calendar: https://portal.13thlegion.org/events
-  - Your Profile / no-media: https://portal.13thlegion.org/settings —
+  The unit portal ({PORTAL_URL}) is your one-stop shop:
+  - Resource Library: {PORTAL_URL}/training/library
+  - Chain of Command: {PORTAL_URL}/chain-of-command
+  - Training & Events Calendar: {PORTAL_URL}/events
+  - Your Profile / no-media: {PORTAL_URL}/settings —
     flip on "Do not photograph, film, or publish me" if you don't want
     your image shared. The roster shows a no-media icon next to your name
     so photographers and AAR writers know to leave you out.
@@ -3088,7 +3093,7 @@ Your application to the 13th Legion has been advanced to the final onboarding ph
 To complete your background check and finalize your membership, please submit the ONE TIME, NON-REFUNDABLE $50 membership fee. This covers the cost of your criminal background check.
 
 Payment can be made via credit/debit card or PayPal at:
-https://portal.13thlegion.org/apply/fee?email={recipient_email}/
+{PORTAL_URL}/apply/fee?email={recipient_email}/
 
 If you have any questions, please reply directly to this email or reach out to your recruiter.
 
@@ -3103,7 +3108,7 @@ S1 Recruiting
 <p>Your application to the 13th Legion has been advanced to the final onboarding phase.</p>
 <p>To complete your background check and finalize your membership, please submit the <strong>ONE TIME, NON-REFUNDABLE $50 membership fee</strong>. This fee covers the cost of your criminal background check.</p>
 <p>Payment can be made securely via credit/debit card or PayPal at: <br>
-<a href="https://portal.13thlegion.org/apply/fee?email={recipient_email}">https://portal.13thlegion.org/apply/fee?email={recipient_email}</a></p>
+<a href="{PORTAL_URL}/apply/fee?email={recipient_email}">{PORTAL_URL}/apply/fee?email={recipient_email}</a></p>
 <p>If you have any questions, please reply directly to this email or reach out to your recruiter.</p>
 <p>Respectfully,<br><br>
 <strong>S1 Recruiting</strong><br>

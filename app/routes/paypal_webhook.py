@@ -70,7 +70,7 @@ def unpaid_upcoming_meal_stmt(member_id: int, now: datetime):
     )
 
 # Nextcloud Deck config (mirrors recruit-daemon & s1_admin constants)
-NC_URL = "https://cloud.13thlegion.org"
+NC_URL = get_settings().nc_url
 DECK_BOARD_ID = 5
 NCTALK_S1_ROOM = "r99dxzo8"  # T1 · S1 - Admin
 # Stacks where an applicant could plausibly pay from

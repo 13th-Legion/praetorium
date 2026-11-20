@@ -31,7 +31,14 @@ templates = Jinja2Templates(directory="app/templates")
 # Groups with S1 admin access
 from app.constants import S1_ROLES, PIPELINE_ROLES, UNIT_COMMS_ROLES
 
-NC_URL = "https://cloud.13thlegion.org"
+from config import get_settings
+NC_URL = get_settings().nc_url
+PORTAL_URL = get_settings().app_url
+WEBSITE_URL = get_settings().website_url
+ADMIN_EMAIL = get_settings().admin_email
+NC_HOST = NC_URL.split("//", 1)[-1]
+PORTAL_HOST = PORTAL_URL.split("//", 1)[-1]
+WEBSITE_HOST = WEBSITE_URL.split("//", 1)[-1]
 
 from app.settings import (
     NC_PORTAL_SVC_USER as NC_SVC_USER,
@@ -66,7 +73,7 @@ def _send_offboard_email(member, reason: str, notes: str | None = None):
     elif reason == "involuntary":
         reapply_block = (
             "<p>If you believe this separation was made in error, you may appeal by contacting "
-            "unit Command at <a href='mailto:admin@13thlegion.org'>admin@13thlegion.org</a>.</p>"
+            f"unit Command at <a href='mailto:{ADMIN_EMAIL}'>{ADMIN_EMAIL}</a>.</p>"
             "<p>If you wish to reapply in the future, there is a <strong>90-day waiting period</strong> "
             f"from your separation date. After that period, you may reapply here:</p>"
             f"<p><a href='{REAPPLY_URL}'>{REAPPLY_URL}</a></p>"
@@ -122,7 +129,7 @@ def _send_offboard_email(member, reason: str, notes: str | None = None):
             <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
             <p style="color: #888; font-size: 12px;">
                 If you have questions, contact us at
-                <a href="mailto:admin@13thlegion.org">admin@13thlegion.org</a>
+                <a href="mailto:{ADMIN_EMAIL}">{ADMIN_EMAIL}</a>
             </p>
         </div>
     </div>
@@ -143,7 +150,7 @@ Any unit-issued equipment must be returned to your team leader or S4.
 
 {'You are not eligible to reapply.' if reason == 'blacklisted' else f'To reapply: {REAPPLY_URL}'}
 
-Questions? Contact admin@13thlegion.org
+Questions? Contact {ADMIN_EMAIL}
 """
 
     msg = MIMEMultipart("alternative")
@@ -1147,10 +1154,10 @@ async def _send_welcome_email(card_title: str, card_desc: str) -> str:
     <p>Your Nextcloud account is ready. This is where we manage files, calendars, tasks, and comms for the unit.</p>
 
     <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:16px 0;">
-        <p style="margin:4px 0;"><strong>Nextcloud:</strong> <a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></p>
+        <p style="margin:4px 0;"><strong>Nextcloud:</strong> <a href="{NC_URL}">{NC_HOST}</a></p>
         {f'<p style="margin:4px 0;"><strong>Username:</strong> <code>{nc_username}</code></p>' if nc_username else ''}
         <p style="margin:4px 0;"><strong>Temporary Password:</strong> <code>{temp_password}</code></p>
-        <p style="margin:4px 0;"><strong>Portal:</strong> <a href="https://portal.13thlegion.org">portal.13thlegion.org</a></p>
+        <p style="margin:4px 0;"><strong>Portal:</strong> <a href="{PORTAL_URL}">{PORTAL_HOST}</a></p>
         <p style="margin:4px 0;font-size:12px;color:#666;">(Portal uses the same Nextcloud login)</p>
     </div>
 
@@ -1170,10 +1177,10 @@ async def _send_welcome_email(card_title: str, card_desc: str) -> str:
 
 Your Nextcloud account is ready.
 
-Nextcloud: https://cloud.13thlegion.org
+Nextcloud: {NC_URL}
 {f"Username: {nc_username}" if nc_username else ""}
 Temporary Password: {temp_password}
-Portal: https://portal.13thlegion.org (same login)
+Portal: {PORTAL_URL} (same login)
 
 First steps:
 1. Log in to Nextcloud and change your password (Settings > Security)
@@ -1181,7 +1188,7 @@ First steps:
 3. Install the Nextcloud app on your phone
 4. Log in to the Portal to see your profile and training record
 
-Questions? Contact admin@13thlegion.org
+Questions? Contact {ADMIN_EMAIL}
 
 V/R,
 13th Legion S6"""
@@ -3048,14 +3055,14 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/crest.png" alt="13th Legion" height="70" style="display: block;">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
+            <img src="{WEBSITE_URL}/assets/img/tsm-seal.png" alt="TSM" height="70" style="display: block;">
         </td>
     </tr></table>
 </div>
@@ -3073,7 +3080,7 @@ async def send_email_blast(request: Request, background_tasks: BackgroundTasks, 
 <div style="background: #1a1a2e; padding: 15px; text-align: center;">
     <p style="color: #d4a537; margin: 0; font-style: italic;">Nunquam Non Paratus — Never Not Ready</p>
     <p style="color: #888; margin: 5px 0 0; font-size: 12px;">
-        13th Legion · Texas State Militia · <a href="https://13thlegion.org" style="color: #888;">13thlegion.org</a>
+        13th Legion · Texas State Militia · <a href="{WEBSITE_URL}" style="color: #888;">{WEBSITE_HOST}</a>
     </p>
 </div>
 </body></html>"""
@@ -3293,7 +3300,7 @@ active status and the Activity Policy will apply again.
 
 Enjoy the time off. The Legion will be here when you get back.
 
-Questions? Contact admin@13thlegion.org
+Questions? Contact {ADMIN_EMAIL}
 """
     else:  # return
         subject = "13th Legion — Leave of Absence Ended"
@@ -3333,7 +3340,7 @@ What this means:
 Good to have you back. If you need more time, contact Command before your
 obligations resume — don't just go quiet.
 
-Questions? Contact admin@13thlegion.org
+Questions? Contact {ADMIN_EMAIL}
 """
 
     html = f"""
@@ -3349,7 +3356,7 @@ Questions? Contact admin@13thlegion.org
             <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
             <p style="color: #888; font-size: 12px;">
                 If you have questions, contact us at
-                <a href="mailto:admin@13thlegion.org">admin@13thlegion.org</a>
+                <a href="mailto:{ADMIN_EMAIL}">{ADMIN_EMAIL}</a>
             </p>
         </div>
     </div>

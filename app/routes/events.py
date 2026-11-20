@@ -32,7 +32,8 @@ from app.services import ranks as _ranks
 from app.services import nc_rooms as _nc_rooms_svc
 from app.services import attendance as attendance_svc
 
-PORTAL_BASE = "https://portal.13thlegion.org"
+PORTAL_BASE = get_settings().app_url
+WEBSITE_BASE = get_settings().website_url
 
 router = APIRouter(tags=["events"])
 templates = Jinja2Templates(directory="app/templates")
@@ -353,7 +354,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
             f"📅 {date_str}\n"
             f"📍 {event.location or 'TBD'}\n\n"
             f"RSVP is now open on the Portal. Log in and respond.\n"
-            f"🔗 https://portal.13thlegion.org/events/{event.id}"
+            f"🔗 {PORTAL_BASE}/events/{event.id}"
         )
         async with _httpx.AsyncClient(timeout=15) as client:
             await client.post(
@@ -381,14 +382,14 @@ async def _activate_warno(db, event, *, already_claimed=False):
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/tsm-seal.png" alt="TSM" height="70">
         </td>
     </tr></table>
 </div>
@@ -398,7 +399,7 @@ async def _activate_warno(db, event, *, already_claimed=False):
 <strong>Location:</strong> {event.location or 'TBD'}</p>
 <p>A Warning Order has been issued for the upcoming exercise. RSVP is now open.</p>
 <p><strong>Log in to the Portal to RSVP:</strong><br>
-<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
+<a href="{PORTAL_BASE}/events/{event.id}" style="color: #6fa8dc;">{PORTAL_BASE}/events/{event.id}</a></p>
 <p style="margin-top: 20px;">
     <em>Nunquam Non Paratus,</em><br>
     <strong>S3 — Operations & Training</strong><br>
@@ -1678,14 +1679,14 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia - Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/tsm-seal.png" alt="TSM" height="70">
         </td>
     </tr></table>
 </div>
@@ -1698,7 +1699,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 {maps_html}
 {smeac_html}
 <p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
-<a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
+<a href="{PORTAL_BASE}/events/{evt_id}" style="color: #6fa8dc;">{PORTAL_BASE}/events/{evt_id}</a></p>
 <p style="margin-top: 20px;">
     <em>Nunquam Non Paratus,</em><br>
     <strong>S3 - Operations & Training</strong><br>
@@ -1755,14 +1756,14 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia - Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/tsm-seal.png" alt="TSM" height="70">
         </td>
     </tr></table>
 </div>
@@ -1772,7 +1773,7 @@ async def submit_rsvp(request: Request, event_id: int, background_tasks: Backgro
 <strong>Location:</strong> {evt_location}</p>
 <p>You're confirmed for the upcoming exercise. Details below.</p>
 <p><strong>Full details on the Portal:</strong><br>
-<a href="https://portal.13thlegion.org/events/{evt_id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{evt_id}</a></p>
+<a href="{PORTAL_BASE}/events/{evt_id}" style="color: #6fa8dc;">{PORTAL_BASE}/events/{evt_id}</a></p>
 <p style="margin-top: 20px;">
     <em>Nunquam Non Paratus,</em><br>
     <strong>S3 - Operations & Training</strong><br>
@@ -2480,7 +2481,7 @@ async def _notify_affected(db, targets, *, action: str):
         f"{icon} **Event {verb}** — {anchor.title}\n"
         f"📅 {when}{occ}\n"
         f"📍 {anchor.location or 'TBD'}\n\n"
-        + (f"See the portal for details: https://portal.13thlegion.org/events/{anchor.id}"
+        + (f"See the portal for details: {PORTAL_BASE}/events/{anchor.id}"
            if action == "cancelled" else
            "This event was removed from the calendar.")
     )
@@ -3333,14 +3334,14 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
             <p style="color: #ccc; margin: 5px 0 0;">Texas State Militia — Dallas / Fort Worth</p>
         </td>
         <td style="vertical-align: middle; padding-left: 15px;">
-            <img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/tsm-seal.png" alt="TSM" height="70">
         </td>
     </tr></table>
 </div>
@@ -3354,7 +3355,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
 {maps_html}
 {smeac_html}
 <p style="margin-top: 20px;"><strong>Full details on the Portal:</strong><br>
-<a href="https://portal.13thlegion.org/events/{event.id}" style="color: #6fa8dc;">https://portal.13thlegion.org/events/{event.id}</a></p>
+<a href="{PORTAL_BASE}/events/{event.id}" style="color: #6fa8dc;">{PORTAL_BASE}/events/{event.id}</a></p>
 <p style="margin-top: 20px;">
     <em>Nunquam Non Paratus,</em><br>
     <strong>S3 — Operations & Training</strong><br>
@@ -3387,7 +3388,7 @@ async def issue_opord(request: Request, event_id: int, background_tasks: Backgro
                     talk_msg += f" @ {event.rally_point_time}"
                 talk_msg += "\n"
             talk_msg += _site_maps_text(event)
-            talk_msg += f"\nFull OPORD on the Portal:\n🔗 https://portal.13thlegion.org/events/{event_id_val}"
+            talk_msg += f"\nFull OPORD on the Portal:\n🔗 {PORTAL_BASE}/events/{event_id_val}"
             async with httpx.AsyncClient(timeout=15) as client:
                 await client.post(
                     f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
@@ -3453,7 +3454,7 @@ def _frago_email_html(event, frago_number: int, subject: str, body: str, date_st
 <div style="background: #1a1a2e; padding: 20px; text-align: center;">
     <table style="margin: 0 auto;" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align: middle; padding-right: 15px;">
-            <img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70">
+            <img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70">
         </td>
         <td style="vertical-align: middle; text-align: center;">
             <h1 style="color: #d4a537; margin: 0; font-size: 28px;">13TH LEGION</h1>
@@ -3475,7 +3476,7 @@ def _frago_email_html(event, frago_number: int, subject: str, body: str, date_st
     <p style="font-size:14px;">This is a change to a previously issued order. All other
        instructions from the WARNO/OPORD remain in effect.</p>
     <p style="font-size:14px;">
-        🔗 <a href="https://portal.13thlegion.org/events/{event.id}">View the full event on the Portal</a>
+        🔗 <a href="{PORTAL_BASE}/events/{event.id}">View the full event on the Portal</a>
     </p>
 </div>
 <div style="background: #1a1a2e; padding: 10px; text-align: center; font-size: 11px; color: #888;">
@@ -4442,7 +4443,7 @@ async def save_aar(request: Request, event_id: int):
             if _ms:
                 esc = _ms.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
                 _summary_html = f'<h3 style="color:#d4a537;margin:16px 0 4px;font-size:14px;">WHAT ACTUALLY HAPPENED</h3><p style="color:#333;font-size:14px;line-height:1.6;">{esc}</p>'
-            html_body = f'<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;line-height:1.6;max-width:650px;margin:0 auto;"><div style="background:#1a1a2e;padding:20px;text-align:center;"><table style="margin:0 auto;" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:15px;"><img src="https://13thlegion.org/assets/img/crest.png" alt="13th Legion" height="70"></td><td style="vertical-align:middle;text-align:center;"><h1 style="color:#d4a537;margin:0;font-size:28px;">13TH LEGION</h1><p style="color:#ccc;margin:5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p></td><td style="vertical-align:middle;padding-left:15px;"><img src="https://13thlegion.org/assets/img/tsm-seal.png" alt="TSM" height="70"></td></tr></table></div><div style="padding:20px;"><h2 style="color:#1a1a2e;">\U0001f4cb AFTER ACTION REVIEW \u2014 {_evt_title}</h2><p><strong>Date:</strong> {_date_str}<br><strong>Location:</strong> {_evt_location}</p>{_intent_html}{_summary_html}{_items_html}<p style="margin-top:20px;"><strong>Full details on the Portal:</strong><br><a href="https://portal.13thlegion.org/events/{_evt_eid}" style="color:#6fa8dc;">https://portal.13thlegion.org/events/{_evt_eid}</a></p><p style="margin-top:20px;"><em>Nunquam Non Paratus,</em><br><strong>S3 \u2014 Operations & Training</strong><br>13th Legion, Texas State Militia</p></div><div style="background:#1a1a2e;padding:10px;text-align:center;font-size:11px;color:#888;">13th Legion \u00b7 Texas State Militia \u00b7 DFW</div></body></html>'
+            html_body = f'<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;line-height:1.6;max-width:650px;margin:0 auto;"><div style="background:#1a1a2e;padding:20px;text-align:center;"><table style="margin:0 auto;" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:15px;"><img src="{WEBSITE_BASE}/assets/img/crest.png" alt="13th Legion" height="70"></td><td style="vertical-align:middle;text-align:center;"><h1 style="color:#d4a537;margin:0;font-size:28px;">13TH LEGION</h1><p style="color:#ccc;margin:5px 0 0;">Texas State Militia \u2014 Dallas / Fort Worth</p></td><td style="vertical-align:middle;padding-left:15px;"><img src="{WEBSITE_BASE}/assets/img/tsm-seal.png" alt="TSM" height="70"></td></tr></table></div><div style="padding:20px;"><h2 style="color:#1a1a2e;">\U0001f4cb AFTER ACTION REVIEW \u2014 {_evt_title}</h2><p><strong>Date:</strong> {_date_str}<br><strong>Location:</strong> {_evt_location}</p>{_intent_html}{_summary_html}{_items_html}<p style="margin-top:20px;"><strong>Full details on the Portal:</strong><br><a href="{PORTAL_BASE}/events/{_evt_eid}" style="color:#6fa8dc;">{PORTAL_BASE}/events/{_evt_eid}</a></p><p style="margin-top:20px;"><em>Nunquam Non Paratus,</em><br><strong>S3 \u2014 Operations & Training</strong><br>13th Legion, Texas State Militia</p></div><div style="background:#1a1a2e;padding:10px;text-align:center;font-size:11px;color:#888;">13th Legion \u00b7 Texas State Militia \u00b7 DFW</div></body></html>'
             from app.integrations import email as _email_service
             _aar_subj = f"\U0001f4cb AAR \u2014 {_evt_title}{_subject_date_suffix(event.date_start, event.date_end)}"
             # The bulk SMTP send is blocking; run it in a worker thread so the
@@ -4468,7 +4469,7 @@ async def save_aar(request: Request, event_id: int):
                 if rc: talk_msg += f"\n\u2705 **What Went Right:** {rc} items"
                 if wc: talk_msg += f"\n\u274c **What Went Wrong:** {wc} items"
                 if ic: talk_msg += f"\n\U0001f527 **Improve:** {ic} items"
-                talk_msg += f"\n\nFull AAR on the Portal:\n\U0001f517 https://portal.13thlegion.org/events/{_evt_eid}"
+                talk_msg += f"\n\nFull AAR on the Portal:\n\U0001f517 {PORTAL_BASE}/events/{_evt_eid}"
                 async with httpx.AsyncClient(timeout=15) as client:
                     await client.post(
                         f"{settings.nc_url}/ocs/v2.php/apps/spreed/api/v1/chat/{WARNO_TALK_ROOM()}",
@@ -4795,7 +4796,7 @@ async def export_opord_pdf(request: Request, event_id: int):
     pdf.cell(0, 5, _safe('Nunquam Non Paratus'), new_x='LMARGIN', new_y='NEXT')
     pdf.set_font('Helvetica', '', 8)
     pdf.cell(0, 5, _safe('S3 Operations & Training  |  13th Legion, Texas State Militia'), new_x='LMARGIN', new_y='NEXT')
-    pdf.cell(0, 5, _safe(f'https://portal.13thlegion.org/events/{event_id}'), new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, _safe(f'{PORTAL_BASE}/events/{event_id}'), new_x='LMARGIN', new_y='NEXT')
 
     buf = io.BytesIO()
     pdf.output(buf)
@@ -4935,7 +4936,7 @@ async def export_aar_pdf(request: Request, event_id: int):
     pdf.cell(0, 5, 'Nunquam Non Paratus', new_x='LMARGIN', new_y='NEXT')
     pdf.set_font('Helvetica', '', 8)
     pdf.cell(0, 5, f'S3 Operations & Training  |  13th Legion, Texas State Militia', new_x='LMARGIN', new_y='NEXT')
-    pdf.cell(0, 5, f'https://portal.13thlegion.org/events/{event_id}', new_x='LMARGIN', new_y='NEXT')
+    pdf.cell(0, 5, f'{PORTAL_BASE}/events/{event_id}', new_x='LMARGIN', new_y='NEXT')
 
     buf = io.BytesIO()
     pdf.output(buf)

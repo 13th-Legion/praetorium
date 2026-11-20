@@ -233,7 +233,7 @@ async def _event_link_html(event_id: str) -> tuple[str, str]:
             return "", ""
         dt = ev.date_start.strftime("%b %d, %Y") if ev.date_start else ""
         label = f"{ev.title}" + (f" — {dt}" if dt else "")
-        url = f"https://portal.13thlegion.org/events/{ev.id}"
+        url = f"{get_settings().app_url}/events/{ev.id}"
         html_line = f'<p>📅 <a href="{url}" target="_blank">{escape(label)}</a></p>'
         plain_line = f"📅 {label}\n{url}"
         return html_line, plain_line

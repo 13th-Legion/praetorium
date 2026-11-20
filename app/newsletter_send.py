@@ -3,6 +3,9 @@ scheduler (scheduled sends). Keeps a single source of truth for recipient
 resolution, HTML rendering, and SMTP assembly with attachments.
 """
 from __future__ import annotations
+from config import get_settings
+WEBSITE_URL = get_settings().website_url
+WEBSITE_HOST = WEBSITE_URL.split("//", 1)[-1]
 
 import os
 import re
@@ -167,7 +170,7 @@ def render_newsletter_html(title: str, body_html: str, crest_key: str, sender_na
     <p style="color:#d4a537;margin:0;font-style:italic;font-size:13px;">Nunquam Non Paratus &mdash; Never Not Ready</p>
     <p style="color:#888;margin:6px 0 0;font-size:11px;">
       13th Legion &middot; Texas State Militia &middot;
-      <a href="https://13thlegion.org" style="color:#888;">13thlegion.org</a>
+      <a href="{WEBSITE_URL}" style="color:#888;">{WEBSITE_HOST}</a>
     </p>
   </td></tr>
 

@@ -19,6 +19,11 @@ from app.models.member import Member
 from app.models.rank_history import RankHistory
 from app.models.conduct import ConductViolation
 from config import get_settings
+NC_URL = get_settings().nc_url
+PORTAL_URL = get_settings().app_url
+ADMIN_EMAIL = get_settings().admin_email
+NC_HOST = NC_URL.split("//", 1)[-1]
+PORTAL_HOST = PORTAL_URL.split("//", 1)[-1]
 
 log = logging.getLogger(__name__)
 settings = get_settings()
@@ -816,10 +821,10 @@ def _build_credentials_email(first_name: str, nc_username: str, temp_password: s
     <p>Welcome to the 13th Legion digital infrastructure, {first_name}!</p>
     <p>Your Nextcloud account is ready. This is where we manage files, calendars, tasks, and comms for the unit.</p>
     <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:16px 0;">
-        <p style="margin:4px 0;"><strong>Nextcloud:</strong> <a href="https://cloud.13thlegion.org">cloud.13thlegion.org</a></p>
+        <p style="margin:4px 0;"><strong>Nextcloud:</strong> <a href="{NC_URL}">{NC_HOST}</a></p>
         <p style="margin:4px 0;"><strong>Username:</strong> <code>{nc_username}</code></p>
         <p style="margin:4px 0;"><strong>Temporary Password:</strong> <code>{temp_password}</code></p>
-        <p style="margin:4px 0;"><strong>Portal:</strong> <a href="https://portal.13thlegion.org">portal.13thlegion.org</a></p>
+        <p style="margin:4px 0;"><strong>Portal:</strong> <a href="{PORTAL_URL}">{PORTAL_HOST}</a></p>
         <p style="margin:4px 0;font-size:12px;color:#666;">(Portal uses the same Nextcloud login)</p>
     </div>
     <p><strong>First steps:</strong></p>
@@ -836,10 +841,10 @@ def _build_credentials_email(first_name: str, nc_username: str, temp_password: s
 
 Your Nextcloud account is ready.
 
-Nextcloud: https://cloud.13thlegion.org
+Nextcloud: {NC_URL}
 Username: {nc_username}
 Temporary Password: {temp_password}
-Portal: https://portal.13thlegion.org (same login)
+Portal: {PORTAL_URL} (same login)
 
 First steps:
 1. Log in to Nextcloud and change your password (Settings > Security)
@@ -847,7 +852,7 @@ First steps:
 3. Install the Nextcloud app on your phone
 4. Log in to the Portal to see your profile and training record
 
-Questions? Contact admin@13thlegion.org
+Questions? Contact {ADMIN_EMAIL}
 
 V/R,
 13th Legion S6"""

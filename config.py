@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # App
     app_name: str = "Project Praetorium"
     app_url: str = "https://portal.13thlegion.org"
+    # Public unit website (footer links, crest/seal asset URLs)
+    website_url: str = "https://13thlegion.org"
+    # Unit admin contact (support/credential emails)
+    admin_email: str = "admin@13thlegion.org"
     debug: bool = False
     secret_key: str = "CHANGE-ME-IN-PRODUCTION"
 

@@ -12,6 +12,7 @@ Zone boundaries:
 
 import math
 import re
+from config import get_settings
 from app.address_parse import parse_oneline_address  # noqa: F401  (re-export)
 from app.constants import GEO_CENTER, GEO_ZONE_START, GEO_ZONE_SIZE, GEO_ZONE_TEAMS  # noqa: F401 (fallback seeds)
 from app.services import settings_store as _ss
@@ -55,7 +56,7 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-_UA = "13thLegion-Praetorium/1.0 (portal.13thlegion.org)"
+_UA = f"13thLegion-Praetorium/1.0 ({get_settings().app_url.split(chr(47)+chr(47), 1)[-1]})"
 
 
 def geocode_zip(zip_code: str) -> tuple[float | None, float | None]:

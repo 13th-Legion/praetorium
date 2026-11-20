@@ -26,7 +26,8 @@ from app.settings import (
 
 log = logging.getLogger(__name__)
 
-NC_URL = "https://cloud.13thlegion.org"
+from config import get_settings
+NC_URL = get_settings().nc_url
 POLL_SECONDS = 600
 _MARKER = "forms-submission:"
 
