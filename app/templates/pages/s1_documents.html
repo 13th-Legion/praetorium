@@ -94,7 +94,7 @@ function editDoc(id) {
   document.getElementById("doc-form").action = "/api/s1/documents/" + id + "/edit";
   document.getElementById("doc-submit").textContent = "Save changes (bumps version)";
   document.getElementById("editor-hint").textContent = "Saving will bump the version and require re-sign.";
-  quill.root.innerHTML = d.content_html || "";
+  quill.clipboard.dangerouslyPasteHTML(d.content_html || "");
   window.scrollTo({top:0, behavior:"smooth"});
 }
 
