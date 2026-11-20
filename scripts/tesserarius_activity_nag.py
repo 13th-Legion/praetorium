@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import smtplib
+import subprocess
 import sys
 from datetime import date, datetime
 from email.mime.multipart import MIMEMultipart
@@ -49,13 +50,24 @@ RENAG_DAYS = int(os.environ.get("TESSERARIUS_RENAG_DAYS", "14"))
 
 # ── Defaults (overridden by app_settings) ─────────────────────────────────────
 DEFAULTS = {
-    "no_contact_outreach_weeks": 6,
-    "no_contact_response_weeks": 2,
-    "no_ftx_verbal_months": 2,
-    "no_ftx_written_months": 3,
-    "no_ftx_removal_months": 4,
-    "loa_months": 6,
+    "no_contact_outreach": (6, "weeks"),
+    "no_contact_response": (2, "weeks"),
+    "no_ftx_verbal": (2, "months"),
+    "no_ftx_written": (3, "months"),
+    "no_ftx_removal": (4, "months"),
+    "loa": (6, "months"),
 }
+_UNIT_DAYS = {"days": 1, "weeks": 7, "months": 30}
+
+
+def _human_days(days):
+    if days >= 30 and days % 30 == 0:
+        n = days // 30
+        return f"{n} month{'s' if n != 1 else ''}"
+    if days >= 7 and days % 7 == 0:
+        n = days // 7
+        return f"{n} week{'s' if n != 1 else ''}"
+    return f"{days} day{'s' if days != 1 else ''}"
 
 
 def _db():
@@ -72,15 +84,41 @@ def load_policy() -> dict:
     rows = dict(cur.fetchall())
     cur.close()
     conn.close()
-    out = dict(DEFAULTS)
-    for k in DEFAULTS:
+    out = {}
+    for k, (default_val, default_unit) in DEFAULTS.items():
+        val = default_val
         v = rows.get("activity_" + k)
         if v is not None:
             try:
-                out[k] = int(v)
+                val = int(v)
             except (TypeError, ValueError):
                 pass
-    out["no_contact_removal_weeks"] = out["no_contact_outreach_weeks"] + out["no_contact_response_weeks"]
+        unit = rows.get("activity_" + k + "_unit", default_unit)
+        if unit not in _UNIT_DAYS:
+            unit = default_unit
+        out[k + "_days"] = val * _UNIT_DAYS[unit]
+    out["no_contact_removal_days"] = out["no_contact_outreach_days"] + out["no_contact_response_days"]
+    return out
+
+
+def load_talk_activity() -> dict:
+    """Return {nc_username: last Talk activity datetime} from Nextcloud Talk (MariaDB)."""
+    out = {}
+    php = os.environ.get("TALK_ACTIVITY_PHP", "/opt/recruit-pipeline/talk_activity.php")
+    try:
+        proc = subprocess.run(
+            ["docker", "exec", "-i", "nextcloud-app", "php"],
+            input=open(php, "rb").read(),
+            capture_output=True,
+            timeout=30,
+        )
+        for line in proc.stdout.decode("utf-8", "replace").splitlines():
+            parts = line.split("\t")
+            if len(parts) == 2 and parts[1].strip().isdigit():
+                ts = int(parts[1].strip())
+                out[parts[0].strip()] = datetime.utcfromtimestamp(ts)
+    except Exception as e:
+        log.error("failed to load Talk activity: %s", e)
     return out
 
 
@@ -161,28 +199,32 @@ def days_since(dt):
 def tier_for(m, p):
     """Return (tier, urgency_label) or None. Higher tier wins."""
     # Two SEPARATE tracks:
-    #   - No-contact (communication) -> last_contact (login/FTX/manual), fallback last_login
+    #   - No-contact (communication) -> most recent of last_contact (login/FTX/manual)
+    #     and last Talk activity (TLAS: members check team chats).
     #   - No-FTX (attendance)       -> last_ftx only
-    c_login = days_since(m.get("last_contact") or m["last_login"])
+    c_portal = days_since(m.get("last_contact") or m["last_login"])
+    c_talk = days_since(m.get("last_talk_activity"))
+    contact_cands = [x for x in (c_portal, c_talk) if x is not None]
+    contact_days = min(contact_cands) if contact_cands else None
     c_ftx = days_since(m["last_ftx"])
-    removal_w = p["no_contact_removal_weeks"]
-    outreach_w = p["no_contact_outreach_weeks"]
+    removal_days = p["no_contact_removal_days"]
+    outreach_days = p["no_contact_outreach_days"]
     ftx = c_ftx  # None = never tracked
 
     # Most-severe single message: prefer removal, then written, verbal, then contact.
     tiers = []
-    if c_login is not None:
-        if c_login >= removal_w * 7:
-            tiers.append(("no_contact_removal", f"{removal_w} weeks with no contact"))
-        elif c_login >= outreach_w * 7:
-            tiers.append(("no_contact_outreach", f"{outreach_w} weeks with no contact"))
+    if contact_days is not None:
+        if contact_days >= removal_days:
+            tiers.append(("no_contact_removal", f"{_human_days(removal_days)} with no contact"))
+        elif contact_days >= outreach_days:
+            tiers.append(("no_contact_outreach", f"{_human_days(outreach_days)} with no contact"))
     if ftx is not None:
-        if ftx >= p["no_ftx_removal_months"] * 30:
-            tiers.append(("no_ftx_removal", f"{p['no_ftx_removal_months']} months with no FTX"))
-        elif ftx >= p["no_ftx_written_months"] * 30:
-            tiers.append(("no_ftx_written", f"{p['no_ftx_written_months']} months with no FTX"))
-        elif ftx >= p["no_ftx_verbal_months"] * 30:
-            tiers.append(("no_ftx_verbal", f"{p['no_ftx_verbal_months']} months with no FTX"))
+        if ftx >= p["no_ftx_removal_days"]:
+            tiers.append(("no_ftx_removal", f"{_human_days(p['no_ftx_removal_days'])} with no FTX"))
+        elif ftx >= p["no_ftx_written_days"]:
+            tiers.append(("no_ftx_written", f"{_human_days(p['no_ftx_written_days'])} with no FTX"))
+        elif ftx >= p["no_ftx_verbal_days"]:
+            tiers.append(("no_ftx_verbal", f"{_human_days(p['no_ftx_verbal_days'])} with no FTX"))
 
     if not tiers:
         return None
@@ -226,6 +268,10 @@ def main():
     dry_run = "--dry-run" in sys.argv
     p = load_policy()
     members = load_members()
+    talk = load_talk_activity()
+    for m in members:
+        if m.get("nc_username"):
+            m["last_talk_activity"] = talk.get(m["nc_username"])
     state = load_state()
     leaders = {m["team"]: m for m in members if m["leadership_title"] == "Team Leader"}
 

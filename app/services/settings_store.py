@@ -147,21 +147,48 @@ def meal_plan_price() -> float:
     return get_float("meal_plan_price", 15.0)
 
 
-# Activity-policy dials (weeks / months). Stored under keys prefixed "activity_".
+# Activity-policy dials: (value, unit) per criteria. Stored under keys
+# activity_<name> (int) and activity_<name>_unit ("days"|"weeks"|"months").
 _ACTIVITY_DEFAULTS = {
-    "no_contact_outreach_weeks": 6,
-    "no_contact_response_weeks": 2,
-    "no_ftx_verbal_months": 2,
-    "no_ftx_written_months": 3,
-    "no_ftx_removal_months": 4,
-    "loa_months": 6,
+    "no_contact_outreach": (6, "weeks"),
+    "no_contact_response": (2, "weeks"),
+    "no_ftx_verbal": (2, "months"),
+    "no_ftx_written": (3, "months"),
+    "no_ftx_removal": (4, "months"),
+    "loa": (6, "months"),
 }
+_UNIT_DAYS = {"days": 1, "weeks": 7, "months": 30}
 
 
-def activity_policy() -> dict[str, int]:
-    """Activity-policy dials with defaults, plus the derived no-contact removal total."""
-    out = {}
-    for k, default in _ACTIVITY_DEFAULTS.items():
-        out[k] = get_int("activity_" + k, default)
-    out["no_contact_removal_weeks"] = out["no_contact_outreach_weeks"] + out["no_contact_response_weeks"]
+def _unit_label(n: int, unit: str) -> str:
+    if n == 1:
+        return {"days": "day", "weeks": "week", "months": "month"}.get(unit, unit)
+    return unit
+
+
+def _days_label(days: int) -> str:
+    if days >= 30 and days % 30 == 0:
+        n = days // 30
+        return f"{n} month{'s' if n != 1 else ''}"
+    if days >= 7 and days % 7 == 0:
+        n = days // 7
+        return f"{n} week{'s' if n != 1 else ''}"
+    return f"{days} day{'s' if days != 1 else ''}"
+
+
+def activity_policy() -> dict:
+    """Activity-policy dials as {value, unit, days, label} per criteria."""
+    out: dict = {}
+    for name, (default_val, default_unit) in _ACTIVITY_DEFAULTS.items():
+        val = get_int("activity_" + name, default_val)
+        unit = get_str("activity_" + name + "_unit", default_unit)
+        if unit not in _UNIT_DAYS:
+            unit = default_unit
+        days = val * _UNIT_DAYS[unit]
+        out[name] = val
+        out[name + "_unit"] = unit
+        out[name + "_days"] = days
+        out[name + "_label"] = f"{val} {_unit_label(val, unit)}"
+    out["no_contact_removal_days"] = out["no_contact_outreach_days"] + out["no_contact_response_days"]
+    out["no_contact_removal_label"] = _days_label(out["no_contact_removal_days"])
     return out

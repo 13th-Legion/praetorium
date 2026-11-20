@@ -12,8 +12,16 @@
             {% for key, label in fields %}
             <div style="margin-bottom:16px;">
                 <label style="font-weight:600;display:block;margin-bottom:4px;font-size:13px;">{{ label }}</label>
-                <input type="number" min="1" name="{{ key }}" value="{{ vals[key] }}"
-                    style="width:120px;padding:8px 10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;box-sizing:border-box;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="number" min="1" name="{{ key }}" value="{{ vals[key] }}"
+                        style="width:100px;padding:8px 10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;box-sizing:border-box;">
+                    <select name="{{ key }}_unit"
+                        style="padding:8px 10px;border:1px solid #444;border-radius:4px;background:#2a2a3e;color:#eee;">
+                        {% for u in units %}
+                        <option value="{{ u }}" {% if vals[key ~ '_unit'] == u %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             {% endfor %}
             <button type="submit" style="padding:9px 22px;background:#d4a537;color:#1a1a2e;border:none;border-radius:4px;font-weight:600;cursor:pointer;">Save Policy</button>

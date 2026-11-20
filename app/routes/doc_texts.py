@@ -282,15 +282,15 @@ ACTIVITY_POLICY_TEXT = """
   <li>Legionaries are expected to make reasonable efforts to attend all Field Training Exercises (FTXs) and maintain regular contact with their assigned team leaders via approved channels (e.g., ProtonMail, Signal).</li>
   <li><strong><em>No Contact</em></strong>:
     <ul>
-      <li>After {no_contact_outreach_weeks} weeks of no communication, the team leader, 1SG, or SFC will attempt outreach.</li>
-      <li>Non-response within {no_contact_response_weeks} weeks (total {no_contact_removal_weeks} weeks) results in removal from the company.</li>
+      <li>After {no_contact_outreach_label} of no communication, the team leader, 1SG, or SFC will attempt outreach.</li>
+      <li>Non-response within {no_contact_response_label} (total {no_contact_removal_label}) results in removal from the company.</li>
     </ul>
   </li>
   <li><strong><em>No FTX Attendance</em></strong>:
     <ul>
-      <li>After {no_ftx_verbal_months} months, a verbal warning is issued by the team leader.</li>
-      <li>After {no_ftx_written_months} months, a written warning is issued, requiring attendance at the next FTX.</li>
-      <li>After {no_ftx_removal_months} months, non-attendance results in removal from the company.</li>
+      <li>After {no_ftx_verbal_label}, a verbal warning is issued by the team leader.</li>
+      <li>After {no_ftx_written_label}, a written warning is issued, requiring attendance at the next FTX.</li>
+      <li>After {no_ftx_removal_label}, non-attendance results in removal from the company.</li>
     </ul>
   </li>
 </ul>
@@ -299,7 +299,7 @@ ACTIVITY_POLICY_TEXT = """
 <ul>
   <li>Life challenges (e.g., work, family, emergencies) may qualify for exceptions if communicated in writing to the team leader and approved by command staff. Documentation will be retained per the Code of Conduct, Section 7.2.</li>
   <li>Recurrent unexcused absences, especially after OPORD receipt, may lead to review under the Code of Conduct, Section 7.</li>
-  <li><strong>Leave of Absence:</strong> Patched members may request a {loa_months}-month leave of absence through unit Command. During an approved leave, the member is exempt from all participation requirements in this policy and is not subject to removal for inactivity. Leave is requested and managed through the member portal.</li>
+  <li><strong>Leave of Absence:</strong> Patched members may request a {loa_label} leave of absence through unit Command. During an approved leave, the member is exempt from all participation requirements in this policy and is not subject to removal for inactivity. Leave is requested and managed through the member portal.</li>
 </ul>
 
 <h3>4. Disciplinary Actions</h3>

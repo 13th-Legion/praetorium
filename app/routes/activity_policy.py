@@ -21,13 +21,24 @@ router = APIRouter(prefix="/api/s1/activity-policy", tags=["s1-activity-policy"]
 templates = Jinja2Templates(directory="app/templates")
 
 FIELDS = [
-    ("no_contact_outreach_weeks", "No-contact → first outreach (weeks)"),
-    ("no_contact_response_weeks", "No-contact → removal after (weeks, on top of outreach)"),
-    ("no_ftx_verbal_months", "No-FTX → verbal warning (months)"),
-    ("no_ftx_written_months", "No-FTX → written warning (months)"),
-    ("no_ftx_removal_months", "No-FTX → removal (months)"),
-    ("loa_months", "Leave of Absence length (months)"),
+    ("no_contact_outreach", "No-contact → first outreach"),
+    ("no_contact_response", "No-contact → removal (on top of outreach)"),
+    ("no_ftx_verbal", "No-FTX → verbal warning"),
+    ("no_ftx_written", "No-FTX → written warning"),
+    ("no_ftx_removal", "No-FTX → removal"),
+    ("loa", "Leave of Absence length"),
 ]
+UNITS = ["days", "weeks", "months"]
+
+
+async def _upsert_setting(db: AsyncSession, key: str, value: str, value_type: str) -> None:
+    row = (await db.execute(select(AppSetting).where(AppSetting.key == key))).scalar_one_or_none()
+    if row is None:
+        db.add(AppSetting(key=key, value=value, value_type=value_type, category="activity"))
+    else:
+        row.value = value
+        row.value_type = value_type
+        row.updated_at = datetime.utcnow()
 
 
 @router.get("", response_class=HTMLResponse)
@@ -36,7 +47,7 @@ async def activity_policy_page(request: Request):
     vals = settings_store.activity_policy()
     return templates.TemplateResponse(
         "pages/s1_activity_policy.html",
-        {"request": request, "user": get_current_user(request), "fields": FIELDS, "vals": vals},
+        {"request": request, "user": get_current_user(request), "fields": FIELDS, "units": UNITS, "vals": vals},
     )
 
 
@@ -53,16 +64,11 @@ async def activity_policy_save(request: Request, db: AsyncSession = Depends(get_
             value = int(raw)
         except ValueError:
             value = current.get(key, 0)
-        db_key = "activity_" + key
-        row = (
-            await db.execute(select(AppSetting).where(AppSetting.key == db_key))
-        ).scalar_one_or_none()
-        if row is None:
-            db.add(AppSetting(key=db_key, value=str(value), value_type="int", category="activity"))
-        else:
-            row.value = str(value)
-            row.value_type = "int"
-            row.updated_at = now
+        unit = (form.get(key + "_unit") or current.get(key + "_unit", "weeks")).strip()
+        if unit not in UNITS:
+            unit = current.get(key + "_unit", "weeks")
+        await _upsert_setting(db, "activity_" + key, str(value), "int")
+        await _upsert_setting(db, "activity_" + key + "_unit", unit, "str")
     await db.commit()
     settings_store.invalidate()
     return RedirectResponse("/api/s1/activity-policy", status_code=303)
