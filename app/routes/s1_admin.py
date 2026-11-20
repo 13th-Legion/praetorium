@@ -358,10 +358,15 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     ip_addr = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
     ua = request.headers.get("user-agent", "")
 
-    # Record signature
+    # Record signature. Link to the DB document + its current version so
+    # editing a doc (version bump) flags prior signatures as needing re-sign.
+    from app.models.document import Document
+    doc_row = (await db.execute(select(Document).where(Document.slug == doc_type))).scalar_one_or_none()
     sig = DocumentSignature(
         member_id=member.id,
         document_type=doc_type,
+        document_id=doc_row.id if doc_row else None,
+        document_version=str(doc_row.version) if doc_row else "1.0",
         full_name=full_name,
         signature_text=signature,
         ip_address=ip_addr,
@@ -473,25 +478,7 @@ async def submit_signature(request: Request, doc_type: str, db: AsyncSession = D
     })
 
 
-@router.get("/documents/status")
-@require_auth
-async def document_status(request: Request, db: AsyncSession = Depends(get_db)):
-    """S1 view — who has signed what."""
-    user = request.session.get("user", {})
-    require_s1(user)
-
-    result = await db.execute(
-        select(Member)
-        .where(Member.status.in_(["recruit", "active"]))
-        .order_by(Member.last_name)
-    )
-    members = result.scalars().all()
-
-    return templates.TemplateResponse("pages/s1_documents.html", {
-        "request": request,
-        "user": user,
-        "members": members,
-    })
+# PP-430: document status moved to app/routes/documents.py (/api/s1/documents/status)
 
 
 # ─── PP-022: Recruiter Auto-Assignment ──────────────────────────────────────

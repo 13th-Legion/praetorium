@@ -18,7 +18,7 @@ from config import get_settings
 from app import database
 from app.database import engine, Base
 from app.audit import AuditContextMiddleware
-from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, awards_catalog, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin, s2_admin, s6_admin, s6_crypto, feedback, company_routing, urban_evasion, activity_policy
+from app.routes import auth, settings as settings_route, dashboard, health, debug, roster, profile, profile_summary, tlas, s1_admin, events, announcements, member_edit, training_claims, training_library, awards, awards_catalog, contact_edit, shops, s3_ops, ops_console, team_manage, notifications, elections, paypal_webhook, attendance_analytics, checkout, conduct, promotions, donate, weapons_qual, tradoc_admin, aars, recruiting_analytics, newsletter, chain_of_command, ribbons_admin, media, s4_admin, s2_admin, s6_admin, s6_crypto, feedback, company_routing, urban_evasion, activity_policy, documents
 
 
 @asynccontextmanager
@@ -420,6 +420,7 @@ app.include_router(s6_admin.router)
 app.include_router(s6_crypto.router)
 app.include_router(company_routing.router)
 app.include_router(activity_policy.router)
+app.include_router(documents.router)
 app.include_router(feedback.router)
 app.include_router(urban_evasion.router)
 

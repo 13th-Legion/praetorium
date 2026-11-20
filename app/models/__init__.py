@@ -61,3 +61,4 @@ from app.models.s6_crypto import (  # noqa: F401
     S6TrenchCodebook,
     S6TrenchEntry,
 )
+from app.models.document import Document  # noqa: F401

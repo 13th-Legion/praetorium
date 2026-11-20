@@ -421,10 +421,7 @@ async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
     conduct_violations = await get_violations_for_profile(member.id, db)
 
     # Build My Documents list (view links + signed status for signable docs)
-    my_documents = []
-    for _k, _t, _signable, _attr in MY_DOCUMENTS:
-        _signed = getattr(member, _attr, None) if (_signable and _attr) else None
-        my_documents.append({"key": _k, "title": _t, "signable": _signable, "signed_at": _signed})
+    my_documents = await _my_documents(member, db)
 
     # Fetch NC last login for this member
     nc_last_login = None
@@ -482,10 +479,7 @@ async def view_profile(request: Request, member_id: int, db: AsyncSession = Depe
     conduct_violations = await get_violations_for_profile(member.id, db)
 
     # Build My Documents list (view links + signed status for signable docs)
-    my_documents = []
-    for _k, _t, _signable, _attr in MY_DOCUMENTS:
-        _signed = getattr(member, _attr, None) if (_signable and _attr) else None
-        my_documents.append({"key": _k, "title": _t, "signable": _signable, "signed_at": _signed})
+    my_documents = await _my_documents(member, db)
 
     # Fetch NC last login for this member
     nc_last_login = None
@@ -528,9 +522,33 @@ MY_DOCUMENTS = [
     ("general_waiver", "General Waiver & Release of Liability", True, "waiver_signed_at"),
 ]
 
+_SIGNED_ATTR = {k: a for k, _t, _s, a in MY_DOCUMENTS if a}
 
-def _get_doc_content(doc_type: str):
-    """Return (title, html_content) for a document key, or (None, None)."""
+
+async def _my_documents(member, db):
+    from app.models.document import Document
+    docs = (await db.execute(
+        select(Document)
+        .where(Document.active == True, Document.archived == False)
+        .order_by(Document.sort_order, Document.id)
+    )).scalars().all()
+    out = []
+    for d in docs:
+        attr = _SIGNED_ATTR.get(d.slug)
+        out.append({"key": d.slug, "title": d.title, "signable": True,
+                    "signed_at": getattr(member, attr, None) if attr else None})
+    return out
+
+
+
+async def _get_doc_content(doc_type: str, db: AsyncSession):
+    """Return (title, html_content) for a document slug, or (None, None)."""
+    from app.models.document import Document
+    doc = (await db.execute(
+        select(Document).where(Document.slug == doc_type, Document.archived == False)
+    )).scalar_one_or_none()
+    if doc is not None:
+        return doc.title, doc.content_html
     from app.routes.doc_texts import (
         CODE_OF_CONDUCT_TEXT, BYLAWS_TEXT, activity_policy_html,
     )
@@ -550,7 +568,7 @@ def _get_doc_content(doc_type: str):
 async def view_document(request: Request, doc_type: str, db: AsyncSession = Depends(get_db)):
     """Read-only document viewer for any logged-in member."""
     user = get_current_user(request)
-    title, content = _get_doc_content(doc_type)
+    title, content = await _get_doc_content(doc_type, db)
     if not content:
         raise HTTPException(status_code=404, detail="Document not found")
     return templates.TemplateResponse("pages/view_document.html", {

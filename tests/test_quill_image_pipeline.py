@@ -106,6 +106,7 @@ EDITOR_TEMPLATES = {
     "pages/s1_email_blast.html": "/api/s1/newsletter/image-upload",
     "pages/s2_iir_edit.html": "/api/media/image-upload",
     "pages/s6_emcomm.html": "/api/media/image-upload",
+    "pages/s1_documents.html": "/api/media/image-upload",
 }
 
 

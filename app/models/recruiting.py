@@ -32,6 +32,7 @@ class DocumentSignature(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
     document_type: Mapped[str] = mapped_column(String(32))  # 'nda', 'general_waiver'
+    document_id: Mapped[Optional[int]] = mapped_column(ForeignKey("documents.id"), nullable=True)
     document_version: Mapped[str] = mapped_column(String(16), default="1.0")
     full_name: Mapped[str] = mapped_column(String(128))
     signature_text: Mapped[str] = mapped_column(String(256))  # typed "I agree" signature
