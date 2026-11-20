@@ -5,7 +5,7 @@
 <div class="card" style="margin-bottom:16px;">
   <div class="card-title" style="justify-content:space-between;">
     <span>📋 Signable Documents</span>
-    <button type="button" id="toggle-editor-btn" class="btn">＋ Add Document</button>
+    <button type="button" id="toggle-editor-btn" class="btn btn-primary">＋ Add Document</button>
   </div>
   <div class="card-body">
     <p style="color:#888;margin:0 0 12px;">These documents are presented to members for signature. Editing a document bumps its version, which flags everyone on the old version as needing to re-sign.</p>
@@ -17,7 +17,7 @@
         <input type="hidden" name="content" id="doc-content">
         <div style="display:flex;gap:8px;align-items:center;">
           <button type="submit" class="btn btn-primary" id="doc-submit">Save</button>
-          <button type="button" class="btn" id="cancel-edit">Cancel</button>
+          <button type="button" class="btn btn-primary" id="cancel-edit">Cancel</button>
           <span id="editor-hint" style="font-size:12px;color:#c62828;"></span>
         </div>
       </form>
@@ -32,12 +32,12 @@
       {% if r.doc.archived %}<span style="font-size:11px;color:#c62828;">(archived)</span>{% elif not r.doc.active %}<span style="font-size:11px;color:#f39c12;">(inactive)</span>{% endif %}
     </span>
     <span style="display:flex;gap:6px;align-items:center;">
-      <button type="button" class="btn" onclick="editDoc({{ r.doc.id }})">Edit</button>
+      <button type="button" class="btn btn-primary" onclick="editDoc({{ r.doc.id }})">Edit</button>
       <form method="POST" action="/api/s1/documents/{{ r.doc.id }}/toggle" style="margin:0;">
-        <button type="submit" class="btn">{{ "Deactivate" if r.doc.active else "Activate" }}</button>
+        <button type="submit" class="btn btn-primary">{{ "Deactivate" if r.doc.active else "Activate" }}</button>
       </form>
       <form method="POST" action="/api/s1/documents/{{ r.doc.id }}/archive" style="margin:0;" onsubmit="return confirm('Archive {{ r.doc.title }}? Its signatures are preserved.');">
-        <button type="submit" class="btn" style="color:#ef5350;">Archive</button>
+        <button type="submit" class="btn btn-primary">Archive</button>
       </form>
     </span>
   </div>
