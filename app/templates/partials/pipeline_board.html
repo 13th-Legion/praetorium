@@ -119,12 +119,12 @@
                         {% if card.has_next %}
                         <!-- Advance -->
                         {% if card.is_approve %}
-                        <button onclick="if(confirm('Approve {{ card.name }}? This triggers onboarding.')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                        <button onclick="if(confirm('Approve {{ card.name | replace("'", "\\'") }}? This triggers onboarding.')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
                             style="padding:4px 8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;width:100%;">
                             {{ card.advance_label }}
                         </button>
                         {% else %}
-                        <button onclick="if(confirm('Move {{ card.name }} to {{ card.next_stage }}?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                        <button onclick="if(confirm('Move {{ card.name | replace("'", "\\'") }} to {{ card.next_stage }}?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/advance', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
                             style="padding:4px 8px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
                             {{ card.advance_label }} →
                         </button>
@@ -133,12 +133,12 @@
 
                         <!-- On Hold / Resume buttons -->
                         {% if stack_id == 81 %}
-                        <button onclick="if(confirm('Resume {{ card.name }} back to their previous stage?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/resume', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                        <button onclick="if(confirm('Resume {{ card.name | replace("'", "\\'") }} back to their previous stage?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/resume', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
                             style="padding:4px 8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
                             ▶️ Resume
                         </button>
                         {% elif stack_id != 16 %}
-                        <button onclick="if(confirm('Place {{ card.name }} on hold?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/hold', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
+                        <button onclick="if(confirm('Place {{ card.name | replace("'", "\\'") }} on hold?')) { htmx.ajax('POST', '/api/s1/pipeline/{{ card.id }}/hold', {target:'#kanban-action-{{ card.id }}', swap:'innerHTML'}) }"
                             style="padding:4px 8px;background:rgba(243,156,18,0.15);color:#f39c12;border:1px solid rgba(243,156,18,0.3);border-radius:4px;cursor:pointer;font-size:11px;width:100%;">
                             ⏸️ On Hold
                         </button>
