@@ -1014,8 +1014,8 @@ async def sync_calendar(request: Request):
                 else:
                     # Create new
                     category = _guess_category(ev["summary"])
-                    # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
-                    rsvp_on = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
+                    # RSVP defaults on for all RSVP-eligible categories incl. FTX/MCFTX
+                    rsvp_on = category in RSVP_CATEGORIES()
                     warno_sched = _calc_warno_schedule(category, date_start)
                     event = Event(
                         title=ev["summary"],
@@ -1246,7 +1246,12 @@ async def _maintain_event_roster(db, event_id, event):
     - Adds pending RSVPs for active/recruit members who joined after event creation
     - Removes ALL RSVPs (pending/attending/declined) for members who have been separated/inactivated
     """
-    if not event or event.finalized_at or not event.rsvp_enabled:
+    if not event or event.finalized_at:
+        return
+    # Keep the invitee roster in sync even before RSVP opens, for events that
+    # have an invite target (e.g. an FTX with invite_groups='entire_unit').
+    # RSVP being off gates the RSVP buttons, not the roster itself.
+    if not event.rsvp_enabled and not (event.invite_groups or "").strip():
         return
 
     # Get existing RSVPs for this event
@@ -2015,12 +2020,11 @@ async def create_event(request: Request):
     if category not in VALID_CATEGORIES():
         category = "other"
 
-    # FTX/MCFTX: RSVP activates on WARNO issue, not on creation
-    _rsvp_default = category in RSVP_CATEGORIES() and category not in ("ftx", "mcftx")
+    # RSVP defaults on for all RSVP-eligible categories incl. FTX/MCFTX
+    _rsvp_default = category in RSVP_CATEGORIES()
     # Explicit toggle from the create form overrides the category default
     # (checkbox present => honor it; absent field => fall back to the default).
-    # FTX/MCFTX still never RSVP-on at creation regardless of the toggle.
-    if "rsvp_enabled" in form.keys() and category not in ("ftx", "mcftx"):
+    if "rsvp_enabled" in form.keys():
         rsvp_on = form.get("rsvp_enabled") == "on"
     else:
         rsvp_on = _rsvp_default

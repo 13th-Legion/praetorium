@@ -195,14 +195,12 @@
                             </button>
 
                             <!-- Assign toggle -->
-                            {% if not card.assigned %}
                             <button onclick="
                                 var el = document.getElementById('assign-{{ card.id }}');
                                 el.style.display = el.style.display === 'none' ? 'block' : 'none';
                             " style="flex:1;padding:3px;background:rgba(255,255,255,0.08);border:none;border-radius:3px;cursor:pointer;font-size:10px;color:#aaa;">
-                                👤
+                                {% if card.assigned %}👤 Change{% else %}👤{% endif %}
                             </button>
-                            {% endif %}
 
                             <!-- Decline -->
                             {% if stack_id != 16 %}
