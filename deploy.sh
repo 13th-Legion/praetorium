@@ -228,3 +228,21 @@ else
     echo "   Check: ssh $SERVER 'docker logs praetorium-app --tail 20'"
     exit 1
 fi
+
+# 6. Recruit daemon (separate runtime dir: /opt/recruit-pipeline)
+#    The rsync above lands the repo under $REMOTE_DIR, but the recruit-daemon
+#    systemd service runs code from /opt/recruit-pipeline. Sync that source too
+#    (NO --delete: preserve state.json / logs / .bak) and bounce the service so
+#    daemon changes ship with the app instead of drifting.
+echo "→ Syncing recruit daemon + restarting..."
+if ! rsync -az --no-links \
+    --exclude='__pycache__/' --exclude='*.log' --exclude='*.bak*' --exclude='state.json' --exclude='.git/' \
+    "$LOCAL_DIR/recruit-pipeline/" "$SERVER:/opt/recruit-pipeline/"; then
+    echo "❌ Aborting: recruit-daemon sync failed"
+    exit 1
+fi
+if ! ssh "$SERVER" "python3 -m py_compile /opt/recruit-pipeline/recruit-daemon.py && systemctl restart recruit-daemon && sleep 2 && systemctl is-active --quiet recruit-daemon"; then
+    echo "❌ Aborting: recruit-daemon restart failed (check: systemctl status recruit-daemon)"
+    exit 1
+fi
+echo "   OK — recruit daemon synced + restarted"

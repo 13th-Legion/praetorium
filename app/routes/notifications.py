@@ -238,8 +238,22 @@ async def create_notification_for_all(db, category: str, title: str, body: Optio
         query = query.where(Member.status == status_filter)
         
     result = await db.execute(query)
-    member_ids = result.scalars().all()
-    
+    member_ids = list(result.scalars().all())
+
+    # Dedup: skip members who already got this exact title within 60s — a
+    # double-submit/retry of the same fan-out must not double-notify.
+    if member_ids:
+        _cutoff = datetime.utcnow() - timedelta(seconds=60)
+        _recent = await db.execute(
+            select(Notification.member_id).where(
+                Notification.member_id.in_(member_ids),
+                Notification.title == title,
+                Notification.created_at > _cutoff,
+            )
+        )
+        _already = {r[0] for r in _recent.all()}
+        member_ids = [m for m in member_ids if m not in _already]
+
     notifications = [
         Notification(
             member_id=mid,
@@ -288,6 +302,19 @@ async def create_notification_for_roles(db, roles: list, category: str, title: s
             member_roles = []
         if any(r in member_roles for r in roles):
             target_ids.append(m.id)
+
+    # Dedup: skip members who already got this exact title within 60s.
+    if target_ids:
+        _cutoff = datetime.utcnow() - timedelta(seconds=60)
+        _recent = await db.execute(
+            select(Notification.member_id).where(
+                Notification.member_id.in_(target_ids),
+                Notification.title == title,
+                Notification.created_at > _cutoff,
+            )
+        )
+        _already = {r[0] for r in _recent.all()}
+        target_ids = [m for m in target_ids if m not in _already]
 
     notifications = [
         Notification(
