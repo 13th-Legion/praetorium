@@ -2473,7 +2473,8 @@ async def _notify_affected(db, targets, *, action: str):
         await create_notification(db, mid, "event", title, body=body, link=link, icon=icon)
 
     await create_notification_for_roles(
-        db, ["command", "s3"], "event", title, body=body, link=link, icon=icon
+        db, ["command", "s3"], "event", title, body=body, link=link, icon=icon,
+        exclude_ids=affected_ids,
     )
     await db.commit()
 

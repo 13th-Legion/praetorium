@@ -267,14 +267,21 @@ async def delete_notifications_by_source(db, source_id: str) -> int:
     return result.rowcount or 0
 
 
-async def create_notification_for_roles(db, roles: list, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None):
-    """Send a notification to all members who have any of the specified portal roles."""
+async def create_notification_for_roles(db, roles: list, category: str, title: str, body: Optional[str] = None, link: Optional[str] = None, icon: Optional[str] = None, exclude_ids: Optional[set] = None):
+    """Send a notification to all members who have any of the specified portal roles.
+
+    ``exclude_ids`` skips members already notified another way (e.g. an RSVP
+    fan-out that also hits command/s3), preventing duplicate bell notifications.
+    """
     import json as _json
+    exclude = exclude_ids or set()
     result = await db.execute(select(Member).where(Member.portal_roles.isnot(None)))
     members = result.scalars().all()
 
     target_ids = []
     for m in members:
+        if m.id in exclude:
+            continue
         try:
             member_roles = _json.loads(m.portal_roles) if m.portal_roles else []
         except Exception:
