@@ -1622,6 +1622,17 @@ def parse_card_for_onboarding(card):
             val = val.strip("*_~")  # strip markdown bold/italic
             info[key] = val
 
+    # Recruiter of record: first user assigned to the Deck card, by NC uid.
+    # Matches Recruiter.nc_username so completion credit lands on the right
+    # recruiter (option A: populate members.assigned_recruiter).
+    assigned = [
+        (au.get("participant", {}) or {}).get("uid", "").strip()
+        for au in (card.get("assignedUsers") or [])
+    ]
+    assigned = [u for u in assigned if u]
+    if assigned:
+        info["assigned_recruiter"] = assigned[0]
+
     return info
 
 
@@ -1952,6 +1963,7 @@ def create_portal_member(info, nc_username, team):
                 address, city, state, zip_code,
                 latitude, longitude,
                 rank_grade, status, team, company,
+                assigned_recruiter,
                 nc_username, join_date, is_veteran, mos,
                 has_ltc, serial_seq, serial_number,
                 created_at, updated_at
@@ -1959,7 +1971,7 @@ def create_portal_member(info, nc_username, team):
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s,
-                %s, %s, %s, %s,
+                %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s,
                 NOW(), NOW()
@@ -1977,6 +1989,7 @@ def create_portal_member(info, nc_username, team):
             "recruit",
             team,
             "13th Legion",
+            info.get("assigned_recruiter"),
             nc_username,
             datetime.now().date(),
             is_vet,
@@ -1989,6 +2002,17 @@ def create_portal_member(info, nc_username, team):
         result = cur.fetchone()
 
         if result:
+            # Credit the recruiter of record (option A). Only on a NEW insert —
+            # ON CONFLICT DO NOTHING means re-runs return no row and must not
+            # double-credit.
+            if info.get("assigned_recruiter"):
+                cur.execute(
+                    "UPDATE recruiters SET "
+                    "total_recruited = COALESCE(total_recruited, 0) + 1, "
+                    "current_load = GREATEST(0, COALESCE(current_load, 0) - 1) "
+                    "WHERE nc_username = %s",
+                    (info["assigned_recruiter"],),
+                )
             conn.commit()
             cur.close()
             conn.close()
