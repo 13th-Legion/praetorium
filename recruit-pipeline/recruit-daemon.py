@@ -1424,6 +1424,7 @@ def forward_application_to_unit(sub, company, recipient_email):
         msg["From"] = SMTP_FROM
         msg["To"] = recipient_email
         # CC state admin on all unit-forwarded applications
+        state_cc = _state_s1_email()
         recipients = [recipient_email]
         if recipient_email != state_cc:
             msg["Cc"] = state_cc
