@@ -50,6 +50,12 @@ def _norm(addr: Optional[str]) -> str:
     return (addr or "").strip().lower()
 
 
+# Values people type to mean "I don't have a personal email". Treat as empty
+# rather than as an invalid address (otherwise a literal "N/A" blocks every
+# member-edit save, including unrelated fields like a team override).
+_PLACEHOLDER_EMAILS = frozenset({"n/a", "na", "none", "nil", "no", "-", "--", "null"})
+
+
 def is_proton(addr: Optional[str]) -> bool:
     """True if ``addr`` is a Proton-hosted mailbox.
 
@@ -89,7 +95,7 @@ def validate_personal(
 ) -> tuple[bool, str]:
     """The personal address is optional, but must not be the official one."""
     p = _norm(personal)
-    if not p:
+    if not p or p in _PLACEHOLDER_EMAILS:
         return True, ""
     if "@" not in p:
         return False, f"{personal!r} is not a valid email address."
